@@ -26,7 +26,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ApplySeoRedirects
 {
-    private const CACHE_KEY = 'seo_active_redirects';
     private const CACHE_TTL = 300; // seconds
 
     /** Path prefixes that must never be redirected by this middleware. */
@@ -75,7 +74,7 @@ class ApplySeoRedirects
     /** @return array<int, array<string, mixed>> */
     protected function loadRules(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
+        return Cache::remember(Redirect::ACTIVE_CACHE_KEY, self::CACHE_TTL, function () {
             if (!Schema::hasTable('redirects')) {
                 return [];
             }

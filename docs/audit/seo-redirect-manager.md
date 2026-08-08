@@ -1,6 +1,6 @@
 # SEO Redirect Manager (Phase 1.6)
 
-Status: **engine built, wired, and unit/feature-tested.** Admin CRUD UI is the next slice.
+Status: **engine + admin CRUD built, wired, and tested.** Remaining: slug-change auto-suggest.
 
 ## What ships
 | Piece | File | Verified |
@@ -33,7 +33,18 @@ changes apply immediately instead of within 5 minutes.
 4. Visit `/admin/...`, `/api/...`, and a normal storefront URL → expect **no** redirect.
 5. Deactivate the rule → `/old-thing` serves normally again.
 
+## Admin CRUD (shipped)
+`Admin › SEO Settings › Redirects` (`admin/seo-settings/redirects`, `module:business_settings`).
+`RedirectController` + `RedirectRepository` (auto-bound) + `RedirectStoreRequest`. Every write
+invalidates `Redirect::ACTIVE_CACHE_KEY`, so storefront redirects apply immediately. Duplicate
+`from_path` is rejected; the source path is normalized with the same resolver the middleware uses.
+
+### Admin UI smoke test (run once in a real environment)
+1. Open `Admin › SEO Settings › Redirects` → the tab renders, empty state shows.
+2. Add `/old-url → /` (301, exact, active) → row appears; visiting `/old-url` 301s to `/`.
+3. Toggle status off → `/old-url` serves normally; toggle on → redirects again (cache invalidated).
+4. Edit the row (change target) and Save → new target applies. Delete → row gone, no redirect.
+5. Try a duplicate `from_path` → rejected with a clear message.
+
 ## Next
-- Admin CRUD (`Admin\Seo\RedirectController` + routes + view + lang) gated by `admin` + a `module`
-  permission, with cache invalidation and duplicate-`from_path` validation.
 - Auto-suggest a redirect when a product/category slug changes.
