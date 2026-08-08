@@ -5,8 +5,8 @@
         <h1 class="text-center">{{ "Please do not refresh this page..." }}</h1>
 
         <div class="razorpay-button-container">
-            <button type="button" id="rzp-button1">Pay</button>
-            <button type="button" class="razorpay-cancel-button" id="razorpay-cancel-button">Cancel</button>
+            <button type="button" id="rzp-button1">{{ translate('Pay') }}</button>
+            <button type="button" class="razorpay-cancel-button" id="razorpay-cancel-button">{{ translate('Cancel') }}</button>
         </div>
     </div>
 

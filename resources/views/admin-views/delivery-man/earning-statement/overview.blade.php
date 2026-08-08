@@ -108,7 +108,7 @@
                         <div class="d-flex justify-content-start">
                             <div><h3>{{translate('status')}} : </h3></div>
                             <div class="mx-1">
-                                <h3>{!! $deliveryMan->is_active == 1?'<label class="badge badge-success text-bg-success">Active</label>':'<label class="badge badge-danger">In-Active</label>' !!}</h3>
+                                <h3>{!! $deliveryMan->is_active == 1?'<label class="badge badge-success text-bg-success">'.translate('Active').'</label>':'<label class="badge badge-danger">'.translate('In-Active').'</label>' !!}</h3>
                             </div>
                         </div>
                         <div class="d-flex justify-content-start">
@@ -188,7 +188,7 @@
                     <div class="col-md-12 mb-3">
                         <div class="text-center">
                             <form action="">
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">{{ translate('Close') }}</button>
                                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">{{translate('collect_Cash')}}</button>
                             </form>
                         </div>

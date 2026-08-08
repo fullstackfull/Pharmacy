@@ -180,7 +180,7 @@
 
     <div class="badge">Auction #{{ $auction->id }}</div>
 
-    <h1>Adjust Auction Time</h1>
+    <h1>{{ translate('Adjust_Auction_Time') }}</h1>
     <p class="subtitle">
         {{ $auction->name ?? ('Product #' . $auction->id) }}
     </p>
@@ -227,7 +227,7 @@
         @csrf
 
         <div class="field">
-            <label for="start_time">New Start Time</label>
+            <label for="start_time">{{ translate('New_Start_Time') }}</label>
             <input
                 type="datetime-local"
                 id="start_time"
@@ -240,7 +240,7 @@
         </div>
 
         <div class="field">
-            <label for="end_time">New End Time</label>
+            <label for="end_time">{{ translate('New_End_Time') }}</label>
             <input
                 type="datetime-local"
                 id="end_time"
@@ -252,7 +252,7 @@
             @enderror
         </div>
 
-        <button type="submit">Update Auction Times</button>
+        <button type="submit">{{ translate('Update_Auction_Times') }}</button>
     </form>
 
 </div>

@@ -216,7 +216,7 @@
             <div class="collapse mt-3" id="collapseNewSlider">
                 <div class="card card-body">
                     <!-- Swiper -->
-                    <h4>Address</h4>
+                    <h4>{{ translate('Address') }}</h4>
                     <p class="fs-12">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam odio tellus, laoreet
                         pharetra auctor eget, fringilla nec lectus. Nullam in feugiat est. Nam in interdum ligula, non elementum
                         purus.

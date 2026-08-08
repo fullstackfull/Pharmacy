@@ -115,7 +115,7 @@
                         <div class="flex-start">
                             <div><h4>{{translate('status')}} : </h4></div>
                             <div class="mx-1">
-                                <h4>{!! $deliveryMan->is_active == 1?'<label class="badge badge-success">Active</label>':'<label class="badge badge-danger">In-Active</label>' !!}</h4>
+                                <h4>{!! $deliveryMan->is_active == 1?'<label class="badge badge-success">'.translate('Active').'</label>':'<label class="badge badge-danger">'.translate('In-Active').'</label>' !!}</h4>
                             </div>
                         </div>
                         <div class="flex-start">
