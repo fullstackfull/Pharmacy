@@ -2602,4 +2602,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"theme_version_not_found" => "Theme version not found",
 	"published_versions_cannot_be_edited_duplicate_it_to_a_draft_first" => "Published versions cannot be edited duplicate it to a draft first",
 	"unknown_section_type" => "Unknown section type",
+	"no_redirects_yet" => "No redirects yet",
+	"Theme_Management" => "Theme Management",
 ];
