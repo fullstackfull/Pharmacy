@@ -933,9 +933,17 @@ class ProductController extends Controller
         if ($request->has('choice')) {
             foreach ($requestChoiceNo as $key => $no) {
                 $str = 'choice_options_' . $no;
+                $optionValues = $request[$str];
+                // An attribute whose options were removed before saving must not persist an empty,
+                // unusable variation attribute (keeps parity with the web ProductService fix).
+                if (empty($optionValues)) {
+                    $requestChoiceNoIndex++;
+                    continue;
+                }
+                $item = [];
                 $item['name'] = 'choice_' . $no;
-                $item['title'] = $requestChoiceArray[$requestChoiceNoIndex];
-                $item['options'] = $request[$str];
+                $item['title'] = $requestChoiceArray[$requestChoiceNoIndex] ?? ('choice_' . $no);
+                $item['options'] = $optionValues;
                 $choiceOptions[] = $item;
                 $requestChoiceNoIndex++;
             }
@@ -951,7 +959,13 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($requestChoiceNo as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $options[] = $request[$name];
+                $optionValues = $request[$name];
+                // Skip an attribute emptied by removal so it doesn't collapse the whole
+                // variation set (an empty factor zeroes the cartesian product).
+                if (empty($optionValues)) {
+                    continue;
+                }
+                $options[] = $optionValues;
             }
         }
 
@@ -1147,10 +1161,11 @@ class ProductController extends Controller
     {
         $options = [];
         if ($request->has('extensions_type')) {
-            foreach (json_decode($request['extensions_type'], true) as $type) {
+            foreach ((json_decode($request['extensions_type'], true) ?? []) as $type) {
                 $type = str_replace(' ', '_', $type);
                 $name = 'extensions_options_' . $type;
-                $options[$type] = json_decode($request[$name], true);
+                $decoded = json_decode($request[$name] ?? '[]', true);
+                $options[$type] = is_array($decoded) ? $decoded : [];
             }
         }
         return $options;
@@ -1426,9 +1441,17 @@ class ProductController extends Controller
         if ($request->has('choice')) {
             foreach ($requestChoiceNo as $key => $no) {
                 $str = 'choice_options_' . $no;
+                $optionValues = $request[$str];
+                // An attribute whose options were removed before saving must not persist an empty,
+                // unusable variation attribute (keeps parity with the web ProductService fix).
+                if (empty($optionValues)) {
+                    $requestChoiceNoIndex++;
+                    continue;
+                }
+                $item = [];
                 $item['name'] = 'choice_' . $no;
-                $item['title'] = $requestChoiceArray[$requestChoiceNoIndex];
-                $item['options'] = $request[$str];
+                $item['title'] = $requestChoiceArray[$requestChoiceNoIndex] ?? ('choice_' . $no);
+                $item['options'] = $optionValues;
                 $choice_options[] = $item;
                 $requestChoiceNoIndex++;
             }
@@ -1446,7 +1469,13 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($requestChoiceNo as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $options[] = $request[$name];
+                $optionValues = $request[$name];
+                // Skip an attribute emptied by removal so it doesn't collapse the whole
+                // variation set (an empty factor zeroes the cartesian product).
+                if (empty($optionValues)) {
+                    continue;
+                }
+                $options[] = $optionValues;
             }
         }
 

@@ -59,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\Localization::class,
             \App\Http\Middleware\DetectMobile::class,
+            \App\Http\Middleware\ApplySeoRedirects::class,
         ]);
         $middleware->group('api', [
             'throttle:3000,1',
