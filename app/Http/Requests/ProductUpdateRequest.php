@@ -258,7 +258,7 @@ class ProductUpdateRequest extends FormRequest
                     if ($this['extensions_type'] && count($this['extensions_type']) > 0) {
                         foreach ($this['extensions_type'] as $type) {
                             $name = 'extensions_options_' . $type;
-                            $my_str = implode('|', $this[$name]);
+                            $my_str = implode('|', is_array($this[$name] ?? null) ? $this[$name] : []);
                             $fileTypeOptions[$type] = explode(',', $my_str);
                         }
 

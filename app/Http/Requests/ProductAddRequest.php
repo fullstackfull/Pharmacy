@@ -206,7 +206,7 @@ class ProductAddRequest extends Request
                         $options = [];
                         foreach ($this['extensions_type'] as $type) {
                             $name = 'extensions_options_' . $type;
-                            $my_str = implode('|', $this[$name]);
+                            $my_str = implode('|', is_array($this[$name] ?? null) ? $this[$name] : []);
                             $options[$type] = explode(',', $my_str);
                         }
 
