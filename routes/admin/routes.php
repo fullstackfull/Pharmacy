@@ -82,6 +82,7 @@ use App\Http\Controllers\Admin\ThirdParty\PaymentMethodController;
 use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
+use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1084,6 +1085,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::get('delete-page', 'getPageDelete')->name('delete-page');
                     Route::get('page-content-view', 'getPageAddContentView')->name('page-content-view');
                     Route::post('page-content-update', 'getPageContentUpdate')->name('page-content-update');
+                });
+            });
+
+            Route::group(['prefix' => 'redirects', 'as' => 'redirects.'], function () {
+                Route::controller(RedirectController::class)->group(function () {
+                    Route::get('', 'index')->name('index');
+                    Route::post('store', 'store')->name('store');
+                    Route::post('update/{id}', 'update')->name('update');
+                    Route::get('status', 'updateStatus')->name('status');
+                    Route::get('delete', 'delete')->name('delete');
                 });
             });
 

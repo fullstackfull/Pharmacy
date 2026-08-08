@@ -18,6 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Redirect extends Model
 {
+    /** Cache key for the active-rules set shared by the storefront middleware and admin CRUD. */
+    public const ACTIVE_CACHE_KEY = 'seo_active_redirects';
+
     protected $fillable = [
         'from_path',
         'to_path',
