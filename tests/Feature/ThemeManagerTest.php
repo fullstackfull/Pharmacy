@@ -114,6 +114,28 @@ class ThemeManagerTest extends TestCase
         $this->assertSame($v->id, $this->mgr->activeThemePublishedVersion()?->id);
     }
 
+    public function test_create_theme_makes_an_initial_draft(): void
+    {
+        $theme = $this->mgr->createTheme(['name' => 'New', 'slug' => 'new-theme'], ['colors' => ['primary' => '#abcdef']]);
+
+        $this->assertDatabaseHas('themes', ['id' => $theme->id, 'slug' => 'new-theme']);
+        $draft = $theme->versions()->first();
+        $this->assertSame(ThemeVersion::STATUS_DRAFT, $draft->status);
+        $this->assertSame(['colors' => ['primary' => '#abcdef']], $draft->settings);
+    }
+
+    public function test_activate_deactivates_all_other_themes(): void
+    {
+        $a = $this->activeTheme(); // is_active = true
+        $b = Theme::create(['name' => 'B', 'slug' => 'b-theme', 'is_active' => false]);
+
+        $this->mgr->activate($b);
+
+        $this->assertTrue($b->fresh()->is_active);
+        $this->assertFalse($a->fresh()->is_active);
+        $this->assertSame(1, Theme::where('is_active', true)->count());
+    }
+
     public function test_duplicate_copies_sections_and_blocks_into_a_draft(): void
     {
         $theme = $this->activeTheme();

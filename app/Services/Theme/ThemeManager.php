@@ -50,6 +50,37 @@ class ThemeManager
         return $this->deepMerge($this->defaultSettings(), is_array($overrides) ? $overrides : []);
     }
 
+    /** Create a theme together with an initial empty draft version. */
+    public function createTheme(array $attributes, array $settings = []): Theme
+    {
+        return DB::transaction(function () use ($attributes, $settings) {
+            $theme = Theme::create($attributes);
+            ThemeVersion::create([
+                'theme_id' => $theme->id,
+                'label'    => 'Initial draft',
+                'status'   => ThemeVersion::STATUS_DRAFT,
+                'settings' => $settings ?: null,
+            ]);
+            return $theme->refresh();
+        });
+    }
+
+    /** Make a theme the single active one (deactivates all others). Atomic. */
+    public function activate(Theme $theme): Theme
+    {
+        return DB::transaction(function () use ($theme) {
+            Theme::query()
+                ->where('id', '!=', $theme->id)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            $theme->is_active = true;
+            $theme->save();
+
+            return $theme->refresh();
+        });
+    }
+
     /** Publish a version: previous published version of the same theme is archived. Atomic. */
     public function publish(ThemeVersion $version): ThemeVersion
     {
