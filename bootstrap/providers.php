@@ -14,6 +14,7 @@ return [
     App\Providers\SocialLoginServiceProvider::class,
     App\Providers\InterfaceServiceProvider::class,
     App\Providers\ObserverServiceProvider::class,
+    App\Providers\SeoServiceProvider::class,
 
     // Third-party packages
     Intervention\Image\ImageServiceProvider::class,
