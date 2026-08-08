@@ -83,6 +83,7 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1066,6 +1067,20 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('', 'update');
                 Route::post('update-by-type', 'updateByType')->name('update-by-type');
             });
+        });
+    });
+
+    /*
+     * Theme System management (Phase 1.1). Distinct from the legacy theme installer at
+     * admin.system-setup.theme.* — this manages themes, versions (draft/publish) and activation.
+     */
+    Route::group(['prefix' => 'theme', 'as' => 'theme.', 'middleware' => ['module:themes_and_addons']], function () {
+        Route::controller(ThemeManagementController::class)->group(function () {
+            Route::get('', 'index')->name('index');
+            Route::post('store', 'store')->name('store');
+            Route::post('activate', 'activate')->name('activate');
+            Route::post('version/publish', 'publishVersion')->name('version.publish');
+            Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
         });
     });
 
