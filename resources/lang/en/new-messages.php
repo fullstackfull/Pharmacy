@@ -2598,4 +2598,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"New_Currency_inserted_successfully" => "New Currency inserted successfully",
 	"configure_your_mail_setup_first" => "Configure your mail setup first",
 	"The_category_has_already_been_taken" => "The category has already been taken",
+	"this_section_could_not_be_added_the_version_may_be_published" => "This section could not be added the version may be published",
+	"theme_version_not_found" => "Theme version not found",
+	"published_versions_cannot_be_edited_duplicate_it_to_a_draft_first" => "Published versions cannot be edited duplicate it to a draft first",
+	"unknown_section_type" => "Unknown section type",
 ];

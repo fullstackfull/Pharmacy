@@ -85,6 +85,7 @@ use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
+use App\Http\Controllers\Admin\Settings\ThemeBuilderController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1082,6 +1083,20 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('activate', 'activate')->name('activate');
             Route::post('version/publish', 'publishVersion')->name('version.publish');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
+        });
+
+        // Visual Theme Builder (Phase 1.2) — all mutations target a DRAFT version.
+        Route::group(['prefix' => 'builder', 'as' => 'builder.'], function () {
+            Route::controller(ThemeBuilderController::class)->group(function () {
+                Route::get('', 'index')->name('index');
+                Route::get('section-schema', 'sectionSchema')->name('section-schema');
+                Route::post('section/add', 'addSection')->name('section.add');
+                Route::post('section/update', 'updateSection')->name('section.update');
+                Route::post('section/reorder', 'reorderSections')->name('section.reorder');
+                Route::post('section/toggle', 'toggleSection')->name('section.toggle');
+                Route::post('section/duplicate', 'duplicateSection')->name('section.duplicate');
+                Route::post('section/delete', 'deleteSection')->name('section.delete');
+            });
         });
     });
 

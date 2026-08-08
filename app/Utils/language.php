@@ -85,7 +85,10 @@ if (!function_exists('getDefaultLanguage')) {
             $data = getWebConfig('language');
             $code = 'en';
             $direction = 'ltr';
-            foreach ($data as $ln) {
+            // Guard: when the `language` business setting is missing (fresh or partially configured
+            // install) getWebConfig() returns null, and foreach(null) fatals — which would break
+            // every translate() call, i.e. the whole UI. Fall back to the defaults set above.
+            foreach ((is_iterable($data) ? $data : []) as $ln) {
                 if (array_key_exists('default', $ln) && $ln['default']) {
                     $code = $ln['code'];
                     if (array_key_exists('direction', $ln)) {
