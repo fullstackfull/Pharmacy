@@ -1,78 +1,213 @@
-<p align="center"><img src="https://res.cloudinary.com/dtfbvvkyp/image/upload/v1566331377/laravel-logolockup-cmyk-red.svg" width="400"></p>
+# دراسة مشروع Pharmacy — تقرير معماري وأمني وخطة تطوير
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+> **تنبيه:** هذه وثيقة تدقيق داخلية. الأسرار المذكورة أدناه مُشار إليها مختصرةً عمداً، ويجب اعتبارها **مكشوفة ووجب تدويرها**. لا تُعِد كتابة القيم الكاملة لأي مفتاح داخل المستودع.
 
-## About Laravel
+أُعدّت هذه الدراسة بفحص مباشر للشيفرة عبر خمسة مسارات تحليل متوازية (الباك إند، الوحدات، المسارات وواجهات API، الواجهة الأمامية، قاعدة البيانات والتشغيل)، مع تحقّق مستقل من كل نتيجة أمنية حرجة. تصف حالة الفرع `claude/project-development-ctyfhz` بتاريخ 2026-08-08.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚨 خلاصة تنفيذية
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+هذه **منصة تجارة إلكترونية 6valley (v16.3)** — Laravel 12 / PHP 8.2 — موسومة بصيدلية عبر نص التذييل فقط، وهي حالياً **مخترقة بباب خلفي فعّال**. نتيجتان تغيّران طبيعة أي عمل قادم:
 
-## Learning Laravel
+1. **المشروع ليس صيدلية.** لا يوجد أي منطق صيدلاني في الشيفرة (لا وصفات، لا أدوية، لا جرعات، لا صلاحية). أي تطوير صيدلاني حقيقي هو **عمل جديد بالكامل** فوق هذه المنصة.
+2. **المشروع مخترَق.** ملف الدخول الجذري ينفّذ كوداً خارجياً عند كل طلب، ومعه عدة مؤشرات اختراق مؤكَّدة. **التأمين شرط لأي تطوير أو نشر لاحق.**
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| المقياس | القيمة |
+|---|---|
+| المنصة | 6valley v16.3 |
+| الإطار | Laravel 12 · PHP 8.2 |
+| ملفات `app/` | 1,046 (~135,886 سطراً) |
+| هجرات قاعدة البيانات | 300 |
+| قوالب Blade | 1,304 |
+| اختبارات فعلية | 2 (قوالب فارغة) |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 1. الهوية الحقيقية للمشروع
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+رغم اسم المجلد ووجهة الترخيص، **لا يوجد منطق صيدلاني إطلاقاً**:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- [UserInsights](https://userinsights.com)
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-- [Invoice Ninja](https://www.invoiceninja.com)
-- [iMi digital](https://www.imi-digital.de/)
-- [Earthlink](https://www.earthlink.ro/)
-- [Steadfast Collective](https://steadfastcollective.com/)
-- [We Are The Robots Inc.](https://watr.mx/)
-- [Understand.io](https://www.understand.io/)
-- [Abdel Elrafa](https://abdelelrafa.com)
-- [Hyper Host](https://hyper.host)
-- [Appoly](https://www.appoly.co.uk)
-- [OP.GG](https://op.gg)
+- البحث عن `prescription | pharmacy | medicine | drug | dosage` في `app/` و`resources/` و`database/` يعطي نتيجتين فقط: رابط التذييل، وإعداد ضريبي عام من 6amTech لقطاعات أخرى.
+- الإشارات «الصيدلانية» في CSS ليست إلا أسماء أيقونات خطوط (`fi-rr-prescription`) في مكتبات طرف ثالث.
+- `.env.example` ما زال يحمل `DB_DATABASE=6valley` و`CONTAINER_NAME_PREFIX=6valley-demo`، ولوحتا الأدمن والبائع تعرضان بانر «اشترِ 6Valley الأصلي» في وضع العرض.
+- التخصيص الحقيقي الوحيد ذهب إلى **المزادات** (Auction)، لا الصيدلية.
 
-## Contributing
+**ملاحظة تخصّ الكويت:** المشروع مُرخّص وموسوم لصيدلية **سورية** (`pharmacysyria.com`، وأكمل لغة عربية هي لهجة `sy`). إن كان العميل في الكويت كياناً مختلفاً فالترخيص والتذييل و`robots.txt` تحتاج إعادة عمل، وقد لا يغطي الترخيص النطاق الجديد. كما أن `GlobalConstant.php` يربط `"kw" ⇒ "Cornish"` (الكورنية) خطأً؛ الرمز الصحيح للعربية الكويتية هو `ar-KW`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## 2. 🔒 الطوارئ الأمنية
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+جميع النتائج التالية تأكّدت بالفحص المباشر للملفات. رُتّبت حسب الخطورة.
 
-## Security Vulnerabilities
+### حرج
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- **باب خلفي RCE في ملف الدخول الجذري** — `index.php:1-9` يُطفئ الإبلاغ عن الأخطاء ثم ينفّذ عبر `eval()` شيفرة PHP تُجلب من موقع لصق خارجي (`hxxps://pastefy[.]app/…/raw`) عند كل طلب. الملف مُتتبَّع في Git؛ والنسخة النظيفة في `public/index.php`. هذا هو الملف الفعّال في هذا النشر (`DOMAIN_POINTED_DIRECTORY = 'root'`).
+- **مفتاح Apple خاص منشور علناً** — `public/assets/back-end/Apple-AuthKey.p8` (ونسخة `.txt`) مُتتبَّع ويبدأ بـ `-----BEGIN PRIVATE KEY-----`، وقابل للتنزيل مباشرة من الويب. **يُدوَّر فوراً** في حساب Apple ثم يُطهَّر من التاريخ.
+- **SSRF غير مصادَق** — `routes/web/routes.php:57` مسار `GET /image-proxy?url=` يجلب أي عنوان ويعيد جسم الاستجابة كاملاً مع `Access-Control-Allow-Origin: *`، دون قائمة سماح أو حجب للعناوين الداخلية (يتيح قراءة بيانات اعتماد السحابة).
+- **رفع ملفات عشوائي غير مصادَق (احتمال RCE)** — `RestAPI/v2/seller/ProductController.php:68` (دالة `upload_images`) بلا مصادقة وتحقّقها `'image' ⇒ 'required'` فقط، و`Utils/ImageManager.php:19` يكتب البايتات الخام بامتداد العميل قبل إعادة الترميز.
 
-## License
+### عالٍ
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- **مفتاح ترخيص 6valley + `APP_KEY` حقيقي في المستودع** — `config/system-addons.php` (مفتاح شراء `b8eb2cc8-…` واسم مستخدم مكشوفان) و`.env.example:3` (مفتاح تطبيق حقيقي مشترك بين كل تثبيت ينسخه).
+- **وسيط الضيف في API لا يصادق** — `app/Http/Middleware/APIGuestMiddleware.php:15` يفحص وجود ترويسة `Authorization` فقط، يقبل أي `guest_id`، ومسار الرفض يعيد حالة **200** بدل 401.
+- **توكنات بائع/مندوب نصّية دائمة** — `SellerApiAuthMiddleware.php:22` و`DeliveryManAuth.php:20`: عمود `auth_token` نصّي، الفحص الوحيد `strlen > 30`، بلا تجزئة/انتهاء/تدوير/إبطال. (المشروع يعتمد أصلاً Sanctum غير المستخدم.)
+- **تسريب PII للعتاد في جذر الويب** — `mySpecs.html` ليس وثيقة مواصفات بل تفريغ `lshw` لعتاد لابتوب مطوّر، يسرّب أرقاماً تسلسلية وUUID وعناوين MAC وعنوان LAN داخلياً. **يُحذف ويُطهَّر من التاريخ.**
+- **تعداد منتجات بائع غير مصادَق (IDOR)** — `routes/rest_api/v3/seller.php:286-291` مساران خارج مجموعة `seller_api_auth` يأخذان `seller_id` من العنوان دون فحص ملكية.
+- **غياب تحديد المعدّل على الدخول/OTP** — الحدّ العام 3000/دقيقة والحدّ المسمّى غير مرتبط بأي مسار.
+
+### متوسط
+
+- `shell_exec('php ../artisan passport:install')` من مسار أدمن (`EnvironmentSettingsController:94`).
+- تعطيل تحقّق TLS في مسار دفع Paytm و`FileManagerLogic`.
+- إعفاءات CSRF واسعة تشمل `/customer/choose-shipping-address` (فعل مصادَق حسّاس لا نداء دفع).
+- `$guarded = []` على `PaymentRequest` و`DeliverymanWallet` و`ShippingAddress` (مال/PII).
+
+### مؤشرات اختراق سابق
+
+- `robots.txt`: 60 سطر `Sitemap:` سبام نحو `pharmacysyria.com`، و`sitemap.xml` المحلي فارغ (0 بايت).
+- `.gitignore` ينتهي بقسم يدوي «Suspicious or temporary local files» يتجاهل `ss.php` و`ziURk0Vz` — أي أن أحداً وجد شِلّات هنا سابقاً.
+- تاريخ Git التزام واحد مضغوط (`afc766f`) — لا يمكن تتبّع متى دخل الباب الخلفي.
+
+> **الاستجابة الموصى بها:** عامل المضيف على أنه مخترق: أزل الباب الخلفي، افحص `storage/` و`bootstrap/cache/` وكل `public/*.php` بحثاً عن شِلّات أخرى، دوّر `APP_KEY` واعتمادات قاعدة البيانات وكل مفاتيح بوابات الدفع ومفتاح الشراء ومفتاح Apple، ونظّف سبام `robots.txt`. **لا تنشر من هذه الشجرة قبل ذلك.**
+
+---
+
+## 3. البنية المعمارية
+
+Laravel 12 بنمط تمهيد حديث (`bootstrap/app.php`، لا `Http/Kernel.php`)، لكن تسجيل المسارات بالنمط القديم `RouteServiceProvider::map()` — تناقض بنيوي جوهري. التدفّق المُوثّق **Controller → Service → Repository → Model** موجود لكنه مُطبّق بتفاوت (~34% من الـ Controllers تتجاوز طبقة Repository).
+
+| الطبقة | العدد |
+|---|---|
+| Controllers | 254 (أدمن 100 · API 68 · بائع 34 · ويب 18) |
+| Services | 75 |
+| Repositories | 94 (من 95 واجهة) |
+| Models | 112 |
+
+**«الأصناف الإلهية» — أكبر الملفات** (منطق الأعمال متمركز في مدراء ثابتين مُحمّلين عالمياً، غير قابلين للاختبار):
+
+| الملف | الأسطر |
+|---|---|
+| `Utils/ProductManager.php` | 2,834 |
+| `Utils/OrderManager.php` | 2,515 |
+| `RestAPI/v3/seller/ProductController.php` | 2,114 |
+| `Web/WebController.php` | 1,618 |
+| `Traits/UpdateClass.php` | 1,562 |
+| `Enums/GlobalConstant.php` | 1,302 |
+
+**ديون بارزة:** تكرار الثوابت بين `Constant.php` و`GlobalConstant.php` (~1,100 مدخل)؛ توائم نسخ-لصق في تقارير الأدمن/البائع (~2,400 سطر)؛ 15 كتلة `catch(Exception){}` فارغة تبتلع الأخطاء بصمت (أبرزها `AppServiceProvider::boot()` كاملة)؛ `ini_set('memory_limit', -1)` على مستوى العملية.
+
+---
+
+## 4. الوحدات والإضافات
+
+`modules_statuses.json` يفعّل خمس وحدات، لكن ثلاثاً فقط موجودة على القرص.
+
+| الوحدة | الحالة | الدور |
+|---|---|---|
+| `AI` | موجودة | توليد محتوى LLM (لا محادثة). مزوّد OpenAI فقط يعمل؛ `ClaudeProvider` قالب فارغ. |
+| `Blog` | موجودة | مدونة بفئات وترجمات وSEO. |
+| `TaxModule` | موجودة | محرّك ضريبة/VAT — أعمق وحدة تكاملاً (~30 ملفاً أساسياً يعتمد عليها). |
+| `Auction` | **مفقودة** | الميزة النشطة الفعلية: 548 ملفاً و195 قالباً يشيران إليها — لكن باكندها غائب. |
+| `Gateways` | **مفقودة** | ~40 بوّابة دفع إضافية؛ يعوّضها fallback داخلي بـ 13 بوّابة. |
+
+الوحدتان المفقودتان إضافتان مدفوعتان تُحذفان آلياً عند بناء نسخة التوزيع. التطبيق **لا ينهار** بفضل تصميم دفاعي متعدّد الطبقات، لكن تبقى نقاط كسر غير محروسة تُنتج خطأ 500 — أخطرها `Modules/AI/.../Auction/AuctionResourceService.php:25` (مرجع صلب لـ `ItemCondition::ALL` بلا حارس على مسار حيّ).
+
+---
+
+## 5. المسارات وواجهات API
+
+~1,382 مساراً عبر 6 ملفات ضخمة أحادية (ملف الأدمن وحده 1,223 سطراً / 565 مساراً). «الإصدارات» الثلاثة ليست تطويراً لواجهة واحدة بل **ثلاثة منتجات مختلفة**:
+
+| الإصدار | المنتج | مسارات | المصادقة |
+|---|---|---|---|
+| v1 | تطبيق العميل + الواجهة | 162 | Passport + وضع ضيف |
+| v2 | تطبيق البائع القديم + المندوب | 96 | توكن يدوي (بلا وسيط على المجموعة) |
+| v3 | تطبيق البائع الحالي | 147 | وسيط `seller_api_auth` |
+
+- **v2 و v3 شبه متطابقين** — كل إصلاح للبائع يجب أن يهبط مرتين، وعملياً لم يحدث (من هنا فجوة المصادقة في v2).
+- **Passport مستخدم فعلاً؛ Sanctum اعتماد ميّت.** توكنات Passport بلا مدة صلاحية مضبوطة.
+- **موارد API (Resources) بنية ميّتة**: صفر استخدام في 68 متحكّم — كل استجابة تُسلسِل نموذج Eloquent خاماً، فأي عمود جديد يتسرّب للعملاء تلقائياً.
+
+---
+
+## 6. الواجهة الأمامية والثيمات
+
+التطبيق **100% Blade + jQuery** — لا Vue (رغم أن `CLAUDE.md` يصفه «Vue 2»؛ بحث عن `v-model|v-for|new Vue` = صفر).
+
+- **ثيمان:** `default` نشط، `theme_aster` (26M / 246 قالباً) خامل غير قابل للعرض.
+- **بناء Mix معطّل:** `resources/sass/app.scss` غير موجود ⇒ `npm run prod` يفشل، ومخرجاته غير مرجَّعة من أي قالب.
+- **`public/` بحجم 125M** فيها ~30M تكرار (ثلاث أشجار أصول أدمن متوازية تُحمَّل معاً).
+- **أداء `translate()` كارثي:** 21,352 نداءً، كلٌّ يعيد بناء مصفوفتين ضخمتين، مع كتابة لملفات المصدر وقت التشغيل.
+- **التدويل/RTL:** لغات `en · sa · sy · bd · in · es` — **لا kw**. لوحة الأدمن v2 غير مترجمة عربياً (381 مفتاحاً بقيم إنجليزية). RTL يدوي عبر ~262 شرطاً ثلاثياً، لا ورقة أنماط RTL للمتجر.
+
+---
+
+## 7. قاعدة البيانات والتشغيل
+
+الجداول الأساسية **لا تُنشأ عبر الهجرات** بل توجد فقط داخل نسخة SQL؛ والهجرات الـ 300 غالبها تعديلات فوقها.
+
+> **المستودع وحده لا يُشغّل المشروع:** `installation/backup/database.sql` و`public.zip` و`demo/database.sql` مستبعدة بـ `.gitignore`. النسخة يجب الحصول عليها خارج النطاق من حزمة إصدار 6amTech. تعليمة `CLAUDE.md` بالاستيراد أولاً غير قابلة للتنفيذ من نسخة نظيفة.
+
+- **اتجاه التطوير الحديث (2025→2026):** دقّة الأموال (`decimal(40,20)`)، تعديل الطلبات، وفهرسة أداء.
+- **فجوات التشغيل:** لا مهام مجدولة إطلاقاً (`Kernel::schedule()` فارغة)؛ صنف Job واحد؛ 23 من 24 مستمعاً تزامنيون داخل الطلب؛ `forceImportSQL()` و`database:refresh` ينفّذان `db:wipe` (فقدان بيانات كامل).
+- بوابات الدفع مُهيّأة عبر قاعدة البيانات (`addon_settings`/`business_settings`)، لا `.env`.
+
+---
+
+## 8. الاختبارات والتوثيق
+
+- **تغطية اختبار = صفر عملياً:** قالبا `ExampleTest` فقط؛ Playwright مُعلَن لكن `playwright.config.ts` والاختبارات مستبعدة بـ `.gitignore`.
+- **انحراف التوثيق:** `CLAUDE.md` يستورد `.claude/rules/*.md` (المجلد غير موجود)، يُدرج `Modules/Auction` كموجود، ويصف `file:permission` خطأً (يجعل `sitemap.xml`/`robots.txt` بصلاحية 0777 ولا يلمس `storage/`).
+
+---
+
+## 9. مصفوفة النتائج
+
+| الخطورة | النتيجة | المجال | الموقع |
+|---|---|---|---|
+| حرج | باب خلفي RCE في ملف الدخول | أمن | `index.php:1` |
+| حرج | مفتاح Apple خاص منشور علناً | أمن | `public/assets/back-end/*.p8` |
+| حرج | SSRF عبر بروكسي الصور | API | `routes/web/routes.php:57` |
+| حرج | رفع ملفات عشوائي غير مصادَق | API | `v2/seller/ProductController:68` |
+| عالٍ | مفتاح ترخيص + APP_KEY مسرّبان | أمن | `system-addons.php` · `.env.example` |
+| عالٍ | وسيط الضيف لا يصادق ويعيد 200 | API | `APIGuestMiddleware:15` |
+| عالٍ | توكنات نصّية دائمة بلا انتهاء | API | `SellerApiAuthMiddleware:22` |
+| عالٍ | تسريب PII للعتاد في جذر الويب | أمن | `mySpecs.html` |
+| عالٍ | المستودع لا يُشغّل قاعدة بيانات | تشغيل | `installation/` · `*.sql` |
+| عالٍ | وحدتا Auction/Gateways مفقودتان | وحدات | `module-helper.php` |
+| متوسط | لا مهام مجدولة؛ مستمعون تزامنيون | تشغيل | `Console/Kernel.php` |
+| متوسط | أداء `translate()`: 21,352 نداء | أداء | `Utils/language.php:21` |
+| متوسط | بناء Mix معطّل + مخرجات ميّتة | واجهة | `webpack.mix.js` |
+| منخفض | شيفرة ميّتة (`test.php`, `routes.json`, أصداف v1) | نظافة | متعدّد |
+
+---
+
+## 10. خطة التطوير المقترحة
+
+مرتّبة بحيث لا يبدأ العمل الوظيفي قبل تأمين الأساس.
+
+**المرحلة 0 — تأمين الطوارئ (قبل أي شيء):**
+- إزالة الباب الخلفي من `index.php` وفحص المضيف والتعامل معه كمخترق.
+- تدوير كل الأسرار (`APP_KEY`، قاعدة البيانات، مفاتيح الدفع، مفتاح الشراء، مفتاح Apple).
+- إزالة `Apple-AuthKey.p8` و`mySpecs.html` ومفتاح الترخيص من الشجرة والتاريخ، وتنظيف `robots.txt`.
+- سدّ الثغرات الحرجة (`/image-proxy`، رفع v2، `APIGuestMiddleware`، تحديد المعدّل على الدخول/OTP).
+
+**المرحلة 1 — تثبيت الصحّة والاتساق:**
+- توثيق طريقة الحصول على `database.sql` وتشغيل بيئة محلية قابلة للإقلاع.
+- حسم مصير Auction/Gateways (حراسة `class_exists` وضبط `modules_statuses.json`، أو الاستعادة).
+- تصحيح `CLAUDE.md` وإنشاء/إزالة `.claude/rules/*.md`؛ إصلاح/حذف بناء Mix؛ حذف الشيفرة الميّتة.
+
+**المرحلة 2 — الأداء وشبكة الأمان:**
+- تخزين `translate()` و`$web_config` وخريطة ربط الـ Repository مؤقتاً؛ إصلاح N+1 في ترويسة الثيم.
+- اختبارات توصيف حول توليد الطلب والدفع؛ تفعيل الطابور والجدولة.
+
+**المرحلة 3 — خفض الديون التقنية:**
+- تفكيك `OrderManager`/`ProductManager` إلى خدمات قابلة للحقن (بعد اختبارات التوصيف).
+- توحيد توائم التقارير؛ دمج الثوابت؛ نقل التحقق إلى `FormRequest`؛ استبدال RTL الشرطي بورقة أنماط.
+
+**المرحلة 4 — بناء الصيدلية فعلاً (عمل جديد بالكامل):**
+- نطاق الوصفات (رفع عند الدفع، تحقّق صيدلي، حالات موافقة/رفض).
+- خصائص الدواء (الاسم العلمي، الشكل، الجرعة، الدفعة والصلاحية، تصنيف الأدوية المراقَبة).
+- توطين الكويت (`ar-KW`، عملة KWD، بوابات محلية، تصحيح فخّ `kw ⇒ Cornish`)، وضوابط تنظيمية وسجلّ تدقيق.
