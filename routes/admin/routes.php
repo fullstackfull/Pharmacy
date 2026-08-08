@@ -84,6 +84,7 @@ use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
+use App\Http\Controllers\Admin\Settings\SeoTemplateController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1100,6 +1101,15 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::get('delete-page', 'getPageDelete')->name('delete-page');
                     Route::get('page-content-view', 'getPageAddContentView')->name('page-content-view');
                     Route::post('page-content-update', 'getPageContentUpdate')->name('page-content-update');
+                });
+            });
+
+            Route::group(['prefix' => 'templates', 'as' => 'templates.'], function () {
+                Route::controller(SeoTemplateController::class)->group(function () {
+                    Route::get('', 'index')->name('index');
+                    Route::post('save', 'save')->name('save');
+                    Route::get('delete', 'delete')->name('delete');
+                    Route::get('preview', 'preview')->name('preview');
                 });
             });
 

@@ -32,6 +32,12 @@
                 {{ translate('Redirects') }}
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {{ Request::is('admin/seo-settings/templates*') ? 'active' : '' }}"
+               href="{{ route('admin.seo-settings.templates.index') }}">
+                {{ translate('SEO_Templates') }}
+            </a>
+        </li>
     </ul>
     <div class="nav--tab__prev">
         <button type="button" class="btn btn-circle border-0 bg-white text-primary">
