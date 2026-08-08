@@ -322,12 +322,23 @@ class ProductService
     public function getChoiceOptions(object $request): array
     {
         $choice_options = [];
-        if ($request->has('choice')) {
+        if ($request->has('choice') && $request->has('choice_no')) {
             foreach ($request->choice_no as $key => $no) {
                 $str = 'choice_options_' . $no;
+                $optionValues = is_array($request[$str] ?? null) ? $request[$str] : [];
+                // An attribute whose option values were removed on the form before saving arrives
+                // here as null/empty. Skip it instead of calling implode() on null (TypeError -> 500)
+                // and instead of persisting an empty, unusable variation attribute.
+                if (count($optionValues) === 0) {
+                    continue;
+                }
+                $item = [];
                 $item['name'] = 'choice_' . $no;
-                $item['title'] = $request->choice[$key];
-                $item['options'] = explode(',', implode('|', $request[$str]));
+                $item['title'] = $request->choice[$key] ?? ('choice_' . $no);
+                $item['options'] = array_values(array_filter(
+                    explode(',', implode('|', $optionValues)),
+                    fn($value) => trim((string)$value) !== ''
+                ));
                 $choice_options[] = $item;
             }
         }
@@ -343,11 +354,17 @@ class ProductService
         if ($request->has('choice_no')) {
             foreach ($request->choice_no as $no) {
                 $name = 'choice_options_' . $no;
-                $myString = implode('|', $request[$name]);
+                $optionValues = is_array($request[$name] ?? null) ? $request[$name] : [];
+                $myString = implode('|', $optionValues);
                 $optionArray = array_filter(explode(',', $myString), function ($value) {
                     return $value !== '';
                 });
-                $options[] = $optionArray;
+                // Skip an attribute whose options were removed before saving; otherwise its empty
+                // value set collapses the whole cartesian product and silently wipes every variation.
+                if (count($optionArray) === 0) {
+                    continue;
+                }
+                $options[] = array_values($optionArray);
             }
         }
         return $options;
@@ -405,8 +422,10 @@ class ProductService
                         $str .= '-' . str_replace(' ', '', $item);
                     } else {
                         if ($request->has('colors_active') && $request->has('colors') && count($request['colors']) > 0) {
-                            $color_name = $this->color->where('code', $item)->first()->name;
-                            $str .= $color_name;
+                            $colorRow = $this->color->where('code', $item)->first();
+                            // Fall back to the raw code if a selected color was removed from the catalog,
+                            // instead of reading ->name on null (Error -> 500) when saving.
+                            $str .= $colorRow->name ?? str_replace(' ', '', (string)$item);
                         } else {
                             $str .= str_replace(' ', '', $item);
                         }
@@ -978,7 +997,7 @@ class ProductService
         if ($request->has('extensions_type')) {
             foreach ($request->extensions_type as $type) {
                 $name = 'extensions_options_' . $type;
-                $my_str = implode('|', $request[$name]);
+                $my_str = implode('|', is_array($request[$name] ?? null) ? $request[$name] : []);
                 $optionsArray = [];
                 foreach (explode(',', $my_str) as $option) {
                     $optionsArray[] = str_replace('.', '_', removeSpecialCharacters($option));
