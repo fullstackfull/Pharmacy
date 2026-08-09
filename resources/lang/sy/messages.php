@@ -9237,4 +9237,13 @@ return [
 	"warehouse_does_not_hold_that_many" => "المستودع لا يحوي هذا العدد",
 	"source_and_destination_must_differ" => "يجب اختلاف المصدر والوجهة",
 	"source_warehouse_does_not_hold_that_many" => "مستودع المصدر لا يحوي هذا العدد",
+
+	// Seller Center hub (Phase 3, Stage A)
+	"seller_center" => "مركز البائع",
+	"your_verification_performance_finances_and_service_standing_in_one_place" => "توثيقك وأداؤك وأموالك ومستوى خدمتك في مكان واحد",
+	"manage" => "إدارة",
+	"service_standing" => "مستوى الخدمة",
+	"last_payout" => "آخر سحب",
+	"within_policy" => "ضمن السياسة",
+	"withdrawable" => "القابل للسحب",
 ];

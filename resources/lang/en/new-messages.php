@@ -2923,4 +2923,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"product_distribution" => "Product distribution",
 	"look_up" => "Look up",
 	"stock_transferred" => "Stock transferred",
+	"within_policy" => "Within policy",
+	"open_breaches" => "Open breaches",
 ];

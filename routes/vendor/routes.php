@@ -390,6 +390,14 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::get('/', 'index')->name('index');
                     });
                 });
+
+                // Seller Center hub (Phase 3, Stage A): one cockpit over verification, performance,
+                // finance and SLA — composed from the seller-facing services, not re-derived.
+                Route::group(['prefix' => 'seller-center', 'as' => 'seller-center.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerCenterController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                    });
+                });
             });
 
             Route::controller(SystemController::class)->group(function () {

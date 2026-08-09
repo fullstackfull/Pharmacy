@@ -568,6 +568,20 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                 </span>
                             </a>
                         </li>
+                        @if (Route::has('vendor.business-settings.seller-center.index'))
+                            <li
+                                class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/seller-center*') ? 'active' : '' }}">
+                                <a class="js-navbar-vertical-aside-menu-link nav-link"
+                                    href="{{ route('vendor.business-settings.seller-center.index') }}"
+                                    title="{{ translate('seller_center') }}">
+                                    <i class="tio-dashboard-vs nav-icon"></i>
+                                    <span
+                                        class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate text-capitalize">
+                                        {{ translate('seller_center') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('vendor.business-settings.payouts.index'))
                             <li
                                 class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/payouts*') ? 'active' : '' }}">
