@@ -587,6 +587,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/write-off', 'writeOff')->whereNumber('id')->name('write-off');
             });
         });
+
+        // Multi-warehouse (Stage C): a location registry that partitions the real current_stock, with
+        // placement from the unallocated remainder and inter-warehouse transfers (sellable total kept).
+        Route::group(['prefix' => 'warehouses', 'as' => 'warehouses.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\WarehouseController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::post('place', 'place')->name('place');
+                Route::post('transfer', 'transfer')->name('transfer');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

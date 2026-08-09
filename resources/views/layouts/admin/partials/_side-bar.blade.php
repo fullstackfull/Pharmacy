@@ -805,6 +805,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.warehouses.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/warehouses*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.warehouses.index') }}"
+                                   title="{{ translate('warehouses') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('warehouses') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
