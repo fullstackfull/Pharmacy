@@ -4,6 +4,11 @@
 
 @push('css_or_js')
     @include(VIEW_FILE_NAMES['product_seo_meta_content_partials'], ['metaContentData' => $product?->seoInfo, 'productDetails' => $product])
+
+    {{-- Adds the canonical, hreflang and Product structured data the partial above does not emit.
+         Separate include so nothing already written there is duplicated. --}}
+    @include('seo.product-supplement', ['productDetails' => $product])
+
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/product-details.css') }}"/>
 @endpush
 
