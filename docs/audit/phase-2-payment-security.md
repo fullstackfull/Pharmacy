@@ -117,3 +117,64 @@ missing amount, near-miss amounts, and fail-closed when the gateway is unreachab
 credentials. The guards are unit-tested and the surrounding pages are runtime-verified, but a real
 end-to-end payment on staging should confirm legitimate checkouts still complete before this
 reaches production.
+
+---
+
+## Order-time inventory — 2026-08-09
+
+Two defects on the path between "customer presses pay" and "order exists".
+
+### Lost updates on stock (fixed)
+
+The decrement wrote a computed absolute value:
+
+```php
+Product::where(['id' => $product['id']])->update([
+    'current_stock' => $product['current_stock'] - $cartSingleItem['quantity']
+]);
+```
+
+`current_stock` came from a model read earlier in the request, so two overlapping orders both read
+the same number and both wrote their own result — losing one decrement outright. Demonstrated
+against the running app:
+
+    stock 10, two orders of 3 each  ->  final stock 7   (should be 4)
+
+This is not a narrow race window. It fires whenever two orders overlap, and it inflates inventory
+in the store's favour, so the catalogue keeps advertising stock that does not exist.
+
+**Fixed** with `->decrement('current_stock', $qty)`, which issues
+`SET current_stock = current_stock - N` and is resolved per statement by the database. Verified:
+the same sequence now ends at 4.
+
+### The remaining gap — NOT fixed, and it needs a decision
+
+`generateOrder()` **is not wrapped in a transaction**, and `product_stock_check()` runs *before* it
+rather than as part of it. So:
+
+  * Between the check passing and the decrement landing, another order can consume the same stock.
+    The atomic decrement stops the arithmetic from being wrong, but it does not stop stock going
+    negative — nothing refuses the write.
+  * If anything throws midway through order generation, some stock is already decremented and some
+    order rows written, with no rollback.
+
+Closing this properly means wrapping order generation in a transaction and taking row locks
+(`lockForUpdate`) on the products being ordered, or making the decrement conditional
+(`where('current_stock', '>=', $qty)`) and aborting the order when it affects no rows.
+
+**I did not make that change**, and the reason is worth stating plainly rather than burying: it
+restructures the single most important path in the application, and this environment cannot
+exercise a real checkout end to end — there are no gateway credentials, and the flow needs
+addresses, shipping methods and a payment provider. Shipping an unverified rewrite of order
+placement is a worse risk than the race it fixes.
+
+**Recommendation:** do it as its own change, on staging, with a real checkout exercised before and
+after, and with a concurrency test (two simultaneous orders for the last unit) as the acceptance
+criterion.
+
+### Null variation crashed the checkout (fixed)
+
+`count(json_decode($product->variation))` is a TypeError on PHP 8 when `variation` is null — the
+same shape as the product-save crash fixed in Phase 1. Because `product_stock_check()` runs
+immediately before order placement, such a product did not block checkout, it **500'd** it, leaving
+the customer stuck at the final step.
