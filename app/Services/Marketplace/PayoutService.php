@@ -112,6 +112,12 @@ class PayoutService
             'review_note' => $note,
         ])->save();
 
+        app(\App\Services\AuditLogger::class)->record(
+            action: $approve ? 'payout.approved' : 'payout.under_review',
+            subject: $request,
+            context: ['reference' => $request->reference, 'amount' => $request->amount, 'seller_id' => $request->seller_id],
+        );
+
         return true;
     }
 
@@ -140,6 +146,12 @@ class PayoutService
                 'payment_reference' => $paymentReference,
                 'payout_entry_id' => $request->reserve_entry_id,
             ])->save();
+
+            app(\App\Services\AuditLogger::class)->record(
+                action: 'payout.paid',
+                subject: $request,
+                context: ['reference' => $request->reference, 'amount' => $request->amount, 'payment_reference' => $paymentReference],
+            );
 
             return true;
         });
@@ -197,7 +209,7 @@ class PayoutService
             return null;
         }
 
-        return VendorBankChangeLog::create([
+        $log = VendorBankChangeLog::create([
             'seller_id' => $sellerId,
             'previous' => $previous,
             'current' => $current,
@@ -206,6 +218,16 @@ class PayoutService
             'changed_by_type' => $changedByType,
             'ip_address' => $ip,
         ]);
+
+        app(\App\Services\AuditLogger::class)->record(
+            action: 'seller.bank_details_changed',
+            subject: ['type' => 'seller', 'id' => $sellerId],
+            before: $previous,
+            after: $current,
+            context: ['cooling_until' => $log->cooling_until?->toDateTimeString()],
+        );
+
+        return $log;
     }
 
     /** Is this seller inside a bank-change cooling window right now? */

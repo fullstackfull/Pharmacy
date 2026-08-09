@@ -466,6 +466,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
             Route::get('ledger/{sellerId}', 'ledger')->whereNumber('sellerId')->name('ledger');
         });
+
+        // The unified audit center (spec item 84). Read-only: no edit or delete path exists.
+        Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
+            Route::get('audit-log', 'index')->name('audit-log');
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

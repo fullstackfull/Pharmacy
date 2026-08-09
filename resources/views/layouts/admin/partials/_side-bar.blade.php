@@ -675,11 +675,22 @@
                         <li class="nav-item px-3 py-2 fw-semibold text-dark bg-section2 aside-mini-show-element">{{ translate('sales_&_Transaction_Report') }}</li>
                         @if (Route::has('admin.marketplace.settlements.index'))
                             <li>
-                                <a class="nav-link {{ Request::is('admin/marketplace/*') ? 'active' : '' }}"
+                                <a class="nav-link {{ Request::is('admin/marketplace/settlements*') || Request::is('admin/marketplace/ledger*') ? 'active' : '' }}"
                                    href="{{ route('admin.marketplace.settlements.index') }}"
                                    title="{{ translate('vendor_settlements') }}">
                                     <span class="text-truncate">
                                         {{ translate('vendor_settlements') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.audit-log'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/audit-log*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.audit-log') }}"
+                                   title="{{ translate('audit_log') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('audit_log') }}
                                     </span>
                                 </a>
                             </li>
