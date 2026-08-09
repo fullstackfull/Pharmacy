@@ -352,3 +352,69 @@ Remaining in Stage B: the payout *request* workflow (sellers asking to be paid, 
 marking a settlement paid) with maker-checker on bank-detail changes, and reconciliation against
 gateway records. Stages A, C, D, E and F remain untouched — Seller Center, KYC/onboarding, suppliers
 and purchasing, multi-warehouse, fulfilment and shipping, B2B, multi-market, and the integration hub.
+
+---
+
+# Phase 3, Stage B — Seller payouts over the ledger
+
+The platform already has `withdraw_requests`, but it runs over `seller_wallets` — the five mutable
+decimals — and validates nothing against a real available balance. This adds a payout flow over the
+ledger built in this stage, alongside the legacy one, which stays untouched.
+
+## What shipped
+
+* **A payout can only ask for what is withdrawable** — the running balance minus anything still
+  `pending`. Requesting **reserves** the amount as a `reserved` ledger debit, so the same money
+  cannot be requested twice and a settlement cannot pay it out from under a live request.
+* **Rejecting or cancelling releases the reservation** as a new credit, not a deletion — the ledger
+  still records that a payout was requested and did not go through.
+* **Paying requires approval** (maker-checker), then the reservation becomes a `paid` debit.
+* **The bank-change cooling period**, the control the specification names: changing a seller's bank
+  details is logged with a before/after snapshot and opens a window during which payouts are
+  refused — the standard defence against an account takeover that immediately redirects the money.
+* Seller UI at **vendor → Payouts**, showing the four buckets, the one number that matters
+  (withdrawable now), the request form (disabled at zero balance or during cooling), and the
+  seller's own requests with a cancel action.
+
+## A bug the tests caught in my own code
+
+The first `withdrawable()` was `available + reserved`. It passed every case until one: after a
+payout is *paid*, the earning credit keeps `available` status forever while the paid debit sits in
+its own bucket, so `available` overstates and a second request would see the full earning again and
+double-spend it. The correct formula is **balance − pending**, which nets holds and payouts alike
+while excluding money still in the return window. Found by the "full request→approve→pay" test
+asserting the wrong number, traced to the code rather than the test, fixed, and the reasoning
+written into the method.
+
+## Verified end to end, through the vendor panel, as a real seller session
+
+    seeded: seller 1, 600 available on the ledger
+
+    /vendor/business-settings/payouts   200   shows 600 withdrawable
+    request 250 (form POST)             302   PO-20260809-256E39, status requested, 250 reserved
+    withdrawable after reserve                350  (600 − 250 held)
+    request 400 (more than 350 left)    302   refused — still 1 request, not 2
+    bank change logged, then request    302   refused during cooling — still 1 request
+
+**13 payout-service tests**; suite at 462 tests, 1,078 assertions.
+
+Note: seller #1's password in the **local test database** was reset to run the login step of this
+verification. That database is never production; the reset is recorded here for transparency.
+
+## Stage B is now functionally complete for the core lifecycle
+
+    onboarded seller (legacy) -> order -> commission snapshot -> ledger -> settlement -> admin pays
+                                    |                              ^  |
+                                 refund reverses both sides ───────┘  └─> seller requests payout,
+                                                                          reserved, approved, paid
+
+Built across the stage: commission engine · commission snapshots · vendor ledger · settlement engine
+· refund reversal · admin settlement/ledger UI · seller payout flow with cooling period.
+
+Genuinely remaining in Stage B: reconciliation against payment-gateway records (matching internal
+payout/settlement rows to bank/gateway transactions), and wiring the cooling-period trigger into the
+*existing* bank-detail update path (`recordBankChange()` is ready; the seller profile controller does
+not call it yet). Stated plainly rather than left implied.
+
+Stages A, C, D, E and F remain untouched: Seller Center redesign, KYC/onboarding, suppliers and
+purchasing, multi-warehouse, fulfilment and shipping, B2B, multi-market, and the integration hub.

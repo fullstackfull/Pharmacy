@@ -128,6 +128,30 @@ class VendorLedger
     }
 
     /**
+     * The amount a seller can actually request a payout for, right now.
+     *
+     * It is the running balance minus anything still `pending`. That one formula handles every case
+     * the `available` bucket gets wrong on its own:
+     *
+     *   - a `reserved` payout hold is a debit, so it already lowers the balance;
+     *   - a `paid` payout is a debit, so it already lowers the balance;
+     *   - but the *earning* credit keeps `available` status forever, so the `available` bucket
+     *     overstates once any of it has been reserved or paid.
+     *
+     * Balance − pending nets the holds and the payouts while excluding money still in the return
+     * window. Worked through: earn 400, reserve 300 -> balance 100, pending 0 -> withdrawable 100;
+     * then pay it -> balance 100, pending 0 -> still 100 (the reserved-to-paid move changes nothing).
+     *
+     * Without this, a second payout request would see the full earning again and double-spend it.
+     */
+    public function withdrawable(int|string $sellerId, string $sellerIs = 'seller'): float
+    {
+        $balances = $this->balances($sellerId, $sellerIs);
+
+        return round($balances['balance'] - $balances['pending'], 4);
+    }
+
+    /**
      * Move entries from pending to available once their window has passed.
      *
      * Status is the only field an entry may ever change, and only along this one path: an earning

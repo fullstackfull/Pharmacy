@@ -2849,4 +2849,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"back_to_settlements" => "Back to settlements",
 	"settlement(s)_calculated_and_awaiting_approval" => "Settlement(s) calculated and awaiting approval",
 	"settlement_marked_paid" => "Settlement marked paid",
+	"no_payout_requests_yet" => "No payout requests yet",
+	"amount_exceeds_available_balance" => "Amount exceeds available balance",
+	"bank_details_recently_changed_payouts_are_temporarily_paused" => "Bank details recently changed payouts are temporarily paused",
 ];
