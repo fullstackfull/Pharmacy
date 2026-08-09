@@ -117,3 +117,197 @@ missing amount, near-miss amounts, and fail-closed when the gateway is unreachab
 credentials. The guards are unit-tested and the surrounding pages are runtime-verified, but a real
 end-to-end payment on staging should confirm legitimate checkouts still complete before this
 reaches production.
+
+---
+
+## Order-time inventory — 2026-08-09
+
+Two defects on the path between "customer presses pay" and "order exists".
+
+### Lost updates on stock (fixed)
+
+The decrement wrote a computed absolute value:
+
+```php
+Product::where(['id' => $product['id']])->update([
+    'current_stock' => $product['current_stock'] - $cartSingleItem['quantity']
+]);
+```
+
+`current_stock` came from a model read earlier in the request, so two overlapping orders both read
+the same number and both wrote their own result — losing one decrement outright. Demonstrated
+against the running app:
+
+    stock 10, two orders of 3 each  ->  final stock 7   (should be 4)
+
+This is not a narrow race window. It fires whenever two orders overlap, and it inflates inventory
+in the store's favour, so the catalogue keeps advertising stock that does not exist.
+
+**Fixed** with `->decrement('current_stock', $qty)`, which issues
+`SET current_stock = current_stock - N` and is resolved per statement by the database. Verified:
+the same sequence now ends at 4.
+
+### The remaining gap — NOT fixed, and it needs a decision
+
+`generateOrder()` **is not wrapped in a transaction**, and `product_stock_check()` runs *before* it
+rather than as part of it. So:
+
+  * Between the check passing and the decrement landing, another order can consume the same stock.
+    The atomic decrement stops the arithmetic from being wrong, but it does not stop stock going
+    negative — nothing refuses the write.
+  * If anything throws midway through order generation, some stock is already decremented and some
+    order rows written, with no rollback.
+
+Closing this properly means wrapping order generation in a transaction and taking row locks
+(`lockForUpdate`) on the products being ordered, or making the decrement conditional
+(`where('current_stock', '>=', $qty)`) and aborting the order when it affects no rows.
+
+**I did not make that change**, and the reason is worth stating plainly rather than burying: it
+restructures the single most important path in the application, and this environment cannot
+exercise a real checkout end to end — there are no gateway credentials, and the flow needs
+addresses, shipping methods and a payment provider. Shipping an unverified rewrite of order
+placement is a worse risk than the race it fixes.
+
+**Recommendation:** do it as its own change, on staging, with a real checkout exercised before and
+after, and with a concurrency test (two simultaneous orders for the last unit) as the acceptance
+criterion.
+
+### Null variation crashed the checkout (fixed)
+
+`count(json_decode($product->variation))` is a TypeError on PHP 8 when `variation` is null — the
+same shape as the product-save crash fixed in Phase 1. Because `product_stock_check()` runs
+immediately before order placement, such a product did not block checkout, it **500'd** it, leaving
+the customer stuck at the final step.
+
+---
+
+## Cart and checkout integrity — 2026-08-09
+
+The question this section answers: **can a customer control what they are charged?** Traced end to
+end, on the running app, on every path that reaches order creation.
+
+### Prices: server-derived (verified sound, no change needed)
+
+Cart lines never carry a client price. `CartManager::addToCart()` sets
+
+```php
+$price = $product->unit_price;              // or the chosen variation's price
+```
+
+and stores that. There is no `Cart::create($request->all())` anywhere, so there is no field a client
+can push a price through. Order lines then copy `$cartSingleItem['price']` — the server's own number.
+
+### Coupons: recomputed at placement, not trusted from the session (verified sound)
+
+Applying a coupon stores `coupon_discount` in the session, which looked like the classic
+trust-the-session bug. It is not. `getVendorWiseCartList()` calls `getTotalCouponAmount()` **again**
+at order-generation time with only the *code*, and recomputes the discount from the coupon row and
+the live cart. The session's amount is never read back into the total.
+
+The mobile path (`payment_request_from == 'app'`) does copy `$request['coupon_discount']` into
+`$additionalData`, which reads alarmingly — but that value is never used in any money calculation.
+The only `coupon_discount` that reaches an order row comes from the recomputation.
+
+The final charge is likewise server-computed:
+
+```php
+$paymentAmount = collect($vendorWiseCartList)->sum('order_amount_with_tax');
+```
+
+Coupon validation itself checks status, date window, per-customer binding, usage limit,
+first-order eligibility, vendor applicability and minimum purchase. **No change made — this is
+correct as written.** Recording it because "we checked and it holds" is a result, and the next
+person to read this file should not have to re-derive it.
+
+Known residual (not a charge-control bug): the usage-limit check counts prior orders, so two
+simultaneous checkouts can both pass a limit of 1. It belongs with the transactional-order-placement
+work above, not on its own.
+
+### Cross-account cart reads on the guest quantity endpoint (fixed)
+
+`POST /cart/updateQuantity-guest` looked the row up unscoped:
+
+```php
+$product = Cart::find($request['key']);
+```
+
+The *write* was already scoped — `update_cart_qty()` matches on `customer_id` — so an arbitrary key
+could not change somebody else's cart. But the response was then built from whatever row that key
+found. Scoped it to the requester, matching the pattern `removeFromCart()` already used.
+
+Verified against the running app with three sessions' rows present: a guest updating their own line
+succeeds with the full response shape intact; keys belonging to another guest and to a logged-in
+customer both return `Product not found in cart`, and both victims' rows are unchanged.
+
+### A deactivated product 500'd the same endpoint (fixed)
+
+```php
+$free_delivery_status = OrderManager::getFreeDeliveryOrderAmountArray($cart[0]->cart_group_id);
+```
+
+`getCartListQuery()` filters on `whereHas('product', active)`. So when the vendor deactivates the
+product a customer has in their cart, the collection comes back empty while the cart row still
+exists — and `$cart[0]` fatals.
+
+Reproduced before the fix, on the running app, by deactivating the only product in a live guest
+cart and updating the quantity:
+
+    {"message": "Undefined array key 0", "exception": "ErrorException"}     HTTP 500
+
+After: `HTTP 200`, with `free_delivery_status` still carrying every key the storefront JS reads —
+`getFreeDeliveryOrderAmountArray()` already treats a null group as "no free delivery", so passing
+`$cart->first()?->cart_group_id` through preserves the published response shape exactly rather than
+inventing a fallback array.
+
+---
+
+## Routes that answer 500 instead of 404 — 2026-08-09
+
+Found while checking that the checkout pages load: `GET /checkout-review` returned
+
+    {"message": "Method App\\Http\\Controllers\\Web\\WebController::checkout_review does not exist.",
+     "exception": "BadMethodCallException"}
+
+Laravel resolves `'Controller@method'` at request time, not at boot, so a route whose target was
+renamed or deleted stays registered and answers **500**, not 404. Nothing reports it, because
+nothing in the UI links to it.
+
+Audited all 1,579 registered routes for this. **19 were broken:**
+
+| Route | Target that no longer exists |
+|---|---|
+| `GET /checkout-review` | `WebController@checkout_review` |
+| `GET /top-rated`, `/best-sell`, `/new-product` | superseded by `top-rated-products` / `best-selling-products` |
+| `POST /user-account-picture` | `UserProfileController@user_picture` |
+| `GET /user-all-restock-request-delete/{ids}` | `UserProfileController@deleteAllRestockRequest` |
+| `POST /customer/choose-billing-address` | `SystemController@choose_billing_address` |
+| `GET /api/v1/customer/address/get/{id}` | `CustomerController@get_address` |
+| `GET /api/v2/delivery-man/order-list-by-date` | `DeliveryManController@order_list_date_filter` |
+| `GET /admin/pos/get-cart-items` | `POS\CartController@getCartItems` |
+| `GET /admin/report/earning` | `ReportController@earning_index` |
+| `POST /admin/stock/ps-filter` | `ProductStockReportController@filter` |
+| `GET /admin/pages-and-media/fetch` | `SocialMediaSettingsController@getList` |
+| `GET /admin/sub-category/update/{id}` | `SubCategoryController@getUpdateView` |
+| `POST /vendor/refund/refund-status-update` | duplicate of the working `update-status` route |
+| `POST /admin/blog/section-view` | `BlogController@sectionView` |
+| `Route::resource('ai', AIController::class)` | `store`, `update`, `destroy` |
+
+Every one was checked for a renamed equivalent before removal, and every one was checked for
+references. **None is linked from any working page**, which is precisely why they survived. Two
+points are worth being explicit about:
+
+* The two **API** routes were never implemented in this version — no method of any name serves
+  them. So no shipped mobile build can be relying on them working; they return 500 today. Turning
+  them into 404 cannot break a client that functions.
+* `Route::resource('ai', ...)` published **`/ai` unauthenticated** — a page titled
+  "AI Module - Laravel" rendering "Hello World", indexable, live on the store — while its siblings
+  `/ai/create`, `/ai/{id}` and `/ai/{id}/edit` returned 500. Module scaffold left in place. The AI
+  module's real surface is `admin/ai/*` and `customer/auction/product/*`, both untouched.
+
+Removed all 19. Verified after: storefront, product list, customer login, admin login
+(`/login/{loginUrl}`) and vendor login all still 200; `/ai`, `/checkout-review` and `/top-rated`
+now 404 rather than 200/500.
+
+`tests/Feature/RouteTargetsExistTest.php` makes this a standing invariant over every route in the
+application, so the rot cannot return quietly. The guard was proved by reintroducing
+`checkout-review` and watching it fail with the exact route named, then removing it again.

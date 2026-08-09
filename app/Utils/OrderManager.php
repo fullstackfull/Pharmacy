@@ -1084,9 +1084,19 @@ class OrderManager
                     'variation' => json_encode($variationData),
                 ]);
             }
-            Product::where(['id' => $product['id']])->update([
-                'current_stock' => $product['current_stock'] - $cartSingleItem['quantity']
-            ]);
+            // An atomic decrement, not a computed absolute value.
+            //
+            // This used to write `current_stock => $product['current_stock'] - $quantity`, where
+            // current_stock came from a model read earlier in the request. Two orders overlapping
+            // therefore both read the same number and both wrote their own absolute result, so one
+            // decrement was lost entirely. Demonstrated: stock 10, two orders of 3, final stock 7
+            // instead of 4.
+            //
+            // `decrement` issues `SET current_stock = current_stock - N`, which the database
+            // resolves per statement, so concurrent orders subtract from each other rather than
+            // overwriting each other. Inventory stops drifting upward, and the store stops showing
+            // stock it does not have.
+            Product::where(['id' => $product['id']])->decrement('current_stock', (int) $cartSingleItem['quantity']);
             $orderDetailsId = DB::table('order_details')->insertGetId($orderDetails);
 
             foreach ($vendorCart['applied_tax_cart_list'] as $cartItem) {

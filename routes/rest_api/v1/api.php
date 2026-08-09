@@ -277,7 +277,6 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
 
         Route::group(['prefix' => 'address'], function () {
             Route::controller(CustomerController::class)->group(function () {
-                Route::get('get/{id}', 'get_address');
             });
         });
 

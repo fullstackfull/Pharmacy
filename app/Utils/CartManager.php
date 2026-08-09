@@ -898,13 +898,17 @@ class CartManager
         foreach ($carts as $cart) {
             if ($cart->product) {
                 $product = $cart->product;
-                $count = count(json_decode($product->variation));
-                if ($count) {
-                    for ($i = 0; $i < $count; $i++) {
-                        if (json_decode($product->variation)[$i]->type == $cart['variant']) {
-                            if (json_decode($product->variation)[$i]->qty < $cart->quantity) {
-                                $status = false;
-                            }
+
+                // json_decode(null) returns null and count(null) is a TypeError on PHP 8. This runs
+                // immediately before an order is placed, so a product row with a null variation
+                // did not block the checkout — it crashed it, leaving the customer on a 500 at the
+                // last step with no way through.
+                $variations = json_decode($product->variation ?? '[]') ?: [];
+
+                if (count($variations)) {
+                    foreach ($variations as $variation) {
+                        if (($variation->type ?? null) == $cart['variant'] && ($variation->qty ?? 0) < $cart->quantity) {
+                            $status = false;
                         }
                     }
                 } else if (($product['product_type'] == 'physical') && $product['current_stock'] < $cart->quantity) {

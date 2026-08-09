@@ -161,7 +161,6 @@ Route::group(['namespace' => 'RestAPI\v2', 'prefix' => 'v2', 'middleware' => ['a
                 Route::put('update-fcm-token', 'update_fcm_token');
 
                 Route::get('delivery-wise-earned', 'delivery_wise_earned');
-                Route::get('order-list-by-date', 'order_list_date_filter');
                 Route::get('search', 'search');
                 Route::get('profile-dashboard-counts', 'profile_dashboard_counts');
                 Route::post('change-status', 'change_status');
