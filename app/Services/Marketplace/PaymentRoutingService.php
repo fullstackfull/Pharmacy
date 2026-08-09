@@ -58,6 +58,32 @@ class PaymentRoutingService
         return array_merge($preferred, $rest);
     }
 
+    /**
+     * Apply routing to a list of gateway *models* rather than bare codes.
+     *
+     * Each model's gateway code is read from `$codeAttribute` (default `key_name`, the storefront
+     * Setting field). The models are returned re-ordered and filtered by the same rules `resolve()`
+     * applies to codes — callers get their own models back, so a view iterating the collection (its
+     * `->key_name`, its `count()`) is untouched. With no active rule the models come back in their
+     * original order, so the caller behaves exactly as before it consulted this.
+     *
+     * @param  iterable $models  gateway models carrying a code attribute
+     * @return \Illuminate\Support\Collection
+     */
+    public function applyToModels($models, float $amount = 0.0, ?string $country = null, string $codeAttribute = 'key_name')
+    {
+        $models = collect($models);
+        if ($models->isEmpty()) {
+            return $models;
+        }
+
+        $codes = $models->pluck($codeAttribute)->filter()->values()->all();
+        $resolved = $this->resolve($codes, $amount, $country);
+
+        $byCode = $models->keyBy($codeAttribute);
+        return collect($resolved)->map(fn ($code) => $byCode->get($code))->filter()->values();
+    }
+
     /** The active rules, for display. */
     public function rules()
     {

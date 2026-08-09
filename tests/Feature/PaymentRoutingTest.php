@@ -106,4 +106,44 @@ class PaymentRoutingTest extends TestCase
 
         $this->assertSame($this->gateways, $this->svc->resolve($this->gateways, 100));
     }
+
+    /** Gateway *models* — the storefront shape — carrying a key_name the checkout view iterates. */
+    private function gatewayModels(): \Illuminate\Support\Collection
+    {
+        return collect($this->gateways)->map(fn ($code) => (object) ['key_name' => $code, 'is_active' => 1]);
+    }
+
+    public function test_apply_to_models_returns_the_models_unchanged_when_no_rule(): void
+    {
+        $resolved = $this->svc->applyToModels($this->gatewayModels(), 100, 'Syria');
+
+        $this->assertSame($this->gateways, $resolved->pluck('key_name')->all(), 'same codes, same order');
+        $this->assertIsObject($resolved->first(), 'model shape preserved for the view');
+    }
+
+    public function test_apply_to_models_drops_a_hidden_gateways_model(): void
+    {
+        $this->rule(['gateway_code' => 'paypal', 'action' => 'hide']);
+
+        $resolved = $this->svc->applyToModels($this->gatewayModels(), 100, 'Syria');
+
+        $this->assertNotContains('paypal', $resolved->pluck('key_name')->all());
+        $this->assertCount(3, $resolved);
+        $this->assertNull($resolved->firstWhere('key_name', 'paypal'));
+    }
+
+    public function test_apply_to_models_floats_a_preferred_gateways_model_to_the_front(): void
+    {
+        $this->rule(['gateway_code' => 'razor_pay', 'action' => 'prefer', 'priority' => 1]);
+
+        $resolved = $this->svc->applyToModels($this->gatewayModels(), 100);
+
+        $this->assertSame('razor_pay', $resolved->first()->key_name);
+        $this->assertCount(4, $resolved, 'nothing removed, only reordered');
+    }
+
+    public function test_apply_to_models_on_an_empty_list_returns_empty(): void
+    {
+        $this->assertTrue($this->svc->applyToModels(collect(), 100)->isEmpty());
+    }
 }
