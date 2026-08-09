@@ -9196,4 +9196,21 @@ return [
 	"per seller" => "لكل بائع",
 	"global total" => "الإجمالي العام",
 	"per settlement" => "لكل تسوية",
+
+	// Batch & expiry tracking (Phase 3, Stage C)
+	"batches_and_expiry" => "الدفعات والصلاحية",
+	"track_batch_expiry_and_write_off_expired_stock" => "تتبّع صلاحية الدفعات واشطب المخزون المنتهي",
+	"expiring_within_30_days" => "ينتهي خلال 30 يوماً",
+	"record_a_batch" => "تسجيل دفعة",
+	"batch_number" => "رقم الدفعة",
+	"batches_track_expiry_they_do_not_change_sellable_stock" => "الدفعات تتبّع الصلاحية ولا تغيّر المخزون القابل للبيع",
+	"batches" => "الدفعات",
+	"expiring" => "ينتهي قريباً",
+	"write_off" => "شطب",
+	"no_batches_yet" => "لا دفعات بعد",
+	"write_off_this_batch_from_sellable_stock" => "شطب هذه الدفعة من المخزون القابل للبيع",
+	"batch_recorded" => "سُجّلت الدفعة",
+	"batch_written_off" => "شُطبت الدفعة",
+	"batch_is_not_active" => "الدفعة غير نشطة",
+	"depleted" => "مُستنفَدة",
 ];

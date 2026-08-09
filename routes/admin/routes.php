@@ -577,6 +577,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         // Financial reconciliation (Stage E): read-only integrity checks over the ledger, commission
         // snapshots and settlements.
         Route::get('reconciliation', [\App\Http\Controllers\Admin\Marketplace\ReconciliationController::class, 'index'])->name('reconciliation');
+
+        // Batch & expiry tracking (Stage C): dated batches, expiry visibility, and write-off of
+        // expired stock through the inventory adjustment path.
+        Route::group(['prefix' => 'batches', 'as' => 'batches.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\BatchController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/write-off', 'writeOff')->whereNumber('id')->name('write-off');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

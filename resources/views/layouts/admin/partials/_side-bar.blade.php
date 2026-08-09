@@ -794,6 +794,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.batches.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/batches*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.batches.index') }}"
+                                   title="{{ translate('batches_and_expiry') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('batches_and_expiry') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
