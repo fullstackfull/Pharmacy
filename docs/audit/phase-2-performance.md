@@ -111,3 +111,62 @@ parse-and-execute rather than by request queueing.
   local `.woff` fallback that does not exist — a guaranteed 404 per page load whenever that CDN is
   unreachable, which for this store's customers it may often be. Fixing it properly means vendoring
   the font files.
+
+---
+
+## Follow-up: the four items listed above as "measured, not yet done"
+
+### Duplicate stylesheets (fixed)
+
+`home.blade.php` and `user-wallet.blade.php` re-linked `home.css` and `owl.carousel.min.css`, both
+of which `layouts/front-end/app.blade.php` already links globally — so they were downloaded and
+parsed twice. Three `<link>` tags removed. Verified in the browser: **23 CSS requests, none fetched
+more than once.**
+
+(The two `uicons` stylesheets still *appear* twice in the HTML — that is the `<noscript>` fallback
+added earlier. The browser fetches each exactly once, which the same check confirms.)
+
+### font-awesome's fonts came from a CDN with a broken local fallback (fixed)
+
+`font-awesome.min.css` pointed its `@font-face` at `stackpath.bootstrapcdn.com` for eot, woff2, ttf
+and svg, with exactly one non-CDN entry in the chain: `../fonts/fontawesome-webfont.woff` — **a file
+that does not exist**. So whenever that CDN was unreachable the browser walked the whole list and
+ended on a 404, on every page load, with the nine font-awesome icons the storefront uses rendering
+blank.
+
+Both font files are now vendored into `public/assets/front-end/fonts/` and the `@font-face` chain
+points at them. Verified in the browser: **zero failed requests** (was one per page load), and
+`.fa-sign-in` resolves to `font-family: FontAwesome` with its glyph set.
+
+### intl-tel-input and swiper — deliberately left alone
+
+The plan was to load these conditionally. Measuring first changed the answer:
+
+* **All 35 scripts are already at the end of `<body>`** — only Debugbar sits in `<head>`, and only
+  locally. They are not blocking the initial parse, so deferring them buys far less than the
+  Firebase change did, where the win came from 1.39 MB of parse-and-execute blocking
+  DOMContentLoaded.
+* **intl-tel-input is present on every storefront page measured**, not just the ones with a visible
+  phone field — the layout carries a login modal containing one.
+
+Splitting them per-page in a Blade layout this old means threading conditionals through every view
+that might contain a phone field or a carousel, and getting it wrong shows up as a dead input or a
+frozen slider rather than a slow page. Not worth it for a body-loaded script. Recorded as measured
+and declined, with the reason, rather than left ambiguous.
+
+### Google Fonts — checked, not an issue here
+
+`fonts.gstatic.com` appears 40 times across the CSS, which for a store whose customers may not
+reach Google reliably would matter. It does not: those references live in `google-apis.css` and
+`back-end/css/google-fonts.css`, **neither of which the storefront loads**. The fonts the storefront
+does use — Roboto, Open Sans, Inter — are already vendored under `assets/front-end/fonts/` and
+requested locally. No change made.
+
+### Net effect on the homepage
+
+| | v2.9 baseline | now |
+|---|---|---|
+| requests | 127 | **122** |
+| failed requests | 1 per page load | **0** |
+| DOMContentLoaded | 26,209 ms | **14,258 ms** |
+| duplicate stylesheet fetches | 2 | **0** |

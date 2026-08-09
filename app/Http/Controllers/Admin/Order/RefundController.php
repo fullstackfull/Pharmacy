@@ -139,6 +139,19 @@ class RefundController extends BaseController
                 $this->vendorWalletRepo->updateWhere(params: ['seller_id' => $order['seller_id']], data: ['total_earning' => $sellerWallet['total_earning'] - $refund['amount']]);
             }
             $this->refundTransactionRepo->add(data: $refundTransactionService->getData(request: $request, refund: $refund, order: $order));
+
+            // Reverse the marketplace's side of the refund on the vendor ledger.
+            //
+            // The wallet update just above subtracts the refunded amount from the seller's earnings
+            // and says nothing about the commission — so the marketplace kept its cut of a sale it
+            // gave back. This posts the refund as a debit and credits the commission on the
+            // refunded portion back, proportionally, as new ledger entries. Nothing is edited: the
+            // original earning and commission stay as they were.
+            app(\App\Services\Marketplace\RefundReversalService::class)->reverseForOrderLine(
+                orderDetailsId: $refund['order_details_id'],
+                refundedAmount: (float) $refund['amount'],
+                refundReference: $refund['id'],
+            );
         }
 
         if ($refund['status'] != 'refunded') {

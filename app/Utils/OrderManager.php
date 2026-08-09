@@ -1017,6 +1017,88 @@ class OrderManager
         ];
     }
 
+    /**
+     * Write the immutable commission snapshot for one order line (Phase 3, Stage B).
+     *
+     * Wrapped whole: marketplace accounting must never be the reason an order fails. If the table
+     * is absent because the migration has not run, or anything else goes wrong, the order still
+     * completes — the worst outcome is a line without a snapshot, which reconciliation can surface.
+     *
+     * The unique key on order_details_id makes this idempotent, so the order transaction retrying
+     * on a deadlock or an id collision cannot double-charge commission.
+     */
+    public static function recordOrderItemCommission(int|string $orderId, int|string $orderDetailsId, $cartItem, $product, float $netLineAmount): void
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('order_item_commissions')) {
+                return;
+            }
+
+            $sellerIs = $cartItem['seller_is'] ?? 'admin';
+            $sellerId = $cartItem['seller_id'] ?? null;
+
+            // `products.category_id` is the leaf category; category rules are matched against it.
+            $categoryId = $product['category_id'] ?? null;
+
+            $calculated = app(\App\Services\Marketplace\CommissionEngine::class)->calculate(
+                line: [
+                    'product_id' => $cartItem['product_id'] ?? ($product['id'] ?? null),
+                    'category_id' => $categoryId,
+                    'seller_id' => $sellerId,
+                    'seller_is' => $sellerIs,
+                ],
+                commissionableAmount: $netLineAmount,
+            );
+
+            $snapshot = \App\Models\OrderItemCommission::updateOrCreate(
+                ['order_details_id' => $orderDetailsId],
+                array_merge($calculated, [
+                    'order_id' => $orderId,
+                    'product_id' => $cartItem['product_id'] ?? ($product['id'] ?? null),
+                    'seller_id' => $sellerId,
+                    'seller_is' => $sellerIs,
+                    'commission_rule_id' => $calculated['rule_id'],
+                    'currency' => session('currency_code'),
+                ])
+            );
+
+            // The seller's side of the same event, on their ledger.
+            //
+            // Two entries, not one net figure: the sale and the marketplace's cut are separate
+            // business events, and netting them at write time destroys the ability to answer "how
+            // much did we charge this seller in commission last month?" without re-deriving it.
+            //
+            // They land as PENDING, because money owed during the return window is not money the
+            // seller can be paid. Nothing here moves it to available — that is the settlement
+            // engine's job, and it is not built yet.
+            if ($sellerIs === 'seller' && $sellerId) {
+                $ledger = app(\App\Services\Marketplace\VendorLedger::class);
+
+                $ledger->record(
+                    sellerId: $sellerId,
+                    entryType: \App\Models\VendorLedgerEntry::TYPE_ORDER_EARNING,
+                    credit: (float) $calculated['commissionable_amount'],
+                    referenceType: 'order_details',
+                    referenceId: $orderDetailsId,
+                    description: 'Order #' . $orderId,
+                );
+
+                if ((float) $calculated['commission_amount'] > 0) {
+                    $ledger->record(
+                        sellerId: $sellerId,
+                        entryType: \App\Models\VendorLedgerEntry::TYPE_COMMISSION_CHARGE,
+                        debit: (float) $calculated['commission_amount'],
+                        referenceType: 'order_details',
+                        referenceId: $orderDetailsId,
+                        description: $calculated['rule_label'] ?? 'Marketplace commission',
+                    );
+                }
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Commission snapshot failed for order detail ' . $orderDetailsId . ': ' . $exception->getMessage());
+        }
+    }
+
     public static function addOrderDetailsData(int $orderId, object|array|null $vendorCart = []): void
     {
         $orderDetailsRewardsData = [];
@@ -1154,6 +1236,23 @@ class OrderManager
             }
 
             $orderDetailsId = DB::table('order_details')->insertGetId($orderDetails);
+
+            // Freeze the commission for this line, here, inside the order transaction.
+            //
+            // Until now the only figure kept was one aggregate `orders.admin_commission`, derived
+            // from whatever the seller's percentage happened to be that day. Change the rate and
+            // there is no record of what an old order was charged under; refund one line of five
+            // and its commission cannot be netted off, because it was never a separate number.
+            //
+            // Written once and never recalculated: settlements and statements read this rather than
+            // re-deriving from live rules, which is the difference between accounting and guessing.
+            OrderManager::recordOrderItemCommission(
+                orderId: $orderId,
+                orderDetailsId: $orderDetailsId,
+                cartItem: $cartSingleItem,
+                product: $product,
+                netLineAmount: $finalAmount,
+            );
 
             foreach ($vendorCart['applied_tax_cart_list'] as $cartItem) {
                 if ($cartItem['cart_id'] == $cartSingleItem['id']) {
