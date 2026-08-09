@@ -816,6 +816,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.fulfillments.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/fulfillments*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.fulfillments.index') }}"
+                                   title="{{ translate('fulfilment') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('fulfilment') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"

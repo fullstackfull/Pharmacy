@@ -599,6 +599,17 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('transfer', 'transfer')->name('transfer');
             });
         });
+
+        // Fulfilment (Stage C): the pick/pack/ship workflow overlay — forward-only, never touches
+        // order status.
+        Route::group(['prefix' => 'fulfillments', 'as' => 'fulfillments.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\FulfillmentController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/advance', 'advance')->whereNumber('id')->name('advance');
+                Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

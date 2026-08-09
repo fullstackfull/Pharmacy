@@ -9246,4 +9246,21 @@ return [
 	"last_payout" => "آخر سحب",
 	"within_policy" => "ضمن السياسة",
 	"withdrawable" => "القابل للسحب",
+
+	// Order fulfilment — pick/pack/ship (Phase 3, Stage C)
+	"pick_pack_and_ship_orders_this_does_not_change_the_order_status" => "التقاط وتغليف وشحن الطلبات، وهذا لا يغيّر حالة الطلب",
+	"open_a_fulfilment" => "فتح تنفيذ",
+	"fulfilment_queue" => "طابور التنفيذ",
+	"no_fulfilments_yet" => "لا عمليات تنفيذ بعد",
+	"mark" => "تعليم",
+	"picking" => "التقاط",
+	"packed" => "مُغلَّف",
+	"ready" => "جاهز",
+	"shipped" => "مشحون",
+	"fulfilment_opened" => "فُتح التنفيذ",
+	"fulfilment_updated" => "حُدّث التنفيذ",
+	"fulfilment_canceled" => "أُلغي التنفيذ",
+	"fulfilment_is_already_closed" => "التنفيذ مُغلق أصلاً",
+	"a_fulfilment_can_only_move_forward" => "التنفيذ يتقدّم للأمام فقط",
+	"an_open_fulfilment_already_exists_for_this_order" => "يوجد تنفيذ مفتوح لهذا الطلب أصلاً",
 ];
