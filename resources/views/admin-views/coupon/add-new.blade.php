@@ -231,7 +231,7 @@
                                                     <strong>{{ $coupon['limit'] }}</strong>
                                                 </span>
 
-                                                <span class="ml-1">
+                                                <span class="ms-1">
                                                     {{translate('Total_Used')}}:
                                                     <strong>{{ $coupon['order_count'] }}</strong>
                                                 </span>

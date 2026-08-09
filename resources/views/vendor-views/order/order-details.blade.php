@@ -129,7 +129,7 @@
                                     @endif
                                     <a class="btn btn--primary btn-sm text-nowrap" target="_blank"
                                        href="{{ route('vendor.orders.generate-invoice', [$order['id']]) }}">
-                                        <i class="tio-print mr-1"></i> {{ translate('print__Invoice') }}
+                                        <i class="tio-print me-1"></i> {{ translate('print__Invoice') }}
                                     </a>
                                 </div>
                                 <div class="d-flex flex-column gap-2 mt-3">
@@ -921,7 +921,7 @@
                         </div>
                         <?php $disableDeliveryType = !$physicalProduct && $shippingAddress; ?>
                         @if($physicalProduct || $shippingAddress)
-                            <ul class="list-unstyled d-flex flex-column mb-0 pr-0">
+                            <ul class="list-unstyled d-flex flex-column mb-0 pe-0">
                                 @if ($order->shipping_type == 'order_wise')
                                     <li>
                                         <label class="font-weight-bold title-color fz-14 mb-2">
@@ -1888,7 +1888,7 @@
                             </ul>
                         </div>
 
-                        <div class="col-md-12 modal_body_map mt-5 pl-0 pr-0">
+                        <div class="col-md-12 modal_body_map mt-5 ps-0 pe-0">
                             <div class="mb-2">
                                 <img src="{{ dynamicAsset('assets/back-end/img/location-blue.png') }}" alt="">
                                 <span>{{ $shippingAddress ? $shippingAddress->address : ($billing ? $billing->address : '') }}</span>

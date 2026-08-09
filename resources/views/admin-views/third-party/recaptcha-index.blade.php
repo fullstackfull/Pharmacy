@@ -147,7 +147,7 @@
                                          src="{{dynamicAsset(path: 'public/assets/new/back-end/img/modal/google-analytics.png')}}"
                                          alt="">
                                     <h4 class="lh-md mb-3 text-capitalize">{{translate('google_recaptcha_instructions')}}</h4>
-                                    <ol class="pl-4 instructions-list">
+                                    <ol class="ps-4 instructions-list">
                                         <li>
                                             {{translate('to_get_site_key_and_secret_key_Go_to_the_Credentials_page')}}
                                             (<a href="https://www.google.com/recaptcha/admin/create"

@@ -1,7 +1,7 @@
 <div class="modal-header">
     <h5 class="modal-title" id="exampleModalLongTitle">
         {{ translate('history_of_Order_No') }}: {{ $histories[0]->order_id?? '##' }}
-        <span class="badge badge-soft-dark radius-50 fs-12 ml-1">{{ $histories->count() }}</span>
+        <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{ $histories->count() }}</span>
     </h5>
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
         <span aria-hidden="true">&times;</span>

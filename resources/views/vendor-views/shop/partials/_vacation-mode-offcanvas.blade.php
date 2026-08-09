@@ -47,7 +47,7 @@
                         <div
                             class="min-h-40 d-flex align-items-center flex-wrap gap-3 gap-sm-4 border rounded mb-2 px-3 py-1 bg-white user-select-none">
                             <div class="form-check d-flex align-items-center gap-5px">
-                                <input class="form-check-input radio--input mt-0 ml-0 position-static" type="radio"
+                                <input class="form-check-input radio--input mt-0 ms-0 position-static" type="radio"
                                     name="vacation_duration_type" id="duration_type2" value="until_change"
                                     {{ isset($shop['vacation_duration_type']) && $shop['vacation_duration_type'] == 'until_change' ? 'checked' : '' }}>
                                 <label class="form-check-label cursor-pointer" for="duration_type2">
@@ -55,7 +55,7 @@
                                 </label>
                             </div>
                             <div class="form-check d-flex align-items-center gap-5px">
-                                <input class="form-check-input radio--input mt-0 ml-0 position-static" type="radio"
+                                <input class="form-check-input radio--input mt-0 ms-0 position-static" type="radio"
                                     name="vacation_duration_type" id="duration_type1" value="one_day"
                                     {{ isset($shop['vacation_duration_type']) && $shop['vacation_duration_type'] == 'one_day' ? 'checked' : '' }}>
                                 <label class="form-check-label cursor-pointer" for="duration_type1">
@@ -63,7 +63,7 @@
                                 </label>
                             </div>
                             <div class="d-flex align-items-center gap-5px">
-                                <input class="form-check-input radio--input mt-0 ml-0 position-static" type="radio"
+                                <input class="form-check-input radio--input mt-0 ms-0 position-static" type="radio"
                                     name="vacation_duration_type" id="duration_type3" value="custom"
                                     {{ !isset($shop['vacation_duration_type']) || $shop['vacation_duration_type'] == 'custom' ? 'checked' : '' }}>
                                 <label class="form-check-label cursor-pointer" for="duration_type3">

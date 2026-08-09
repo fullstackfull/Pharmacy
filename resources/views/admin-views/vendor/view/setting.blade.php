@@ -18,7 +18,7 @@
         <div class="flex-between d-sm-flex row align-items-center justify-content-between mb-2 mx-1">
             <div>
                 @if ($seller->status=="pending")
-                    <div class="mt-4 pr-2">
+                    <div class="mt-4 pe-2">
                         <div class="flex-start">
                             <div class="mx-1"><h4><i class="fi fi-rr-shop"></i></h4></div>
                             <div><h4>{{translate('vendor_request_for_open_a_shop')}}.</h4></div>

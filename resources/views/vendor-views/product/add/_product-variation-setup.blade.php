@@ -74,7 +74,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group sku_combination py-3 mb-0" id="sku_combination"></div>
+                {{-- AJAX target for the variation table. table-responsive to match the update page,
+                     where the same five-column table is already scroll-contained. --}}
+                <div class="form-group sku_combination table-responsive py-3 mb-0" id="sku_combination"></div>
                 @include('vendor-views.product.add._color-wise-images')
             </div>
         </div>

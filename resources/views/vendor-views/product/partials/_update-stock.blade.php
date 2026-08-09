@@ -3,7 +3,7 @@
         <div class="avatar rounded avatar-70 border">
             <img class="avatar-img" src="{{ getStorageImages(path: $product->thumbnail_full_url, type:'backend-product') }}" alt="">
         </div>
-        <div class="ml-3">
+        <div class="ms-3">
             <div class="d-block">
                 <span class="line--limit-2 h5 text-hover-primary mb-2">
                {{ $product['name'] }}
@@ -25,7 +25,9 @@
         <div>
             <label class="form-label text-dark">{{ translate('Variations_Stock') }}</label>
             <div class="bg-white p-2 rounded">
-                <div class="sku_combination py-2" id="sku_combination">
+                {{-- table-responsive to match the vendor update page and the admin restock modal:
+                     this five-column table otherwise pushes the modal sideways. --}}
+                <div class="sku_combination table-responsive py-2" id="sku_combination">
                     @if($restockId)
                         @include('vendor-views.product.partials._edit-restock-combinations', ['combinations'=>json_decode($product['variation'], true)])
                         <input type="hidden" name="restock_id" id="" value="{{ $restockId }}">

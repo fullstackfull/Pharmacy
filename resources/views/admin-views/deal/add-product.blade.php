@@ -6,7 +6,7 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0 text-capitalize">
-                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/inhouse-product-list.png') }}" class="mb-1 mr-1" alt="">
+                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/inhouse-product-list.png') }}" class="mb-1 me-1" alt="">
                 {{ translate('add_new_product') }}
             </h2>
         </div>
@@ -38,7 +38,7 @@
                                             </button>
                                             <div class="dropdown-menu w-100 px-2">
                                                 <div class="search-form mb-3">
-                                                    <button type="button" class="btn"><i class="fi fi-rr-search"></i></button>
+                                                    <button type="button" class="btn" aria-label="{{ translate('search') }}"><i class="fi fi-rr-search"></i></button>
                                                     <input type="text" id="searchInput" autocomplete="off"
                                                            class="js-form-search form-control search-bar-input search-all-type-product"
                                                            data-deal-id="{{$deal_id}}"

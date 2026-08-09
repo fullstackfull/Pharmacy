@@ -19,7 +19,7 @@
             <div class="d-flex pb-0">
                 <a href="{{route('product',$product->slug)}}" class="w-100 rounded">
                     <img alt=""
-                         src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}">
+                         src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}" loading="lazy" width="300" height="300" decoding="async">
                 </a>
             </div>
 

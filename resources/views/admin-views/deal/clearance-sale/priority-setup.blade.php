@@ -257,7 +257,7 @@
                                                             @if (is_null($availableVendor) && in_array(0, $stockClearanceVendors))
                                                                 <li class="name d-flex gap-2">
                                                                     <span>
-                                                                        <img class="rounded-circle tag-image-20px" src="{{ getStorageImages(path: getInHouseShopConfig(key: 'image_full_url'), type: 'shop') }}">
+                                                                        <img class="rounded-circle tag-image-20px" alt="" src="{{ getStorageImages(path: getInHouseShopConfig(key: 'image_full_url'), type: 'shop') }}">
                                                                         {{ getInHouseShopConfig(key: 'name') }}
                                                                     </span>
                                                                     <span class="close-icon d-flex h-100 align-items-center justify-content-center lh-1" data-id="0"><i class="fi fi-rr-cross-small cursor-pointer"></i></span>
@@ -266,7 +266,7 @@
                                                             @elseif (!is_null($availableVendor) && in_array($availableVendor['id'], $stockClearanceVendors))
                                                                 <li class="name d-flex gap-2">
                                                                     <span>
-                                                                        <img class="rounded-circle tag-image-20px" src="{{ getStorageImages(path: $availableVendor['image_full_url'], type: 'shop') }}">
+                                                                        <img class="rounded-circle tag-image-20px" alt="" src="{{ getStorageImages(path: $availableVendor['image_full_url'], type: 'shop') }}">
                                                                         {{ $availableVendor['name'] }}
                                                                     </span>
                                                                     <span class="close-icon d-flex h-100 align-items-center justify-content-center lh-1" data-id="{{ $availableVendor['id'] }}"><i class="fi fi-rr-cross-small cursor-pointer"></i></span>

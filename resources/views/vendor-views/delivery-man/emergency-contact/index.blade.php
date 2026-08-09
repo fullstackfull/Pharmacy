@@ -56,13 +56,13 @@
                             <div class="col-auto">
                                 <h5>
                                     {{translate('contact_information_Table')}}
-                                    <span class="badge badge-soft-dark radius-50 fs-12 ml-1">{{ $contacts->count() }}</span>
+                                    <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{ $contacts->count() }}</span>
                                 </h5>
                             </div>
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <table id="datatable" class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-left">
+                        <table id="datatable" class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-start">
                             <thead class="thead-light thead-50 text-capitalize">
                             <tr>
                                 <th>{{translate('SL')}}</th>

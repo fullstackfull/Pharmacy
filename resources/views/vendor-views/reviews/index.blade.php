@@ -6,7 +6,7 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0 text-capitalize">
-                <img width="20" src="{{dynamicAsset(path: 'public/assets/back-end/img/product-review.png')}}" class="mb-1 mr-1"
+                <img width="20" src="{{dynamicAsset(path: 'public/assets/back-end/img/product-review.png')}}" class="mb-1 me-1"
                      alt="">
                 {{translate('product_reviews')}}
                         <span class="badge badge-soft-dark radius-50 fs-12">{{ $reviews->total() }}</span>
@@ -239,7 +239,7 @@
                                         <div class="d-flex flex-wrap gap-2">
                                             @if(count($review->attachment_full_url)>0)
                                                 @foreach ($review->attachment_full_url as $img)
-                                                    <a class="aspect-1 float-left overflow-hidden"
+                                                    <a class="aspect-1 float-start overflow-hidden"
                                                        href="{{ getStorageImages(path:$img,type: 'backend-basic') }}"
                                                        data-lightbox="review-gallery-modal{{ $review['id'] }}" >
                                                         <img width="45" class="rounded aspect-1 border"
@@ -255,7 +255,7 @@
                                         <input type="hidden" name="review_id" value="{{ $review['id'] }}">
                                         <textarea class="form-control text-area-max-min" rows="3" name="reply_text"
                                                   placeholder="{{ translate('Write_the_reply_of_the_product_review') }}...">{{ $review?->reply?->reply_text ?? '' }}</textarea>
-                                        <div class="text-right mt-4">
+                                        <div class="text-end mt-4">
                                             <button type="submit" class="btn btn--primary">
                                                 @if($review?->reply?->reply_text)
                                                     {{ translate('Update') }}

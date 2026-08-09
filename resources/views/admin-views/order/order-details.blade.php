@@ -134,7 +134,7 @@
 
                                     <a class="btn btn-primary btn-sm" target="_blank"
                                        href={{ route('admin.orders.generate-invoice', [$order['id']]) }}>
-                                        <img alt="" class="mr-1"
+                                        <img alt="" class="me-1"
                                              src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/icons/uil_invoice.svg') }}">
                                         {{translate('print_Invoice')}}
                                     </a>
@@ -1993,7 +1993,7 @@
                             </div>
 
                             @if(!empty((array) $shippingAddress))
-                                <div class="col-md-12 modal_body_map mt-5 pl-0 pr-0">
+                                <div class="col-md-12 modal_body_map mt-5 ps-0 pe-0">
                                     <div class="mb-2">
                                         <img src="{{ dynamicAsset('assets/new/back-end/img/location-blue.png') }}"
                                              alt="">

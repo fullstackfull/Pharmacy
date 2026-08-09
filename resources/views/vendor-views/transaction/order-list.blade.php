@@ -39,7 +39,7 @@
                                     </option>
 
                                     @foreach($customers as $customer)
-                                        <option class="text-left text-capitalize"
+                                        <option class="text-start text-capitalize"
                                                 value="{{ $customer->id }}" {{ $customer->id == $customer_id ? 'selected' : '' }}>
                                             {{ $customer->f_name.' '.$customer->l_name }}
                                         </option>

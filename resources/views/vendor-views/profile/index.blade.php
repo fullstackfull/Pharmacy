@@ -16,7 +16,7 @@
                     <div class="border-bottom d-flex gap-3 flex-wrap justify-content-between align-items-center px-4 py-3">
                         <div class="d-flex gap-2 align-items-center">
                             <img width="20" src="{{dynamicAsset(path: 'public/assets/back-end/img/bank.png')}}" alt="" />
-                            <h3 class="mb-0">{{translate('account_details')}} <span data-toggle="tooltip" data-placement="right" data-title="{{translate('update_your_bank_details_with_correct_information').'.'.translate('it_will_be_used_for_your_withdraw_request_transactions by admin').'.'}}"> <img src="{{ dynamicAsset(path: 'public/assets/installation/assets/img/svg-icons/info.svg') }}" alt="" class="svg ml-1"> </span></h3>
+                            <h3 class="mb-0">{{translate('account_details')}} <span data-toggle="tooltip" data-placement="right" data-title="{{translate('update_your_bank_details_with_correct_information').'.'.translate('it_will_be_used_for_your_withdraw_request_transactions by admin').'.'}}"> <img src="{{ dynamicAsset(path: 'public/assets/installation/assets/img/svg-icons/info.svg') }}" alt="" class="svg ms-1"> </span></h3>
                         </div>
                     </div>
                     <div class="card-body p-30">
@@ -37,17 +37,17 @@
                                             <li>
                                                 <span class="__w-100px">{{translate('bank_Name')}}</span>
                                                 <span>:</span>
-                                                <strong class="right pl-4">{{$vendor->bank_name ?? translate('no_data_found')}}</strong>
+                                                <strong class="right ps-4">{{$vendor->bank_name ?? translate('no_data_found')}}</strong>
                                             </li>
                                             <li>
                                                 <span class="__w-100px">{{translate('branch_Name')}}</span>
                                                 <span>:</span>
-                                                <strong class="right pl-4">{{$vendor->branch ?? translate('no_data_found')}}</strong>
+                                                <strong class="right ps-4">{{$vendor->branch ?? translate('no_data_found')}}</strong>
                                             </li>
                                             <li>
                                                 <span class="__w-100px">{{translate('account_Number')}}</span>
                                                 <span>:</span>
-                                                <strong class="right pl-4">{{$vendor->account_no ?? translate('no_data_found')}}</strong>
+                                                <strong class="right ps-4">{{$vendor->account_no ?? translate('no_data_found')}}</strong>
                                             </li>
                                         </ul>
                                     </div>

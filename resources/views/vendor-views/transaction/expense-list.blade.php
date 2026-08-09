@@ -58,7 +58,7 @@
                         <h4 class="subtitle">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $total_expense), currencyCode: getCurrencyCode()) }}</h4>
                         <h6 class="subtext">
                             <span>{{translate('total_Expense')}}</span>
-                            <span class="ml-2" data-toggle="tooltip" data-placement="top"
+                            <span class="ms-2" data-toggle="tooltip" data-placement="top"
                                   title="{{translate('free_delivery')}}, {{translate('coupon_discount_will_be_shown_here')}}">
                                 <img class="info-img" src="{{dynamicAsset(path: 'public/assets/back-end/img/info-circle.svg')}}"
                                      alt="img">
@@ -79,7 +79,7 @@
                         <h4 class="subtitle">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $coupon_discount), currencyCode: getCurrencyCode()) }}</h4>
                         <h6 class="subtext">
                             <span>{{translate('coupon_Discount')}}</span>
-                            <span class="ml-2" data-toggle="tooltip" data-placement="top"
+                            <span class="ms-2" data-toggle="tooltip" data-placement="top"
                                   title="{{translate('discount_on_purchase_and_first_order_coupon_amount_will_be_shown_here')}}">
                                 <img class="info-img" src="{{dynamicAsset(path: 'public/assets/back-end/img/info-circle.svg')}}"
                                      alt="img">

@@ -150,6 +150,56 @@ class ThemeBuilderApiContractTest extends TestCase
         $this->assertSame(422, $res->getStatusCode());
     }
 
+    /**
+     * Regression, and a destructive one: the endpoint used to return the schema only, so the
+     * builder's settings form fell back to defaults for every field. Because the autosave posts the
+     * WHOLE form, editing one field wrote defaults over every other setting on that section.
+     * Confirmed in a browser before fixing — a section saved with columns=2, padding_top=99 showed
+     * columns=6, padding_top=40 in the form.
+     */
+    public function test_section_schema_returns_the_sections_saved_settings(): void
+    {
+        $section = ThemeSection::create([
+            'theme_version_id' => $this->draft->id, 'page' => 'home', 'type' => 'category_grid',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['title' => 'Saved title', 'columns' => 2, 'padding_top' => 99],
+        ]);
+
+        $res = $this->controller->sectionSchema(\Illuminate\Http\Request::create('/', 'GET', [
+            'type' => 'category_grid', 'section_id' => $section->id,
+        ]));
+        $payload = json_decode($res->getContent(), true);
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertSame('Saved title', $payload['settings']['title']);
+        $this->assertSame(2, $payload['settings']['columns']);
+        $this->assertSame(99, $payload['settings']['padding_top']);
+    }
+
+    public function test_section_schema_without_a_section_id_returns_no_settings(): void
+    {
+        $res = $this->controller->sectionSchema(\Illuminate\Http\Request::create('/', 'GET', ['type' => 'category_grid']));
+        $payload = json_decode($res->getContent(), true);
+
+        $this->assertSame([], $payload['settings']); // adding a new section starts from defaults
+    }
+
+    /** A section_id whose type does not match must not leak another section's settings. */
+    public function test_section_schema_ignores_a_mismatched_section(): void
+    {
+        $section = ThemeSection::create([
+            'theme_version_id' => $this->draft->id, 'page' => 'home', 'type' => 'hero_banner',
+            'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 777],
+        ]);
+
+        $res = $this->controller->sectionSchema(\Illuminate\Http\Request::create('/', 'GET', [
+            'type' => 'category_grid', 'section_id' => $section->id,
+        ]));
+        $payload = json_decode($res->getContent(), true);
+
+        $this->assertSame([], $payload['settings']);
+    }
+
     public function test_delete_section_on_draft_works(): void
     {
         $section = ThemeSection::create([

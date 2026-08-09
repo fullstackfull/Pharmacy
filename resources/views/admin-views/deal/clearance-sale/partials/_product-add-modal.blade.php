@@ -31,7 +31,7 @@
                             </button>
                             <div class="dropdown-menu w-100 px-2">
                                 <div class="search-form mb-3">
-                                    <button type="button" class="btn"><i class="fi fi-rr-search"></i></button>
+                                    <button type="button" class="btn" aria-label="{{ translate('search') }}"><i class="fi fi-rr-search"></i></button>
                                     <input type="text" id="searchInput" autocomplete="off"
                                            class="form-control search-product-for-clearance-sale"
                                            placeholder="{{ translate('Search_Product') }}">

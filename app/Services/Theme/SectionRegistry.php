@@ -153,26 +153,42 @@ class SectionRegistry
         $clean = [];
 
         foreach ($schema as $key => $field) {
-            $value = $settings[$key] ?? $field['default'] ?? null;
-
-            $clean[$key] = match ($field['type']) {
-                'number'  => is_numeric($value) ? $value + 0 : ($field['default'] ?? null),
-                'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
-                'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
-                default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
-            };
+            $clean[$key] = $this->coerce($settings[$key] ?? $field['default'] ?? null, $field);
 
             // Responsive overrides: settings may carry key_tablet / key_mobile variants.
+            //
+            // These get the SAME coercion as the base value. They used to be copied through raw,
+            // which meant an override reached the storefront unvalidated while the base value was
+            // sanitised — the one path an attacker-controlled or corrupted value could take.
+            //
+            // An absent override is left absent rather than defaulted: the renderer treats a
+            // missing breakpoint key as "inherit the base value", so writing a default here would
+            // silently pin every section to its desktop value on tablet and mobile.
             if (!empty($field['responsive'])) {
                 foreach (['tablet', 'mobile'] as $breakpoint) {
                     $rKey = $key . '_' . $breakpoint;
-                    if (array_key_exists($rKey, $settings)) {
-                        $clean[$rKey] = $settings[$rKey];
+                    if (!array_key_exists($rKey, $settings)) {
+                        continue;
                     }
+                    if ($settings[$rKey] === null || $settings[$rKey] === '') {
+                        continue; // explicit "inherit"
+                    }
+                    $clean[$rKey] = $this->coerce($settings[$rKey], $field);
                 }
             }
         }
 
         return $clean;
+    }
+
+    /** Coerce one value to the type its schema field declares. */
+    private function coerce(mixed $value, array $field): mixed
+    {
+        return match ($field['type']) {
+            'number'  => is_numeric($value) ? $value + 0 : ($field['default'] ?? null),
+            'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
+            'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
+            default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
+        };
     }
 }

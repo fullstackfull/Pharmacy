@@ -117,7 +117,7 @@
                     </option>
                     @foreach($sellers as $seller)
                         @if($seller?->shop)
-                            <option class="text-left text-capitalize"
+                            <option class="text-start text-capitalize"
                                     value="{{ $seller->id }}" {{ $seller->id == request('seller_id') ? 'selected' : '' }}>
                                 {{ $seller?->shop?->name }}
                             </option>

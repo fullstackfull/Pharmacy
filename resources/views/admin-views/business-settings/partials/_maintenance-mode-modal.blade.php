@@ -5,7 +5,7 @@
             @csrf
             <div class="modal-header p-4 border-0 justify-content-between">
                 <h3 class="mb-0">
-                    <i class="tio-notifications-alert mr-1"></i>
+                    <i class="tio-notifications-alert me-1"></i>
                     {{ translate('System_Maintenance') }}
                 </h3>
                 <button type="button" class="close maintenance-cancel-button btn-close border-0 shadow-none fs-12"
@@ -23,7 +23,7 @@
                             <label
                                 class="d-flex justify-content-between align-items-center border rounded mb-2 px-3 py-2">
                                 <h5 class="mb-0">{{ translate('Maintenance_Mode') }}</h5>
-                                <label class="switcher ml-auto mb-0">
+                                <label class="switcher ms-auto mb-0">
                                     <input type="checkbox" class="switcher_input" name="maintenance_mode"
                                            id="maintenance-mode-checkbox" value="1"
                                         {{ $businessSetting['maintenance_mode'] ? 'checked' : '' }}>

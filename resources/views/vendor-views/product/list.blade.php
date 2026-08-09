@@ -9,7 +9,7 @@
             <h2 class="h1 mb-0 text-capitalize d-flex gap-2 align-items-center">
                 <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/inhouse-product-list.png') }}" alt="">
                 {{ translate($type=='new-request'?'pending_for_approval_products':($type=='approved'?'approved_products':'product_list')) }}
-                <span class="badge badge-soft-dark radius-50 fz-14 ml-1">
+                <span class="badge badge-soft-dark radius-50 fz-14 ms-1">
                     {{ $products->total() }}
                 </span>
             </h2>

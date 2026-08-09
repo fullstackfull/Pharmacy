@@ -18,7 +18,7 @@
                             <div class="col-lg-4">
                                 <h5>
                                     {{ translate('withdraw_Request_Table')}}
-                                    <span class="badge badge-soft-dark radius-50 fs-12 ml-1" id="withdraw-requests-count">{{ $withdrawRequests->total() }}</span>
+                                    <span class="badge badge-soft-dark radius-50 fs-12 ms-1" id="withdraw-requests-count">{{ $withdrawRequests->total() }}</span>
                                 </h5>
                             </div>
                             <div class="col-lg-8 mt-3 mt-lg-0 d-flex gap-3 justify-content-lg-end flex-xl-nowrap flex-wrap">

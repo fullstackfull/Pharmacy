@@ -45,7 +45,7 @@
                             <div class="card-header d-flex justify-content-between">
                                 <h5 class="mb-0 mt-3">{{ translate('features_Section').' '.'-'.' '.translate('middle') }}</h5>
                                 <span id="add-this-features-card-middle" class="btn btn-primary text-capitalize">
-                                    <i class="tio-add pr-2"></i>{{ translate('add_new') }}
+                                    <i class="tio-add pe-2"></i>{{ translate('add_new') }}
                                 </span>
                             </div>
                             <div class="card-body">
@@ -122,7 +122,7 @@
                         <div class="card-header d-flex justify-content-between">
                             <h5 class="mb-0 mt-3">{{ translate('features_Section').' '.'-'.' '.translate('bottom') }}</h5>
                             <span id="add-this-features-card-bottom" class="btn btn-primary text-capitalize">
-                                <i class="tio-add pr-2"></i>{{ translate('add_new') }}
+                                <i class="tio-add pe-2"></i>{{ translate('add_new') }}
                             </span>
                         </div>
                         <div class="card-body">

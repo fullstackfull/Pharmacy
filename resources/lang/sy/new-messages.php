@@ -192,4 +192,9 @@ return [
 	"vs_previous_period" => "مقارنة بالفترة السابقة",
 	"your_meta_description_will_appear_here" => "سيظهر وصف الميتا هنا",
 	"your_seo_title_will_appear_here" => "سيظهر عنوان SEO هنا",
+	"review_attachment" => "مرفق التقييم",
+	"selected_color" => "اللون المحدد",
+	"remove_image" => "إزالة الصورة",
+	"order_status_history" => "سجل حالات الطلب",
+	"search_menu" => "ابحث في القائمة",
 ];

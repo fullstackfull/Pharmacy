@@ -250,16 +250,84 @@
                 selectedId = el.dataset.id;
                 document.getElementById('tb-actions').classList.remove('d-none');
 
-                fetch(root.dataset.urlSchema + '?type=' + encodeURIComponent(el.dataset.type), {
+                // section_id matters: without it the response carries no saved settings and the form
+                // falls back to schema defaults, which the autosave would then write back over the
+                // merchant's configuration.
+                fetch(root.dataset.urlSchema
+                        + '?type=' + encodeURIComponent(el.dataset.type)
+                        + '&section_id=' + encodeURIComponent(selectedId), {
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 }).then(function (r) { return r.json(); }).then(function (data) {
-                    renderSettings(data.schema || {});
+                    renderSettings(data.schema || {}, data.settings || {});
                 });
             }
 
-            function renderSettings(schema) {
+            // Build one control. `value` is the SAVED value; the schema default is only the
+            // fallback when the section has never had that setting written.
+            function buildInput(field, key, value, optional) {
+                var input;
+                var resolved = (value === undefined || value === null) ? field.default : value;
+
+                // A breakpoint override needs a third state — "inherit the base value" — which a
+                // checkbox cannot express: unchecked would post false and hide the section on that
+                // device. So an optional boolean is a select, whose blank option means inherit.
+                if (field.type === 'boolean' && optional) {
+                    input = document.createElement('select');
+                    input.className = 'form-control form-control-sm';
+                    [['', '{{ translate('inherit') }}'], ['1', '{{ translate('visible') }}'], ['0', '{{ translate('hidden') }}']]
+                        .forEach(function (opt) {
+                            var o = document.createElement('option');
+                            o.value = opt[0]; o.textContent = opt[1];
+                            if (value !== undefined && value !== null && String(value) !== ''
+                                && opt[0] === ((value === true || value === 'true' || value === 1 || value === '1') ? '1' : '0')) {
+                                o.selected = true;
+                            }
+                            input.appendChild(o);
+                        });
+                } else if (field.type === 'boolean') {
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.checked = (resolved === true || resolved === 'true' || resolved === 1 || resolved === '1');
+                } else if (field.type === 'select' || field.type === 'source') {
+                    input = document.createElement('select');
+                    input.className = 'form-control form-control-sm';
+                    (field.options || []).forEach(function (opt) {
+                        var o = document.createElement('option');
+                        o.value = opt; o.textContent = opt;
+                        if (opt === resolved) o.selected = true;
+                        input.appendChild(o);
+                    });
+                } else if (field.type === 'textarea') {
+                    input = document.createElement('textarea');
+                    input.className = 'form-control form-control-sm';
+                    input.rows = 3;
+                    input.value = (resolved === null || resolved === undefined) ? '' : resolved;
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.type === 'number' ? 'number' : (field.type === 'color' ? 'color' : 'text');
+                    input.className = 'form-control form-control-sm';
+                    if (resolved !== null && resolved !== undefined) input.value = resolved;
+                    // A colour input cannot hold "no colour" — it reports #000000 when empty, so an
+                    // untouched empty colour would be saved as black. Mark it and drop it on collect
+                    // unless the merchant actually picks something.
+                    if (field.type === 'color' && (resolved === null || resolved === undefined || resolved === '')) {
+                        input.dataset.unset = '1';
+                    }
+                }
+
+                input.dataset.key = key;
+                input.disabled = !editable;
+                input.addEventListener('input', function () { delete input.dataset.unset; dirty = true; scheduleAutosave(); });
+                input.addEventListener('change', function () { delete input.dataset.unset; dirty = true; scheduleAutosave(); });
+                return input;
+            }
+
+            function renderSettings(schema, settings) {
+                settings = settings || {};
                 var host = document.getElementById('tb-settings');
                 host.innerHTML = '';
+
                 Object.keys(schema).forEach(function (key) {
                     var field = schema[key];
                     var wrap = document.createElement('div');
@@ -268,38 +336,38 @@
                     var label = document.createElement('label');
                     label.textContent = field.label || key;
                     wrap.appendChild(label);
+                    wrap.appendChild(buildInput(field, key, settings[key]));
 
-                    var input;
-                    if (field.type === 'boolean') {
-                        input = document.createElement('input');
-                        input.type = 'checkbox';
-                        input.className = 'form-check-input';
-                        input.checked = !!field.default;
-                    } else if (field.type === 'select' || field.type === 'source') {
-                        input = document.createElement('select');
-                        input.className = 'form-control form-control-sm';
-                        (field.options || []).forEach(function (opt) {
-                            var o = document.createElement('option');
-                            o.value = opt; o.textContent = opt;
-                            if (opt === field.default) o.selected = true;
-                            input.appendChild(o);
-                        });
-                    } else if (field.type === 'textarea') {
-                        input = document.createElement('textarea');
-                        input.className = 'form-control form-control-sm';
-                        input.rows = 3;
-                        input.value = field.default || '';
-                    } else {
-                        input = document.createElement('input');
-                        input.type = field.type === 'number' ? 'number' : (field.type === 'color' ? 'color' : 'text');
-                        input.className = 'form-control form-control-sm';
-                        if (field.default !== null && field.default !== undefined) input.value = field.default;
+                    // Responsive fields get a value per breakpoint. The renderer already falls back
+                    // to the base value when a breakpoint is blank, so leaving these empty is the
+                    // "same on every device" case and costs nothing.
+                    if (field.responsive) {
+                        var group = document.createElement('div');
+                        group.className = 'row g-1 mt-1';
+
+                        [['tablet', '{{ translate('tablet') }}'], ['mobile', '{{ translate('mobile') }}']]
+                            .forEach(function (bp) {
+                                var col = document.createElement('div');
+                                col.className = 'col-6';
+
+                                var sub = document.createElement('label');
+                                sub.className = 'text-muted';
+                                sub.style.fontSize = '.7rem';
+                                sub.textContent = bp[1];
+                                col.appendChild(sub);
+
+                                var rKey = key + '_' + bp[0];
+                                // no default for an override: blank means "inherit the base value"
+                                var rField = Object.assign({}, field, {default: null});
+                                var rInput = buildInput(rField, rKey, settings[rKey], true);
+                                rInput.dataset.optional = '1';
+                                col.appendChild(rInput);
+                                group.appendChild(col);
+                            });
+
+                        wrap.appendChild(group);
                     }
-                    input.dataset.key = key;
-                    input.disabled = !editable;
-                    input.addEventListener('input', function () { dirty = true; scheduleAutosave(); });
-                    input.addEventListener('change', function () { dirty = true; scheduleAutosave(); });
-                    wrap.appendChild(input);
+
                     host.appendChild(wrap);
                 });
             }
@@ -307,7 +375,11 @@
             function collectSettings() {
                 var out = {};
                 document.querySelectorAll('#tb-settings [data-key]').forEach(function (el) {
-                    out[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
+                    if (el.dataset.unset === '1') return;              // untouched empty colour
+                    var value = el.type === 'checkbox' ? el.checked : el.value;
+                    // A blank breakpoint override means "inherit", not "set to empty".
+                    if (el.dataset.optional === '1' && value === '') return;
+                    out[el.dataset.key] = value;
                 });
                 return out;
             }

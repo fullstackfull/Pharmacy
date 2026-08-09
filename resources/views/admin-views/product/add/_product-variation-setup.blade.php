@@ -74,7 +74,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group sku_combination py-3 mb-0" id="sku_combination"></div>
+                {{-- AJAX target for the variation table. table-responsive to match the edit/update
+                     pages: the same five-column table is scroll-contained there, so without this a
+                     merchant defining several variations makes the ADD page scroll sideways. --}}
+                <div class="form-group sku_combination table-responsive py-3 mb-0" id="sku_combination"></div>
                 @include('admin-views.product.add._color-wise-images')
             </div>
         </div>

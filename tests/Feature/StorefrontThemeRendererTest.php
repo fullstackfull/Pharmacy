@@ -156,6 +156,46 @@ class StorefrontThemeRendererTest extends TestCase
         $this->assertSame(2, $this->renderer->responsiveValue($settings, 'columns', 'mobile'));
     }
 
+    /**
+     * Breakpoint overrides used to be copied through the registry raw while the base value was
+     * coerced — so an override was the one path an unvalidated value could take to the storefront.
+     */
+    public function test_responsive_overrides_are_coerced_like_the_base_value(): void
+    {
+        $version = $this->publishedVersion();
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'category_grid',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['columns' => '4', 'columns_mobile' => '2', 'columns_tablet' => 'not-a-number'],
+        ]);
+
+        $settings = $this->renderer->sectionsFor('home')[0]['settings'];
+
+        $this->assertSame(4, $settings['columns']);
+        $this->assertSame(2, $settings['columns_mobile']);              // coerced to int, not "2"
+        $this->assertSame(6, $settings['columns_tablet']);              // garbage falls back to the default
+    }
+
+    /**
+     * A blank override means "inherit", so it must NOT be stored — writing a default there would
+     * silently pin every section to its desktop value on tablet and mobile.
+     */
+    public function test_blank_overrides_are_dropped_so_the_base_value_is_inherited(): void
+    {
+        $version = $this->publishedVersion();
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'category_grid',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['columns' => 4, 'columns_mobile' => '', 'columns_tablet' => null],
+        ]);
+
+        $settings = $this->renderer->sectionsFor('home')[0]['settings'];
+
+        $this->assertArrayNotHasKey('columns_mobile', $settings);
+        $this->assertArrayNotHasKey('columns_tablet', $settings);
+        $this->assertSame(4, $this->renderer->responsiveValue($settings, 'columns', 'mobile'));
+    }
+
     // ---- caching / invalidation ----
 
     public function test_publishing_invalidates_the_storefront_cache(): void

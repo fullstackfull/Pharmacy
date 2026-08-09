@@ -96,7 +96,7 @@
                             <strong class="text-danger">{{ $canceled_order }}</strong>
                             <div class="d-flex gap-2 align-items-center justify-content-center">
                                 <span>{{translate('canceled')}}</span>
-                                <span class="ml-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of')}} {{translate('failed_to_deliver')}}, {{translate('canceled')}}, {{translate('and')}} {{translate('returned_orders')}}">
+                                <span class="ms-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of')}} {{translate('failed_to_deliver')}}, {{translate('canceled')}}, {{translate('and')}} {{translate('returned_orders')}}">
                                       <i class="fi fi-rr-info"></i>
                                 </span>
                             </div>
@@ -105,7 +105,7 @@
                             <strong class="text-primary">{{ $ongoing_order }}</strong>
                             <div class="d-flex gap-2 align-items-center justify-content-center">
                                 <span>{{translate('ongoing')}}</span>
-                                <span class="ml-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of')}} {{translate('pending')}}, {{translate('confirmed')}}, {{translate('packaging')}}, {{translate('out_for_delivery_orders')}}">
+                                <span class="ms-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of')}} {{translate('pending')}}, {{translate('confirmed')}}, {{translate('packaging')}}, {{translate('out_for_delivery_orders')}}">
                                       <i class="fi fi-rr-info"></i>
                                 </span>
                             </div>
@@ -114,7 +114,7 @@
                             <strong class="text-success">{{ $delivered_order }}</strong>
                             <div class="d-flex gap-2 align-items-center justify-content-center">
                                 <span>{{translate('completed')}}</span>
-                                <span class="ml-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of_delivered_orders')}}">
+                                <span class="ms-2" data-bs-toggle="tooltip" data-bs-title="{{translate('this_count_is_the_summation_of_delivered_orders')}}">
                                       <i class="fi fi-rr-info"></i>
                                 </span>
                             </div>
@@ -158,7 +158,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h3 class="mb-0 mr-auto">
+                    <h3 class="mb-0 me-auto">
                         {{ translate('total_Vendor') }}
                         <span class="badge badge-info text-bg-info">{{ $orders->total() }}</span>
                     </h3>
