@@ -9328,4 +9328,23 @@ return [
 	"manual" => "يدوي",
 	"bulk" => "دُفعة",
 	"api" => "واجهة برمجية",
+
+	// Payment orchestration (Phase 3, Stage E)
+	"payment_routing" => "توجيه المدفوعات",
+	"payment_orchestration" => "تنسيق المدفوعات",
+	"hide_or_prefer_gateways_by_amount_and_country_no_rule_means_the_gateways_are_offered_as_today" => "إخفاء بوّابات أو تفضيلها حسب المبلغ والدولة، وبلا قاعدة تُعرَض كما اليوم",
+	"add_rule" => "إضافة قاعدة",
+	"hide" => "إخفاء",
+	"prefer" => "تفضيل",
+	"min_amount" => "أدنى مبلغ",
+	"max_amount" => "أقصى مبلغ",
+	"any" => "أي",
+	"resolution_preview" => "معاينة النتيجة",
+	"gateways_offered_in_order" => "البوّابات المعروضة بالترتيب",
+	"conditions" => "الشروط",
+	"always" => "دائماً",
+	"no_rules_yet_gateways_are_offered_as_today" => "لا قواعد بعد، البوّابات تُعرَض كما اليوم",
+	"routing_rule_created" => "أُنشئت قاعدة التوجيه",
+	"routing_rule_updated" => "حُدّثت قاعدة التوجيه",
+	"routing_rule_deleted" => "حُذفت قاعدة التوجيه",
 ];

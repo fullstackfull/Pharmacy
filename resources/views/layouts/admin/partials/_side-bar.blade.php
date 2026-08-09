@@ -849,6 +849,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.payment-routing.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/payment-routing*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.payment-routing.index') }}"
+                                   title="{{ translate('payment_orchestration') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('payment_orchestration') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.customer-groups.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/customer-groups*') ? 'active' : '' }}"

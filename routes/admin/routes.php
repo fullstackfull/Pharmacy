@@ -622,6 +622,17 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // Payment orchestration (Stage E): gateway routing rules — hide or prefer a gateway by amount
+        // or country. Non-breaking: no rule leaves the offered gateways unchanged.
+        Route::group(['prefix' => 'payment-routing', 'as' => 'payment-routing.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\PaymentRoutingController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+
         // Exchange-rate governance (Stage E): bulk rate update + audited change history over the
         // platform's existing currencies. Conversion itself is unchanged.
         Route::group(['prefix' => 'exchange-rates', 'as' => 'exchange-rates.'], function () {
