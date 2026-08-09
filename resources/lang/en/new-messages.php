@@ -2692,4 +2692,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"prefix" => "Prefix",
 	"source" => "Source",
 	"Edit_Redirect" => "Edit Redirect",
+	"duplicate" => "Duplicate",
+	"hide_show" => "Hide show",
 ];
