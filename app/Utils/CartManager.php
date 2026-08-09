@@ -737,25 +737,60 @@ class CartManager
         }
 
         $product = Product::find($cart['product_id']);
-        $count = count(json_decode($product->variation));
+
+        // Reject anything that is not a positive whole number BEFORE the stock checks below.
+        //
+        // Those checks only ask "is the requested quantity larger than stock?", which a negative
+        // number passes trivially — so a quantity of -50 was stored as-is and cart_grand_total()
+        // multiplied it by the unit price. Measured on a real cart: two items totalling 6,100
+        // became -276,950 once one line was set to -50. The customer controls the sign, and
+        // therefore the total.
+        //
+        // add_to_cart() was never exposed: its minimum_order_qty check (1 > -50) already refused
+        // these. Only the update path was missing the guard.
+        $requestedQuantity = filter_var($request->quantity, FILTER_VALIDATE_INT);
+        if ($requestedQuantity === false || $requestedQuantity < 1) {
+            return [
+                'status' => 0,
+                'qty' => $cart['quantity'],
+                'message' => translate('Minimum_order_quantity') . ' ' . max(1, (int) $product?->minimum_order_qty),
+            ];
+        }
+
+        // The minimum is enforced when adding to the cart; without it here, a customer could add the
+        // required 5 and then edit the line down to 1.
+        $minimumOrderQty = max(1, (int) ($product->minimum_order_qty ?? 1));
+        if ($requestedQuantity < $minimumOrderQty) {
+            return [
+                'status' => 0,
+                'qty' => $cart['quantity'],
+                'message' => translate('Minimum_order_quantity') . ' ' . $minimumOrderQty,
+            ];
+        }
+
+        // json_decode(null) returns null, and count(null) is a TypeError on PHP 8 — the same shape
+        // as the product-save crash fixed in Phase 1. A product row with a null variation would
+        // take down the cart page rather than update a quantity.
+        $variations = json_decode($product->variation ?? '[]') ?: [];
+        $count = count($variations);
         if ($count) {
-            for ($i = 0; $i < $count; $i++) {
-                if (json_decode($product->variation)[$i]->type == $cart['variant']) {
-                    if (json_decode($product->variation)[$i]->qty < $request->quantity) {
-                        $status = 0;
-                        $qty = $cart['quantity'];
-                    }
+            foreach ($variations as $variation) {
+                if (($variation->type ?? null) == $cart['variant'] && ($variation->qty ?? 0) < $requestedQuantity) {
+                    $status = 0;
+                    $qty = $cart['quantity'];
                 }
             }
-        } else if (($product['product_type'] == 'physical') && $product['current_stock'] < $request->quantity) {
+        } else if (($product['product_type'] == 'physical') && $product['current_stock'] < $requestedQuantity) {
             $status = 0;
             $qty = $cart['quantity'];
         }
 
         if ($status) {
-            $qty = $request->quantity;
-            $cart['quantity'] = $request->quantity;
-            $cart['shipping_cost'] = $product->product_type == 'physical' ? CartManager::get_shipping_cost_for_product_category_wise($product, $request->quantity) : 0;
+            // The validated integer, not the raw request value — otherwise "3abc" would pass the
+            // checks as 3 and then be stored verbatim.
+            $qty = $requestedQuantity;
+            $cart['quantity'] = $requestedQuantity;
+            $cart['shipping_cost'] = $product->product_type == 'physical' ? CartManager::get_shipping_cost_for_product_category_wise($product, $requestedQuantity) : 0;
         }
 
         $cart->save();
