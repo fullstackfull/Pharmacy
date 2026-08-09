@@ -314,6 +314,12 @@ Route::group(['prefix' => 'cart', 'as' => 'cart.', 'namespace' => 'Web'], functi
         Route::post('select-cart-items', 'updateCheckedCartItems')->name('select-cart-items');
         Route::post('product-restock-request', 'addProductRestockRequest')->name('product-restock-request');
     });
+
+    // The link inside the abandoned-cart email. `signed` is what makes the reminder id in the URL
+    // safe to trust: without it anyone could walk the sequence and mark other people's reminders.
+    Route::get('recover/{reminder}', [\App\Http\Controllers\Web\AbandonedCartRecoveryController::class, 'recover'])
+        ->name('recover')
+        ->middleware('signed');
 });
 
 Route::group(['prefix' => 'coupon', 'as' => 'coupon.', 'namespace' => 'Web'], function () {

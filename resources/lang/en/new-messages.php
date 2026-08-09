@@ -2756,4 +2756,12 @@ ____________________________________________________on_search_engines_and_see_th
 	"page_structure" => "Page structure",
 	"footer" => "Footer",
 	"Minimum_order_quantity" => "Minimum order quantity",
+	"Forbidden" => "Forbidden",
+	"you_left_something_in_your_cart" => "You left something in your cart",
+	"the_items_below_are_still_waiting_for_you" => "The items below are still waiting for you",
+	"return_to_my_cart" => "Return to my cart",
+	"prices_and_availability_are_confirmed_at_checkout" => "Prices and availability are confirmed at checkout",
+	"you_are_receiving_this_because_you_left_items_in_your_cart_on_our_store" => "You are receiving this because you left items in your cart on our store",
+	"abandoned_cart_recovery" => "Abandoned cart recovery",
+	"settings_updated_successfully" => "Settings updated successfully",
 ];
