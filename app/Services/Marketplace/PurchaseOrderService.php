@@ -124,8 +124,24 @@ class PurchaseOrderService
             if ($item->product_id && Schema::hasTable('products')) {
                 $locked = DB::table('products')->where('id', $item->product_id)->lockForUpdate()->first();
                 if ($locked) {
+                    $newStock = (int) $locked->current_stock + $qty;
                     DB::table('products')->where('id', $item->product_id)
-                        ->update(['current_stock' => (int) $locked->current_stock + $qty, 'updated_at' => now()]);
+                        ->update(['current_stock' => $newStock, 'updated_at' => now()]);
+
+                    // Log the receipt into the stock-movement history so the increase has a reason and
+                    // a reference back to this PO. Non-throwing: a missing log line must not roll back
+                    // the receipt.
+                    app(InventoryService::class)->record(
+                        productId: $item->product_id,
+                        type: \App\Models\StockMovement::TYPE_RECEIPT,
+                        qtyChange: $qty,
+                        balanceAfter: $newStock,
+                        referenceType: 'purchase_order',
+                        referenceId: $po->id,
+                        sellerId: $po->seller_id,
+                        createdBy: $receivedBy,
+                        createdByType: 'admin',
+                    );
                 }
             }
 

@@ -542,6 +542,15 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
             });
         });
+
+        // Inventory adjustments + movement log (Stage C): reasoned stock changes with an auditable
+        // history, seeded here and by purchase-order receipts.
+        Route::group(['prefix' => 'inventory-adjustments', 'as' => 'inventory-adjustments.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\InventoryAdjustmentController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('adjust', 'adjust')->name('adjust');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

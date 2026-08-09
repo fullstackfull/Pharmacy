@@ -750,6 +750,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.inventory-adjustments.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/inventory-adjustments*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.inventory-adjustments.index') }}"
+                                   title="{{ translate('inventory_adjustments') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('inventory_adjustments') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
