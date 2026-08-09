@@ -117,7 +117,9 @@
                             </div>
                         </div>
 
-                        @if(isset($recaptcha) && $recaptcha['status'] == 1)
+                        {{-- Captcha disabled by product decision (see RecaptchaService::verificationStatus). Login
+                             forms are rate limited instead. Restore by reverting this condition. --}}
+                        @if(false)
                             <div class="dynamic-default-and-recaptcha-section">
                                 <input type="hidden" name="g-recaptcha-response" class="render-grecaptcha-response" data-action="login"
                                        data-input="#login-default-captcha-section"
