@@ -158,7 +158,13 @@ class BkashPaymentController extends Controller
         curl_close($url);
         $obj = json_decode($resultdata);
 
-        if ($obj->statusCode == '0000') {
+        $paymentRecord = $this->payment::where(['id' => $request['payment_id']])->first();
+
+        // A successful execute proves the bKash payment is real; it does NOT prove it belongs to
+        // this order. paymentID and payment_id are both caller-supplied, so without the checks
+        // below a genuine small payment could settle any other, more expensive order — and with no
+        // is_paid guard, the same one could be replayed indefinitely.
+        if ($obj->statusCode == '0000' && $paymentRecord && $this->executedPaymentMatches($obj, $paymentRecord)) {
 
             $this->payment::where(['id' => $request['payment_id']])->update([
                 'payment_method' => 'bkash',
@@ -182,6 +188,39 @@ class BkashPaymentController extends Controller
         }
     }
 
+    /**
+     * Confirm an executed bKash payment is for THIS payment record and has not already settled it.
+     *
+     * bKash's execute response carries the amount and currency actually paid, which is what makes
+     * this checkable at all: statusCode 0000 only says "a payment happened", not "the right payment
+     * happened for the right order".
+     *
+     * Fails closed — a response missing the amount is treated as unverified rather than trusted.
+     */
+    private function executedPaymentMatches(object $executed, object $payment): bool
+    {
+        if ((int) $payment->is_paid === 1) {
+            return false; // already settled; refuse the replay
+        }
 
+        if (!isset($executed->amount)) {
+            return false;
+        }
+
+        // Compared in minor units so float representation cannot make 99.999999 equal 100.
+        $paidMinor = (int) round(((float) $executed->amount) * 100);
+        $expectedMinor = (int) round(((float) $payment->payment_amount) * 100);
+        if ($paidMinor !== $expectedMinor) {
+            return false;
+        }
+
+        $paidCurrency = strtolower((string) ($executed->currency ?? ''));
+        $expectedCurrency = strtolower((string) ($payment->currency_code ?? ''));
+        if ($paidCurrency !== '' && $expectedCurrency !== '' && $paidCurrency !== $expectedCurrency) {
+            return false;
+        }
+
+        return true;
+    }
 }
 

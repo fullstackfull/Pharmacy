@@ -61,3 +61,59 @@ The other 12 gateways do verify against the gateway before settling: PayPal capt
 SenangPay and MercadoPago all make a verification call or validate a signature/checksum. **They were
 not audited for the same session↔payment binding weakness** — that is the recommended next P0 sweep,
 since the pattern (`payment_id` from the query string) is shared across the family.
+
+---
+
+## Update — 2026-08-09: the same flaw was in two more gateways
+
+The Stripe fix documented above was the first instance of a pattern, not an isolated bug. Auditing
+the other gateways for the same shape found it in both.
+
+### RazorPay — worse than Stripe, and unauthenticated in effect
+
+`RazorPayController@callback` **never contacted RazorPay at all**:
+
+```php
+$payment_data = $this->payment::where(['id' => $request->payment_request_id])->first();
+if (count($input) && $payment_data && !empty($input['razorpay_payment_id'])) {
+    $payment_data->is_paid = 1;     // no verification of anything
+    $payment_data->save();
+```
+
+`POST payment/razor-pay/callback` carries only the `web` middleware, so any logged-in customer —
+a CSRF token comes free with any page — could post their own pending order id with an arbitrary
+`razorpay_payment_id` and be marked paid **without paying anything**. No amount check, no binding,
+no `is_paid` guard, so it also worked repeatedly.
+
+`RazorPayController@payment` had the same exposure with an extra twist: it captured
+`$payment['amount'] - $payment['fee']` — whatever the fetched RazorPay payment was worth, not what
+the order cost.
+
+`createOrder` took `payment_amount` and `currency_code` **straight from the request body**, so a
+caller could create a ₹1 RazorPay order against a ₹10,000 checkout and pay it for real.
+
+**Fixed:** amount and currency now come from the stored record; the RazorPay order carries
+`notes.payment_request_id`; and both settlement paths verify the RazorPay signature when present,
+confirm the payment is captured/authorised, match amount and currency in minor units, and refuse an
+already-paid record. Fails closed.
+
+### bKash — real payment, wrong order
+
+`BkashPaymentController@callback` did call the gateway and checked `statusCode == '0000'`, which
+proves *a* payment happened — not that the right one happened for the right order. With `paymentID`
+and `payment_id` both caller-supplied and no amount or `is_paid` check, a genuine small payment
+could settle any other order, repeatedly.
+
+**Fixed:** the executed payment's amount and currency must match the record, in minor units, and an
+already-paid record is refused.
+
+### Coverage
+
+Nine regression tests in `tests/Feature/PaymentSettlementGuardTest.php` cover the attacks directly:
+cheap-payment-settles-expensive-order, currency mismatch, replay against an already-paid record,
+missing amount, near-miss amounts, and fail-closed when the gateway is unreachable.
+
+**Still unverified by me:** no live payment was exercised — this environment has no gateway
+credentials. The guards are unit-tested and the surrounding pages are runtime-verified, but a real
+end-to-end payment on staging should confirm legitimate checkouts still complete before this
+reaches production.
