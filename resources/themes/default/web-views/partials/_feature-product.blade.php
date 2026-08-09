@@ -13,7 +13,7 @@
             <div class="inline_product clickable">
                 <span class="for-discount-value-null"></span>
                 <a href="{{route('product',$product->slug)}}" class="rounded">
-                    <img loading="lazy" class="border border-black-50" src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}" alt="{{ $product['name'] }}">
+                    <img loading="lazy" class="border border-black-50" src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}" alt="{{ $product['name'] }}" width="300" height="300" decoding="async">
                 </a>
                 <div class="quick-view">
                     <div class="d-none d-md-flex gap-2 align-items-center quick-view-tag">

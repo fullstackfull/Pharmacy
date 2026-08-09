@@ -2746,4 +2746,12 @@ ____________________________________________________on_search_engines_and_see_th
 	"hidden" => "Hidden",
 	"visible" => "Visible",
 	"inherit" => "Inherit",
+	"your_seo_title_will_appear_here" => "Your seo title will appear here",
+	"device_preview" => "Device preview",
+	"search_result_preview" => "Search result preview",
+	"spacer" => "Spacer",
+	"custom_content" => "Custom content",
+	"promotional_banner" => "Promotional banner",
+	"add_section" => "Add section",
+	"page_structure" => "Page structure",
 ];
