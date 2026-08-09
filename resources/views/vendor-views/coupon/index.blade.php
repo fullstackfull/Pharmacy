@@ -39,7 +39,7 @@
                                     <div class="d-flex justify-content-between">
                                         <label for="name"
                                                class="title-color font-weight-medium text-capitalize">{{ translate('coupon_code') }}</label>
-                                        <a href="javascript:" class="float-right c1 fs-12"
+                                        <a href="javascript:" class="float-end c1 fs-12"
                                            id="generateCode">{{ translate('generate_code') }}</a>
                                     </div>
                                     <input type="text" name="code" value=""
@@ -143,7 +143,7 @@
                         <div class="d-flex flex-wrap  gap-3 align-items-center justify-content-between">
                             <h5 class="mb-0 text-capitalize d-flex gap-2">
                                 {{ translate('coupon_list') }}
-                                <span class="badge badge-soft-dark radius-50 fs-12 ml-1">{{ $coupons->total() }}</span>
+                                <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{ $coupons->total() }}</span>
                             </h5>
                             <div class="d-flex gap-2 flex-wrap">
                                 <form action="{{ url()->current() }}" method="GET">

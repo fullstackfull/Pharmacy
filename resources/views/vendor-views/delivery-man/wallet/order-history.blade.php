@@ -23,7 +23,7 @@
 
                             <h4 class="d-flex align-items-center text-capitalize gap-10 mb-0">
                                 {{ translate('order_list') }}
-                                <span class="badge badge-soft-dark radius-50 fs-12 ml-1">{{  $orders->total() }}</span>
+                                <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{  $orders->total() }}</span>
                             </h4>
                         </div>
                         <div class="col-md-8 col-lg-6">
@@ -50,7 +50,7 @@
                     <div class="col-sm-12 mb-3">
                         <div class="card">
                             <div class="table-responsive datatable-custom">
-                                <table class="table table-hover table-borderless table-thead-bordered table-align-middle card-table text-left">
+                                <table class="table table-hover table-borderless table-thead-bordered table-align-middle card-table text-start">
                                     <thead class="thead-light thead-50 text-capitalize table-nowrap">
                                     <tr>
                                         <th>{{ translate('SL') }}</th>

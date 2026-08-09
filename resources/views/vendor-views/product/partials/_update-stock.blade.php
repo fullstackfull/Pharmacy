@@ -3,7 +3,7 @@
         <div class="avatar rounded avatar-70 border">
             <img class="avatar-img" src="{{ getStorageImages(path: $product->thumbnail_full_url, type:'backend-product') }}" alt="">
         </div>
-        <div class="ml-3">
+        <div class="ms-3">
             <div class="d-block">
                 <span class="line--limit-2 h5 text-hover-primary mb-2">
                {{ $product['name'] }}

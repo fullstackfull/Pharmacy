@@ -2728,4 +2728,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"all_copy_right_reserved_©_2026_" => "All copy right reserved © 2026 ",
 	"product_slider" => "Product slider",
 	"no_templates_yet" => "No templates yet",
+	"due_to_no_balance_this_button_is_disable" => "Due to no balance this button is disable",
+	"no_coupon_found" => "No coupon found",
 ];

@@ -52,7 +52,7 @@
                             <button type="button" class="btn px-3 inset-inline-start-0 inset-inline-end-auto h-100"><i
                                     class="fi fi-rr-search"></i>
                             </button>
-                            <input type="search" class="form-control ps-40 pr-2 search-product-for-order-edit"
+                            <input type="search" class="form-control ps-40 pe-2 search-product-for-order-edit"
                                    placeholder="{{ translate('search_by_product_name_or_bar_code_and_click_or_press_enter_to_add') }}">
                         </div>
                         <div class="dropdown-menu w-100 px-2">

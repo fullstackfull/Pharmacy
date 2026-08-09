@@ -7,7 +7,7 @@
                 </button>
             </div>
             <div class="modal-body px-20 pb-0 pt-4 mb-30">
-                <h3 class="mb-2 pr-4">
+                <h3 class="mb-2 pe-4">
                     {{ translate('Review') }} #{{ $review['id'] }}
                 </h3>
                 @if($review['order_id'])

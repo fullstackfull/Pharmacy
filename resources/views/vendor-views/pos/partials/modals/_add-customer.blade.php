@@ -10,7 +10,7 @@
             <div class="modal-body">
                 <form action="{{ route('vendor.customer.add') }}" method="post" id="product_form">
                     @csrf
-                    <div class="row pl-2">
+                    <div class="row ps-2">
                         <div class="col-12 col-lg-6">
                             <div class="form-group">
                                 <label class="input-label">{{ translate('first_name') }} <span
@@ -28,7 +28,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row pl-2">
+                    <div class="row ps-2">
                         <div class="col-12 col-lg-6">
                             <div class="form-group">
                                 <label class="input-label">{{ translate('email') }}<span
@@ -52,7 +52,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row pl-2">
+                    <div class="row ps-2">
                         <div class="col-12 col-lg-6">
                             <div class="form-group">
                                 <label class="input-label">{{ translate('country') }}</label>

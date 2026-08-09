@@ -248,10 +248,16 @@ class AuditUiConsistencyTest extends TestCase
         $this->assertStringContainsString('form-row', $output);
     }
 
-    /** The vendor panel serves Bootstrap 4.5, which has no logical `ms-*` spacing. */
+    /**
+     * The vendor panel serves Bootstrap 4.5 and still lacks some of Bootstrap 5's utilities.
+     *
+     * This used to assert on ms-3, which stopped being a valid example once the vendor panel gained
+     * a logical-utilities stylesheet — the rule was correctly reporting that the gap had closed.
+     * visually-hidden is still genuinely absent there (the panel has BS4's sr-only instead).
+     */
     public function test_flags_a_bootstrap_5_only_class_on_a_vendor_page(): void
     {
-        $this->panelFixture('vendor', '<div class="ms-3">x</div>');
+        $this->panelFixture('vendor', '<div class="visually-hidden">x</div>');
 
         $this->assertStringContainsString('class_not_defined', $this->auditPanel('vendor'));
     }
@@ -259,7 +265,7 @@ class AuditUiConsistencyTest extends TestCase
     /** …and the same class is fine on the admin panel, so the rule must be panel-aware. */
     public function test_does_not_flag_a_bootstrap_5_class_on_an_admin_page(): void
     {
-        $this->panelFixture('admin', '<div class="ms-3">x</div>');
+        $this->panelFixture('admin', '<div class="visually-hidden">x</div>');
 
         $this->assertStringNotContainsString('class_not_defined', $this->auditPanel('admin'));
     }

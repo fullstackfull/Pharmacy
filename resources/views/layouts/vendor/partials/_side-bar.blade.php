@@ -220,7 +220,7 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                         <span class="tio-circle nav-indicator-icon"></span>
                                         <span class="text-truncate">
                                             {{ translate('pending') }}
-                                            <span class="badge badge-soft-danger badge-pill ml-1">
+                                            <span class="badge badge-soft-danger badge-pill ms-1">
                                                 {{ RefundRequest::whereHas('order', function ($query) {
                                                     $query->where('seller_is', 'seller')->where('seller_id', auth('seller')->id());
                                                 })->where('status', 'pending')->count() }}
@@ -235,7 +235,7 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                         <span class="tio-circle nav-indicator-icon"></span>
                                         <span class="text-truncate">
                                             {{ translate('approved') }}
-                                            <span class="badge badge-soft-info badge-pill ml-1">
+                                            <span class="badge badge-soft-info badge-pill ms-1">
                                                 {{ RefundRequest::whereHas('order', function ($query) {
                                                     $query->where('seller_is', 'seller')->where('seller_id', auth('seller')->id());
                                                 })->where('status', 'approved')->count() }}
@@ -249,7 +249,7 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                         <span class="tio-circle nav-indicator-icon"></span>
                                         <span class="text-truncate">
                                             {{ translate('refunded') }}
-                                            <span class="badge badge-soft-success badge-pill ml-1">
+                                            <span class="badge badge-soft-success badge-pill ms-1">
                                                 {{ RefundRequest::whereHas('order', function ($query) {
     $query->where('seller_is', 'seller')->where('seller_id', auth('seller')->id());
 })->where('status', 'refunded')->count() }}
@@ -263,7 +263,7 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                         <span class="tio-circle nav-indicator-icon"></span>
                                         <span class="text-truncate">
                                             {{ translate('rejected') }}
-                                            <span class="badge badge-danger badge-pill ml-1">
+                                            <span class="badge badge-danger badge-pill ms-1">
                                                 {{ RefundRequest::whereHas('order', function ($query) {
     $query->where('seller_is', 'seller')->where('seller_id', auth('seller')->id());
 })->where('status', 'rejected')->count() }}

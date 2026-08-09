@@ -29,7 +29,7 @@
                                     <div class="fs-12 text-dark fw-semibold font-weight-semibold mb-3">
                                         {{ translate('Instruction') }}
                                     </div>
-                                    <ul class="d-flex flex-column gap-10 pl-3 list-group">
+                                    <ul class="d-flex flex-column gap-10 ps-3 list-group">
                                         <li class="text-dark fs-12">
                                             {{ translate('Download the format file to get the required column structure.') }}
                                         </li>
@@ -59,7 +59,7 @@
                                     <div class="fs-12 text-dark fw-semibold font-weight-semibold mb-3">
                                         {{ translate('Instruction') }}
                                     </div>
-                                    <ul class="d-flex flex-column gap-10 pl-3 list-group">
+                                    <ul class="d-flex flex-column gap-10 ps-3 list-group">
                                         <li class="text-dark fs-12">
                                             {{ translate('Ensure all required columns in your Excel file are complete and match the downloaded format.') }}
                                         </li>
@@ -89,7 +89,7 @@
                                     <div class="fs-12 text-dark fw-semibold font-weight-semibold mb-3">
                                         {{ translate('Instruction') }}
                                     </div>
-                                    <ul class="d-flex flex-column gap-10 pl-3 list-group">
+                                    <ul class="d-flex flex-column gap-10 ps-3 list-group">
                                         <li class="text-dark fs-12">
                                             {{ translate('Upload your completed Excel or xlsx file using the upload tool.') }}
                                         </li>

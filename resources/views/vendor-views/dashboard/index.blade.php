@@ -16,7 +16,7 @@
 
                 <div>
                     <a class="btn btn--primary" href="{{route('vendor.products.list',['type'=>'all'])}}">
-                        <i class="tio-premium-outlined mr-1"></i> {{translate('products')}}
+                        <i class="tio-premium-outlined me-1"></i> {{translate('products')}}
                     </a>
                 </div>
             </div>

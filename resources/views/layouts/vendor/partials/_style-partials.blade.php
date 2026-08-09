@@ -23,6 +23,12 @@
 <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/back-end/css/custom.css') }}">
 <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/vendor/css/custom.css') }}">
 <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/vendor/css/product-add-auto-fill.css') }}">
+
+{{-- Last on purpose: this completes the logical direction utilities Bootstrap 4.5 lacks, and
+     corrects the three (me-3, float-start, float-end) that were defined physically despite their
+     logical names. Loading it earlier would let bootstrap.min.css and custom.css win. --}}
+<link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/back-end/css/vendor/logical-utilities.css') }}">
+
 <style>
     select {
         background-image: url('{{dynamicAsset(path: 'public/assets/back-end/img/arrow-down.png')}}');

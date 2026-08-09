@@ -9,7 +9,7 @@
             <h2 class="h1 mb-0 text-capitalize d-flex gap-2 align-items-center">
                 <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/inhouse-product-list.png') }}" alt="">
                 {{ translate('Request_Restock_List') }}
-                <span class="badge badge-soft-dark radius-50 fz-14 ml-1">{{ $totalRestockProducts }}</span>
+                <span class="badge badge-soft-dark radius-50 fz-14 ms-1">{{ $totalRestockProducts }}</span>
             </h2>
         </div>
 

@@ -643,7 +643,7 @@
                         </p>
                         @if($product?->seoInfo?->image_full_url['path'] || $product->meta_image_full_url['path'])
                             <div class="d-flex flex-wrap gap-2">
-                                <a class="h-100px w-180 float-left overflow-hidden"
+                                <a class="h-100px w-180 float-start overflow-hidden"
                                    href="{{ getStorageImages(path:$product?->seoInfo?->image_full_url['path'] ? $product?->seoInfo?->image_full_url : $product->meta_image_full_url,type: 'backend-basic') }}"
                                    data-lightbox="meta-thumbnail">
                                     <img class="object-fit-cover rounded h-100"
@@ -761,7 +761,7 @@
                                                 </div>
                                                 @if(count($review->attachment_full_url) > 0)
                                                     @foreach ($review->attachment_full_url as $img)
-                                                        <a class="aspect-1 float-left overflow-hidden"
+                                                        <a class="aspect-1 float-start overflow-hidden"
                                                            href="{{ getStorageImages(path: $img,type: 'backend-basic') }}"
                                                            data-lightbox="review-gallery{{ $review['id'] }}">
                                                             <img class="p-2" width="60" height="60"
@@ -889,7 +889,7 @@
                                                 </span>
 
                                                     @if($review['comment'] && Str::length($review['comment']) > 120)
-                                                        <span class="see_more_btn text-primary cursor-pointer ml-1">
+                                                        <span class="see_more_btn text-primary cursor-pointer ms-1">
                                                         {{ translate('see_more') }}
                                                     </span>
                                                     @endif
@@ -920,7 +920,7 @@
                                                           name="reply_text"
                                                           placeholder="{{ translate('Write_the_reply_of_the_product_review') }}...">{{ $review?->reply?->reply_text ?? '' }}</textarea>
 
-                                                <div class="text-right mt-4">
+                                                <div class="text-end mt-4">
                                                     <button type="submit" class="btn btn--primary">
                                                         @if($review?->reply?->reply_text)
                                                             {{ translate('Update') }}
@@ -987,7 +987,7 @@
                                         </span>
 
                                             @if($review['comment'] && Str::length($review['comment']) > 120)
-                                                <span class="see_more_btn text-primary cursor-pointer ml-1">
+                                                <span class="see_more_btn text-primary cursor-pointer ms-1">
                                                 {{ translate('see_more') }}
                                             </span>
                                             @endif
@@ -1020,7 +1020,7 @@
                                                 {{ $replyText }}
                                             </span>
                                                 @if(Str::length($replyText) > 120)
-                                                    <span class="see_more_btn text-primary cursor-pointer ml-1">
+                                                    <span class="see_more_btn text-primary cursor-pointer ms-1">
                                                     {{ translate('see_more') }}
                                                 </span>
                                                 @endif
@@ -1081,7 +1081,7 @@
                 <ul class="nav nav-tabs nav--tab lang_tab" id="offcanvas-pills-tab" role="tablist">
                     @foreach ($languages as $language)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link action-for-lang-tab-offcanvas ml-1 {{ $language == $defaultLanguage ? 'active' : '' }}"
+                            <a class="nav-link action-for-lang-tab-offcanvas ms-1 {{ $language == $defaultLanguage ? 'active' : '' }}"
                                href="javascript:"
                                data-name="{{ $translate[$language]['name'] ?? $product['name'] }}"
                                data-name-field="#product-name-heading-{{ $language }}"

@@ -75,7 +75,7 @@
                                                 {{translate('first_Name')}}
                                                 <span class="text-danger px-1">*</span>
                                             </label>
-                                            <span class="input-label-secondary cursor-pointer p-1 ml-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{ translate('this_will_be_displayed_as_your_profile_name') }}">
+                                            <span class="input-label-secondary cursor-pointer p-1 ms-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{ translate('this_will_be_displayed_as_your_profile_name') }}">
                                             <img alt="" width="16" src="{{dynamicAsset(path: 'public/assets/back-end/img/info-circle.svg') }}" alt="">
                                         </span>
                                         </div>
@@ -128,7 +128,7 @@
                                                 <span class="text-danger px-1">*</span>
                                             </label>
 
-                                            <span class="input-label-secondary cursor-pointer p-1 ml-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{ translate('you_can_login_to_your_panel_by_using_this_email') }}">
+                                            <span class="input-label-secondary cursor-pointer p-1 ms-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{ translate('you_can_login_to_your_panel_by_using_this_email') }}">
                                             <img alt="" width="16" src="{{dynamicAsset(path: 'public/assets/back-end/img/info-circle.svg') }}" alt="">
                                         </span>
                                         </div>
@@ -179,7 +179,7 @@
                                                 {{translate('new_password')}}
                                                 <span class="text-danger px-1">*</span>
                                             </label>
-                                            <span class="input-label-secondary cursor-pointer p-1 ml-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{translate('The_password_must_be_at_least_8_characters_long_and_contain_at_least_one_uppercase_letter').','.translate('_one_lowercase_letter').','.translate('_one_digit_').','.translate('_one_special_character').','.translate('_and_no_spaces').'.'}}">
+                                            <span class="input-label-secondary cursor-pointer p-1 ms-1 d-inline-flex align-items-center" data-toggle="tooltip" data-placement="auto" tabindex="0" role="button" aria-label="{{ translate('info') }}" title="" data-original-title="{{translate('The_password_must_be_at_least_8_characters_long_and_contain_at_least_one_uppercase_letter').','.translate('_one_lowercase_letter').','.translate('_one_digit_').','.translate('_one_special_character').','.translate('_and_no_spaces').'.'}}">
                                             <img alt="" width="16" src="{{dynamicAsset(path: 'public/assets/back-end/img/info-circle.svg') }}" alt="">
                                         </span>
                                         </div>

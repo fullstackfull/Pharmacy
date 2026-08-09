@@ -126,7 +126,7 @@
                                  class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-right navbar-dropdown-menu navbar-dropdown-account __w-16rem">
                                 <div class="dropdown-item-text">
                                     <div class="media align-items-center text-break">
-                                        <div class="avatar avatar-sm avatar-circle mr-2">
+                                        <div class="avatar avatar-sm avatar-circle me-2">
                                             <img class="avatar-img"
                                                  src="{{ getStorageImages(path: $vendor->image_full_url ?? '', type: 'backend-profile') }}"
                                                  alt="{{ translate('image_description') }}">
@@ -139,12 +139,12 @@
                                 </div>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{{ route('vendor.profile.update', [$vendor->id ?? '']) }}">
-                                    <span class="text-truncate pr-2">{{ translate('settings') }}</span>
+                                    <span class="text-truncate pe-2">{{ translate('settings') }}</span>
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="javascript:" data-toggle="modal"
                                    data-target="#sign-out-modal">
-                                    <span class="text-truncate pr-2">{{ translate('logout') }}</span>
+                                    <span class="text-truncate pe-2">{{ translate('logout') }}</span>
                                 </a>
                             </div>
                         </div>

@@ -8,7 +8,7 @@
             <div class="d-flex flex-wrap gap-3 align-items-center justify-content-end mb-20">
                 <div class="mb-0 d-flex gap-2 align-items-center flex-grow-1">
                     <h2 class="h1 mb-0">
-                        <img src="{{dynamicAsset(path: 'public/assets/back-end/img/all-orders.png')}}" class="mb-1 mr-1" alt="">
+                        <img src="{{dynamicAsset(path: 'public/assets/back-end/img/all-orders.png')}}" class="mb-1 me-1" alt="">
                         {{translate('product_gallery')}}
                     </h2>
                     <span class="badge badge-soft-dark radius-50 fz-14">{{$products->total()}}</span>
