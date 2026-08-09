@@ -9386,4 +9386,14 @@ return [
 	"turn_off" => "تعطيل",
 	"enabled" => "مُفعَّل",
 	"disabled" => "مُعطَّل",
+
+	// Seller staff sign-in (Phase 3, Stage A — the deferred login, now shipped)
+	"staff_login" => "دخول الطاقم",
+	"sign_in_with_the_credentials_your_shop_owner_gave_you" => "سجّل الدخول ببيانات الاعتماد التي منحك إياها صاحب المتجر",
+	"shop_owner_login" => "دخول صاحب المتجر",
+	"your_staff_account_is_inactive" => "حساب الطاقم الخاص بك غير مُفعَّل",
+	"the_shop_this_account_belongs_to_is_not_active" => "المتجر التابع له هذا الحساب غير مُفعَّل",
+	"you_do_not_have_permission_for_this_action" => "لا تملك صلاحية لهذا الإجراء",
+	"staff_sign_in_link" => "رابط دخول الطاقم",
+	"share_this_link_with_your_staff_to_sign_in" => "شارك هذا الرابط مع طاقمك لتسجيل الدخول",
 ];

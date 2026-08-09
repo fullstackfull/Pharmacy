@@ -83,6 +83,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'admin' => AdminMiddleware::class,
             'seller' => SellerMiddleware::class,
+            'seller_staff_access' => \App\Http\Middleware\SellerStaffAccessMiddleware::class,
             'customer' => CustomerMiddleware::class,
             'module' => ModulePermissionMiddleware::class,
             'installation-check' => InstallationMiddleware::class,

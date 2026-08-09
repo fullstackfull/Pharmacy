@@ -9,6 +9,7 @@ use App\Enums\ViewPaths\Vendor\Review;
 use App\Http\Controllers\Vendor\Auth\ForgotPasswordController;
 use App\Http\Controllers\Vendor\Auth\LoginController;
 use App\Http\Controllers\Vendor\Auth\RegisterController;
+use App\Http\Controllers\Vendor\Auth\StaffLoginController;
 use App\Http\Controllers\Vendor\DashboardController;
 use App\Http\Controllers\Vendor\ChattingController;
 use App\Http\Controllers\Vendor\Coupon\CouponController;
@@ -69,7 +70,18 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
             });
         });
 
-        Route::group(['middleware' => ['seller']], function () {
+        // Seller staff sign-in (Phase 3, Stage A). A staff member signs in with their own credentials
+        // and is logged in as their parent seller; SellerStaffAccessMiddleware then scopes what they may
+        // do. Rate limited like the owner login — this is the brute-force barrier.
+        Route::group(['prefix' => 'staff-auth', 'as' => 'staff-auth.', 'middleware' => ['throttle:20,1']], function () {
+            Route::controller(StaffLoginController::class)->group(function () {
+                Route::get('login', 'getLoginView')->name('login');
+                Route::post('login', 'login')->name('login.submit');
+                Route::get('logout', 'logout')->name('logout');
+            });
+        });
+
+        Route::group(['middleware' => ['seller', 'seller_staff_access']], function () {
             Route::controller(FirebaseController::class)->group(function () {
                 Route::post('system/save-fcm-web-token', 'saveSellerWebToken')->name('system.save-fcm-web-token');
             });

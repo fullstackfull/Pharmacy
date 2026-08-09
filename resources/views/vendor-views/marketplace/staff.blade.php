@@ -6,9 +6,24 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0">{{ translate('staff_and_roles') }}</h2>
-            <p class="mb-0 fs-12">{{ translate('define_roles_and_add_your_team') }}.
-                <span class="badge bg-warning text-dark">{{ translate('sign_in_for_staff_is_coming_soon') }}</span>
-            </p>
+            <p class="mb-0 fs-12">{{ translate('define_roles_and_add_your_team') }}.</p>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h6 class="mb-1">{{ translate('staff_sign_in_link') }}</h6>
+                    <p class="mb-0 fs-12 text-muted">{{ translate('share_this_link_with_your_staff_to_sign_in') }}.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="text" readonly class="form-control form-control-sm" style="min-width:260px"
+                           value="{{ route('vendor.staff-auth.login') }}"
+                           onclick="this.select()">
+                    <a href="{{ route('vendor.staff-auth.login') }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        {{ translate('open') }}
+                    </a>
+                </div>
+            </div>
         </div>
 
         <div class="row">

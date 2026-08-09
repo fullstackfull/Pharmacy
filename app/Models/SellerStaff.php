@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A seller's staff member, assigned a role (Phase 3, Stage A).
  *
- * Credentials are stored for the deferred login step; until the staff guard exists these are managed
- * records, not sign-in accounts.
+ * A sign-in account: the member authenticates with these (hashed) credentials via the staff login,
+ * which signs them in as their parent seller, and SellerStaffAccessMiddleware scopes what they may do
+ * to their role's permissions.
  */
 class SellerStaff extends Model
 {
