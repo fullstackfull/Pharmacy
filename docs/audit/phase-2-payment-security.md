@@ -178,3 +178,83 @@ criterion.
 same shape as the product-save crash fixed in Phase 1. Because `product_stock_check()` runs
 immediately before order placement, such a product did not block checkout, it **500'd** it, leaving
 the customer stuck at the final step.
+
+---
+
+## Cart and checkout integrity — 2026-08-09
+
+The question this section answers: **can a customer control what they are charged?** Traced end to
+end, on the running app, on every path that reaches order creation.
+
+### Prices: server-derived (verified sound, no change needed)
+
+Cart lines never carry a client price. `CartManager::addToCart()` sets
+
+```php
+$price = $product->unit_price;              // or the chosen variation's price
+```
+
+and stores that. There is no `Cart::create($request->all())` anywhere, so there is no field a client
+can push a price through. Order lines then copy `$cartSingleItem['price']` — the server's own number.
+
+### Coupons: recomputed at placement, not trusted from the session (verified sound)
+
+Applying a coupon stores `coupon_discount` in the session, which looked like the classic
+trust-the-session bug. It is not. `getVendorWiseCartList()` calls `getTotalCouponAmount()` **again**
+at order-generation time with only the *code*, and recomputes the discount from the coupon row and
+the live cart. The session's amount is never read back into the total.
+
+The mobile path (`payment_request_from == 'app'`) does copy `$request['coupon_discount']` into
+`$additionalData`, which reads alarmingly — but that value is never used in any money calculation.
+The only `coupon_discount` that reaches an order row comes from the recomputation.
+
+The final charge is likewise server-computed:
+
+```php
+$paymentAmount = collect($vendorWiseCartList)->sum('order_amount_with_tax');
+```
+
+Coupon validation itself checks status, date window, per-customer binding, usage limit,
+first-order eligibility, vendor applicability and minimum purchase. **No change made — this is
+correct as written.** Recording it because "we checked and it holds" is a result, and the next
+person to read this file should not have to re-derive it.
+
+Known residual (not a charge-control bug): the usage-limit check counts prior orders, so two
+simultaneous checkouts can both pass a limit of 1. It belongs with the transactional-order-placement
+work above, not on its own.
+
+### Cross-account cart reads on the guest quantity endpoint (fixed)
+
+`POST /cart/updateQuantity-guest` looked the row up unscoped:
+
+```php
+$product = Cart::find($request['key']);
+```
+
+The *write* was already scoped — `update_cart_qty()` matches on `customer_id` — so an arbitrary key
+could not change somebody else's cart. But the response was then built from whatever row that key
+found. Scoped it to the requester, matching the pattern `removeFromCart()` already used.
+
+Verified against the running app with three sessions' rows present: a guest updating their own line
+succeeds with the full response shape intact; keys belonging to another guest and to a logged-in
+customer both return `Product not found in cart`, and both victims' rows are unchanged.
+
+### A deactivated product 500'd the same endpoint (fixed)
+
+```php
+$free_delivery_status = OrderManager::getFreeDeliveryOrderAmountArray($cart[0]->cart_group_id);
+```
+
+`getCartListQuery()` filters on `whereHas('product', active)`. So when the vendor deactivates the
+product a customer has in their cart, the collection comes back empty while the cart row still
+exists — and `$cart[0]` fatals.
+
+Reproduced before the fix, on the running app, by deactivating the only product in a live guest
+cart and updating the quantity:
+
+    {"message": "Undefined array key 0", "exception": "ErrorException"}     HTTP 500
+
+After: `HTTP 200`, with `free_delivery_status` still carrying every key the storefront JS reads —
+`getFreeDeliveryOrderAmountArray()` already treats a null group as "no free delivery", so passing
+`$cart->first()?->cart_group_id` through preserves the published response shape exactly rather than
+inventing a fallback array.

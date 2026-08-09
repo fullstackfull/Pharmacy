@@ -281,6 +281,7 @@ class CartController extends Controller
     public function updateQuantity_guest(Request $request): JsonResponse
     {
         $sub_total = 0;
+        $user = Helpers::getCustomerInformation($request);
         $response = CartManager::update_cart_qty($request);
         $cart = CartManager::getCartListQuery();
         session()->forget('coupon_code');
@@ -289,7 +290,12 @@ class CartController extends Controller
         session()->forget('coupon_discount');
         session()->forget('coupon_seller_id');
 
-        $product = Cart::find($request['key']);
+        // Scoped to the requester: an unscoped find() would read a row belonging to somebody else
+        // whenever a client sends an arbitrary key, even though update_cart_qty refuses the write.
+        $product = Cart::where([
+            'id' => $request['key'],
+            'customer_id' => ($user == 'offline' ? (session('guest_id') ?? $request['guest_id']) : $user['id']),
+        ])->first();
 
         if (!$product) {
             return response()->json([
@@ -317,7 +323,11 @@ class CartController extends Controller
             ]);
         }
         /** for default theme nav cart ,showing free delivery amount */
-        $free_delivery_status = OrderManager::getFreeDeliveryOrderAmountArray($cart[0]->cart_group_id);
+        // getCartListQuery() drops lines whose product is no longer active, so the collection can be
+        // empty here even though the row was just updated — $cart[0] then fataled the whole response.
+        // getFreeDeliveryOrderAmountArray() already treats a null group as "no free delivery", so
+        // passing it through keeps the exact response shape the storefront JS reads.
+        $free_delivery_status = OrderManager::getFreeDeliveryOrderAmountArray($cart->first()?->cart_group_id);
 
         return response()->json([
             'status' => $response['status'],
