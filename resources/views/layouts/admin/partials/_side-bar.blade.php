@@ -772,6 +772,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.returns.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/returns*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.returns.index') }}"
+                                   title="{{ translate('returns') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('returns') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"

@@ -561,6 +561,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('evaluate', 'evaluate')->name('evaluate');
             });
         });
+
+        // Returns logistics (Stage C): the RMA queue and its state machine — receiving a restockable
+        // return puts stock back through the inventory movement log.
+        Route::group(['prefix' => 'returns', 'as' => 'returns.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ReturnLogisticsController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/transit', 'transit')->whereNumber('id')->name('transit');
+                Route::post('{id}/receive', 'receive')->whereNumber('id')->name('receive');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {
