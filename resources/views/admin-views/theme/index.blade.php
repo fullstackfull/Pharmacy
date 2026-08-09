@@ -35,6 +35,29 @@
                             <button type="submit" class="btn btn-primary">{{ translate('create') }}</button>
                         </form>
                         <hr>
+                        <h6>{{ translate('start_from_a_preset') }}</h6>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @foreach($presets as $key => $preset)
+                                <form action="{{ route('admin.theme.import-preset') }}" method="post">
+                                    @csrf
+                                    <input type="hidden" name="preset" value="{{ $key }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        {{ translate($preset['label']) }}
+                                    </button>
+                                </form>
+                            @endforeach
+                        </div>
+
+                        <h6>{{ translate('import_a_theme_file') }}</h6>
+                        <form action="{{ route('admin.theme.import') }}" method="post" enctype="multipart/form-data" class="mb-3">
+                            @csrf
+                            <div class="form-group">
+                                <input type="file" name="theme_file" class="form-control" accept="application/json,.json" required>
+                                <small class="text-muted">{{ translate('imported_themes_are_created_inactive_as_a_draft_and_never_overwrite_an_existing_theme') }}</small>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-secondary">{{ translate('import') }}</button>
+                        </form>
+
                         <p class="text-muted mb-0 small">
                             {{ translate('a_new_theme_starts_with_an_empty_draft_version_publishing_a_draft_archives_the_previous_published_version_so_you_can_always_roll_back') }}
                         </p>
@@ -109,6 +132,11 @@
                                                         <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
                                                         <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>
                                                     </form>
+                                                @endif
+                                                @php $exportable = $published ?? $latestDraft; @endphp
+                                                @if($exportable)
+                                                    <a href="{{ route('admin.theme.version.export', ['version_id' => $exportable->id]) }}"
+                                                       class="btn btn-sm btn-outline-secondary">{{ translate('export') }}</a>
                                                 @endif
                                                 @foreach($theme->versions->where('status', 'archived')->sortByDesc('id')->take(3) as $archived)
                                                     <form action="{{ route('admin.theme.version.restore') }}" method="post"

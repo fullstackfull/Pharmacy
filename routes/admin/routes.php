@@ -1086,6 +1086,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('version/publish', 'publishVersion')->name('version.publish');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
             Route::post('version/restore', 'restoreVersion')->name('version.restore');
+            Route::get('version/export', 'exportVersion')->name('version.export');
+            Route::post('import', 'importTheme')->name('import');
+            Route::post('import-preset', 'importPreset')->name('import-preset');
         });
 
         // Global theme settings (branding / colors / typography / layout) — draft-scoped.

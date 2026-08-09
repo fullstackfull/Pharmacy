@@ -8,6 +8,8 @@ use App\Models\Theme;
 use App\Models\ThemeVersion;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ThemePermissionService;
+use App\Services\Theme\ThemePortabilityService;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -28,6 +30,7 @@ class ThemeManagementController extends BaseController
         private readonly ThemeRepositoryInterface $themeRepo,
         private readonly ThemeManager             $themeManager,
         private readonly ThemePermissionService   $permissions,
+        private readonly ThemePortabilityService  $portability,
     )
     {
     }
@@ -42,8 +45,9 @@ class ThemeManagementController extends BaseController
         );
 
         return view('admin-views.theme.index', [
-            'themes' => $themes,
-            'search' => $request?->get('searchValue'),
+            'themes'  => $themes,
+            'search'  => $request?->get('searchValue'),
+            'presets' => $this->portability->presets(),
         ]);
     }
 
@@ -164,6 +168,91 @@ class ThemeManagementController extends BaseController
 
         $draft = $this->themeManager->restoreVersion($version);
         ToastMagic::success(translate('version_restored_into_a_new_draft') . ' #' . $draft->id);
+
+        return $this->backToIndex();
+    }
+
+    /** Download a version as a portable JSON file. */
+    public function exportVersion(Request $request): StreamedResponse|RedirectResponse
+    {
+        if (!$this->permissions->canView()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_view_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $version = ThemeVersion::with('theme')->find($request['version_id']);
+        if (!$version) {
+            ToastMagic::error(translate('theme_version_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        $payload = $this->portability->export($version);
+        $filename = 'theme-' . ($version->theme?->slug ?? 'export') . '-v' . $version->id . '.json';
+
+        return response()->streamDownload(function () use ($payload) {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }, $filename, ['Content-Type' => 'application/json']);
+    }
+
+    /** Import an uploaded theme file into a NEW inactive theme (never overwrites, never publishes). */
+    public function importTheme(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $request->validate([
+            'theme_file' => ['required', 'file', 'mimetypes:application/json,text/plain', 'max:2048'],
+            'name'       => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $decoded = json_decode(file_get_contents($request->file('theme_file')->getRealPath()), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            ToastMagic::error(translate('the_file_is_not_valid_json') . '!');
+            return $this->backToIndex();
+        }
+
+        $imported = $this->portability->import($decoded, $request->get('name'), auth('admin')->id());
+
+        if (!$imported['theme']) {
+            ToastMagic::error(translate('import_failed') . ': ' . implode(', ', $imported['result']['errors']));
+            return $this->backToIndex();
+        }
+
+        foreach ($imported['result']['warnings'] as $warning) {
+            ToastMagic::warning(translate($warning));
+        }
+        ToastMagic::success(translate('theme_imported_successfully'));
+
+        return $this->backToIndex();
+    }
+
+    /** Create a theme from a built-in preset. */
+    public function importPreset(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $presets = $this->portability->presets();
+        $key = (string) $request['preset'];
+        if (!array_key_exists($key, $presets)) {
+            ToastMagic::error(translate('unknown_preset') . '!');
+            return $this->backToIndex();
+        }
+
+        $imported = $this->portability->import($presets[$key]['payload'], $request->get('name'), auth('admin')->id());
+        $imported['theme']
+            ? ToastMagic::success(translate('theme_created_from_preset_successfully'))
+            : ToastMagic::error(translate('import_failed') . '!');
 
         return $this->backToIndex();
     }
