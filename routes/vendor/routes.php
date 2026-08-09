@@ -363,6 +363,17 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::post('render-withdraw-method-infos', 'renderInfosView')->name('render-withdraw-method-infos');
                     });
                 });
+
+                // Ledger-based payouts (Phase 3, Stage B). Runs over the vendor ledger — a request
+                // can only ask for the withdrawable balance and reserves it — alongside the legacy
+                // withdraw flow above, which stays untouched until reads are moved over.
+                Route::group(['prefix' => 'payouts', 'as' => 'payouts.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\PayoutController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::post('/', 'store')->name('store');
+                        Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+                    });
+                });
             });
 
             Route::controller(SystemController::class)->group(function () {

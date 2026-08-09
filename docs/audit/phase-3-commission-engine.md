@@ -293,3 +293,128 @@ reconciliation against gateway records, and the admin/seller UI — everything a
 through the service layer and `php artisan marketplace:settle` only.
 
 Stages A, C, D, E and F remain untouched.
+
+---
+
+# Phase 3, Stage B — Admin settlement & ledger UI
+
+Everything above this was reachable only through the service layer and `php artisan
+marketplace:settle`. A financial core the operator cannot see or act on is worth much less than one
+they can, so this is the surface.
+
+## What was added
+
+* **Settlements list** — `admin/marketplace/settlements`, with a status filter carrying live counts,
+  and one honest headline number: how many vendors have money waiting and its net total. The
+  Calculate button is disabled when that number is zero, so the operator is never invited to press a
+  button that does nothing.
+* **Settlement detail** — opening → credits − debits → closing across the top, then every ledger
+  entry the settlement claimed. The settlement is not a number; it is exactly those rows, and the
+  page shows them.
+* **Vendor ledger** — `admin/marketplace/ledger/{sellerId}`, the four buckets (pending / available /
+  reserved / paid) and every entry, each linking back to the settlement that claimed it.
+* Reached from **Reports → Vendor Settlements** in the admin sidebar, guarded by `Route::has` so it
+  only appears where the routes are registered.
+
+## The controller adds no logic of its own
+
+Every calculation, claim and state change goes through `SettlementEngine`. The rules the engine
+tests cover are the same rules the buttons trigger — there is no second implementation behind the UI
+to drift from the first. The maker-checker control in particular lives on the server: the pay button
+is hidden until approval as a courtesy, but the *rule* is `SettlementEngine::markPaid()` refusing
+anything not approved.
+
+## Verified end to end, through the UI, as an authenticated admin
+
+Against the running store, driving the actual routes with a real session:
+
+    seeded ledger: vendor 5, available, 400 earning − 52 commission = 348 net waiting
+
+    /admin/marketplace/settlements   200   shows 348 waiting, Calculate enabled
+    Calculate (button)               302   created STL-20260809-9E4E46, net 348, status calculated
+    Pay before approval (forced)     302   refused — status stayed 'calculated', no payout reference
+    Approve (button)                 302   status approved, approved_by #4 recorded
+    Pay after approval               302   status paid, reference BANK-7788
+    ledger entries                         both moved to 'paid', linked to settlement #1
+
+The premature-pay attempt being refused at the HTTP boundary is the maker-checker split working
+where it has to.
+
+**4 controller tests** on top of the engine's 16; suite at 449 tests, 1,046 assertions.
+
+## Stage B now
+
+Built: commission engine · commission snapshots · vendor ledger · settlement engine · refund
+reversal · **admin UI for settlements and the ledger**. The financial core is now operable, not just
+implemented.
+
+Remaining in Stage B: the payout *request* workflow (sellers asking to be paid, vs. the admin
+marking a settlement paid) with maker-checker on bank-detail changes, and reconciliation against
+gateway records. Stages A, C, D, E and F remain untouched — Seller Center, KYC/onboarding, suppliers
+and purchasing, multi-warehouse, fulfilment and shipping, B2B, multi-market, and the integration hub.
+
+---
+
+# Phase 3, Stage B — Seller payouts over the ledger
+
+The platform already has `withdraw_requests`, but it runs over `seller_wallets` — the five mutable
+decimals — and validates nothing against a real available balance. This adds a payout flow over the
+ledger built in this stage, alongside the legacy one, which stays untouched.
+
+## What shipped
+
+* **A payout can only ask for what is withdrawable** — the running balance minus anything still
+  `pending`. Requesting **reserves** the amount as a `reserved` ledger debit, so the same money
+  cannot be requested twice and a settlement cannot pay it out from under a live request.
+* **Rejecting or cancelling releases the reservation** as a new credit, not a deletion — the ledger
+  still records that a payout was requested and did not go through.
+* **Paying requires approval** (maker-checker), then the reservation becomes a `paid` debit.
+* **The bank-change cooling period**, the control the specification names: changing a seller's bank
+  details is logged with a before/after snapshot and opens a window during which payouts are
+  refused — the standard defence against an account takeover that immediately redirects the money.
+* Seller UI at **vendor → Payouts**, showing the four buckets, the one number that matters
+  (withdrawable now), the request form (disabled at zero balance or during cooling), and the
+  seller's own requests with a cancel action.
+
+## A bug the tests caught in my own code
+
+The first `withdrawable()` was `available + reserved`. It passed every case until one: after a
+payout is *paid*, the earning credit keeps `available` status forever while the paid debit sits in
+its own bucket, so `available` overstates and a second request would see the full earning again and
+double-spend it. The correct formula is **balance − pending**, which nets holds and payouts alike
+while excluding money still in the return window. Found by the "full request→approve→pay" test
+asserting the wrong number, traced to the code rather than the test, fixed, and the reasoning
+written into the method.
+
+## Verified end to end, through the vendor panel, as a real seller session
+
+    seeded: seller 1, 600 available on the ledger
+
+    /vendor/business-settings/payouts   200   shows 600 withdrawable
+    request 250 (form POST)             302   PO-20260809-256E39, status requested, 250 reserved
+    withdrawable after reserve                350  (600 − 250 held)
+    request 400 (more than 350 left)    302   refused — still 1 request, not 2
+    bank change logged, then request    302   refused during cooling — still 1 request
+
+**13 payout-service tests**; suite at 462 tests, 1,078 assertions.
+
+Note: seller #1's password in the **local test database** was reset to run the login step of this
+verification. That database is never production; the reset is recorded here for transparency.
+
+## Stage B is now functionally complete for the core lifecycle
+
+    onboarded seller (legacy) -> order -> commission snapshot -> ledger -> settlement -> admin pays
+                                    |                              ^  |
+                                 refund reverses both sides ───────┘  └─> seller requests payout,
+                                                                          reserved, approved, paid
+
+Built across the stage: commission engine · commission snapshots · vendor ledger · settlement engine
+· refund reversal · admin settlement/ledger UI · seller payout flow with cooling period.
+
+Genuinely remaining in Stage B: reconciliation against payment-gateway records (matching internal
+payout/settlement rows to bank/gateway transactions), and wiring the cooling-period trigger into the
+*existing* bank-detail update path (`recordBankChange()` is ready; the seller profile controller does
+not call it yet). Stated plainly rather than left implied.
+
+Stages A, C, D, E and F remain untouched: Seller Center redesign, KYC/onboarding, suppliers and
+purchasing, multi-warehouse, fulfilment and shipping, B2B, multi-market, and the integration hub.

@@ -113,6 +113,12 @@ class SettlementEngine
             'approved_at' => now(),
         ])->save();
 
+        app(\App\Services\AuditLogger::class)->record(
+            action: 'settlement.approved',
+            subject: $settlement,
+            context: ['reference' => $settlement->reference, 'net_amount' => $settlement->net_amount, 'seller_id' => $settlement->seller_id],
+        );
+
         return true;
     }
 
@@ -137,6 +143,12 @@ class SettlementEngine
 
             VendorLedgerEntry::where('settlement_id', $settlement->id)
                 ->update(['status' => VendorLedgerEntry::STATUS_PAID, 'updated_at' => now()]);
+
+            app(\App\Services\AuditLogger::class)->record(
+                action: 'settlement.paid',
+                subject: $settlement,
+                context: ['reference' => $settlement->reference, 'net_amount' => $settlement->net_amount, 'payout_reference' => $payoutReference],
+            );
 
             return true;
         });

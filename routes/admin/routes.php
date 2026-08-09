@@ -451,6 +451,28 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     /*  report */
+    // Marketplace financial core (Phase 3, Stage B): settlements, and the vendor ledger they read.
+    // Under the same reports module the earning reports already live under, since it is the same
+    // audience — whoever reconciles the marketplace's money.
+    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:reports']], function () {
+        Route::controller(\App\Http\Controllers\Admin\Marketplace\SettlementController::class)->group(function () {
+            Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('calculate', 'calculate')->name('calculate');
+                Route::get('{id}', 'show')->whereNumber('id')->name('show');
+                Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
+                Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+            });
+            Route::get('ledger/{sellerId}', 'ledger')->whereNumber('sellerId')->name('ledger');
+        });
+
+        // The unified audit center (spec item 84). Read-only: no edit or delete path exists.
+        Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
+            Route::get('audit-log', 'index')->name('audit-log');
+        });
+    });
+
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {
         Route::group(['prefix' => 'transaction', 'as' => 'transaction.'], function () {
             Route::controller(RefundTransactionController::class)->group(function () {
