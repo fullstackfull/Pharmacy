@@ -1,0 +1,7 @@
+# Deny access to credential/key material and archives that must never be web-served.
+<FilesMatch "\.(p8|pem|key|crt|p12|pfx|env|sql|zip|bak)$">
+    Require all denied
+</FilesMatch>
+
+# No directory listings.
+Options -Indexes

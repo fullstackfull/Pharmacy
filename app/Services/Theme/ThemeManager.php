@@ -77,6 +77,8 @@ class ThemeManager
             $theme->is_active = true;
             $theme->save();
 
+            app(StorefrontThemeRenderer::class)->flush();
+
             return $theme->refresh();
         });
     }
@@ -94,6 +96,9 @@ class ThemeManager
             $version->status = ThemeVersion::STATUS_PUBLISHED;
             $version->published_at = now();
             $version->save();
+
+            // The storefront caches the published structure; drop it so the change is live at once.
+            app(StorefrontThemeRenderer::class)->flush();
 
             return $version->refresh();
         });
@@ -134,6 +139,28 @@ class ThemeManager
 
             return $draft;
         });
+    }
+
+    /**
+     * Restore a previous version by copying it into a NEW draft (Phase 1 "restore revision").
+     *
+     * Deliberately non-destructive: it never mutates or deletes the archived version, and never
+     * publishes directly. The merchant reviews the restored draft and publishes it explicitly, so a
+     * mis-clicked restore can't change the live storefront.
+     */
+    public function restoreVersion(ThemeVersion $source): ThemeVersion
+    {
+        return $this->createDraftFrom($source, 'Restored from #' . $source->id);
+    }
+
+    /** Version history for a theme, newest first — what the revision list renders. */
+    public function versionHistory(int $themeId, int $limit = 30): \Illuminate\Support\Collection
+    {
+        return ThemeVersion::query()
+            ->where('theme_id', $themeId)
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get(['id', 'label', 'status', 'based_on_version_id', 'published_at', 'created_at']);
     }
 
     /** The published version of the currently active theme, if any. */

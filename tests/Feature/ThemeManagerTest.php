@@ -76,6 +76,20 @@ class ThemeManagerTest extends TestCase
         return Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true, 'is_system' => true]);
     }
 
+    public function test_theme_repository_is_auto_bound_and_queries_work(): void
+    {
+        $repo = app(\App\Contracts\Repositories\ThemeRepositoryInterface::class);
+        $this->assertInstanceOf(\App\Repositories\ThemeRepository::class, $repo);
+
+        $active = $this->activeTheme();
+        Theme::create(['name' => 'Other', 'slug' => 'other', 'is_active' => false]);
+
+        $this->assertSame($active->id, $repo->getActiveTheme()?->id);
+        $this->assertTrue($repo->slugExists('other'));
+        $this->assertFalse($repo->slugExists('other', Theme::where('slug', 'other')->first()->id));
+        $this->assertFalse($repo->slugExists('nope'));
+    }
+
     public function test_resolve_settings_returns_defaults_for_null_version(): void
     {
         $s = $this->mgr->resolveSettings(null);

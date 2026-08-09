@@ -52,7 +52,12 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
         Route::get('business-pages', 'getBusinessPagesList');
     });
 
-    Route::group(['prefix' => 'auth'], function () {
+    /*
+     * Rate limited: login, OTP verification/resend and password reset are credential-stuffing and
+     * OTP-brute-force targets. The only limit before this was the global api group's
+     * throttle:3000,1 — effectively none.
+     */
+    Route::group(['prefix' => 'auth', 'middleware' => ['throttle:20,1']], function () {
         Route::controller(PassportAuthController::class)->group(function () {
             Route::get('logout', 'logout')->middleware('auth:api');
         });

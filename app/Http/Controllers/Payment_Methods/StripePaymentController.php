@@ -86,6 +86,11 @@ class StripePaymentController extends Controller
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
+            // Bind the Stripe session to THIS payment record. success() verifies this back, so a
+            // session cannot be used to settle a different (or another customer's) payment.
+            'metadata' => [
+                'payment_id' => (string) $data->id,
+            ],
             'success_url' => url('/') . '/payment/stripe/success?payment_session_id={CHECKOUT_SESSION_ID}&payment_id=' . $data->id,
             'cancel_url' => url()->previous(),
         ]);
@@ -98,7 +103,16 @@ class StripePaymentController extends Controller
         Stripe::setApiKey($this->config_values->api_key);
         $session = Session::retrieve($request->get('payment_session_id'));
 
-        if ($session->payment_status == 'paid' && $session->status == 'complete') {
+        $payment = $this->payment::where(['id' => $request['payment_id']])->first();
+
+        // Idempotency: a re-opened success URL (or a retry) must not run the success hook twice,
+        // which would duplicate order/stock/wallet side effects.
+        if (isset($payment) && $payment->is_paid) {
+            return $this->payment_response($payment, 'success');
+        }
+
+        if (isset($payment) && $session->payment_status == 'paid' && $session->status == 'complete'
+            && $this->sessionBelongsToPayment($session, $payment)) {
 
             $this->payment::where(['id' => $request['payment_id']])->update([
                 'payment_method' => 'stripe',
@@ -119,5 +133,40 @@ class StripePaymentController extends Controller
             call_user_func($payment_data->failure_hook, $payment_data);
         }
         return $this->payment_response($payment_data,'fail');
+    }
+
+    /**
+     * Verify the completed Stripe session actually belongs to the payment record being settled.
+     *
+     * Without this, both `payment_session_id` and `payment_id` are attacker-supplied query
+     * parameters: one genuinely-paid session could be replayed to mark ANY other (cheaper or
+     * unrelated) payment as paid, and reused indefinitely. Two independent checks:
+     *
+     *  1. metadata.payment_id — set when the session is created, so a session is bound to exactly
+     *     one payment record. (Absent on sessions created before this fix; the amount check below
+     *     still protects those, so in-flight checkouts are not broken.)
+     *  2. amount_total — the captured amount must match what this payment expects, in the same
+     *     currency. This alone defeats settling an expensive order with a cheap session.
+     */
+    private function sessionBelongsToPayment(object $session, object $payment): bool
+    {
+        $metadataPaymentId = $session->metadata->payment_id ?? null;
+        if ($metadataPaymentId !== null && (string) $metadataPaymentId !== (string) $payment->id) {
+            return false;
+        }
+
+        $expectedMinor = (int) round(((float) $payment->payment_amount) * 100);
+        $paidMinor = (int) ($session->amount_total ?? 0);
+        if ($paidMinor !== $expectedMinor) {
+            return false;
+        }
+
+        $sessionCurrency = strtolower((string) ($session->currency ?? ''));
+        $paymentCurrency = strtolower((string) ($payment->currency_code ?? ''));
+        if ($sessionCurrency !== '' && $paymentCurrency !== '' && $sessionCurrency !== $paymentCurrency) {
+            return false;
+        }
+
+        return true;
     }
 }

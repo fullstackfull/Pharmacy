@@ -54,16 +54,52 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-Route::get('/image-proxy', function () {
+/*
+ * Image proxy — hardened against SSRF.
+ *
+ * Previously this fetched ANY user-supplied URL and returned the full body with
+ * Access-Control-Allow-Origin: *, i.e. an unauthenticated read-anything primitive: cloud
+ * instance-metadata (169.254.169.254 -> IAM credentials), internal services, and cross-origin
+ * exfiltration of the results. Now: scheme/destination validated by OutboundUrlGuard (public
+ * addresses only), redirects disabled (a 302 to 169.254.169.254 would bypass the check),
+ * image content-types only, a response-size cap, no wildcard CORS, and rate limited.
+ */
+Route::get('/image-proxy', function (\App\Services\Security\OutboundUrlGuard $guard) {
     $url = request('url');
     if (!$url) {
         abort(400, 'Missing url parameter');
     }
-    $response = Http::withHeaders(['User-Agent' => 'Laravel-Image-Proxy'])->get($url);
-    return response($response->body(), $response->status())
-        ->header('Content-Type', $response->header('Content-Type'))
-        ->header('Access-Control-Allow-Origin', '*');
-});
+
+    $verdict = $guard->check($url);
+    if (!$verdict['allowed']) {
+        abort(403, 'URL not allowed');
+    }
+
+    try {
+        $response = Http::withHeaders(['User-Agent' => 'Laravel-Image-Proxy'])
+            ->withOptions(['allow_redirects' => false])   // a redirect could point back at private space
+            ->timeout(5)
+            ->get($url);
+    } catch (\Throwable) {
+        abort(502, 'Upstream fetch failed');
+    }
+
+    if (!$response->successful()) {
+        abort(502, 'Upstream fetch failed');
+    }
+
+    $contentType = (string) $response->header('Content-Type');
+    if (!str_starts_with(strtolower($contentType), 'image/')) {
+        abort(415, 'Only image responses are proxied');
+    }
+
+    $body = $response->body();
+    if (strlen($body) > 5 * 1024 * 1024) {
+        abort(413, 'Image too large');
+    }
+
+    return response($body, 200)->header('Content-Type', $contentType);
+})->middleware('throttle:30,1');
 
 Route::controller(WebController::class)->group(function () {
     Route::get('maintenance-mode', 'maintenance_mode')->name('maintenance-mode');

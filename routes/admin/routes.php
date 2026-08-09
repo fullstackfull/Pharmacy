@@ -83,6 +83,11 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Settings\ThemeManagementController;
+use App\Http\Controllers\Admin\Settings\SeoTemplateController;
+use App\Http\Controllers\Admin\Settings\SeoTranslationController;
+use App\Http\Controllers\Admin\Settings\ThemeBuilderController;
+use App\Http\Controllers\Admin\Settings\ThemeSettingsController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1069,6 +1074,46 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         });
     });
 
+    /*
+     * Theme System management (Phase 1.1). Distinct from the legacy theme installer at
+     * admin.system-setup.theme.* — this manages themes, versions (draft/publish) and activation.
+     */
+    Route::group(['prefix' => 'theme', 'as' => 'theme.', 'middleware' => ['module:themes_and_addons']], function () {
+        Route::controller(ThemeManagementController::class)->group(function () {
+            Route::get('', 'index')->name('index');
+            Route::post('store', 'store')->name('store');
+            Route::post('activate', 'activate')->name('activate');
+            Route::post('version/publish', 'publishVersion')->name('version.publish');
+            Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
+            Route::post('version/restore', 'restoreVersion')->name('version.restore');
+            Route::get('version/export', 'exportVersion')->name('version.export');
+            Route::post('import', 'importTheme')->name('import');
+            Route::post('import-preset', 'importPreset')->name('import-preset');
+        });
+
+        // Global theme settings (branding / colors / typography / layout) — draft-scoped.
+        Route::group(['prefix' => 'settings', 'as' => 'settings.'], function () {
+            Route::controller(ThemeSettingsController::class)->group(function () {
+                Route::get('', 'index')->name('index');
+                Route::post('update', 'update')->name('update');
+            });
+        });
+
+        // Visual Theme Builder (Phase 1.2) — all mutations target a DRAFT version.
+        Route::group(['prefix' => 'builder', 'as' => 'builder.'], function () {
+            Route::controller(ThemeBuilderController::class)->group(function () {
+                Route::get('', 'index')->name('index');
+                Route::get('section-schema', 'sectionSchema')->name('section-schema');
+                Route::post('section/add', 'addSection')->name('section.add');
+                Route::post('section/update', 'updateSection')->name('section.update');
+                Route::post('section/reorder', 'reorderSections')->name('section.reorder');
+                Route::post('section/toggle', 'toggleSection')->name('section.toggle');
+                Route::post('section/duplicate', 'duplicateSection')->name('section.duplicate');
+                Route::post('section/delete', 'deleteSection')->name('section.delete');
+            });
+        });
+    });
+
     Route::group(['prefix' => 'seo-settings', 'as' => 'seo-settings.'], function () {
         Route::group(['middleware' => ['module:business_settings']], function () {
             Route::controller(SEOSettingsController::class)->group(function () {
@@ -1085,6 +1130,23 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::get('delete-page', 'getPageDelete')->name('delete-page');
                     Route::get('page-content-view', 'getPageAddContentView')->name('page-content-view');
                     Route::post('page-content-update', 'getPageContentUpdate')->name('page-content-update');
+                });
+            });
+
+            Route::group(['prefix' => 'translations', 'as' => 'translations.'], function () {
+                Route::controller(SeoTranslationController::class)->group(function () {
+                    Route::get('', 'index')->name('index');
+                    Route::post('save', 'save')->name('save');
+                    Route::get('delete', 'delete')->name('delete');
+                });
+            });
+
+            Route::group(['prefix' => 'templates', 'as' => 'templates.'], function () {
+                Route::controller(SeoTemplateController::class)->group(function () {
+                    Route::get('', 'index')->name('index');
+                    Route::post('save', 'save')->name('save');
+                    Route::get('delete', 'delete')->name('delete');
+                    Route::get('preview', 'preview')->name('preview');
                 });
             });
 

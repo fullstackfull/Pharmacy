@@ -114,7 +114,8 @@ Route::group(['namespace' => 'RestAPI\v2', 'prefix' => 'v2', 'middleware' => ['a
             });
         });
 
-        Route::group(['prefix' => 'auth', 'namespace' => 'auth'], function () {
+        // Rate limited: brute-force target (seller + delivery-man auth).
+        Route::group(['prefix' => 'auth', 'namespace' => 'auth', 'middleware' => ['throttle:20,1']], function () {
             Route::post('login', [LoginController::class,'login']);
             Route::controller(ForgotPasswordController::class)->group(function () {
                 Route::post('forgot-password', 'reset_password_request');
@@ -130,7 +131,8 @@ Route::group(['namespace' => 'RestAPI\v2', 'prefix' => 'v2', 'middleware' => ['a
 
     Route::group(['prefix' => 'delivery-man', 'namespace' => 'delivery_man'], function () {
 
-        Route::group(['prefix' => 'auth', 'namespace' => 'auth'], function () {
+        // Rate limited: brute-force target (seller + delivery-man auth).
+        Route::group(['prefix' => 'auth', 'namespace' => 'auth', 'middleware' => ['throttle:20,1']], function () {
             Route::controller(DeliveryManLoginController::class)->group(function () {
                 Route::post('login', 'login');
                 Route::post('forgot-password', 'reset_password_request');
