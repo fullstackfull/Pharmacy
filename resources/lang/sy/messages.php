@@ -8866,4 +8866,6 @@ return [
 	"the_stop_reminding_hours_must_be_greater_than_the_idle_hours" => "يجب أن تكون ساعة التوقّف عن التذكير أكبر من ساعة اعتبار السلّة متروكة.",
 	"you_can_only_edit_your_own_review" => "لا يمكنك تعديل إلا تقييمك أنت.",
 	"you_can_only_review_a_product_you_ordered" => "لا يمكنك تقييم منتج إلا إذا كنت قد طلبته.",
+	"sorry_an_item_in_your_cart_just_went_out_of_stock" => "عذراً، نفد مخزون أحد المنتجات في سلّتك للتوّ",
+	"your_cart_has_not_been_changed" => "لم يطرأ أي تغيير على سلّتك",
 ];

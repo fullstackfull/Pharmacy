@@ -588,6 +588,19 @@ class WebController extends Controller
             'bring_change_amount_currency' => session('currency_code'),
         ]);
 
+        // generateOrder() returns an empty list when the order was refused inside its transaction —
+        // stock ran out between the pre-order check and the write. Nothing was created and nothing
+        // was taken, so the cart is intact and the customer can simply try again with less.
+        if (empty($orderIds)) {
+            $message = translate('sorry_an_item_in_your_cart_just_went_out_of_stock') . '. ' . translate('your_cart_has_not_been_changed');
+            if ($request->ajax()) {
+                return response()->json(['status' => 0, 'message' => $message], 200);
+            }
+            Toastr::error($message);
+
+            return back();
+        }
+
         $isNewCustomerInSession = session('newCustomerRegister');
         session(['order_success_ids' => $orderIds, 'isNewCustomerInSession' => $isNewCustomerInSession]);
         session()->forget('newCustomerRegister');
@@ -714,6 +727,15 @@ class WebController extends Controller
             'payment_note' => $request['payment_note'],
             'offline_payment_info' => $offlinePaymentInfo,
         ]);
+
+        // generateOrder() returns an empty list when the order was refused inside its transaction —
+        // stock ran out between the pre-order check and the write. Nothing was created and nothing
+        // was taken, so the cart is intact and the customer can simply try again with less.
+        if (empty($orderIds)) {
+            Toastr::error(translate('sorry_an_item_in_your_cart_just_went_out_of_stock') . '. ' . translate('your_cart_has_not_been_changed'));
+
+            return back();
+        }
 
         $isNewCustomerInSession = session('newCustomerRegister');
         session(['order_success_ids' => $orderIds, 'isNewCustomerInSession' => $isNewCustomerInSession]);

@@ -38,6 +38,7 @@ use App\Models\OrderTransaction;
 use App\Models\ReferralCustomer;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\DigitalProductVariation;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
 
@@ -687,12 +688,31 @@ class OrderManager
         ];
     }
 
+    /**
+     * The next order id — read-max-then-increment, so it has to be serialised.
+     *
+     * `orders.id` is not auto-increment; this function picks the number. Two concurrent checkouts
+     * therefore read the same maximum and both return it, and the second insert dies on the primary
+     * key. Observed on the running store with two simultaneous orders:
+     *
+     *     SQLSTATE[23000]: Integrity constraint violation: 1062
+     *     Duplicate entry '100002' for key 'PRIMARY'
+     *
+     * — a hard 500 at the last step of checkout, after the customer pressed pay.
+     *
+     * `lockForUpdate()` makes the read-then-insert atomic for the duration of the order
+     * transaction, so the second checkout waits, then reads the id the first one just wrote.
+     * Outside a transaction it is a harmless no-op, so callers that are not in one are unaffected.
+     *
+     * The selection rule itself is left exactly as it was — this changes when the read happens,
+     * not which number it produces.
+     */
     public static function generateNewOrderID()
     {
         $baseID = 100001;
-        $orderDetailsId = OrderDetail::orderBy('order_id', 'desc')->first()?->order_id ?? $baseID;
+        $orderDetailsId = OrderDetail::orderBy('order_id', 'desc')->lockForUpdate()->first()?->order_id ?? $baseID;
         if (Order::find($orderDetailsId)) {
-            $orderDetailsId = Order::orderBy('id', 'DESC')->first()->id + 1;
+            $orderDetailsId = Order::orderBy('id', 'DESC')->lockForUpdate()->first()->id + 1;
         }
         return $orderDetailsId;
     }
@@ -1004,10 +1024,20 @@ class OrderManager
 
         $taxConfig = self::getTaxSystemType();
 
+        // Reject overselling by default; the post-payment path opts out (see generateOrder).
+        $stockPolicy = $vendorCart['stock_policy'] ?? 'reject';
+
         foreach ($vendorCart['cart_list'] as $cartSingleItem) {
-            $product = Product::where(['id' => $cartSingleItem['product_id']])->with(['digitalVariation', 'clearanceSale' => function ($query) {
+            // lockForUpdate() serialises concurrent orders for the same product for the rest of this
+            // transaction. It is what makes the variant read-modify-write below safe: that block
+            // decodes `variation`, subtracts from one variant and writes the whole JSON back, so
+            // without a lock two orders for the same variant read the same array and one decrement
+            // is lost outright — the identical bug that was fixed for `current_stock`, still live on
+            // the variant path.
+            $productModel = Product::where(['id' => $cartSingleItem['product_id']])->with(['digitalVariation', 'clearanceSale' => function ($query) {
                 return $query->active();
-            }])->first()->toArray();
+            }])->lockForUpdate()->first();
+            $product = $productModel->toArray();
             unset($product['is_shop_temporary_close']);
             unset($product['meta_image_full_url']);
             unset($product['reviews']);
@@ -1096,7 +1126,33 @@ class OrderManager
             // resolves per statement, so concurrent orders subtract from each other rather than
             // overwriting each other. Inventory stops drifting upward, and the store stops showing
             // stock it does not have.
-            Product::where(['id' => $product['id']])->decrement('current_stock', (int) $cartSingleItem['quantity']);
+            //
+            // The decrement is now also CONDITIONAL for physical products: `where('current_stock',
+            // '>=', $qty)` means the database itself refuses to take stock that is not there, and
+            // an affected-row count of zero is the signal that it refused. Atomicity alone stopped
+            // the arithmetic being wrong; it did not stop stock going negative.
+            //
+            // Digital products keep the unconditional decrement they always had — they have no
+            // real stock, so guarding them would reject orders for a number that means nothing.
+            $orderedQuantity = (int) $cartSingleItem['quantity'];
+            $isPhysical = ($product['product_type'] ?? 'physical') === 'physical';
+
+            if ($isPhysical && $stockPolicy === 'reject') {
+                $stockTaken = Product::where(['id' => $product['id']])
+                    ->where('current_stock', '>=', $orderedQuantity)
+                    ->decrement('current_stock', $orderedQuantity);
+
+                if ($stockTaken === 0) {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        productId: $product['id'],
+                        productName: $product['name'] ?? null,
+                        requested: $orderedQuantity,
+                    );
+                }
+            } else {
+                Product::where(['id' => $product['id']])->decrement('current_stock', $orderedQuantity);
+            }
+
             $orderDetailsId = DB::table('order_details')->insertGetId($orderDetails);
 
             foreach ($vendorCart['applied_tax_cart_list'] as $cartItem) {
@@ -1241,7 +1297,52 @@ class OrderManager
             'requestObj' => $data['requestObj'] ?? null,
         ]);
 
+        // Everything that writes an order is one transaction; everything with a side effect the
+        // database cannot undo — notifications, emails, clearing the cart, the session — stays
+        // outside it and runs only after the commit. The loop below was already written that way:
+        // it *collects* notification and mail payloads and fires them further down, so this
+        // boundary follows a seam that already existed rather than restructuring the path.
+        //
+        // Without it, a failure part-way through left some stock decremented and some order rows
+        // written, with nothing to undo either.
+        //
+        // The post-payment caller opts out of rejection: by then the customer's money has been
+        // taken, and refusing the order would leave them paid with nothing to show for it, which is
+        // strictly worse than an oversold line a human can reconcile. See generateOrder's callers.
+        $stockPolicy = ($data['stock_policy'] ?? 'reject') === 'allow_oversell' ? 'allow_oversell' : 'reject';
+
+        // Order ids are chosen by generateNewOrderID(), not by the database, so two checkouts that
+        // start together can pick the same number and the second insert dies on the primary key.
+        // Observed on the running store: "Duplicate entry '100002' for key 'PRIMARY'" — a hard 500
+        // at the last step of checkout. Locking does not help, because the row being counted may
+        // not exist yet and an absent row cannot be locked. Re-running the transaction does: each
+        // attempt re-reads the id, so the loser of the race simply takes the next number.
+        for ($idCollisionAttempt = 1; ; $idCollisionAttempt++) {
+        try {
+            DB::transaction(function () use (
+                $vendorWiseCartList, $taxConfig, $getCustomerInfo, $orderGroupId, $data, $stockPolicy,
+                &$orderPlacedIds, &$orderPlacedNotificationEvents, &$orderPlacedMailEvents
+            ) {
+                // Reset per attempt. DB::transaction retries on deadlock, and these accumulate —
+                // without this a retried attempt would report each order twice.
+                $orderPlacedIds = [];
+                $orderPlacedNotificationEvents = [];
+                $orderPlacedMailEvents = [];
+
+                // Lock every product in the order up front, ordered by id. Two carts holding the
+                // same two products in opposite orders would otherwise each hold the row the other
+                // needs — a deadlock. Acquiring them in one deterministic order removes the cycle;
+                // the retry count below is the belt to this pair of braces.
+                $lockProductIds = collect($vendorWiseCartList)
+                    ->pluck('cart_list')->flatten(1)->pluck('product_id')
+                    ->filter()->unique()->sort()->values()->all();
+
+                if ($lockProductIds) {
+                    Product::whereIn('id', $lockProductIds)->orderBy('id')->lockForUpdate()->get();
+                }
+
         foreach ($vendorWiseCartList as $vendorWiseGroupId => $vendorWiseCart) {
+            $vendorWiseCart['stock_policy'] = $stockPolicy;
             $order_id = OrderManager::generateNewOrderID();
             $orderPlacedIds[] = $order_id;
 
@@ -1322,6 +1423,31 @@ class OrderManager
                 order: $order,
                 customer: $getCustomerInfo['customer'],
             );
+        }
+            }, attempts: 3);
+
+            break;
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $exception) {
+            // Nothing was committed — the whole attempt rolled back, stock included. Retrying
+            // re-reads the id, so the loser of the race simply takes the next number.
+            if ($idCollisionAttempt >= 3) {
+                throw $exception;
+            }
+
+            usleep(random_int(20000, 90000));
+            continue;
+        } catch (\App\Exceptions\InsufficientStockException $exception) {
+            // The transaction has already rolled back: no order rows, no stock taken. Report the
+            // failure as "no orders created" rather than throwing, because every caller treats the
+            // return value as a list of ids and none of them expects an exception. Callers guard on
+            // an empty result and tell the customer their cart is unchanged.
+            Log::warning('Order refused: ' . $exception->getMessage(), [
+                'product_id' => $exception->productId,
+                'requested' => $exception->requested,
+            ]);
+
+            return [];
+        }
         }
 
         $user = Helpers::getCustomerInformation(($data['requestObj'] ?? request()->all()));
