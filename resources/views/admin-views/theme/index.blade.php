@@ -6,9 +6,14 @@
     <div class="content container-fluid">
         <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
             <h2 class="h1 mb-0 text-capitalize">{{ translate('Theme_Management') }}</h2>
-            <a href="{{ route('admin.theme.builder.index') }}" class="btn btn-primary">
-                {{ translate('Open_Theme_Builder') }}
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('admin.theme.settings.index') }}" class="btn btn-outline-primary">
+                    {{ translate('Theme_Settings') }}
+                </a>
+                <a href="{{ route('admin.theme.builder.index') }}" class="btn btn-primary">
+                    {{ translate('Open_Theme_Builder') }}
+                </a>
+            </div>
         </div>
 
         <div class="row g-3">

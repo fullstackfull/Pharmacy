@@ -86,6 +86,7 @@ use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
 use App\Http\Controllers\Admin\Settings\ThemeBuilderController;
+use App\Http\Controllers\Admin\Settings\ThemeSettingsController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
 use App\Http\Controllers\Admin\Deliveryman\EmergencyContactController;
 use App\Http\Controllers\Admin\HelpAndSupport\SupportTicketController;
@@ -1083,6 +1084,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('activate', 'activate')->name('activate');
             Route::post('version/publish', 'publishVersion')->name('version.publish');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
+        });
+
+        // Global theme settings (branding / colors / typography / layout) — draft-scoped.
+        Route::group(['prefix' => 'settings', 'as' => 'settings.'], function () {
+            Route::controller(ThemeSettingsController::class)->group(function () {
+                Route::get('', 'index')->name('index');
+                Route::post('update', 'update')->name('update');
+            });
         });
 
         // Visual Theme Builder (Phase 1.2) — all mutations target a DRAFT version.
