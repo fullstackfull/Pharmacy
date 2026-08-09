@@ -285,10 +285,11 @@ class CartController extends BaseController
      */
     public function getCartIds(): JsonResponse
     {
+        $cartName = $this->cartService->ensureCartSession();
         $this->cartService->getCartKeeper();
         $getCurrentCustomerData = $this->getCustomerDataFromSessionForPOS();
         $summaryData = array_merge($this->POSService->getSummaryData(), $getCurrentCustomerData);
-        $cartItems = $this->getCartData(cartName: session(SessionKey::CURRENT_USER));
+        $cartItems = $this->getCartData(cartName: $cartName);
         return response()->json([
             'view' => view('vendor-views.pos.partials._cart', compact('summaryData', 'cartItems'))->render(),
         ]);
@@ -327,16 +328,20 @@ class CartController extends BaseController
      */
     public function addNewCartId(): RedirectResponse
     {
-        $cart = session(session(SessionKey::CURRENT_USER));
+        // `session(SessionKey::CURRENT_USER)` is unset until the first POS cart exists, and
+        // `session(null)` returns the SessionManager rather than null — so `count($cart)` fataled
+        // and a new cart tab could never be opened. No current cart simply means an empty cart.
+        $currentCart = session(SessionKey::CURRENT_USER);
+        $cart = $currentCart ? session($currentCart) : null;
 
-        $cartItems = collect(session(session(SessionKey::CURRENT_USER)))->filter(function ($cartItem) {
+        $cartItems = collect(is_array($cart) ? $cart : [])->filter(function ($cartItem) {
             return is_array($cartItem);
         });
 
-        if (is_null($cart) || count($cartItems) <= 0) {
+        if (!is_array($cart) || $cartItems->count() <= 0) {
             ToastMagic::error(translate('Cart_is_empty'));
         } else {
-            if (session()->has(session(SessionKey::CURRENT_USER)) && count($cart) > 0) {
+            if (count($cart) > 0) {
                 ToastMagic::success(translate('this_order_is_now_on_hold'));
             }
             $this->cartService->customerOnHoldStatus(status: true);
@@ -350,11 +355,18 @@ class CartController extends BaseController
      */
     protected function getCustomerDataFromSessionForPOS(): array
     {
-        if (Str::contains(session(SessionKey::CURRENT_USER), 'walk-in-customer')) {
+        // Before the first POS cart exists this key is unset. Str::contains(null, ...) is false, so
+        // the old code fell into the saved-customer branch and blew up on explode(null)[2] with
+        // "Undefined array key 2" — the POS cart panel could not load on a fresh admin session.
+        // No current cart means a walk-in customer, which is what the panel shows by default.
+        $currentUserKey = session(SessionKey::CURRENT_USER);
+        $savedCustomerId = $currentUserKey ? (explode('-', $currentUserKey)[2] ?? null) : null;
+
+        if (!$currentUserKey || Str::contains($currentUserKey, 'walk-in-customer') || $savedCustomerId === null) {
             $currentCustomer = 'Walk-In Customer';
             $currentCustomerData = $this->customerRepo->getFirstWhere(params: ['id' => '0']);
         } else {
-            $userId = explode('-', session(SessionKey::CURRENT_USER))[2];
+            $userId = $savedCustomerId;
             $currentCustomerData = $this->customerRepo->getFirstWhere(params: ['id' => $userId]);
             $currentCustomer = $currentCustomerData['f_name'] . ' ' . $currentCustomerData['l_name'] . ' (' . $currentCustomerData['phone'] . ')';
         }

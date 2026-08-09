@@ -166,6 +166,13 @@ class VendorTaxReportController extends Controller
 
         $shop = $this->shopRepo->getFirstWhere(params: ['id' => $request['shop_id']]);
 
+        // This is a per-vendor details page, and the view reads $shop['name'] and $shop['id']
+        // directly — so a missing, stale or deleted shop_id rendered a 500 rather than a page.
+        // Send the admin back to the list they came from.
+        if (!$shop) {
+            return redirect()->route('admin.report.vendor-wise-taxes');
+        }
+
         $orderTransactions = OrderTransaction::with(['seller', 'shop.seller', 'orderTaxes.tax', 'order'])
             ->where(['status' => 'disburse'])
             ->whereHas('order', function ($query) {

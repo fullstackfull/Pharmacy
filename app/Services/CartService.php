@@ -161,14 +161,22 @@ class CartService
     public function getCartKeeper(): void
     {
         $cartId = session(SessionKey::CURRENT_USER);
+
+        // Before the first POS cart exists this key is unset, and `session(null)` returns the
+        // SessionManager itself rather than null — so `count($cart)` was a fatal TypeError and the
+        // POS could not open a cart at all. Nothing to keep when there is no cart id.
+        if (!$cartId) {
+            return;
+        }
+
         $cart = session($cartId);
         $cartKeeper = [];
-        if (session()->has($cartId) && count($cart) > 0) {
+        if (is_array($cart)) {
             foreach ($cart as $cartItem) {
                 $cartKeeper[] = $cartItem;
             }
         }
-        session()->put(session(SessionKey::CURRENT_USER), $cartKeeper);
+        session()->put($cartId, $cartKeeper);
     }
 
     public function getVariationPrice(array $variation, string $variant): float
@@ -311,6 +319,23 @@ class CartService
         if (!in_array($cartId, session(SessionKey::CART_NAME) ?? [])) {
             session()->push(SessionKey::CART_NAME, $cartId);
         }
+    }
+
+    /**
+     * The current POS cart id, creating one if the session has none yet.
+     *
+     * Only `POSController@index` established this key, so every other POS endpoint assumed a page
+     * load had already happened. Hit directly — which is what the panel's own AJAX does after a
+     * session expires — they passed null into `getCartData(string $cartName)` and fataled. A POS
+     * with no cart yet is a walk-in customer, which is exactly what getNewCartId() sets up.
+     */
+    public function ensureCartSession(): string
+    {
+        if (!session(SessionKey::CURRENT_USER)) {
+            $this->getNewCartId();
+        }
+
+        return (string) session(SessionKey::CURRENT_USER);
     }
 
     public function getCartSubtotalCalculation(object|array $product, array $cartItem, int|float $totalDiscountedPrice, string $cartName): array
