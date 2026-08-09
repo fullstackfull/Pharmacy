@@ -673,6 +673,17 @@
                     </a>
                     <ul class="aside-submenu navbar-nav">
                         <li class="nav-item px-3 py-2 fw-semibold text-dark bg-section2 aside-mini-show-element">{{ translate('sales_&_Transaction_Report') }}</li>
+                        @if (Route::has('admin.marketplace.settlements.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.settlements.index') }}"
+                                   title="{{ translate('vendor_settlements') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('vendor_settlements') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         <li>
                             <a class="nav-link {{ (Request::is('admin/report/admin-earning') || Request::is('admin/report/vendor-earning')) ? 'active' : '' }}"
                                href="{{ route('admin.report.admin-earning') }}"
