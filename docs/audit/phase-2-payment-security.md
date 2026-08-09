@@ -258,3 +258,56 @@ After: `HTTP 200`, with `free_delivery_status` still carrying every key the stor
 `getFreeDeliveryOrderAmountArray()` already treats a null group as "no free delivery", so passing
 `$cart->first()?->cart_group_id` through preserves the published response shape exactly rather than
 inventing a fallback array.
+
+---
+
+## Routes that answer 500 instead of 404 — 2026-08-09
+
+Found while checking that the checkout pages load: `GET /checkout-review` returned
+
+    {"message": "Method App\\Http\\Controllers\\Web\\WebController::checkout_review does not exist.",
+     "exception": "BadMethodCallException"}
+
+Laravel resolves `'Controller@method'` at request time, not at boot, so a route whose target was
+renamed or deleted stays registered and answers **500**, not 404. Nothing reports it, because
+nothing in the UI links to it.
+
+Audited all 1,579 registered routes for this. **19 were broken:**
+
+| Route | Target that no longer exists |
+|---|---|
+| `GET /checkout-review` | `WebController@checkout_review` |
+| `GET /top-rated`, `/best-sell`, `/new-product` | superseded by `top-rated-products` / `best-selling-products` |
+| `POST /user-account-picture` | `UserProfileController@user_picture` |
+| `GET /user-all-restock-request-delete/{ids}` | `UserProfileController@deleteAllRestockRequest` |
+| `POST /customer/choose-billing-address` | `SystemController@choose_billing_address` |
+| `GET /api/v1/customer/address/get/{id}` | `CustomerController@get_address` |
+| `GET /api/v2/delivery-man/order-list-by-date` | `DeliveryManController@order_list_date_filter` |
+| `GET /admin/pos/get-cart-items` | `POS\CartController@getCartItems` |
+| `GET /admin/report/earning` | `ReportController@earning_index` |
+| `POST /admin/stock/ps-filter` | `ProductStockReportController@filter` |
+| `GET /admin/pages-and-media/fetch` | `SocialMediaSettingsController@getList` |
+| `GET /admin/sub-category/update/{id}` | `SubCategoryController@getUpdateView` |
+| `POST /vendor/refund/refund-status-update` | duplicate of the working `update-status` route |
+| `POST /admin/blog/section-view` | `BlogController@sectionView` |
+| `Route::resource('ai', AIController::class)` | `store`, `update`, `destroy` |
+
+Every one was checked for a renamed equivalent before removal, and every one was checked for
+references. **None is linked from any working page**, which is precisely why they survived. Two
+points are worth being explicit about:
+
+* The two **API** routes were never implemented in this version — no method of any name serves
+  them. So no shipped mobile build can be relying on them working; they return 500 today. Turning
+  them into 404 cannot break a client that functions.
+* `Route::resource('ai', ...)` published **`/ai` unauthenticated** — a page titled
+  "AI Module - Laravel" rendering "Hello World", indexable, live on the store — while its siblings
+  `/ai/create`, `/ai/{id}` and `/ai/{id}/edit` returned 500. Module scaffold left in place. The AI
+  module's real surface is `admin/ai/*` and `customer/auction/product/*`, both untouched.
+
+Removed all 19. Verified after: storefront, product list, customer login, admin login
+(`/login/{loginUrl}`) and vendor login all still 200; `/ai`, `/checkout-review` and `/top-rated`
+now 404 rather than 200/500.
+
+`tests/Feature/RouteTargetsExistTest.php` makes this a standing invariant over every route in the
+application, so the rot cannot return quietly. The guard was proved by reintroducing
+`checkout-review` and watching it fail with the exact route named, then removing it again.

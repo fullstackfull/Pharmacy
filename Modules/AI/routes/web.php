@@ -15,9 +15,10 @@ use Modules\AI\app\Http\Controllers\API\V3\AIAuctionProductController;
 |
 */
 
-Route::group([], function () {
-    Route::resource('ai', AIController::class)->names('ai');
-});
+// The module scaffold's `Route::resource('ai', AIController::class)` was left in place: it published
+// /ai unauthenticated (a "Hello World" page titled "AI Module - Laravel") while /ai/create, /ai/{id}
+// and /ai/{id}/edit returned 500, because AIController only ever implemented index/create/show/edit.
+// Nothing links to any of it — the module's real surface is admin/ai/* and customer/auction/product/*.
 
 Route::group(['prefix' => 'customer', 'as' => 'customer.', 'middleware' => ['customer']], function () {
     Route::group(['prefix' => 'auction/product', 'as' => 'auction.product.'], function () {
