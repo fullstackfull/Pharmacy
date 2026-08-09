@@ -728,6 +728,28 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.suppliers.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/suppliers*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.suppliers.index') }}"
+                                   title="{{ translate('suppliers') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('suppliers') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.purchase-orders.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/purchase-orders*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.purchase-orders.index') }}"
+                                   title="{{ translate('purchase_orders') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('purchase_orders') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"

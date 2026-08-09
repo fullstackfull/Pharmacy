@@ -520,6 +520,28 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('/', 'index')->name('index');
             });
         });
+
+        // Procurement (Stage C): suppliers and purchase orders. Receiving a PO line increments the
+        // catalogue stock the storefront sells — the supply side of the same inventory.
+        Route::group(['prefix' => 'suppliers', 'as' => 'suppliers.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SupplierController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+        Route::group(['prefix' => 'purchase-orders', 'as' => 'purchase-orders.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\PurchaseOrderController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('create', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('{id}', 'show')->whereNumber('id')->name('show');
+                Route::post('{id}/place', 'place')->whereNumber('id')->name('place');
+                Route::post('{id}/receive', 'receive')->whereNumber('id')->name('receive');
+                Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

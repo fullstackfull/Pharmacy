@@ -2879,4 +2879,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"kyc" => "Kyc",
 	"a_high_cancellation_return_or_refund_rate_or_moderation_strikes_move_your_store_from_good_to_watch_to_at_risk" => "A high cancellation return or refund rate or moderation strikes move your store from good to watch to at risk",
 	"moderation_strikes" => "Moderation strikes",
+	"no_suppliers_yet" => "No suppliers yet",
+	"all_suppliers" => "All suppliers",
+	"line_total" => "Line total",
 ];
