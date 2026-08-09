@@ -494,6 +494,15 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('bulk', 'bulk')->name('bulk');
             });
         });
+
+        // Per-category governance (spec item 10): return window, tax class, required attributes and a
+        // moderation flag, each inheriting the global default when left blank.
+        Route::group(['prefix' => 'category-governance', 'as' => 'category-governance.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CategoryGovernanceController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('update', 'update')->name('update');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

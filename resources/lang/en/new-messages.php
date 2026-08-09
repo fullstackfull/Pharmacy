@@ -2856,4 +2856,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"record" => "Record",
 	"already_decided_by_this_actor" => "Already decided by this actor",
 	"product_rejected" => "Product rejected",
+	"shipping_restricted" => "Shipping restricted",
+	"always_moderate_products_here" => "Always moderate products here",
+	"shipping_restriction_note" => "Shipping restriction note",
 ];

@@ -695,6 +695,28 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.category-governance.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/category-governance*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.category-governance.index') }}"
+                                   title="{{ translate('category_governance') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('category_governance') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.product-moderation.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.product-moderation.index') }}"
+                                   title="{{ translate('product_moderation') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('product_moderation') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.audit-log'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/audit-log*') ? 'active' : '' }}"

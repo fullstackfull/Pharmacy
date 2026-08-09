@@ -455,7 +455,13 @@ class OrderController extends Controller
             if ($order_details->refund_request != 0) {
                 $already_requested = true;
             }
-            if (!is_null($order_details?->refund_started_at) && $order_details?->refund_started_at?->diffInDays(Carbon::now()) > getWebConfig(name: 'refund_day_limit')) {
+            // The return window is per-category now (spec item 10). CategoryGovernanceService resolves
+            // the category's window, falling back to the global refund_day_limit when the category
+            // sets none — so this is identical to the old behaviour for every ungoverned category,
+            // and honours a stricter (or more generous) window where one is configured.
+            $refundCategoryId = $order_details->product_details ? (json_decode($order_details->product_details, true)['category_id'] ?? null) : null;
+            if (!app(\App\Services\Marketplace\CategoryGovernanceService::class)
+                    ->isWithinReturnWindow($refundCategoryId, $order_details?->refund_started_at)) {
                 $expired = true;
             }
             return response()->json(['already_requested' => $already_requested, 'expired' => $expired, 'refund' => $data], 200);
