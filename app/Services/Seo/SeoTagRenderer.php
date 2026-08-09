@@ -85,6 +85,42 @@ class SeoTagRenderer
         return implode("\n", $lines);
     }
 
+    /**
+     * Canonical and hreflang only — the tags a theme that already writes its own meta is missing.
+     *
+     * 6Valley's storefront templates emit title/description/og/twitter/robots themselves, but no
+     * canonical and no hreflang. Rendering the full block alongside them would duplicate half the
+     * head, and duplicate canonical or og tags are worse than none: search engines treat conflicting
+     * signals as untrustworthy. This lets a theme adopt exactly the part it lacks.
+     *
+     * Separate from render() rather than an option on it, so the existing method keeps its
+     * behaviour and its tests unchanged.
+     *
+     * @param  array<string,string>  $alternates  language code => absolute URL
+     */
+    public function renderCanonicalAndAlternates(?string $canonicalUrl, array $alternates = []): string
+    {
+        $lines = [];
+
+        if (!empty($canonicalUrl)) {
+            $lines[] = $this->tag('link', ['rel' => 'canonical', 'href' => (string) $canonicalUrl]);
+        }
+
+        $first = true;
+        foreach ($alternates as $lang => $url) {
+            if (!is_string($url) || $url === '') {
+                continue;
+            }
+            $lines[] = $this->tag('link', ['rel' => 'alternate', 'hreflang' => (string) $lang, 'href' => $url]);
+            if ($first) {
+                $lines[] = $this->tag('link', ['rel' => 'alternate', 'hreflang' => 'x-default', 'href' => $url]);
+                $first = false;
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
     /** JSON-LD structured data. Returns '' for an empty payload so callers can echo unconditionally. */
     public function renderJsonLd(array $data): string
     {

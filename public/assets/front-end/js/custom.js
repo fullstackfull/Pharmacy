@@ -1947,6 +1947,7 @@ function getVariantPrice(formSelector = ".add-to-cart-details-form") {
                 }
                 updateProductDetailsTopSection(".add-to-cart-details-form", response);
                 updateProductDetailsBottomSection(".add-to-cart-sticky-form", response);
+                applyVariantStockLimit(response);
                 if (response?.discount_amount > 0) {
                     if (response?.discount_type === "flat") {
                         $(formSelector).find(".discounted_badge").html(`${response?.discount}`);
@@ -1974,6 +1975,38 @@ function getVariantPrice(formSelector = ".add-to-cart-details-form") {
     }
 }
 
+
+/**
+ * Re-limit the quantity box to the stock of the variant the customer just chose.
+ *
+ * The page renders max="{{ $product->current_stock }}" — the product's TOTAL stock across every
+ * variant. So on a product with 8 small and 2 large, choosing "large" still offered up to 10. The
+ * server does refuse it (CartManager checks the variant's own qty), so nothing oversells; the cost
+ * is that the page invites a quantity it is about to reject, and the customer only finds out after
+ * pressing Add to cart.
+ *
+ * The variant response already carries the right number — it was simply never applied. Digital
+ * products report 100 rather than a stock level, which is the existing convention and is left alone.
+ */
+function applyVariantStockLimit(response) {
+    var available = parseInt(response?.quantity);
+    if (isNaN(available)) {
+        return;
+    }
+
+    $(".product-details-cart-qty").each(function () {
+        var $input = $(this);
+        $input.attr("max", available);
+
+        // Clamp a quantity that was valid for the previous variant but is not for this one, so the
+        // box can never sit on a value the server will reject.
+        var current = parseInt($input.val());
+        var minimum = parseInt($input.attr("min")) || 1;
+        if (!isNaN(current) && current > available) {
+            $input.val(available > 0 ? Math.max(minimum, available) : minimum);
+        }
+    });
+}
 
 $(".product-details-cart-qty").on("keypress keyup input", function (event) {
     if (parseInt($(this).val()) > $(this).attr("max")) {

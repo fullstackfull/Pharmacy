@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\View\Composers\ProductSeoSupplementComposer;
 use App\View\Composers\SeoHeadComposer;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -19,5 +20,10 @@ class SeoServiceProvider extends ServiceProvider
     {
         // Only the opt-in SEO head partial gets the composer, so no existing view is affected.
         View::composer('seo.head', SeoHeadComposer::class);
+
+        // Product pages: supplies the canonical, hreflang and Product schema the theme's own
+        // meta partial does not emit. Scoped to this one partial for the same reason — nothing
+        // that does not include it can be affected.
+        View::composer('seo.product-supplement', ProductSeoSupplementComposer::class);
     }
 }
