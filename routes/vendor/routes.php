@@ -383,6 +383,13 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::post('/', 'store')->name('store');
                     });
                 });
+
+                // Seller's own performance scorecard (Phase 3, Stage A) — the same metrics the admin sees.
+                Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerScorecardController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                    });
+                });
             });
 
             Route::controller(SystemController::class)->group(function () {

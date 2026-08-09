@@ -596,6 +596,20 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('vendor.business-settings.seller-scorecard.index'))
+                            <li
+                                class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/seller-scorecard*') ? 'active' : '' }}">
+                                <a class="js-navbar-vertical-aside-menu-link nav-link"
+                                    href="{{ route('vendor.business-settings.seller-scorecard.index') }}"
+                                    title="{{ translate('performance') }}">
+                                    <i class="tio-chart-bar-4 nav-icon"></i>
+                                    <span
+                                        class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate text-capitalize">
+                                        {{ translate('performance') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         <li
                             class="navbar-vertical-aside-has-menu {{ Request::is('vendor/profile/' . Profile::INDEX[URI]) || Request::is('vendor/profile/' . Profile::BANK_INFO_UPDATE[URI]) ? 'active' : '' }}">
                             <a class="js-navbar-vertical-aside-menu-link nav-link"

@@ -513,6 +513,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('settings', 'updateSettings')->name('settings');
             });
         });
+
+        // Seller performance scorecard: quality metrics and a derived health tier per seller.
+        Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerScorecardController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

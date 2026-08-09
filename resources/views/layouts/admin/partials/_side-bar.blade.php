@@ -717,6 +717,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.seller-scorecard.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/seller-scorecard*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.seller-scorecard.index') }}"
+                                   title="{{ translate('seller_scorecard') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_scorecard') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"

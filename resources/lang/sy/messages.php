@@ -9035,4 +9035,21 @@ return [
 	"identity" => "الهوية",
 	"business_license" => "السجل التجاري",
 	"expires" => "ينتهي",
+
+	// Seller performance scorecard (Phase 3, Stage A)
+	"seller_scorecard" => "بطاقة أداء البائع",
+	"fulfilment_cancellations_returns_refunds_rating_and_moderation_per_seller" => "التنفيذ والإلغاءات والإرجاعات والاستردادات والتقييم والإشراف لكل بائع",
+	"health" => "الحالة",
+	"fulfilment" => "التنفيذ",
+	"refunds" => "الاستردادات",
+	"strikes" => "المخالفات",
+	"kyc" => "التوثيق",
+	"no_sellers_found" => "لا يوجد بائعون",
+	"watch" => "قيد المراقبة",
+	"at_risk" => "معرَّض للخطر",
+	"my_performance" => "أدائي",
+	"performance" => "الأداء",
+	"moderation_strikes" => "مخالفات الإشراف",
+	"how_your_store_is_doing_on_the_metrics_that_matter" => "كيف يبلي متجرك في المقاييس المهمّة",
+	"a_high_cancellation_return_or_refund_rate_or_moderation_strikes_move_your_store_from_good_to_watch_to_at_risk" => "ارتفاع معدّل الإلغاء أو الإرجاع أو الاسترداد أو مخالفات الإشراف ينقل متجرك من جيّد إلى قيد المراقبة إلى معرَّض للخطر",
 ];
