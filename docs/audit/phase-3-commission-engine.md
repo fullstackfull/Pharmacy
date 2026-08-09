@@ -231,3 +231,65 @@ Remaining before Stage B closes:
   only through the service layer and the console command.
 
 Stages A, C, D, E and F remain untouched.
+
+---
+
+# Phase 3, Stage B — Refund reversal
+
+The hole named in the two sections above, now closed. It was the largest one in the financial core,
+and it was a live overcharge rather than a missing feature.
+
+## What the refund path did
+
+```php
+$this->vendorWalletRepo->updateWhere(
+    params: ['seller_id' => $order['seller_id']],
+    data: ['total_earning' => $sellerWallet['total_earning'] - $refund['amount']]
+);
+```
+
+It subtracts the refunded amount from a mutable total and says nothing about the commission. **The
+marketplace kept its cut of a sale it gave back.** The seller lost the full amount; the commission
+charged on it stayed charged. On a marketplace with any return volume that is a systematic
+overcharge of every seller, and nothing in the data would have surfaced it — there was no per-line
+commission figure to compare against.
+
+## What shipped
+
+Both sides now reverse, proportionally, as **new ledger entries**:
+
+* a `refund` **debit** for what the customer got back, and
+* a `return_adjustment` **credit** giving back the commission on the refunded portion.
+
+Verified by the tests: a sale of 400 with 52 commission leaves the seller at 348; a full refund
+returns them to **0** — the sale fully unwound. Half the line returns half the commission: 200
+refunded gives 26 back, leaving 174.
+
+**Repeated partial refunds can never reverse more than was charged.** `reversed_amount` is tracked
+on the snapshot rather than recomputed, so three refunds of 200 against a 400 line still cap the
+commission reversal at 52. A refund larger than the line caps it too.
+
+**Nothing is edited.** The original earning and commission entries are untouched and the snapshot's
+`commission_amount` still reads 52 — the charge stands, the reversal is a separate pair of entries
+that names what it undoes. Four entries where there were two. That is what keeps "what did this look
+like at the time?" answerable after a refund.
+
+Wired into `RefundController::updateRefundStatus()` at the point the refund is actually marked
+refunded, wrapped whole: refund accounting must never be the reason a customer fails to be refunded.
+
+**11 reversal tests**; suite at 445 tests, 1,035 assertions.
+
+## Stage B status
+
+Built: commission engine · commission snapshots · vendor ledger · settlement engine · refund
+reversal. The financial core is now closed end to end for the ordinary marketplace lifecycle:
+
+    order -> commission snapshot -> ledger entries -> matured -> settlement -> approved -> paid
+                                          ^
+                                       refund reverses both sides, proportionally
+
+Remaining in Stage B: the payout request workflow with maker-checker on bank detail changes,
+reconciliation against gateway records, and the admin/seller UI — everything above is reachable
+through the service layer and `php artisan marketplace:settle` only.
+
+Stages A, C, D, E and F remain untouched.
