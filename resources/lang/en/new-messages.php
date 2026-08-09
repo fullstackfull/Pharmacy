@@ -2954,4 +2954,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"routing_rule_created" => "Routing rule created",
 	"no_staff_yet" => "No staff yet",
 	"staff_member_added" => "Staff member added",
+	"shop_owner_login" => "Shop owner login",
+	"sign_in_with_the_credentials_your_shop_owner_gave_you" => "Sign in with the credentials your shop owner gave you",
+	"you_do_not_have_permission_for_this_action" => "You do not have permission for this action",
 ];
