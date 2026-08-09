@@ -2892,4 +2892,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"received" => "Received",
 	"outstanding" => "Outstanding",
 	"all_items_received" => "All items received",
+	"no_breaches_recorded_run_an_evaluation_to_start" => "No breaches recorded run an evaluation to start",
+	"cancellation_rate" => "Cancellation rate",
 ];

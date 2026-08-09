@@ -728,6 +728,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.sla.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/sla*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.sla.index') }}"
+                                   title="{{ translate('seller_sla') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_sla') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.suppliers.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/suppliers*') ? 'active' : '' }}"

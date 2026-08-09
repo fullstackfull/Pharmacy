@@ -551,6 +551,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('adjust', 'adjust')->name('adjust');
             });
         });
+
+        // Seller SLA policy (Stage E): configurable thresholds over the scorecard metrics, evaluated
+        // into a breach ledger that opens on a crossed line and clears on recovery.
+        Route::group(['prefix' => 'sla', 'as' => 'sla.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SlaController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('settings', 'updateSettings')->name('settings');
+                Route::post('evaluate', 'evaluate')->name('evaluate');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {
