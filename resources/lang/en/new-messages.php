@@ -2754,4 +2754,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"promotional_banner" => "Promotional banner",
 	"add_section" => "Add section",
 	"page_structure" => "Page structure",
+	"footer" => "Footer",
 ];
