@@ -96,3 +96,76 @@ order the spec suggests and the dependencies require:
 * **Reversal on refund.** The `reversed_amount` column exists and is honoured by
   `OrderItemCommission::getNetCommissionAttribute()`, but nothing writes to it yet — the refund path
   has not been wired in. Stated here rather than left to be discovered.
+
+---
+
+# Phase 3, Stage B — Vendor financial ledger
+
+## What the platform did
+
+`seller_wallets` holds five mutable decimals — `total_earning`, `withdrawn`, `commission_given`,
+`pending_withdraw`, `collected_cash` — updated in place with `->update([...])`.
+`seller_wallet_histories` is a flat log: seller, amount, order, product, payment. No transaction
+type, no running balance, no status, no currency.
+
+From that data you cannot answer, without re-deriving from orders:
+
+* why is this seller's balance what it is?
+* which part of it is still inside the return window, and which is genuinely theirs?
+* what did the balance read immediately before a given payout?
+
+## What shipped
+
+`vendor_ledger_entries`: one immutable row per financial event, each carrying its own
+`balance_after`. **The balance is a consequence of the entries, never a number somebody updated.**
+
+* **Debit and credit as separate columns**, not one signed amount. A ledger that reads at a glance
+  is worth more than a column saved, and it makes a sign error visible instead of silent.
+* **Four buckets kept genuinely apart** — pending, available, reserved, paid — so "what can this
+  seller actually be paid?" is a query, not an assumption.
+* **Corrections are new entries, never edits.** An edited ledger cannot be reconciled, and the one
+  question a ledger exists to answer — what did this look like at the time — stops having an answer
+  the moment a row is rewritten. Status is the single exception, and only along one path: a pending
+  earning maturing out of the return window, which is the event the entry anticipated. Amounts are
+  untouched, and that is asserted.
+* **Idempotent** on (seller, entry type, reference), enforced by a unique key as well as a lookup.
+  A retried order transaction or a webhook delivered twice credits once.
+* **`balance_after` is written under a row lock.** It is a read-then-write, so two events landing
+  together would otherwise both read the same previous balance — the identical lost update that
+  cost this project a stock decrement in Phase 2.
+
+`seller_wallets` is deliberately left untouched and still maintained by the existing code. The
+ledger runs alongside it until reads are moved over, which is the migration strategy the phase
+specification asks for: build new, backfill, verify, switch gradually.
+
+## Verified against the running store
+
+A real cash-on-delivery order, 2 units at 200, seller-owned product in a category carrying
+12.5% + 2 — the ledger filled itself from order generation:
+
+    order_earning      credit 400.00   balance 400.00   pending   order_details #17  "Order #100002"
+    commission_charge  debit   52.00   balance 348.00   pending   order_details #17  "cosmetics category rate"
+
+Two entries rather than one net figure, because the sale and the marketplace's cut are separate
+business events — netting them at write time destroys the ability to answer "how much commission did
+we charge this seller last month?" without re-deriving it from orders.
+
+Both land as **pending**: money owed during the return window is not money a seller can be paid.
+Nothing moves it to available yet — that is the settlement engine, which is not built.
+
+**11 ledger tests**; suite at 418 tests, 970 assertions.
+
+## Stage B is not finished
+
+Built: commission engine, commission snapshots, vendor ledger. Still required before Stage B closes:
+
+* **Settlement engine** — reads matured ledger entries and the commission snapshots, produces an
+  immutable settlement record. The `settlement_id` column exists on the ledger for exactly this and
+  is unused.
+* **Payout workflow** with maker-checker on bank changes.
+* **Refund reversal** — `OrderItemCommission::reversed_amount` and the ledger's refund entry types
+  both exist and are honoured in arithmetic, but nothing writes to them: the refund path is not
+  wired in.
+* **Reconciliation** against gateway records.
+
+And Stages A, C, D, E and F are untouched.

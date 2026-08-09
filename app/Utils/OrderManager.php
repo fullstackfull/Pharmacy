@@ -1050,7 +1050,7 @@ class OrderManager
                 commissionableAmount: $netLineAmount,
             );
 
-            \App\Models\OrderItemCommission::updateOrCreate(
+            $snapshot = \App\Models\OrderItemCommission::updateOrCreate(
                 ['order_details_id' => $orderDetailsId],
                 array_merge($calculated, [
                     'order_id' => $orderId,
@@ -1061,6 +1061,39 @@ class OrderManager
                     'currency' => session('currency_code'),
                 ])
             );
+
+            // The seller's side of the same event, on their ledger.
+            //
+            // Two entries, not one net figure: the sale and the marketplace's cut are separate
+            // business events, and netting them at write time destroys the ability to answer "how
+            // much did we charge this seller in commission last month?" without re-deriving it.
+            //
+            // They land as PENDING, because money owed during the return window is not money the
+            // seller can be paid. Nothing here moves it to available — that is the settlement
+            // engine's job, and it is not built yet.
+            if ($sellerIs === 'seller' && $sellerId) {
+                $ledger = app(\App\Services\Marketplace\VendorLedger::class);
+
+                $ledger->record(
+                    sellerId: $sellerId,
+                    entryType: \App\Models\VendorLedgerEntry::TYPE_ORDER_EARNING,
+                    credit: (float) $calculated['commissionable_amount'],
+                    referenceType: 'order_details',
+                    referenceId: $orderDetailsId,
+                    description: 'Order #' . $orderId,
+                );
+
+                if ((float) $calculated['commission_amount'] > 0) {
+                    $ledger->record(
+                        sellerId: $sellerId,
+                        entryType: \App\Models\VendorLedgerEntry::TYPE_COMMISSION_CHARGE,
+                        debit: (float) $calculated['commission_amount'],
+                        referenceType: 'order_details',
+                        referenceId: $orderDetailsId,
+                        description: $calculated['rule_label'] ?? 'Marketplace commission',
+                    );
+                }
+            }
         } catch (\Throwable $exception) {
             Log::warning('Commission snapshot failed for order detail ' . $orderDetailsId . ': ' . $exception->getMessage());
         }
