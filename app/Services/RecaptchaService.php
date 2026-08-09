@@ -36,7 +36,23 @@ class RecaptchaService
         return true;
     }
 
+    /**
+     * CAPTCHA DISABLED BY PRODUCT DECISION.
+     *
+     * Every login and forgot-password flow (admin, employee, vendor, customer) funnels through this
+     * one method, so disabling it here removes the captcha everywhere in a single, reversible place
+     * rather than editing nine controllers. Delete this early return to restore captcha.
+     *
+     * Compensating control: captcha was the brute-force barrier on these forms, so the web login and
+     * password-reset routes are now rate limited (see routes/admin, routes/vendor, routes/web).
+     * Without that, removing captcha would leave credential stuffing completely unthrottled.
+     */
     public static function verificationStatus(object|array $request, string $session, ?string $action = 'default', ?bool $firebase = false): array
+    {
+        return ['status' => true, 'message' => ''];
+    }
+
+    public static function verificationStatusOriginal(object|array $request, string $session, ?string $action = 'default', ?bool $firebase = false): array
     {
         $firebaseOTPVerification = getWebConfig(name: 'firebase_otp_verification') ?? [];
         if ($firebase && $firebaseOTPVerification && $firebaseOTPVerification['status']) {

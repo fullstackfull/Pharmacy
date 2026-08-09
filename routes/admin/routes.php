@@ -123,7 +123,8 @@ Route::controller(FirebaseController::class)->group(function () {
 });
 
 
-Route::group(['prefix' => 'login'], function () {
+// Rate limited: captcha was removed by product decision, so this is now the brute-force barrier.
+Route::group(['prefix' => 'login', 'middleware' => ['throttle:20,1']], function () {
     Route::get('{loginUrl}', [LoginController::class, 'index']);
     Route::get('recaptcha/{tmp}', [LoginController::class, 'generateReCaptcha'])->name('recaptcha');
     Route::post('/', [LoginController::class, 'login'])->name('login');

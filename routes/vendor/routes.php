@@ -44,7 +44,8 @@ use App\Http\Controllers\Vendor\VendorPaymentInfoController;
 Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], function () {
 
     Route::group(['prefix' => 'vendor', 'as' => 'vendor.'], function () {
-        Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
+        // Rate limited: captcha removed by product decision — this is now the brute-force barrier.
+        Route::group(['prefix' => 'auth', 'as' => 'auth.', 'middleware' => ['throttle:20,1']], function () {
             Route::controller(LoginController::class)->group(function () {
                 Route::get('login', 'getLoginView');
                 Route::post('login', 'login')->name('login');

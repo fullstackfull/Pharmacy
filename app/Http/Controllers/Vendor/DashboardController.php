@@ -25,6 +25,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use App\Services\Vendor\VendorDashboardStatsService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Auction\app\Services\AuctionVendorWalletStatsService;
@@ -133,7 +134,23 @@ class DashboardController extends BaseController
             relations: ['withdraw_method'],
             dataLimit: 'all'
         );
+        /*
+         * Operational KPIs the seller acts on: inventory needing attention, and revenue/orders
+         * compared against the PREVIOUS EQUAL PERIOD. The comparison reports 'no_baseline' or 'new'
+         * rather than inventing a percentage when there is no comparable history — a fabricated
+         * trend makes a seller distrust every number on the page.
+         */
+        $statsService = app(VendorDashboardStatsService::class);
+        $inventoryAlerts = $statsService->inventoryAlerts(sellerId: (int) $vendorId);
+        $salesComparison = $statsService->salesWithComparison(
+            sellerId: (int) $vendorId,
+            from: now()->startOfMonth()->toDateTimeString(),
+            to: now()->toDateTimeString(),
+        );
+
         return view('vendor-views.dashboard.index', [
+            'inventoryAlerts' => $inventoryAlerts,
+            'salesComparison' => $salesComparison,
             'vendorWallet' => $vendorWallet,
             'withdrawRequests' => $withdrawRequests,
             'vendorWithdrawMethods' => $vendorWithdrawMethods,

@@ -280,3 +280,49 @@ It is a schema + minimal seed (~1 row per core table), not a mass customer datab
 contain **30 email addresses and 13 bcrypt password hashes**, now committed to the repository.
 Those credentials should be treated as disclosed and rotated, and the file is better distributed
 out-of-band than tracked in git.
+
+---
+
+## Appendix C — VISUALLY VERIFIED (browser, real schema)
+
+With the dump imported, captcha removed and a local-only activation bypass, Phase 1 was validated
+in a real browser against the real 6Valley database.
+
+### Product create/edit bug — reproduced and confirmed fixed at every level
+
+| Level | Evidence |
+|---|---|
+| Pre-fix behaviour | `implode()` on the absent options array throws `TypeError: argument #2 must be of type array, null given` — the exact silent-500 cause |
+| Service (real schema) | desynced payload (`choice_no` present, `choice_options_2` removed) → no crash: options=2, choiceOptions=1 (emptied attribute skipped), combinations=2 |
+| Real HTTP POST | `POST /admin/products/add` with the desynced payload → **HTTP 200, zero TypeError/fatal** |
+| Merchant experience | the response carries **validation errors** (my test payload omitted the required image) instead of an opaque crash — precisely the "no silent failures" requirement |
+
+### Admin pages (authenticated, real schema)
+
+`/admin/dashboard` 200 · `/admin/theme` 200 · `/admin/theme/settings` 200 · `/admin/theme/builder`
+200 · `/admin/seo-settings/translations` 200 · `/admin/seo-settings/redirects` 200 — all with **zero**
+JavaScript errors.
+
+### Theme workflow — executed end to end at runtime
+
+Preset imported → theme with 5 sections → activated → published → `StorefrontThemeRenderer` returned
+the **4 home-page sections** (correctly excluding the footer section). Import/export, presets,
+publish and the storefront shim are RUNTIME VERIFIED.
+
+### Responsive + bilingual
+
+Desktop 1600×1000, tablet 768×1024, mobile 390×844 — all render, zero JS errors.
+**Arabic RTL:** the builder mirrors correctly — panel order reverses (Section settings ← Preview ←
+Page structure), device and page tabs flip, text right-aligns — with **no horizontal overflow**.
+The flex/`gap` construction (no directional margins) mirrors automatically, as intended.
+
+### Status changes
+
+| Previously | Now |
+|---|---|
+| Product bug reproduction — BLOCKED | **RUNTIME VERIFIED** |
+| Theme Builder in a browser — BLOCKED | **VISUALLY VERIFIED** |
+| Arabic RTL / responsive — VISUAL VALIDATION PENDING | **VISUALLY VERIFIED** |
+
+Remaining: product images render as placeholders because only the database was supplied — the
+companion `public.zip` asset archive was not.
