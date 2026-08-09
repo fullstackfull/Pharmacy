@@ -162,3 +162,64 @@ Precise reasons:
 **Minimum path to "READY WITH CONDITIONS":** rotate all secrets and sweep the host; supply the
 database dump; fix the five pre-existing P0 vulnerabilities above; then run the full visual, RTL,
 responsive and commerce-journey verification in a real environment.
+
+---
+
+## Appendix — Local bootstrap investigation (evidence, not assumption)
+
+I attempted a real local bootstrap rather than declaring it blocked. Findings:
+
+**Available:** PHP 8.4 with `pdo_sqlite`/`pdo_mysql`, Composer, Node, `redis-server`, and
+**Chromium + Playwright** (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`).
+**Not available:** any MySQL/MariaDB server binary.
+
+**What I ran:** pointed `.env` at an isolated SQLite file in a scratch directory (never a production
+host), then `php artisan migrate`.
+
+**Exact blocker — `php artisan migrate` fails on the 6th migration:**
+```
+SQLSTATE[HY000]: no such table: flash_deals
+  (alter table "flash_deals" add column "deal_type" varchar)
+  database/migrations/2021_02_24_154706_add_deal_type_to_flash_deals.php:16
+```
+
+**Why the chain cannot self-heal:** of **307 migrations, only 78 contain a `Schema::create` and 229
+are ALTER-only**, assuming the dump was already imported. The core commerce tables are created by
+**no migration at all** — verified individually: `users`, `products`, `orders`, `categories`,
+`brands`, `sellers`, `shops`, `order_details`, `customers`. (`carts` is the exception; it does have
+a create migration.)
+
+**The application itself is fine.** With the schema absent it still boots and serves HTTP — every
+route returned a rendered Laravel error page, i.e. PHP, Composer autoload, config and routing all
+work. The failure is purely missing tables.
+
+**Partial bootstrap achieved.** `php artisan dev:bootstrap-test-schema` creates a minimal, clearly
+labelled TEST schema (14 tables + seed rows) inferred from the models. It moved the boot path
+forward from `business_settings` → `guest_users` → `brands`, proving the mechanism works. I stopped
+there deliberately: continuing would mean hand-inventing the catalogue schema, and validating the
+product editor against a `products` table I made up would be **false confidence**, not evidence.
+
+**Runtime-verified as a result:** all 7 Phase 1 migrations apply cleanly against a real database
+engine (not just the in-memory SQLite used by the test suite) — `redirects`, `themes`,
+`theme_versions`, `theme_sections`, `theme_blocks`, `seo_meta_translations`, `seo_templates`.
+
+### Exactly what is missing (the single blocker)
+
+**`installation/backup/database.sql`** — the proprietary 6Valley base schema + seed data. It is
+excluded by `.gitignore` (`*.sql`) and absent from the repository. It ships inside the 6amTech
+CodeCanyon release ZIP.
+
+Supply that one file and the whole chain unblocks: import it → `php artisan migrate` completes →
+the app serves real pages → Chromium is already present, so browser/RTL/responsive validation and
+the product-editor reproduction can all proceed.
+
+### Status of each validation the brief requested
+
+| Validation | Status |
+|---|---|
+| Phase 1 migrations apply to a real DB | **RUNTIME VERIFIED** |
+| Theme/SEO/redirect logic + workflows | **TESTED** (222 tests, incl. two end-to-end workflows) |
+| App boots and serves HTTP | **RUNTIME VERIFIED** |
+| Product create/edit bug reproduction against a running app | **BLOCKED** — needs the real `products` schema |
+| Storefront rendering, Theme Builder in a browser, admin/vendor screens | **BLOCKED** — needs the dump |
+| Desktop/tablet/mobile · Arabic RTL / English LTR visual checks | **VISUAL VALIDATION PENDING** — Chromium is available; only the schema is missing |
