@@ -36,11 +36,29 @@
                             <div class="card-body">
                                 @foreach(['logo', 'mobile_logo', 'favicon'] as $field)
                                     <div class="form-group">
-                                        <label class="form-label">{{ translate($field) }}</label>
-                                        <input type="text" dir="ltr" name="settings[branding][{{ $field }}]"
+                                        <label class="form-label" for="branding-{{ $field }}">{{ translate($field) }}</label>
+                                        <input type="text" dir="ltr" id="branding-{{ $field }}"
+                                               name="settings[branding][{{ $field }}]"
                                                class="form-control" @disabled(!$editable)
                                                value="{{ $settings['branding'][$field] ?? '' }}"
                                                placeholder="https://…">
+
+                                        {{-- Click an uploaded image to fill the field above. Without this the
+                                             upload feature would only produce a URL to copy by hand. --}}
+                                        @if($editable && $assets->isNotEmpty())
+                                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                                @foreach($assets as $asset)
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary p-1 js-pick-theme-asset"
+                                                            data-target="branding-{{ $field }}"
+                                                            data-url="{{ $asset->url }}"
+                                                            title="{{ $asset->label ?? $asset->mime_type }}">
+                                                        <img src="{{ $asset->url }}" alt="{{ $asset->label ?? translate('theme_image') }}"
+                                                             style="width:34px;height:34px;object-fit:contain;">
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
                                 @endforeach
                                 <div class="row">
@@ -161,3 +179,23 @@
         @endif
     </div>
 @endsection
+
+@push('script')
+    <script>
+        // Fill a branding URL field from an uploaded theme image. Delegated so it survives the
+        // pjax navigation this admin uses, and written without jQuery/Bootstrap so it does not
+        // depend on which of the two Bootstrap majors this page happens to load.
+        document.addEventListener('click', function (event) {
+            var picker = event.target.closest ? event.target.closest('.js-pick-theme-asset') : null;
+            if (!picker) {
+                return;
+            }
+            var field = document.getElementById(picker.getAttribute('data-target'));
+            if (!field) {
+                return;
+            }
+            field.value = picker.getAttribute('data-url') || '';
+            field.dispatchEvent(new Event('change', {bubbles: true}));
+        });
+    </script>
+@endpush

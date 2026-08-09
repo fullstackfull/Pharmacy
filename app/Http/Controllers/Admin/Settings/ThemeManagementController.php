@@ -9,11 +9,14 @@ use App\Models\ThemeVersion;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ThemePermissionService;
 use App\Services\Theme\ThemePortabilityService;
+use App\Services\Theme\ThemeAssetService;
+use App\Models\ThemeAsset;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -31,23 +34,30 @@ class ThemeManagementController extends BaseController
         private readonly ThemeManager             $themeManager,
         private readonly ThemePermissionService   $permissions,
         private readonly ThemePortabilityService  $portability,
+        private readonly ThemeAssetService         $assets,
     )
     {
     }
 
     public function index(Request|null $request, ?string $type = null): View
     {
+        // Assets arrived in a later migration than themes, so an installation that has run some but
+        // not all migrations must still render this page rather than 500 on a missing table.
+        $relations = Schema::hasTable('theme_assets') ? ['versions', 'assets'] : ['versions'];
+
         $themes = $this->themeRepo->getListWhere(
             orderBy: ['id' => 'desc'],
             searchValue: $request?->get('searchValue'),
-            relations: ['versions'],
+            relations: $relations,
             dataLimit: 20,
         );
 
         return view('admin-views.theme.index', [
-            'themes'  => $themes,
-            'search'  => $request?->get('searchValue'),
-            'presets' => $this->portability->presets(),
+            'themes'       => $themes,
+            'search'       => $request?->get('searchValue'),
+            'presets'      => $this->portability->presets(),
+            'assetsReady'  => Schema::hasTable('theme_assets'),
+            'maxAssetSize' => ThemeAssetService::maxBytes(),
         ]);
     }
 
@@ -253,6 +263,58 @@ class ThemeManagementController extends BaseController
         $imported['theme']
             ? ToastMagic::success(translate('theme_created_from_preset_successfully'))
             : ToastMagic::error(translate('import_failed') . '!');
+
+        return $this->backToIndex();
+    }
+
+    /** Upload an image asset for a theme (logo, favicon, background). */
+    public function uploadAsset(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        // The `max` here only produces a friendlier error early; the service re-checks the size and
+        // sniffs the real MIME type, because request validation trusts the client-supplied type.
+        $request->validate([
+            'asset'    => ['required', 'file', 'max:' . (int) (ThemeAssetService::maxBytes() / 1024)],
+            'theme_id' => ['required', 'integer'],
+            'label'    => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $theme = $this->themeRepo->getFirstWhere(params: ['id' => $request['theme_id']]);
+        if (!$theme instanceof Theme) {
+            ToastMagic::error(translate('theme_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        $result = $this->assets->upload($theme, $request->file('asset'), $request->get('label'), auth('admin')->id());
+        $result['asset']
+            ? ToastMagic::success(translate('asset_uploaded_successfully'))
+            : ToastMagic::error(translate($result['error'] ?? 'the_upload_failed'));
+
+        return $this->backToIndex();
+    }
+
+    public function deleteAsset(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $asset = ThemeAsset::find($request['id']);
+        if ($asset) {
+            $this->assets->delete($asset);
+            ToastMagic::success(translate('asset_deleted_successfully'));
+        }
 
         return $this->backToIndex();
     }

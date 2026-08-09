@@ -28,6 +28,12 @@ class Theme extends Model
         return $this->hasMany(ThemeVersion::class);
     }
 
+    /** Uploaded images (logo, favicon, backgrounds). Owned by the theme, so versioning cannot lose them. */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(ThemeAsset::class);
+    }
+
     public function publishedVersion(): HasOne
     {
         return $this->hasOne(ThemeVersion::class)->where('status', ThemeVersion::STATUS_PUBLISHED);

@@ -42,11 +42,8 @@ class AuditUiConsistency extends Command
     /**
      * Directional utilities that break in RTL, mapped to their logical equivalents.
      *
-     * IMPORTANT: this project loads TWO Bootstrap majors from parallel asset trees —
-     * `assets/backend/libs/bootstrap` is Bootstrap 5 (defines .ms-*, .me-*, .gap-*, used by the v2
-     * admin) while `assets/back-end/css/bootstrap.min.css` is Bootstrap 4.5 (does NOT define them).
-     * So these findings are advisory, not auto-fixable: applying the logical class to a page served
-     * by the BS4 tree silently removes the spacing instead of mirroring it. Verify per page.
+     * These are NOT blindly auto-fixable — see PANEL_CSS below. Whether the logical class exists
+     * depends on which panel serves the page.
      */
     private const RTL_UNSAFE = [
         'ml-' => 'ms-', 'mr-' => 'me-', 'pl-' => 'ps-', 'pr-' => 'pe-',
@@ -54,6 +51,56 @@ class AuditUiConsistency extends Command
         'float-left' => 'float-start', 'float-right' => 'float-end',
         'border-left' => 'border-start', 'border-right' => 'border-end',
     ];
+
+    /**
+     * The two panels load DIFFERENT Bootstrap majors:
+     *
+     *   admin  — layouts/admin/app  → assets/backend/libs/bootstrap  = Bootstrap 5.3.3  (184 views)
+     *   vendor — layouts/vendor/app → assets/back-end/css/bootstrap  = Bootstrap 4.5    (46 views)
+     *
+     * A class absent from a panel's bundle does not fall back to anything — it silently does
+     * nothing, so the layout is quietly wrong rather than visibly broken. That is how a BS4
+     * `form-row` on an admin page stacked a three-column upload form into one column.
+     *
+     * The Bootstrap version alone does NOT answer whether a class works, because 6Valley's own
+     * stylesheets shim an arbitrary scattered subset back in: on the admin panel `.mr-2` is defined
+     * but `.mr-1` and `.mr-4` are not; on vendor `.ps-2` and `.ps-20` exist but `.ps-1` and `.ps-3`
+     * do not. So this rule reads the ACTUAL stylesheets each layout loads and checks membership,
+     * rather than encoding a version-derived guess.
+     */
+    private const PANEL_STYLESHEET_SOURCES = [
+        'admin' => [
+            'resources/views/layouts/admin/partials/_style-partials.blade.php',
+            'resources/views/layouts/admin/app.blade.php',
+        ],
+        'vendor' => [
+            'resources/views/layouts/vendor/partials/_style-partials.blade.php',
+            'resources/views/layouts/vendor/app.blade.php',
+        ],
+    ];
+
+    /**
+     * Only class tokens matching these shapes are checked against the stylesheets.
+     *
+     * Deliberately narrow: a template is full of JS hooks, third-party widget classes and bespoke
+     * names that legitimately have no CSS rule. These are the Bootstrap-family utilities where
+     * "silently defined nowhere" is a real and recurring layout bug.
+     */
+    private const CHECKED_CLASS_SHAPES = [
+        '/^[mp][stebxy]?-(?:n?[0-5]|auto)$/',                       // spacing utilities
+        '/^(?:text|float|border)-(?:start|end|left|right)$/',        // directional utilities
+        '/^(?:form-row|no-gutters|card-deck|jumbotron|form-inline|btn-block|sr-only|visually-hidden)$/',
+    ];
+
+    /** Suggested replacement for the classes we can name one for. */
+    private const CLASS_REPLACEMENTS = [
+        'form-row' => 'row', 'no-gutters' => 'g-0', 'card-deck' => 'row row-cols-*',
+        'jumbotron' => 'a plain .p-5.bg-light block', 'form-inline' => 'd-flex on the form',
+        'sr-only' => 'visually-hidden', 'visually-hidden' => 'sr-only', 'btn-block' => 'w-100',
+    ];
+
+    /** @var array<string, array<string, true>> panel => set of class names defined in its stylesheets */
+    private array $definedClassCache = [];
 
     public function handle(): int
     {
@@ -77,17 +124,20 @@ class AuditUiConsistency extends Command
             }
 
             $scanned++;
-            $lines = preg_split('/\R/', (string) file_get_contents($file->getRealPath())) ?: [];
+            $content = (string) file_get_contents($file->getRealPath());
+            $lines = preg_split('/\R/', $content) ?: [];
+
+            $panel = $this->panelOf($relative);
+            [$definedClasses, $cssScope] = $this->resolveStylesheetScope($content, $panel);
 
             foreach ($lines as $i => $line) {
                 $lineNo = $i + 1;
-                foreach ($this->inspect($line) as $issue) {
+                foreach ($this->inspect($line, $panel, $definedClasses, $cssScope) as $issue) {
                     $findings[$issue['rule']][] = $issue + ['file' => $relative, 'line' => $lineNo];
                 }
             }
 
             // whole-file checks
-            $content = (string) file_get_contents($file->getRealPath());
             // Email templates legitimately use tables for layout, and .table-responsive does nothing
             // in a mail client — flagging them would be a false positive, not a finding.
             $isEmailTemplate = str_contains($relative, 'email-template') || str_contains($relative, 'mail-template');
@@ -108,8 +158,229 @@ class AuditUiConsistency extends Command
         return $this->report($findings, $scanned);
     }
 
+    /**
+     * Utility classes in a class attribute that this panel's stylesheets never define.
+     *
+     * @return array<int, string>
+     */
+    private function undefinedUtilityClasses(string $classAttribute, ?array $defined): array
+    {
+        if ($defined === null) {
+            return []; // stylesheet scope unknown — stay silent rather than report noise
+        }
+
+        $undefined = [];
+        // Blade can interpolate into a class attribute; only fixed tokens can be checked.
+        foreach (preg_split('/\s+/', preg_replace('/\{\{.*?\}\}|\{!!.*?!!\}/s', ' ', $classAttribute) ?? '') as $token) {
+            if ($token === '' || isset($defined[$token])) {
+                continue;
+            }
+            foreach (self::CHECKED_CLASS_SHAPES as $shape) {
+                if (preg_match($shape, $token)) {
+                    $undefined[] = $token;
+                    break;
+                }
+            }
+        }
+
+        return $undefined;
+    }
+
+    /**
+     * Which stylesheets actually apply to this template, and a label for the message.
+     *
+     * Two kinds of template need different answers, and conflating them produced 30 false
+     * positives:
+     *
+     *  - A PANEL page/partial is rendered inside layouts/{admin,vendor}/app and gets that panel's
+     *    bundle, plus anything it adds in its own <style> block.
+     *  - A STANDALONE document (invoice, PDF, print view) is a complete <html> page that links its
+     *    own CSS and never sees the panel bundle at all. order_transaction_summary_report_pdf
+     *    links admin/order-transaction.css, which defines the .text-left it was flagged for.
+     *
+     * @return array{0: array<string, true>|null, 1: string} [defined classes or null to skip, label]
+     */
+    private function resolveStylesheetScope(string $content, ?string $panel): array
+    {
+        $own = $this->classesDefinedInline($content) + $this->classesFromLinkedStylesheets($content);
+
+        if ($this->isStandaloneDocument($content)) {
+            return $own === [] ? [null, ''] : [$own, 'this document'];
+        }
+
+        if ($panel === null) {
+            return [null, '']; // shared/storefront template — the serving layout is unknown
+        }
+
+        $bundle = $this->definedClasses($panel);
+
+        return $bundle === [] ? [null, ''] : [$bundle + $own, "the {$panel} panel"];
+    }
+
+    /** A full HTML document renders on its own rather than inside a panel layout. */
+    private function isStandaloneDocument(string $content): bool
+    {
+        return (bool) preg_match('/<html\b/i', $content);
+    }
+
+    /**
+     * Class names a template defines in its own <style> block.
+     *
+     * @return array<string, true>
+     */
+    private function classesDefinedInline(string $content): array
+    {
+        if (!preg_match_all('#<style\b[^>]*>(.*?)</style>#is', $content, $blocks)) {
+            return [];
+        }
+
+        return $this->classNamesIn(implode("\n", $blocks[1]));
+    }
+
+    /**
+     * Class names from stylesheets the template links itself.
+     *
+     * @return array<string, true>
+     */
+    private function classesFromLinkedStylesheets(string $content): array
+    {
+        if (!preg_match_all('#public/assets/[^"\']*\.css#', $content, $matches)) {
+            return [];
+        }
+
+        $defined = [];
+        foreach (array_unique($matches[0]) as $href) {
+            $path = base_path($href);
+            if (is_file($path)) {
+                $defined += $this->classNamesIn((string) file_get_contents($path));
+            }
+        }
+
+        return $defined;
+    }
+
+    /** @return array<string, true> */
+    private function classNamesIn(string $css): array
+    {
+        preg_match_all('/\.(-?[A-Za-z_][\w-]*)/', $css, $matches);
+
+        $defined = [];
+        foreach ($matches[1] as $class) {
+            $defined[$class] = true;
+        }
+
+        return $defined;
+    }
+
+    /**
+     * Every class name defined by the stylesheets a panel's layout actually links.
+     *
+     * @return array<string, true>
+     */
+    private function definedClasses(string $panel): array
+    {
+        if (isset($this->definedClassCache[$panel])) {
+            return $this->definedClassCache[$panel];
+        }
+
+        $hrefs = [];
+        foreach (self::PANEL_STYLESHEET_SOURCES[$panel] ?? [] as $source) {
+            $path = base_path($source);
+            if (!is_file($path)) {
+                continue;
+            }
+            preg_match_all('#public/assets/[^"\']*\.css#', (string) file_get_contents($path), $matches);
+            $hrefs = array_merge($hrefs, $matches[0]);
+        }
+
+        $defined = [];
+        foreach (array_unique($hrefs) as $href) {
+            $cssPath = base_path($href);
+            if (!is_file($cssPath)) {
+                continue;
+            }
+            preg_match_all('/\.(-?[A-Za-z_][\w-]*)/', (string) file_get_contents($cssPath), $classMatches);
+            foreach ($classMatches[1] as $class) {
+                $defined[$class] = true;
+            }
+        }
+
+        return $this->definedClassCache[$panel] = $defined;
+    }
+
+    /** The logical/physical counterpart of a directional class, when there is an obvious one. */
+    private function mirroredClass(string $class): ?string
+    {
+        $pairs = ['s' => 'l', 'e' => 'r', 'l' => 's', 'r' => 'e',
+                  'start' => 'left', 'end' => 'right', 'left' => 'start', 'right' => 'end'];
+
+        if (preg_match('/^([mp])([sler])(-.*)$/', $class, $m)) {
+            return $m[1] . $pairs[$m[2]] . $m[3];
+        }
+        if (preg_match('/^(text|float|border)-(start|end|left|right)$/', $class, $m)) {
+            return $m[1] . '-' . $pairs[$m[2]];
+        }
+        return null;
+    }
+
+    /**
+     * Panel-specific advice for an RTL finding.
+     *
+     * The generic "check the Bootstrap first" warning was true but useless — it left every one of
+     * these findings requiring manual investigation. Since the panel determines the stylesheet
+     * bundle, and the bundles have been measured, the answer can just be stated.
+     */
+    private function rtlFixAdvice(string $bad, string $good, ?string $panel): string
+    {
+        if ($panel === null) {
+            return "Use \"{$good}\", but verify first: this template is shared/storefront, so which "
+                . "Bootstrap serves it depends on the including layout.";
+        }
+
+        // Only a *-prefix is known here (e.g. "ms-"), not the exact number, so answer for the
+        // whole family: the spacing scale is what differs between the two panels.
+        $defined = $this->definedClasses($panel);
+        if ($defined === []) {
+            return "Use \"{$good}\" after checking it exists in the {$panel} panel's stylesheets.";
+        }
+
+        if (str_ends_with($good, '-')) {
+            $available = array_values(array_filter(
+                array_map(fn ($n) => $good . $n, range(0, 5)),
+                fn ($c) => isset($defined[$c])
+            ));
+
+            return $available === []
+                ? "Do NOT swap to \"{$good}*\" here: the {$panel} panel defines none of {$good}0…{$good}5, "
+                . "so the spacing would disappear instead of mirroring. Add the rule to the panel "
+                . "stylesheet, or migrate the panel to Bootstrap 5 first."
+                : "Use \"{$good}*\" — the {$panel} panel defines " . implode(', ', $available)
+                . ". Confirm the specific step you need is in that list.";
+        }
+
+        return isset($defined[$good])
+            ? "Use \"{$good}\" — verified present in the {$panel} panel's stylesheets, so this swap is safe."
+            : "Do NOT swap to \"{$good}\" here: the {$panel} panel does not define it, so the rule would "
+            . "silently do nothing. Add it to the panel stylesheet first.";
+    }
+
+    /**
+     * Which panel serves this template, and therefore which Bootstrap it gets.
+     * Returns null for shared/storefront templates, where no panel-specific claim is safe.
+     */
+    private function panelOf(string $relativePath): ?string
+    {
+        if (str_contains($relativePath, 'admin-views/') || str_contains($relativePath, 'layouts/admin/')) {
+            return 'admin';
+        }
+        if (str_contains($relativePath, 'vendor-views/') || str_contains($relativePath, 'layouts/vendor/')) {
+            return 'vendor';
+        }
+        return null;
+    }
+
     /** @return array<int, array{rule:string, severity:string, message:string, fix:string, snippet:string}> */
-    private function inspect(string $line): array
+    private function inspect(string $line, ?string $panel = null, ?array $definedClasses = null, string $cssScope = ''): array
     {
         $issues = [];
         $trimmed = trim($line);
@@ -117,6 +388,13 @@ class AuditUiConsistency extends Command
         if ($trimmed === '' || str_starts_with($trimmed, '{{--')) {
             return $issues;
         }
+
+        // Tag-shape rules must see HTML, not Blade. `{{ $asset->url }}` contains a literal ">" from
+        // the object arrow, which terminates a tag as far as a regex is concerned — so
+        // `<img src="{{ $a->b }}" alt="…">` looked like an unterminated <img> with no alt and was
+        // reported as missing alt text. Every Blade img src has an arrow in it, so this rule was
+        // largely reporting itself.
+        $html = $this->stripBladeExpressions($line);
 
         // 1. RTL-unsafe directional utilities inside class attributes
         if (preg_match('/class\s*=\s*"([^"]*)"/i', $line, $m)) {
@@ -128,18 +406,29 @@ class AuditUiConsistency extends Command
                     $issues[] = [
                         'rule' => 'rtl_directional', 'severity' => 'warning',
                         'message' => "Directional class \"{$bad}\" does not mirror in RTL (Arabic).",
-                        'fix' => "Use the logical equivalent \"{$good}\" — but CHECK THE PAGE'S BOOTSTRAP FIRST: "
-                            . "the v2 admin loads Bootstrap 5 (assets/backend/libs/bootstrap) where {$good} exists, "
-                            . "while assets/back-end ships Bootstrap 4.5 where it does NOT. A blanket replace breaks BS4 pages.",
+                        'fix' => $this->rtlFixAdvice($bad, $good, $panel),
                         'snippet' => $this->snippet($trimmed),
                     ];
                     break;
                 }
             }
+
+            // 1b. Utility classes none of this page's stylesheets define — silently no-ops.
+            foreach ($this->undefinedUtilityClasses($m[1], $definedClasses) as $class) {
+                $replacement = self::CLASS_REPLACEMENTS[$class] ?? $this->mirroredClass($class);
+                $issues[] = [
+                    'rule' => 'class_not_defined', 'severity' => 'warning',
+                    'message' => "\"{$class}\" is not defined by any stylesheet {$cssScope} loads — it does nothing.",
+                    'fix' => $replacement ? "Use \"{$replacement}\", or add the rule to a stylesheet this page loads."
+                        : "Remove it, or add the rule to a stylesheet this page loads.",
+                    'snippet' => $this->snippet($trimmed),
+                ];
+                break; // one finding per line is enough to make it actionable
+            }
         }
 
         // 2. Hardcoded user-facing button/heading text (bypasses translate())
-        if (preg_match('/<(button|h[1-6]|th|label)[^>]*>\s*([A-Za-z][A-Za-z ]{2,40})\s*<\/\1>/', $line, $m)) {
+        if (preg_match('/<(button|h[1-6]|th|label)[^>]*>\s*([A-Za-z][A-Za-z ]{2,40})\s*<\/\1>/', $html, $m)) {
             $text = trim($m[2]);
             if (!str_contains($line, 'translate(') && !str_contains($line, '__(')) {
                 $issues[] = [
@@ -152,7 +441,7 @@ class AuditUiConsistency extends Command
         }
 
         // 3. Images without alt text
-        if (preg_match('/<img\b(?![^>]*\balt=)[^>]*>/i', $line)) {
+        if (preg_match('/<img\b(?![^>]*\balt=)[^>]*>/i', $html)) {
             $issues[] = [
                 'rule' => 'missing_alt', 'severity' => 'warning',
                 'message' => 'Image without an alt attribute (accessibility + image SEO).',
@@ -162,7 +451,7 @@ class AuditUiConsistency extends Command
         }
 
         // 4. Icon-only buttons/links with no accessible name
-        if (preg_match('/<(button|a)\b[^>]*>\s*<i\b[^>]*><\/i>\s*<\/\1>/i', $line)
+        if (preg_match('/<(button|a)\b[^>]*>\s*<i\b[^>]*><\/i>\s*<\/\1>/i', $html)
             && !preg_match('/aria-label|title=/i', $line)) {
             $issues[] = [
                 'rule' => 'icon_button_no_label', 'severity' => 'warning',
@@ -193,6 +482,22 @@ class AuditUiConsistency extends Command
             }
         }
         return false;
+    }
+
+    /**
+     * Replace Blade expressions with a single non-markup placeholder so the tag-shape rules see the
+     * HTML skeleton only.
+     *
+     * \x01 is deliberate: it is neither "<", ">" nor a letter, so it can neither terminate a tag nor
+     * be mistaken for untranslated user-facing text.
+     */
+    private function stripBladeExpressions(string $line): string
+    {
+        return (string) preg_replace(
+            ['/\{!!.*?!!\}/s', '/\{\{.*?\}\}/s'],
+            "\x01",
+            $line
+        );
     }
 
     private function snippet(string $line): string
