@@ -16,8 +16,11 @@ class ImageManager
                 Storage::disk($storage)->makeDirectory($dir);
             }
 
-            $imageName = Carbon::now()->toDateString() . "-" . uniqid() . "." . $image->getClientOriginalExtension();
-            Storage::disk($storage)->put($dir . $imageName, file_get_contents($image));
+            // NOTE: an unconditional raw write used to happen here, persisting the uploaded bytes
+            // under the CLIENT-SUPPLIED extension (e.g. .php/.phtml) before any re-encoding — and
+            // its filename was then overwritten by both branches below, so the file was orphaned
+            // and never even used. That made every upload path an arbitrary-file-write primitive.
+            // Removed: each branch below writes the file it actually returns.
 
             if (in_array($image->getClientOriginalExtension(), ['gif', 'svg'])) {
                 $imageName = Carbon::now()->toDateString() . "-" . uniqid() . "." . $image->getClientOriginalExtension();

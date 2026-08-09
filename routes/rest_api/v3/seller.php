@@ -31,7 +31,8 @@ use Illuminate\Support\Facades\Route;
 |*/
 
 Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'middleware' => ['api_lang']], function () {
-    Route::group(['prefix' => 'auth', 'namespace' => 'auth'], function () {
+    // Rate limited: seller login / OTP / password reset are brute-force targets.
+    Route::group(['prefix' => 'auth', 'namespace' => 'auth', 'middleware' => ['throttle:20,1']], function () {
 
         Route::controller(VendorLoginController::class)->group(function () {
             Route::post('login', 'login');
@@ -283,10 +284,19 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
 
     });
 
-    Route::controller(ProductController::class)->group(function () {
-        Route::group(['prefix' => 'products'], function () {
-            Route::get('{seller_id}/all-products', 'getVendorAllProducts');
-            Route::get('{seller_id}/edit-order-all-products', 'editOrderVendorAllProducts');
+    /*
+     * These two were declared AFTER the seller_api_auth group closed, so they inherited no
+     * authentication: any anonymous caller could iterate {seller_id} and dump every vendor's full
+     * catalogue (including unpublished and out-of-stock items). Moved under seller_api_auth.
+     * The controller must still verify the token's seller owns {seller_id} — see the ownership
+     * check added in getVendorAllProducts().
+     */
+    Route::group(['middleware' => ['seller_api_auth']], function () {
+        Route::controller(ProductController::class)->group(function () {
+            Route::group(['prefix' => 'products'], function () {
+                Route::get('{seller_id}/all-products', 'getVendorAllProducts');
+                Route::get('{seller_id}/edit-order-all-products', 'editOrderVendorAllProducts');
+            });
         });
     });
 });

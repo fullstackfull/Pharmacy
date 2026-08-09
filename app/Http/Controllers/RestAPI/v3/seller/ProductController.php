@@ -141,6 +141,14 @@ class ProductController extends Controller
 
     public function getVendorAllProducts($seller_id, Request $request): JsonResponse
     {
+        // Ownership check: seller_api_auth proves WHO is calling, not WHICH shop they may read.
+        // Without this an authenticated seller could still iterate {seller_id} and read a
+        // competitor's full catalogue (IDOR).
+        $authSellerId = $request['seller']->id ?? null;
+        if ($authSellerId === null || (string) $authSellerId !== (string) $seller_id) {
+            return response()->json(['message' => translate('unauthorized')], 403);
+        }
+
         $brandIds = json_decode($request['brand_ids'] ?? '', true);
         $categoryIds = json_decode($request['category_ids'] ?? '', true);
         $publishingHouseIds = json_decode($request['publishing_house_ids'] ?? '', true);
@@ -386,6 +394,14 @@ class ProductController extends Controller
 
     public function editOrderVendorAllProducts($seller_id, Request $request): JsonResponse
     {
+        // Ownership check: seller_api_auth proves WHO is calling, not WHICH shop they may read.
+        // Without this an authenticated seller could still iterate {seller_id} and read a
+        // competitor's full catalogue (IDOR).
+        $authSellerId = $request['seller']->id ?? null;
+        if ($authSellerId === null || (string) $authSellerId !== (string) $seller_id) {
+            return response()->json(['message' => translate('unauthorized')], 403);
+        }
+
         $brandIds = json_decode($request['brand_ids'] ?? '', true);
         $categoryIds = json_decode($request['category_ids'] ?? '', true);
         $publishingHouseIds = json_decode($request['publishing_house_ids'] ?? '', true);

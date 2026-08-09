@@ -67,8 +67,19 @@ class ProductController extends Controller
 
     public function upload_images(Request $request):JsonResponse
     {
+        // This endpoint previously performed NO authentication — the v2 seller route group carries
+        // no auth middleware, and every sibling method authenticates manually, but this one didn't.
+        // Combined with the permissive validation below it was an unauthenticated file-write.
+        $data = Helpers::get_seller_by_token($request);
+        if ($data['success'] != 1) {
+            return response()->json([
+                'auth-001' => translate('Your existing session token does not authorize you any more')
+            ], 401);
+        }
+
         $validator = Validator::make($request->all(), [
-            'image' => 'required',
+            // 'required' alone accepted ANY file of ANY type or size. Constrain it to real images.
+            'image' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:10240',
             'type' => 'required|in:product,thumbnail,meta',
         ]);
 
