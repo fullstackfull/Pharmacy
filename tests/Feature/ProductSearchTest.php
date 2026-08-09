@@ -284,4 +284,47 @@ class ProductSearchTest extends TestCase
         $this->assertSame(['zzzz'], $this->search->unmatchedTerms('vitamin zzzz'));
         $this->assertSame([], $this->search->unmatchedTerms('vitamin serum'));
     }
+
+    // ---- integration into the existing search paths ----
+
+    /**
+     * The storefront and the API both merge these IDs into what their legacy searches found, so
+     * this helper must degrade to an empty array rather than throw — a search that raises takes
+     * the product listing page down with it.
+     */
+    public function test_the_product_manager_helper_never_throws(): void
+    {
+        $product = $this->product('Serum', 'سيروم');
+
+        $this->assertSame([$product->id], \App\Utils\ProductManager::normalizedSearchProductIds('سيروم'));
+        $this->assertSame([], \App\Utils\ProductManager::normalizedSearchProductIds(null));
+        $this->assertSame([], \App\Utils\ProductManager::normalizedSearchProductIds('   '));
+
+        Schema::dropIfExists('product_search_index');
+        $this->assertSame([], \App\Utils\ProductManager::normalizedSearchProductIds('سيروم'));
+    }
+
+    /**
+     * The API response keys are a published contract that shipped Flutter builds parse. The
+     * Arabic-aware fallback reproduces them exactly; a rename or omission here would break clients
+     * that cannot be updated retroactively.
+     */
+    public function test_the_api_result_shape_matches_the_published_contract(): void
+    {
+        $result = \App\Utils\ProductManager::normalizedSearchProducts(request(), 'nothing matches this', 10, 1);
+
+        $this->assertSame(['total_size', 'limit', 'offset', 'products'], array_keys($result));
+        $this->assertSame(0, $result['total_size']);
+        $this->assertSame(10, $result['limit']);
+        $this->assertSame(1, $result['offset']);
+        $this->assertSame([], $result['products']);
+    }
+
+    public function test_the_api_helper_reports_the_requested_paging_values(): void
+    {
+        $result = \App\Utils\ProductManager::normalizedSearchProducts(request(), 'nothing', 25, 3);
+
+        $this->assertSame(25, $result['limit']);
+        $this->assertSame(3, $result['offset']);
+    }
 }

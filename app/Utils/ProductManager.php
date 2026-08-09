@@ -33,6 +33,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Services\Search\ProductSearchService;
 
 class ProductManager
 {
@@ -365,6 +366,99 @@ class ProductManager
         });
 
         return $products;
+    }
+
+    /**
+     * Product IDs matching a search term with Arabic spelling variants folded (Phase 2.1).
+     *
+     * Kept separate from search_products() rather than folded into it because the two answer
+     * different questions: search_products() compares raw strings, this one compares normalised
+     * ones. Callers merge the results, so an unavailable index or an empty result simply
+     * contributes nothing and the existing behaviour stands.
+     *
+     * Never throws. This runs inside the storefront's main product query, and a search must not be
+     * able to take the listing page down.
+     *
+     * @return array<int, int> ranked best-match first
+     */
+    public static function normalizedSearchProductIds(?string $searchKey): array
+    {
+        if ($searchKey === null || trim($searchKey) === '') {
+            return [];
+        }
+
+        // Resolved separately, because getDefaultLanguage() reads business_settings and can fail on
+        // a partially configured install. The locale only narrows the scan — losing it costs
+        // nothing, whereas letting it abort the call would lose the search entirely.
+        $locale = null;
+        try {
+            $locale = getDefaultLanguage();
+        } catch (\Throwable) {
+            // fall through with no locale filter
+        }
+
+        try {
+            return app(ProductSearchService::class)->productIds($searchKey, $locale);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Arabic-aware search returning the SAME array shape as search_products() (Phase 2.1).
+     *
+     * The API has its own search path — it does not go through getProductListData() — so wiring the
+     * storefront alone left every Flutter customer with the original defect. Verified rather than
+     * assumed: after the web fix, `GET /api/v1/products/search?name=حماية` still answered
+     * total_size 0 while the same term returned two products on the website.
+     *
+     * The shape is reproduced key for key (total_size, limit, offset, products) because these keys
+     * are a published contract that shipped mobile apps parse. Nothing here changes it.
+     *
+     * @return array{total_size:int, limit:int, offset:int, products:array}
+     */
+    public static function normalizedSearchProducts($request, ?string $name, $limit = 10, $offset = 1): array
+    {
+        $limit = (int) ($limit ?: 10);
+        $offset = (int) ($offset ?: 1);
+        $empty = ['total_size' => 0, 'limit' => $limit, 'offset' => $offset, 'products' => []];
+
+        $ids = self::normalizedSearchProductIds($name);
+        if ($ids === []) {
+            return $empty;
+        }
+
+        try {
+            $user = Helpers::getCustomerInformation($request);
+
+            $query = Product::active()
+                ->with(['rating', 'tags', 'clearanceSale' => fn ($q) => $q->active()])
+                ->withCount(['wishList' => function ($q) use ($user) {
+                    $q->where('customer_id', $user != 'offline' ? $user->id : '0');
+                }])
+                ->whereIn('id', $ids);
+
+            $total = (clone $query)->count();
+
+            // Preserve the relevance order the search service resolved. whereIn() returns rows in
+            // whatever order the storage engine likes, so without this the ranking is discarded at
+            // the last step.
+            $ordered = $query->orderByRaw(
+                'FIELD(id, ' . implode(',', array_fill(0, count($ids), '?')) . ')',
+                $ids
+            );
+
+            return [
+                'total_size' => $total,
+                'limit'      => $limit,
+                'offset'     => $offset,
+                'products'   => $ordered->skip($limit * ($offset - 1))->take($limit)->get()->all(),
+            ];
+        } catch (\Throwable) {
+            // A search must not be able to fail the endpoint; an empty result lets the caller keep
+            // whatever the legacy path produced.
+            return $empty;
+        }
     }
 
     public static function search_products($request, $name, $category = 'all', $limit = 10, $offset = 1): array
@@ -2282,6 +2376,22 @@ class ProductManager
                         $productsIDArray[] = $product->id;
                     }
                 }
+
+                // Arabic-aware matches, merged on top of whatever the two searches above found
+                // (Phase 2.1).
+                //
+                // A UNION rather than a replacement, deliberately: this path is the storefront's
+                // main search and swapping it wholesale would risk losing a result someone relies
+                // on. Adding to it can only ever widen the result set, so the change cannot regress
+                // — it can only find products that were previously unreachable.
+                //
+                // Which is the point. Both searches above compare raw strings, so a customer typing
+                // "حماية" — the ordinary spelling — found NOTHING while the product sat in the
+                // catalogue spelled "حمايه". Measured on this store's own data before the fix.
+                $productsIDArray = array_values(array_unique(array_merge(
+                    ProductManager::normalizedSearchProductIds($searchKey),
+                    $productsIDArray
+                )));
 
                 $searchName = str_ireplace(['\'', '"', ',', ';', '<', '>', '?', '\\'], ' ', preg_replace('/\s\s+/', ' ', $searchKey));
                 return $query->when(!empty($productsIDArray), function ($query) use ($productsIDArray) {

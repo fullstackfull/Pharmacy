@@ -107,6 +107,23 @@ class ProductController extends Controller
         if ($products['products'] == null) {
             $products = ProductManager::translated_product_search(base64_encode($request['name']), 'all', $request['limit'], $request['offset']);
         }
+
+        // Arabic-aware fallback (Phase 2.1). Both searches above compare raw strings, so a customer
+        // typing "حماية" — the ordinary spelling — got total_size 0 while the product sat in the
+        // catalogue spelled "حمايه". Measured against this store's data.
+        //
+        // Last, and only when the others found nothing: existing results are never displaced, so
+        // this can widen a result set but never change one. The response shape is untouched, so
+        // shipped Flutter builds are unaffected.
+        if (empty($products['products'])) {
+            $normalized = ProductManager::normalizedSearchProducts(
+                $request, $request['name'], $request['limit'], $request['offset']
+            );
+            if (!empty($normalized['products'])) {
+                $products = $normalized;
+            }
+        }
+
         $products['products'] = Helpers::product_data_formatting($products['products'], true);
         return response()->json($products, 200);
     }
