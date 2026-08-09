@@ -150,6 +150,7 @@
                             <button type="button" id="tb-toggle" class="btn btn-sm btn-outline-secondary">{{ translate('hide_show') }}</button>
                             <button type="button" id="tb-duplicate" class="btn btn-sm btn-outline-secondary">{{ translate('duplicate') }}</button>
                             <button type="button" id="tb-delete" class="btn btn-sm btn-outline-danger">{{ translate('delete') }}</button>
+                            <span id="tb-autosave-status" class="small ms-2 text-muted" aria-live="polite"></span>
                         </div>
                     </div>
                 </div>
@@ -191,10 +192,51 @@
                 return res;
             }
 
+            // ---- autosave ----
+            // Debounced so a burst of keystrokes is one request, and it only ever targets a DRAFT
+            // (the endpoint refuses published versions), so it can never silently change the live
+            // storefront. The explicit Save button remains for immediate saves.
+            var autosaveTimer = null;
+            var AUTOSAVE_DELAY = 2000;
+
+            function setAutosaveStatus(text, tone) {
+                var el = document.getElementById('tb-autosave-status');
+                if (!el) return;
+                el.textContent = text;
+                el.className = 'small ms-2 ' + (tone || 'text-muted');
+            }
+
+            function scheduleAutosave() {
+                if (!editable || !selectedId) return;
+                clearTimeout(autosaveTimer);
+                setAutosaveStatus('{{ translate('unsaved_changes') }}', 'text-warning');
+                autosaveTimer = setTimeout(runAutosave, AUTOSAVE_DELAY);
+            }
+
+            function runAutosave() {
+                if (!editable || !selectedId) return;
+                setAutosaveStatus('{{ translate('saving') }}…', 'text-muted');
+                post(root.dataset.urlUpdate, {section_id: selectedId, settings: collectSettings()})
+                    .then(function (res) {
+                        if (res.ok) {
+                            dirty = false;
+                            setAutosaveStatus('{{ translate('draft_saved') }}', 'text-success');
+                        } else {
+                            // leave `dirty` set so the unsaved-changes warning still fires
+                            setAutosaveStatus('{{ translate('autosave_failed_use_save_draft') }}', 'text-danger');
+                        }
+                    })
+                    .catch(function () {
+                        setAutosaveStatus('{{ translate('autosave_failed_use_save_draft') }}', 'text-danger');
+                    });
+            }
+
             // ---- selection + settings form (rendered from the registry schema) ----
             function selectSection(el) {
                 document.querySelectorAll('.tb-section-item').forEach(function (i) { i.setAttribute('aria-selected', 'false'); });
                 el.setAttribute('aria-selected', 'true');
+                // flush any pending autosave for the previously selected section before switching
+                if (autosaveTimer) { clearTimeout(autosaveTimer); runAutosave(); }
                 selectedId = el.dataset.id;
                 document.getElementById('tb-actions').classList.remove('d-none');
 
@@ -245,8 +287,8 @@
                     }
                     input.dataset.key = key;
                     input.disabled = !editable;
-                    input.addEventListener('input', function () { dirty = true; });
-                    input.addEventListener('change', function () { dirty = true; });
+                    input.addEventListener('input', function () { dirty = true; scheduleAutosave(); });
+                    input.addEventListener('change', function () { dirty = true; scheduleAutosave(); });
                     wrap.appendChild(input);
                     host.appendChild(wrap);
                 });
