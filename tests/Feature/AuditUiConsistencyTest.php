@@ -134,9 +134,14 @@ class AuditUiConsistencyTest extends TestCase
         $this->assertStringNotContainsString('icon_button_no_label', $this->audit());
     }
 
+    /**
+     * The fixture is five columns wide on purpose. It used to be a single cell, which never
+     * represented the defect — a one-column table has nothing to scroll — and stopped matching once
+     * the rule learned to tell a wide data table from a narrow key/value list.
+     */
     public function test_detects_table_without_responsive_wrapper(): void
     {
-        $this->fixture('<table><tbody><tr><td>x</td></tr></tbody></table>');
+        $this->fixture('<table><tbody><tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr></tbody></table>');
         $this->assertStringContainsString('table_overflow', $this->audit());
     }
 
@@ -144,6 +149,68 @@ class AuditUiConsistencyTest extends TestCase
     {
         $this->fixture('<div class="table-responsive"><table><tbody></tbody></table></div>');
         $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /**
+     * A two-column "label : value" list is rendered as a table all over this codebase
+     * (contacts/view, product-gallery, brand-view). It has nothing to scroll, and wrapping it
+     * would be cargo-cult.
+     */
+    public function test_narrow_key_value_table_is_not_an_overflow_risk(): void
+    {
+        $this->fixture('<table><tbody><tr><td>Name</td><td>Ali</td></tr></tbody></table>');
+
+        $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /** role="presentation" is the author explicitly declaring "this is layout, not data". */
+    public function test_presentation_table_is_not_flagged(): void
+    {
+        $this->fixture('<table role="presentation"><tbody><tr><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>');
+
+        $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /** A <table> holding only hidden inputs (an auto-submitting redirect form) has no cells. */
+    public function test_table_with_no_cells_is_not_flagged(): void
+    {
+        $this->fixture('<table><tbody><input type="hidden" name="a" value="1"></tbody></table>');
+
+        $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /** Invoices and PDFs are printed on paper — there is no viewport to scroll. */
+    public function test_print_documents_are_not_flagged(): void
+    {
+        File::put($this->dir . '/order-invoice.blade.php',
+            '<table><tbody><tr><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>');
+        File::delete($this->dir . '/sample.blade.php');
+
+        $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /**
+     * Regression: a partial has no container of its own. Flagging one whose include site already
+     * wraps it led to a nested .table-responsive — two scrollbars, worse than the finding.
+     */
+    public function test_partial_wrapped_at_its_include_site_is_not_flagged(): void
+    {
+        File::put($this->dir . '/_wide.blade.php',
+            '<table><tbody><tr><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>');
+        File::put($this->dir . '/sample.blade.php',
+            '<div class="table-responsive">' . "\n" . "@include('__audit_fixture._wide')" . "\n" . '</div>');
+
+        $this->assertStringNotContainsString('table_overflow', $this->audit());
+    }
+
+    /** …and an include site that does NOT wrap it is a real finding. */
+    public function test_partial_left_unwrapped_by_its_include_site_is_flagged(): void
+    {
+        File::put($this->dir . '/_wide.blade.php',
+            '<table><tbody><tr><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>');
+        File::put($this->dir . '/sample.blade.php', "<div>\n@include('__audit_fixture._wide')\n</div>");
+
+        $this->assertStringContainsString('table_overflow', $this->audit());
     }
 
     public function test_clean_template_reports_no_issues(): void

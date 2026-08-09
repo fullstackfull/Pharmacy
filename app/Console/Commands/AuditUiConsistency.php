@@ -102,6 +102,9 @@ class AuditUiConsistency extends Command
     /** @var array<string, array<string, true>> panel => set of class names defined in its stylesheets */
     private array $definedClassCache = [];
 
+    /** @var array<int, string>|null every Blade template path, resolved once per run */
+    private ?array $allTemplatesCache = null;
+
     public function handle(): int
     {
         $base = resource_path('views');
@@ -137,19 +140,50 @@ class AuditUiConsistency extends Command
                 }
             }
 
-            // whole-file checks
-            // Email templates legitimately use tables for layout, and .table-responsive does nothing
-            // in a mail client — flagging them would be a false positive, not a finding.
+            // whole-file checks.
+            //
+            // This rule's premise is "a wide table makes the PAGE scroll sideways", which only holds
+            // for a panel page in a browser viewport. Two kinds of template are exempt because the
+            // premise does not apply, not because the finding is inconvenient:
+            //   - Email templates: tables ARE the layout mechanism, and .table-responsive does
+            //     nothing in a mail client.
+            //   - Invoices / PDFs / print views: a printed page has no viewport to scroll, and
+            //     overflow:auto would clip content off the sheet rather than make it reachable.
             $isEmailTemplate = str_contains($relative, 'email-template') || str_contains($relative, 'mail-template');
+            $isPrintDocument = $this->isStandaloneDocument($content) || $this->isPrintTemplate($relative);
 
             if (!$isEmailTemplate
+                && !$isPrintDocument
                 && preg_match('/<table[\s>]/i', $content)
                 && !str_contains($content, 'table-responsive')
-                && !str_contains($content, 'x-ui.data-table')) {
+                && !str_contains($content, 'x-ui.data-table')
+                && $this->canOverflowHorizontally($content)
+                && !$this->isWrappedByEveryIncludeSite($relative)) {
+                // Report only what can actually be established. A partial has no container of its
+                // own, so the claim "this scrolls the page sideways" depends on how it is reached:
+                //   - rendered from PHP for AJAX injection -> the container is whatever the JS
+                //     drops it into, which is not visible statically;
+                //   - no reference anywhere -> the template may simply be unused, and wrapping it
+                //     would be editing dead code.
+                [$message, $fix] = match (true) {
+                    $this->isRenderedFromPhp($relative) => [
+                        'Bare table in a partial rendered from PHP for AJAX injection — the container is not statically visible.',
+                        'Check that the element the response is injected into carries .table-responsive.',
+                    ],
+                    !$this->hasAnyReference($relative) => [
+                        'Bare table in a template nothing appears to reference — it may be unused.',
+                        'Confirm whether this template is still reached before wrapping it.',
+                    ],
+                    default => [
+                        'Table without a responsive wrapper — can scroll the whole page sideways.',
+                        'Wrap it in <x-ui.data-table> or a .table-responsive container.',
+                    ],
+                };
+
                 $findings['table_overflow'][] = [
                     'rule' => 'table_overflow', 'severity' => 'warning', 'file' => $relative, 'line' => 0,
-                    'message' => 'Table without a responsive wrapper — can scroll the whole page sideways.',
-                    'fix' => 'Wrap it in <x-ui.data-table> or a .table-responsive container.',
+                    'message' => $message,
+                    'fix' => $fix,
                     'snippet' => '<table>',
                 ];
             }
@@ -221,6 +255,171 @@ class AuditUiConsistency extends Command
     private function isStandaloneDocument(string $content): bool
     {
         return (bool) preg_match('/<html\b/i', $content);
+    }
+
+    /**
+     * Whether every template that @includes this partial already wraps it in a scroll container.
+     *
+     * A partial cannot be judged in isolation. `_edit-sku-combinations.blade.php` holds a bare
+     * <table>, but all three of its include sites wrap it in
+     * `<div class="sku_combination table-responsive ...">`. Reporting it made me add a SECOND
+     * wrapper inside the first, which is worse than the finding — nested scroll containers give the
+     * user two scrollbars.
+     *
+     * Proximity-based by design: parsing Blade's block structure would be far more brittle. The
+     * lookback is 8 lines because the include is often nested inside an @if/@else under the
+     * wrapper, as in _update-stock.blade.php.
+     */
+    private function isWrappedByEveryIncludeSite(string $relativePath): bool
+    {
+        // resources/views/admin-views/product/partials/_x.blade.php -> admin-views.product.partials._x
+        $viewName = str_replace('/', '.', preg_replace(
+            ['#^resources/views/#', '#\.blade\.php$#'], '', $relativePath
+        ) ?? '');
+
+        if ($viewName === '') {
+            return false;
+        }
+
+        $sites = 0;
+        $wrapped = 0;
+        foreach ($this->allTemplates() as $path) {
+            $lines = preg_split('/\R/', (string) file_get_contents($path)) ?: [];
+            foreach ($lines as $i => $line) {
+                if (!str_contains($line, "@include('{$viewName}'") && !str_contains($line, "@include(\"{$viewName}\"")) {
+                    continue;
+                }
+                $sites++;
+                $start = max(0, $i - 8);
+                $lookback = implode("\n", array_slice($lines, $start, $i - $start + 1));
+                if (str_contains($lookback, 'table-responsive') || str_contains($lookback, 'x-ui.data-table')) {
+                    $wrapped++;
+                }
+            }
+        }
+
+        return $sites > 0 && $sites === $wrapped;
+    }
+
+    /**
+     * Whether any template names this view — @include, @extends, @each or a component reference.
+     *
+     * Only a hint: a view name assembled at runtime from a variable is invisible here, so this
+     * returning false means "nothing found", not "definitely unused". The finding it produces is
+     * worded accordingly.
+     */
+    private function hasAnyReference(string $relativePath): bool
+    {
+        $viewName = $this->viewNameOf($relativePath);
+        if ($viewName === '') {
+            return false;
+        }
+
+        foreach ($this->allTemplates() as $path) {
+            if (str_contains((string) file_get_contents($path), $viewName)) {
+                return true;
+            }
+        }
+
+        return $this->isRenderedFromPhp($relativePath);
+    }
+
+    /** resources/views/a/b/_c.blade.php -> a.b._c */
+    private function viewNameOf(string $relativePath): string
+    {
+        return str_replace('/', '.', preg_replace(
+            ['#^resources/views/#', '#\.blade\.php$#'], '', $relativePath
+        ) ?? '');
+    }
+
+    /** Whether PHP renders this view directly, e.g. `view('...')->render()` for an AJAX response. */
+    private function isRenderedFromPhp(string $relativePath): bool
+    {
+        $viewName = str_replace('/', '.', preg_replace(
+            ['#^resources/views/#', '#\.blade\.php$#'], '', $relativePath
+        ) ?? '');
+
+        if ($viewName === '') {
+            return false;
+        }
+
+        foreach (['app', 'Modules'] as $directory) {
+            $path = base_path($directory);
+            if (!is_dir($path)) {
+                continue;
+            }
+            foreach (Finder::create()->files()->in($path)->name('*.php') as $file) {
+                if (str_contains((string) file_get_contents($file->getRealPath()), "'{$viewName}'")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<int, string> absolute paths of every Blade template */
+    private function allTemplates(): array
+    {
+        if ($this->allTemplatesCache !== null) {
+            return $this->allTemplatesCache;
+        }
+
+        $paths = [];
+        foreach (Finder::create()->files()->in(resource_path('views'))->name('*.blade.php') as $file) {
+            $paths[] = $file->getRealPath();
+        }
+
+        return $this->allTemplatesCache = $paths;
+    }
+
+    /**
+     * Whether a template's widest table could actually overflow a viewport.
+     *
+     * Two shapes cannot, and wrapping them would be cargo-cult rather than a fix:
+     *   - role="presentation": the author has explicitly declared it a layout table, not data.
+     *   - Three columns or fewer: this codebase renders "label : value" description lists as
+     *     tables (contacts/view, product-gallery, brand-view). A two- or three-column key/value
+     *     list has nothing to scroll.
+     */
+    private function canOverflowHorizontally(string $content): bool
+    {
+        if (str_contains($content, 'role="presentation"')) {
+            return false;
+        }
+
+        // A table with no cells at all has nothing to overflow. payment/paytm.blade.php wraps a set
+        // of hidden inputs in a <table> purely to auto-submit a redirect form.
+        if (!preg_match('/<t[hd]\b/i', $content)) {
+            return false;
+        }
+
+        $widest = 0;
+        if (preg_match_all('#<tr\b[^>]*>(.*?)</tr>#is', $content, $rows)) {
+            foreach ($rows[1] as $row) {
+                $widest = max($widest, preg_match_all('/<t[hd]\b/i', $row));
+            }
+        }
+
+        // Cells exist but no parseable rows (a table assembled in JS) — keep reporting rather than
+        // assume it is safe.
+        return $widest === 0 || $widest > 3;
+    }
+
+    /**
+     * A print-destined fragment, which is not a full document but is still never scrolled.
+     *
+     * pos/order/invoice.blade.php has no <html> of its own — it is included into a print modal —
+     * yet it is printed on paper, so the "page scrolls sideways" premise does not apply to it.
+     */
+    private function isPrintTemplate(string $relativePath): bool
+    {
+        foreach (['invoice', '_pdf', 'pdf.blade', 'print', 'barcode'] as $marker) {
+            if (str_contains($relativePath, $marker)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -25,7 +25,9 @@
         <div>
             <label class="form-label text-dark">{{ translate('Variations_Stock') }}</label>
             <div class="bg-white p-2 rounded">
-                <div class="sku_combination" id="sku_combination">
+                {{-- table-responsive to match the other two include sites of this partial: the
+                     variation table is five columns of inputs and pushed the modal sideways here. --}}
+                <div class="sku_combination table-responsive" id="sku_combination">
                     @if($restockId)
                         @include('admin-views.product.partials._edit-restock-combinations', ['combinations'=>json_decode($product['variation'], true)])
                         <input type="hidden" name="restock_id" id="" value="{{ $restockId }}">
