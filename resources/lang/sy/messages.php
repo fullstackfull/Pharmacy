@@ -9179,4 +9179,21 @@ return [
 	"only_an_authorized_return_can_be_marked_in_transit" => "لا يوضَع قيد النقل إلا إرجاعٌ مُرخَّص",
 	"return_is_not_in_a_receivable_state" => "الإرجاع ليس في حالة تسمح بالاستلام",
 	"return_is_not_open" => "الإرجاع غير مفتوح",
+
+	// Financial reconciliation (Phase 3, Stage E)
+	"reconciliation" => "التسوية",
+	"financial_reconciliation" => "التسوية المالية",
+	"integrity_checks_over_the_ledger_commissions_and_settlements" => "فحوص سلامة على دفتر الأستاذ والعمولات والتسويات",
+	"all_reconciled" => "الكل متطابق",
+	"discrepancies_found" => "عُثر على فروقات",
+	"checked" => "فُحص",
+	"no_discrepancies" => "لا فروقات",
+	"delta" => "الفرق",
+	"this_report_is_read_only_and_computes_live_it_writes_nothing" => "هذا التقرير للقراءة فقط ويُحسب حيّاً ولا يكتب شيئاً",
+	"Ledger running balance matches the sum of entries" => "الرصيد الجاري للدفتر يطابق مجموع القيود",
+	"Commission snapshots equal the ledger commission charges" => "لقطات العمولة تساوي رسوم العمولة في الدفتر",
+	"Settlements match the entries they claimed" => "التسويات تطابق القيود التي طالبت بها",
+	"per seller" => "لكل بائع",
+	"global total" => "الإجمالي العام",
+	"per settlement" => "لكل تسوية",
 ];

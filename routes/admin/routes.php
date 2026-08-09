@@ -573,6 +573,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
             });
         });
+
+        // Financial reconciliation (Stage E): read-only integrity checks over the ledger, commission
+        // snapshots and settlements.
+        Route::get('reconciliation', [\App\Http\Controllers\Admin\Marketplace\ReconciliationController::class, 'index'])->name('reconciliation');
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

@@ -739,6 +739,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.reconciliation'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/reconciliation*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.reconciliation') }}"
+                                   title="{{ translate('financial_reconciliation') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('financial_reconciliation') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.suppliers.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/suppliers*') ? 'active' : '' }}"

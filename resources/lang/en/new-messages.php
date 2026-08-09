@@ -2910,4 +2910,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"restocked" => "Restocked",
 	"carrier" => "Carrier",
 	"tracking" => "Tracking",
+	"this_report_is_read_only_and_computes_live_it_writes_nothing" => "This report is read only and computes live it writes nothing",
 ];
