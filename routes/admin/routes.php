@@ -482,6 +482,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
             });
         });
+
+        // Product moderation with history (spec item 7): approve/reject/needs-changes/suspend, single
+        // and bulk, each writing a history event and an audit line. Separate from the legacy product
+        // controller so the moderation trail is added without touching the save path.
+        Route::group(['prefix' => 'product-moderation', 'as' => 'product-moderation.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ProductModerationController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('history/{productId}', 'history')->whereNumber('productId')->name('history');
+                Route::post('moderate', 'moderate')->name('moderate');
+                Route::post('bulk', 'bulk')->name('bulk');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {
