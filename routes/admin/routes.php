@@ -1084,6 +1084,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('activate', 'activate')->name('activate');
             Route::post('version/publish', 'publishVersion')->name('version.publish');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
+            Route::post('version/restore', 'restoreVersion')->name('version.restore');
         });
 
         // Global theme settings (branding / colors / typography / layout) — draft-scoped.

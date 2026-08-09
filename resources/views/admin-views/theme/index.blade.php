@@ -110,6 +110,16 @@
                                                         <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>
                                                     </form>
                                                 @endif
+                                                @foreach($theme->versions->where('status', 'archived')->sortByDesc('id')->take(3) as $archived)
+                                                    <form action="{{ route('admin.theme.version.restore') }}" method="post"
+                                                          onsubmit="return confirm('{{ translate('restore_this_version_into_a_new_draft') }}?')">
+                                                        @csrf
+                                                        <input type="hidden" name="version_id" value="{{ $archived->id }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                            {{ translate('restore') }} #{{ $archived->id }}
+                                                        </button>
+                                                    </form>
+                                                @endforeach
                                                 @if($published)
                                                     <form action="{{ route('admin.theme.version.duplicate') }}" method="post">
                                                         @csrf

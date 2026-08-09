@@ -7,6 +7,7 @@ use App\Http\Controllers\BaseController;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
 use App\Services\Theme\ThemeManager;
+use App\Services\Theme\ThemePermissionService;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,7 @@ class ThemeManagementController extends BaseController
     public function __construct(
         private readonly ThemeRepositoryInterface $themeRepo,
         private readonly ThemeManager             $themeManager,
+        private readonly ThemePermissionService   $permissions,
     )
     {
     }
@@ -83,6 +85,11 @@ class ThemeManagementController extends BaseController
             return $this->backToIndex();
         }
 
+        if (!$this->permissions->canPublish()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_publish_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
         $theme = $this->themeRepo->getFirstWhere(params: ['id' => $request['id']]);
         if (!$theme instanceof Theme) {
             ToastMagic::error(translate('theme_not_found') . '!');
@@ -99,6 +106,11 @@ class ThemeManagementController extends BaseController
     public function publishVersion(Request $request): RedirectResponse
     {
         if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+
+        if (!$this->permissions->canPublish()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_publish_a_theme') . '!');
             return $this->backToIndex();
         }
 
@@ -129,6 +141,29 @@ class ThemeManagementController extends BaseController
 
         $this->themeManager->createDraftFrom($version);
         ToastMagic::success(translate('draft_created_successfully'));
+
+        return $this->backToIndex();
+    }
+
+    /** Restore an archived/older version into a new draft (non-destructive). */
+    public function restoreVersion(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $version = ThemeVersion::find($request['version_id']);
+        if (!$version) {
+            ToastMagic::error(translate('theme_version_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        $draft = $this->themeManager->restoreVersion($version);
+        ToastMagic::success(translate('version_restored_into_a_new_draft') . ' #' . $draft->id);
 
         return $this->backToIndex();
     }
