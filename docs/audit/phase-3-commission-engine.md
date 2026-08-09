@@ -169,3 +169,65 @@ Built: commission engine, commission snapshots, vendor ledger. Still required be
 * **Reconciliation** against gateway records.
 
 And Stages A, C, D, E and F are untouched.
+
+---
+
+# Phase 3, Stage B — Settlement engine
+
+A settlement is a period drawn across the ledger. It **sums entries**; it never re-derives from
+orders. That is deliberate: the ledger already holds every financial event with its own running
+balance, and a second derivation is a second source of truth that can disagree with the first. It is
+the reason the ledger was built before this.
+
+## The three properties that carry the design
+
+**1. The same earning can never be paid twice.** Calculating *claims* its entries by stamping
+`settlement_id` on them — the column that was put on the ledger for exactly this and left unused
+until now. A claimed entry is invisible to the next run, and that is enforced by the data rather
+than by remembering to check. The rows are locked for the transaction, so two runs racing cannot
+both claim them.
+
+**2. Pending money is not settleable.** Only `available` entries are eligible. Money still inside
+the return window is not money a seller can be paid, and the engine has no way to spend it.
+
+**3. Approval freezes it.** After approval the totals stop moving: approving twice cannot re-stamp
+who approved it, and an approved settlement cannot be cancelled. A correction is a new ledger entry
+that the *next* settlement picks up — a restated settlement cannot be reconciled against the payout
+already made from it. Cancelling an *unapproved* settlement releases the claim and returns its
+entries to the pool.
+
+Paying requires approval first, which is the maker-checker split the specification asks for:
+calculating never pays anybody.
+
+## The statement reads the way an accountant expects
+
+`opening_balance → credits − debits → closing_balance`, taken from the entries' own `balance_after`
+rather than re-summing all history. Asserted: after one settled period of 100 − 10, the next
+settlement opens at **90**, moves 400 − 52, and closes at **438**.
+
+## Operable, not just implemented
+
+`php artisan marketplace:settle` — `--dry-run` reports without writing (a dry run that claimed
+entries would not be a dry run), `--release` opts in to maturing pending entries first so a
+reporting run cannot silently change what counts as payable, `--seller=` narrows to one vendor.
+Settlements land as `calculated`; a human approves.
+
+**16 settlement tests**; suite at 434 tests, 1,011 assertions.
+
+## Stage B after this
+
+Built: commission engine · commission snapshots · vendor ledger · settlement engine.
+
+Remaining before Stage B closes:
+
+* **Payout workflow** — requested → under review → approved → processing → paid → failed, with
+  maker-checker on bank detail changes and a cooling period before payouts after one.
+* **Refund reversal.** `OrderItemCommission::reversed_amount` and the ledger's refund entry types
+  exist and are honoured in arithmetic, but **nothing writes to them**: the refund path is still not
+  wired in. This is the largest remaining hole in the financial core and it is stated plainly rather
+  than left to be discovered.
+* **Reconciliation** against gateway records.
+* **Seller-facing statements** and an admin settlement UI. Everything above is currently reachable
+  only through the service layer and the console command.
+
+Stages A, C, D, E and F remain untouched.
