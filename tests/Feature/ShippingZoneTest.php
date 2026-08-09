@@ -109,4 +109,27 @@ class ShippingZoneTest extends TestCase
 
         $this->assertNull($this->svc->resolveZone('Syria'));
     }
+
+    // --- checkoutCost(): the seam the storefront consults, with its fallback contract ---
+
+    public function test_checkout_cost_falls_back_when_no_zone_matches(): void
+    {
+        // No zones at all → the platform's existing shipping cost is returned untouched.
+        $this->assertSame(30.0, $this->svc->checkoutCost(30.0, 'Syria', 0, 1000));
+    }
+
+    public function test_checkout_cost_uses_the_zone_rate_when_one_matches(): void
+    {
+        ShippingZone::create(['name' => 'Syria', 'countries' => ['Syria'], 'base_cost' => 7, 'priority' => 10]);
+
+        $this->assertSame(7.0, $this->svc->checkoutCost(30.0, 'Syria', 0, 1000));
+    }
+
+    public function test_checkout_cost_is_zero_when_the_zone_is_free_over_threshold(): void
+    {
+        ShippingZone::create(['name' => 'Syria', 'countries' => ['Syria'], 'base_cost' => 7, 'free_over' => 500, 'priority' => 10]);
+
+        // Order clears the free-over threshold → free, distinct from "no zone" which would fall back.
+        $this->assertSame(0.0, $this->svc->checkoutCost(30.0, 'Syria', 0, 1000));
+    }
 }

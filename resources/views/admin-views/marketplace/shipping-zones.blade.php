@@ -9,6 +9,25 @@
             <p class="mb-0 fs-12">{{ translate('price_shipping_by_destination_and_weight_where_no_zone_matches_the_existing_flat_shipping_applies') }}.</p>
         </div>
 
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h5 class="mb-1">{{ translate('charge_zone_shipping_at_web_checkout') }}</h5>
+                    <p class="mb-0 fs-12 text-muted">{{ translate('when_on_web_checkout_charges_the_zone_rate_for_the_destination_falling_back_to_the_chosen_method_where_no_zone_matches_off_by_default') }}.</p>
+                </div>
+                <form action="{{ route('admin.marketplace.shipping-zones.toggle') }}" method="post" class="d-flex align-items-center gap-2">
+                    @csrf
+                    <input type="hidden" name="status" value="{{ $zoneShippingEnabled ? 0 : 1 }}">
+                    <span class="badge {{ $zoneShippingEnabled ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                        {{ $zoneShippingEnabled ? translate('enabled') : translate('disabled') }}
+                    </span>
+                    <button class="btn btn-sm {{ $zoneShippingEnabled ? 'btn-outline-danger' : 'btn-primary' }}">
+                        {{ $zoneShippingEnabled ? translate('turn_off') : translate('turn_on') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-lg-5">
                 <div class="card mb-3">

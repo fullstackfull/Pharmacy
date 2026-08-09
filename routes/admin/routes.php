@@ -617,6 +617,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::controller(\App\Http\Controllers\Admin\Marketplace\ShippingZoneController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
+                Route::post('toggle', 'toggle')->name('toggle');
                 Route::put('{id}', 'update')->whereNumber('id')->name('update');
                 Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
             });

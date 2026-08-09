@@ -9376,4 +9376,14 @@ return [
 	"reviews.view" => "عرض التقييمات",
 	"shop_settings.manage" => "إدارة إعدادات المتجر",
 	"staff.manage" => "إدارة الطاقم",
+
+	// Zone shipping at checkout (Phase 3, Stage C — hot-path adoption)
+	"charge_zone_shipping_at_web_checkout" => "احتساب الشحن حسب المنطقة عند الدفع على الويب",
+	"when_on_web_checkout_charges_the_zone_rate_for_the_destination_falling_back_to_the_chosen_method_where_no_zone_matches_off_by_default" => "عند التفعيل، يحتسب الدفع على الويب سعر المنطقة حسب الوجهة، ويعود إلى طريقة الشحن المختارة عند عدم تطابق أي منطقة. مُعطَّل افتراضيًا",
+	"zone_shipping_enabled" => "تم تفعيل الشحن حسب المنطقة",
+	"zone_shipping_disabled" => "تم تعطيل الشحن حسب المنطقة",
+	"turn_on" => "تفعيل",
+	"turn_off" => "تعطيل",
+	"enabled" => "مُفعَّل",
+	"disabled" => "مُعطَّل",
 ];

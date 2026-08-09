@@ -68,6 +68,22 @@ class ShippingRateService
         return ['zone' => $zone, 'cost' => $cost, 'free' => false];
     }
 
+    /**
+     * The checkout shipping cost for a destination, falling back to the platform's existing cost.
+     *
+     * This is the seam a checkout consults: it returns `$fallbackCost` unchanged when no zone serves the
+     * destination, so a store keeps its current shipping until a matching zone exists. A zone with a
+     * met free-over threshold resolves to 0 (free) — distinct from "no zone", which returns the
+     * fallback. Config-free by design: whether zone shipping is switched on at all is the caller's gate,
+     * so this stays a pure function of its inputs and is unit-testable.
+     */
+    public function checkoutCost(float $fallbackCost, ?string $country, float $weight = 0.0, float $orderValue = 0.0, ?string $region = null): float
+    {
+        $rate = $this->rateFor($country, $weight, $orderValue, $region);
+
+        return $rate === null ? $fallbackCost : (float) $rate['cost'];
+    }
+
     private function zoneMatches(ShippingZone $zone, ?string $country, ?string $region, bool $isCatchAll): bool
     {
         if (!$isCatchAll && !$zone->matchesCountry($country)) {

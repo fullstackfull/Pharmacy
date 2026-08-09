@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Marketplace;
 
 use App\Http\Controllers\BaseController;
+use App\Models\BusinessSetting;
 use App\Models\ShippingZone;
 use App\Services\Marketplace\ShippingRateService;
 use App\Services\AuditLogger;
@@ -49,7 +50,27 @@ class ShippingZoneController extends BaseController
         return view('admin-views.marketplace.shipping-zones', [
             'zones' => $zones,
             'preview' => $preview,
+            'zoneShippingEnabled' => (bool) (getWebConfig(name: 'zone_wise_shipping') ?? false),
         ]);
+    }
+
+    /**
+     * Switch destination-based (zone) shipping on or off for web checkout.
+     *
+     * Off by default and off until switched here, so checkout keeps its existing method-based shipping.
+     * When on, the web checkout charges the zone rate for the destination (falling back to the chosen
+     * method's cost where no zone matches).
+     */
+    public function toggle(Request $request): RedirectResponse
+    {
+        $enabled = $request->boolean('status');
+        BusinessSetting::updateOrCreate(['type' => 'zone_wise_shipping'], ['value' => $enabled ? '1' : '0']);
+        clearWebConfigCacheKeys();
+
+        $this->audit->record(action: 'shipping.zone_shipping_toggled', subject: ['type' => 'business_setting', 'id' => 'zone_wise_shipping'], after: ['enabled' => $enabled]);
+        ToastMagic::success($enabled ? translate('zone_shipping_enabled') : translate('zone_shipping_disabled'));
+
+        return back();
     }
 
     public function store(Request $request): RedirectResponse
