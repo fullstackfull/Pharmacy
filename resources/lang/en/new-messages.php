@@ -2696,4 +2696,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"hide_show" => "Hide show",
 	"Product_thumbnail_is_required!" => "Product thumbnail is required!",
 	"select_a_section_to_edit_its_settings" => "Select a section to edit its settings",
+	"revenue_this_month" => "Revenue this month",
+	"no_comparison_data_yet" => "No comparison data yet",
+	"orders_this_month" => "Orders this month",
+	"low_stock_products" => "Low stock products",
+	"at_or_below" => "At or below",
+	"out_of_stock_products" => "Out of stock products",
+	"needs_restocking" => "Needs restocking",
 ];

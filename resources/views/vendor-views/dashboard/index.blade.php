@@ -6,6 +6,7 @@
 
 @section('content')
     <div class="content container-fluid">
+        @include('vendor-views.partials._operational-kpis')
         <div class="page-header pb-0 border-0 mb-3">
             <div class="flex-between row align-items-center mx-1">
                 <div>
