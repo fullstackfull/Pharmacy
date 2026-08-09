@@ -827,6 +827,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.shipping-zones.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/shipping-zones*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.shipping-zones.index') }}"
+                                   title="{{ translate('shipping_zones') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('shipping_zones') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"

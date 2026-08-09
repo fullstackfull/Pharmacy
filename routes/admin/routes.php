@@ -610,6 +610,17 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
             });
         });
+
+        // Shipping zones (Stage C): destination-based rate rules with a resolver that falls back to the
+        // existing flat shipping where no zone matches.
+        Route::group(['prefix' => 'shipping-zones', 'as' => 'shipping-zones.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ShippingZoneController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

@@ -2937,4 +2937,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"ready" => "Ready",
 	"shipped" => "Shipped",
 	"mark" => "Mark",
+	"free_over" => "Free over",
 ];
