@@ -2703,4 +2703,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"at_or_below" => "At or below",
 	"out_of_stock_products" => "Out of stock products",
 	"needs_restocking" => "Needs restocking",
+	"section_settings" => "Section settings",
 ];

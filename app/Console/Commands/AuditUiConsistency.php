@@ -39,7 +39,15 @@ class AuditUiConsistency extends Command
      */
     private const EXCLUDED_PATHS = ['layouts/admin/components', 'layouts/admin/component-snippets'];
 
-    /** Directional utilities that break in RTL; the logical equivalent is safe in both directions. */
+    /**
+     * Directional utilities that break in RTL, mapped to their logical equivalents.
+     *
+     * IMPORTANT: this project loads TWO Bootstrap majors from parallel asset trees —
+     * `assets/backend/libs/bootstrap` is Bootstrap 5 (defines .ms-*, .me-*, .gap-*, used by the v2
+     * admin) while `assets/back-end/css/bootstrap.min.css` is Bootstrap 4.5 (does NOT define them).
+     * So these findings are advisory, not auto-fixable: applying the logical class to a page served
+     * by the BS4 tree silently removes the spacing instead of mirroring it. Verify per page.
+     */
     private const RTL_UNSAFE = [
         'ml-' => 'ms-', 'mr-' => 'me-', 'pl-' => 'ps-', 'pr-' => 'pe-',
         'text-left' => 'text-start', 'text-right' => 'text-end',
@@ -80,7 +88,14 @@ class AuditUiConsistency extends Command
 
             // whole-file checks
             $content = (string) file_get_contents($file->getRealPath());
-            if (preg_match('/<table[\s>]/i', $content) && !str_contains($content, 'table-responsive') && !str_contains($content, 'x-ui.data-table')) {
+            // Email templates legitimately use tables for layout, and .table-responsive does nothing
+            // in a mail client — flagging them would be a false positive, not a finding.
+            $isEmailTemplate = str_contains($relative, 'email-template') || str_contains($relative, 'mail-template');
+
+            if (!$isEmailTemplate
+                && preg_match('/<table[\s>]/i', $content)
+                && !str_contains($content, 'table-responsive')
+                && !str_contains($content, 'x-ui.data-table')) {
                 $findings['table_overflow'][] = [
                     'rule' => 'table_overflow', 'severity' => 'warning', 'file' => $relative, 'line' => 0,
                     'message' => 'Table without a responsive wrapper — can scroll the whole page sideways.',
@@ -113,7 +128,9 @@ class AuditUiConsistency extends Command
                     $issues[] = [
                         'rule' => 'rtl_directional', 'severity' => 'warning',
                         'message' => "Directional class \"{$bad}\" does not mirror in RTL (Arabic).",
-                        'fix' => "Use the logical equivalent \"{$good}\".",
+                        'fix' => "Use the logical equivalent \"{$good}\" — but CHECK THE PAGE'S BOOTSTRAP FIRST: "
+                            . "the v2 admin loads Bootstrap 5 (assets/backend/libs/bootstrap) where {$good} exists, "
+                            . "while assets/back-end ships Bootstrap 4.5 where it does NOT. A blanket replace breaks BS4 pages.",
                         'snippet' => $this->snippet($trimmed),
                     ];
                     break;

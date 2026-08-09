@@ -37,6 +37,16 @@
                         {{ $editable ? translate('draft') : translate('published') }} #{{ $version->id }}
                     </span>
                 @endif
+                @if($version && $editable)
+                    <form action="{{ route('admin.theme.builder.preview.start') }}" method="post" class="d-inline">
+                        @csrf
+                        <input type="hidden" name="version_id" value="{{ $version->id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">{{ translate('Preview_on_storefront') }}</button>
+                    </form>
+                @endif
+                @if(session(\App\Services\Theme\StorefrontThemeRenderer::PREVIEW_SESSION_KEY))
+                    <a href="{{ route('admin.theme.builder.preview.stop') }}" class="btn btn-sm btn-warning">{{ translate('End_preview') }}</a>
+                @endif
                 <a href="{{ route('admin.theme.index') }}" class="btn btn-sm btn-outline-secondary">{{ translate('Theme_Management') }}</a>
             </div>
         </div>

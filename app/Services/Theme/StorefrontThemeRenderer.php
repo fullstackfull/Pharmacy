@@ -35,10 +35,30 @@ class StorefrontThemeRenderer
      *
      * @return array<int, array{type:string, settings:array, blocks:array}>|null
      */
+    /**
+     * Session key holding the theme version an admin is previewing.
+     *
+     * Preview is deliberately session-scoped and admin-gated rather than a query parameter: a
+     * ?preview_version=N URL could be shared or crawled, which would expose an unpublished design
+     * to customers and to search engines.
+     */
+    public const PREVIEW_SESSION_KEY = 'theme_preview_version_id';
+
     public function sectionsFor(string $page): ?array
     {
         if (!$this->tablesReady()) {
             return null;
+        }
+
+        // Draft preview: only for an authenticated admin, and never cached, so a preview can never
+        // leak into what customers are served.
+        $previewVersionId = $this->activePreviewVersionId();
+        if ($previewVersionId !== null) {
+            try {
+                return $this->buildSections($previewVersionId, $page);
+            } catch (\Throwable) {
+                return null;
+            }
         }
 
         try {
@@ -48,25 +68,7 @@ class StorefrontThemeRenderer
                     return null;
                 }
 
-                $sections = ThemeSection::with('blocks')
-                    ->where('theme_version_id', $version->id)
-                    ->where('page', $page)
-                    ->where('is_visible', true)
-                    ->orderBy('sort_order')
-                    ->get();
-
-                if ($sections->isEmpty()) {
-                    return null; // nothing configured -> keep the existing storefront
-                }
-
-                return $sections->map(fn (ThemeSection $section) => [
-                    'type'     => $section->type,
-                    'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
-                    'blocks'   => $section->blocks
-                        ->where('is_visible', true)
-                        ->map(fn ($block) => ['type' => $block->type, 'settings' => $block->settings ?? []])
-                        ->values()->all(),
-                ])->all();
+                return $this->buildSections($version->id, $page);
             });
         } catch (\Throwable) {
             // A theme problem must never take the storefront down.
@@ -108,6 +110,44 @@ class StorefrontThemeRenderer
     {
         foreach ($pages as $page) {
             Cache::forget(self::CACHE_KEY_PREFIX . $page);
+        }
+    }
+
+    /** Shared section builder used by both the published path and draft preview. */
+    private function buildSections(int $versionId, string $page): ?array
+    {
+        $sections = ThemeSection::with('blocks')
+            ->where('theme_version_id', $versionId)
+            ->where('page', $page)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($sections->isEmpty()) {
+            return null; // nothing configured -> keep the existing storefront
+        }
+
+        return $sections->map(fn (ThemeSection $section) => [
+            'type'     => $section->type,
+            'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
+            'blocks'   => $section->blocks
+                ->where('is_visible', true)
+                ->map(fn ($block) => ['type' => $block->type, 'settings' => $block->settings ?? []])
+                ->values()->all(),
+        ])->all();
+    }
+
+    /** The version being previewed, but ONLY for an authenticated admin. */
+    private function activePreviewVersionId(): ?int
+    {
+        try {
+            if (!auth('admin')->check()) {
+                return null;
+            }
+            $id = session(self::PREVIEW_SESSION_KEY);
+            return $id ? (int) $id : null;
+        } catch (\Throwable) {
+            return null;
         }
     }
 

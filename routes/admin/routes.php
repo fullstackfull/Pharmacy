@@ -1105,6 +1105,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::controller(ThemeBuilderController::class)->group(function () {
                 Route::get('', 'index')->name('index');
                 Route::get('section-schema', 'sectionSchema')->name('section-schema');
+            Route::post('preview/start', 'startPreview')->name('preview.start');
+            Route::get('preview/stop', 'stopPreview')->name('preview.stop');
                 Route::post('section/add', 'addSection')->name('section.add');
                 Route::post('section/update', 'updateSection')->name('section.update');
                 Route::post('section/reorder', 'reorderSections')->name('section.reorder');
