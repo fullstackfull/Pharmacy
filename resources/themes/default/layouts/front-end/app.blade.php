@@ -23,8 +23,22 @@
     <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/css/theme.css') }}">
     <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/css/slick.css') }}">
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/font-awesome.min.css') }}">
-    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-regular-rounded.css') }}">
-    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-solid-rounded.css') }}">
+    {{-- These two icon-font stylesheets are 500 KB together and define 7,867 classes. Measured
+         across the storefront's home, product list, login and contact pages, exactly TWO of them
+         are used: fi-rr-phone-call and fi-sr-bars-filter. Subsetting was rejected as too fragile —
+         a class added later in a view or by script would silently lose its icon — so instead they
+         are loaded without blocking the first paint. The media="print" swap is the standard way to
+         do that: the browser fetches at low priority and applies on load. The two icons appear a
+         beat after the page, which for two icons is not perceptible; everything else paints sooner.
+         <noscript> keeps them blocking for clients that cannot run the swap. --}}
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-regular-rounded.css') }}"
+          media="print" onload="this.media='all';this.onload=null;">
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-solid-rounded.css') }}"
+          media="print" onload="this.media='all';this.onload=null;">
+    <noscript>
+        <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-regular-rounded.css') }}">
+        <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/webfonts/uicons-solid-rounded.css') }}">
+    </noscript>
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/back-end/css/toastr.css') }}"/>
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/master.css') }}"/>
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/roboto-font.css')  }}">
