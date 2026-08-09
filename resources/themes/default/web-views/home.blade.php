@@ -3,8 +3,8 @@
 @section('title', $web_config['meta_title'])
 
 @push('css_or_js')
-    <link rel="stylesheet" href="{{theme_asset(path: 'public/assets/front-end/css/home.css')}}"/>
-    <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/owl.carousel.min.css') }}">
+    {{-- Removed: layouts/front-end/app.blade.php already links this globally, so the page was
+         downloading and parsing it a second time. --}}
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/owl.theme.default.min.css') }}">
     <script>
         (function () {
