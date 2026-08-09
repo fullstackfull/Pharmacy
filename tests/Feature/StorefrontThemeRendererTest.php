@@ -187,4 +187,31 @@ class StorefrontThemeRendererTest extends TestCase
 
         $this->assertSame('#0f766e', $settings['colors']['primary']);
     }
+
+    // ---- draft preview (admin-only) ----
+
+    public function test_preview_is_ignored_for_guests(): void
+    {
+        // A guest with the preview key in session must still see the PUBLISHED theme, never a draft.
+        $published = $this->publishedVersion();
+        ThemeSection::create(['theme_version_id' => $published->id, 'page' => 'home', 'type' => 'hero_banner', 'sort_order' => 1, 'is_visible' => true]);
+
+        $draft = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_DRAFT]);
+        ThemeSection::create(['theme_version_id' => $draft->id, 'page' => 'home', 'type' => 'brand_slider', 'sort_order' => 1, 'is_visible' => true]);
+        ThemeSection::create(['theme_version_id' => $draft->id, 'page' => 'home', 'type' => 'newsletter', 'sort_order' => 2, 'is_visible' => true]);
+
+        session([StorefrontThemeRenderer::PREVIEW_SESSION_KEY => $draft->id]);
+
+        $sections = $this->renderer->sectionsFor('home');
+        $this->assertCount(1, $sections);                       // published, not the 2-section draft
+        $this->assertSame('hero_banner', $sections[0]['type']);
+    }
+
+    public function test_preview_without_a_session_key_renders_published(): void
+    {
+        $published = $this->publishedVersion();
+        ThemeSection::create(['theme_version_id' => $published->id, 'page' => 'home', 'type' => 'hero_banner', 'sort_order' => 1, 'is_visible' => true]);
+
+        $this->assertCount(1, $this->renderer->sectionsFor('home'));
+    }
 }

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin\Settings;
 use App\Http\Controllers\BaseController;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
+use Devrabiul\ToastMagic\Facades\ToastMagic;
+use Illuminate\Http\RedirectResponse;
 use App\Services\Theme\SectionRegistry;
+use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeBuilderService;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Contracts\View\View;
@@ -162,4 +165,34 @@ class ThemeBuilderController extends BaseController
     {
         return response()->json(['status' => 'error', 'message' => $message], 422);
     }
+    /**
+     * Preview a DRAFT on the real storefront (Phase 1.2 draft -> preview -> publish).
+     *
+     * The version id is stored in the ADMIN SESSION, not the URL: a ?preview_version=N link could be
+     * shared or crawled, exposing an unpublished design to customers and to search engines. The
+     * renderer additionally requires an authenticated admin, so the preview cannot leak even if the
+     * session cookie were replayed by a guest.
+     */
+    public function startPreview(Request $request): RedirectResponse
+    {
+        $version = ThemeVersion::find($request['version_id']);
+        if (!$version) {
+            ToastMagic::error(translate('theme_version_not_found') . '!');
+            return back();
+        }
+
+        session([StorefrontThemeRenderer::PREVIEW_SESSION_KEY => $version->id]);
+        ToastMagic::success(translate('previewing_draft_on_the_storefront') . ' #' . $version->id);
+
+        return redirect('/');
+    }
+
+    public function stopPreview(): RedirectResponse
+    {
+        session()->forget(StorefrontThemeRenderer::PREVIEW_SESSION_KEY);
+        ToastMagic::success(translate('preview_ended'));
+
+        return redirect()->route('admin.theme.builder.index');
+    }
+
 }
