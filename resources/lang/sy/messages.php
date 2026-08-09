@@ -8864,4 +8864,6 @@ return [
 	"you_left_something_in_your_cart" => "تركتَ أشياءً في سلّتك",
 	"carts_matching_these_thresholds_right_now" => "السلّات المطابقة لهذه الحدود الآن",
 	"the_stop_reminding_hours_must_be_greater_than_the_idle_hours" => "يجب أن تكون ساعة التوقّف عن التذكير أكبر من ساعة اعتبار السلّة متروكة.",
+	"you_can_only_edit_your_own_review" => "لا يمكنك تعديل إلا تقييمك أنت.",
+	"you_can_only_review_a_product_you_ordered" => "لا يمكنك تقييم منتج إلا إذا كنت قد طلبته.",
 ];

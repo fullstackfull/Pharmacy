@@ -28,12 +28,25 @@ class ReviewController extends Controller
     public function add(Request $request): RedirectResponse
     {
         $request->validate([
-            'rating' => 'required',
+            // 'required' alone accepted "abc" and 999. A rating outside 1-5 corrupts every average
+            // computed from this table.
+            'rating' => 'required|integer|min:1|max:5',
             'comment' => 'required',
+            'product_id' => 'required',
+            'order_id' => 'required',
         ], [
             'rating.required' => translate('please_rate_the_quality') . '!',
             'comment.required' => translate('The_comment_is_required') . '!',
         ]);
+
+        // product_id and order_id used to be written straight from the request, so any signed-in
+        // customer could review any product against any order id, including somebody else's.
+        if (!(new \App\Services\Retention\ReviewEligibilityService())
+            ->customerMayReview(auth('customer')->id(), $request['order_id'], $request['product_id'])) {
+            Toastr::error(translate('you_can_only_review_a_product_you_ordered'));
+
+            return redirect()->back();
+        }
 
         if ($request->has('fileUpload')) {
             foreach ($request->file('fileUpload') as $image) {
@@ -81,8 +94,15 @@ class ReviewController extends Controller
             'created_at' => $review->created_at ?? now()
         ];
 
-        if ($request['review_id']) {
-            $this->reviewRepo->update(id: $request['review_id'], data: $dataArray);
+        // $review is looked up scoped to the signed-in customer, but the update used to be issued
+        // against $request['review_id'] regardless of whether that lookup found anything — so
+        // passing somebody else's review id rewrote their review and reassigned it to the sender.
+        if ($request['review_id'] && $review) {
+            $this->reviewRepo->update(id: $review['id'], data: $dataArray);
+        } elseif ($request['review_id']) {
+            Toastr::error(translate('you_can_only_edit_your_own_review'));
+
+            return redirect()->back();
         } else {
             $this->reviewRepo->add(data: $dataArray);
         }
