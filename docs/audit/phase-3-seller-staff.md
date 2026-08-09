@@ -54,8 +54,44 @@ the role is deleted, and a staff member may only be assigned a role belonging to
   scoped to the seller, the password stored **hashed** (not plaintext), and the resolver returned
   `orders.manage` → true, `finance.view` → false. Test rows removed.
 
-## The honest scope line
+## The honest scope line (at foundation time)
 
 This is the roles/permissions/team **foundation**, not yet functional staff access: no one can sign in
 as staff until the guard lands. Stated here and in the UI rather than implied by the presence of a
 password field.
+
+## Update — the deferred login has landed
+
+The guard, login and per-route enforcement named above as the next step are now built.
+
+- **Login** (`StaffLoginController`, `vendor/staff-auth/login`): a staff member authenticates with their
+  own hashed credentials and is then signed in **as their parent seller** on the existing `seller`
+  guard, with `seller_staff_id` stamped on the session. That one choice is what keeps it small and safe
+  — every vendor controller already scopes by `auth('seller')`, so a staff member operates their shop
+  with **no controller change**, and the owner's own login path is untouched and never sets that key.
+- **Enforcement** (`SellerStaffAccessMiddleware`, added after `seller` on the whole vendor group): a real
+  owner (no `seller_staff_id`) passes straight through. For a staff session the required permission is
+  derived from the vendor URL and checked via the already-tested `staffCan()`. The map is
+  **deny-by-default** — navigation is allowed, a core domain needs its catalog permission, and anything
+  unmapped is refused (403), so a gap fails closed. A stale/tampered staff session (missing, inactive, or
+  not matching the signed-in seller) is dropped and bounced to the staff login.
+- **Owner-facing**: the staff management page now shows the staff sign-in link to share (replacing the
+  "coming soon" note); the `SellerStaff` model docblock now describes a sign-in account.
+
+### Verification of the login
+
+- **7 tests** (`SellerStaffAccessTest`) pin the security-critical URL→permission map: navigation is
+  allowed, read needs `.view` and write needs `.manage`, the settings area splits `staff.manage` from
+  `shop_settings.manage`, every mapped key is a real catalog key, and an unmapped area is **denied**.
+  Full suite **652 passed, 1 skipped**.
+- **Runtime verified** end-to-end through the real HTTP stack against live MariaDB: a staff member with
+  only `orders.view` signed in (302), reached the dashboard (200, baseline) and order pages (200,
+  granted), was **refused** the promotions and products pages (403, not granted), and after logout the
+  dashboard redirected to login (session cleared). Test role and staff removed afterward.
+
+### The honest boundary now
+
+Enforcement is **deny-by-default over the mapped core domains** (catalogue, orders, promotions, reviews,
+finance, settings, and navigation). A staff member can act only where their role grants it and where the
+domain is mapped; niche vendor areas not in the map are refused rather than silently allowed. Widening
+coverage to more areas is additive map entries, not a redesign.
