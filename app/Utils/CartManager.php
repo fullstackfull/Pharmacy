@@ -361,6 +361,10 @@ class CartManager
 
     public static function cartCleanByCartGroupIds($cartGroupIDs): void
     {
+        // Attribute the recovery before the rows go: this is the exact moment a reminded cart turns
+        // into an order, and once the cart rows are deleted the link cannot be made again.
+        self::markAbandonedCartsRecovered($cartGroupIDs);
+
         CartShipping::whereIn('cart_group_id', $cartGroupIDs)->delete();
         Cart::whereIn('cart_group_id', $cartGroupIDs)->where(['is_checked' => 1])->delete();
 
@@ -376,6 +380,32 @@ class CartManager
         session()->forget('order_note');
 
         cacheRemoveByType(type: 'carts');
+    }
+
+    /**
+     * Record that a reminded cart converted (Phase 2.4).
+     *
+     * Wrapped whole: abandoned-cart reporting must never be able to fail an order. If the table is
+     * absent because the migration has not run yet, or anything else goes wrong, the order still
+     * completes — the worst outcome is a recovery that goes unreported.
+     */
+    private static function markAbandonedCartsRecovered($cartGroupIDs): void
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('abandoned_cart_reminders')) {
+                return;
+            }
+
+            \App\Models\AbandonedCartReminder::whereIn('cart_group_id', (array) $cartGroupIDs)
+                ->whereNull('recovered_at')
+                ->update([
+                    'recovered_at' => now(),
+                    'recovered_order_id' => session('order_id'),
+                    'updated_at' => now(),
+                ]);
+        } catch (\Throwable) {
+            // Reporting is not worth an order.
+        }
     }
 
     public static function addToCartPhysicalProduct($request, $product, $shippingType, $sellerShippingList): array

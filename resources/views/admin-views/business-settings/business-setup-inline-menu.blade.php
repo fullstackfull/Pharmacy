@@ -42,6 +42,12 @@
                 {{ translate('Orders') }}
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {{ Request::is('admin/business-settings/abandoned-cart/index') ? 'active' : '' }}"
+                href="{{ route('admin.business-settings.abandoned-cart.index') }}">
+                {{ translate('abandoned_cart_recovery') }}
+            </a>
+        </li>
 
         @if(Route::has('admin.business-settings.auction-config') && getCheckAddonPublishedStatus(moduleName: 'Auction'))
             <li class="nav-item">

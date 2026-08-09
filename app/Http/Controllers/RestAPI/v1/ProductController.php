@@ -540,12 +540,22 @@ class ProductController extends Controller
             'product_id' => 'required',
             'order_id' => 'required',
             'comment' => 'required',
-            'rating' => 'required',
+            // 'required' alone accepted "abc" and 999, and a rating outside 1-5 corrupts every
+            // average computed from this table.
+            'rating' => 'required|integer|min:1|max:5',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
+
+        // product_id and order_id were written straight from the request, so any authenticated
+        // customer could review any product against any order id, including somebody else's.
+        if (!(new \App\Services\Retention\ReviewEligibilityService())
+            ->customerMayReview($request->user()->id, $request['order_id'], $request['product_id'])) {
+            return response()->json(['message' => translate('you_can_only_review_a_product_you_ordered')], 403);
+        }
+
         $image_array = [];
         if (!empty($request->file('fileUpload'))) {
             foreach ($request->file('fileUpload') as $image) {
@@ -603,14 +613,21 @@ class ProductController extends Controller
             'product_id' => 'required',
             'order_id' => 'required',
             'comment' => 'required',
-            'rating' => 'required',
+            'rating' => 'required|integer|min:1|max:5',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
 
-        $review = Review::find($request['id']);
+        // Review::find($request['id']) was unscoped, so any authenticated customer could rewrite
+        // any review in the store — comment, rating and attachments — by sending its id. A missing
+        // row also fataled the request on the first property assignment below.
+        $review = Review::where(['id' => $request['id'], 'customer_id' => $request->user()->id])->first();
+        if (!$review) {
+            return response()->json(['message' => translate('you_can_only_edit_your_own_review')], 403);
+        }
+
         $image_array = [];
         if ($review && $review->attachment && $request->has('fileUpload')) {
             foreach ($review->attachment as $image) {

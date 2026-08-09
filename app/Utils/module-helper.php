@@ -81,6 +81,12 @@ if (!function_exists('digital_payment_success')) {
                 'address_id' => $additionalData['address_id'] ?? null,
                 'billing_address_id' => $additionalData['billing_address_id'] ?? null,
                 'requestObj' => $requestObj,
+
+                // The gateway has already taken the money by the time this runs. Refusing the order
+                // for want of stock would leave the customer paid with nothing to show for it —
+                // strictly worse than an oversold line, which a human can reconcile against a real
+                // payment record. So this path allows the oversell; every unpaid path rejects it.
+                'stock_policy' => 'allow_oversell',
             ]);
 
             foreach ($orderIds as $orderId) {

@@ -300,9 +300,12 @@
     </span>
 
     <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/firebase/firebase.min.js') }}"></script>
-    <script src="{{ 'https://www.gstatic.com/firebasejs/8.3.2/firebase-app.js' }}"></script>
-    <script src="{{ 'https://www.gstatic.com/firebasejs/8.3.2/firebase-auth.js' }}"></script>
-    <script src="{{ 'https://www.gstatic.com/firebasejs/8.3.2/firebase-messaging.js' }}"></script>
+    {{-- The three gstatic scripts that used to sit here were removed: the local firebase.min.js
+         above is Firebase 8.3.2 and already provides app, auth and messaging, which the CDN copies
+         then re-defined at the same version. Verified in a real browser with the CDN unreachable —
+         firebase.SDK_VERSION 8.3.2, firebase.auth and firebase.messaging both present, one app
+         initialised. Three fewer external round-trips, and nothing on this page depends on Google
+         being reachable, which matters for a store whose customers may not have that reliably. --}}
     <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/firebase/firebase-init.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/firebase/firebase-auth.js') }}"></script>
 

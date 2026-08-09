@@ -364,7 +364,7 @@ class POSController extends BaseController
                 return $query->active();
             }],
         );
-        $cartId = session(SessionKey::CURRENT_USER);
+        $cartId = $this->cartService->ensureCartSession();
         $cartItems = $this->getCartData(cartName: $cartId);
         $productSubtotal = $cartItems['productSubtotal'] ?? 0;
         $productAuthorIds = $this->productService->getProductAuthorsInfo(product: $product)['ids'];

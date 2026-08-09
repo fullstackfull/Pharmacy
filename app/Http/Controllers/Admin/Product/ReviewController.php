@@ -260,7 +260,10 @@ class ReviewController extends BaseController
 
     public function getCustomerList(Request $request): JsonResponse
     {
-        $data = $this->customerRepo->getCustomerList(request: $request);
+        // The repository method is getCustomerNameList(); getCustomerList() has never existed on it,
+        // so the customer filter on the reviews page answered 500 on every keystroke. Same call the
+        // working Admin\Customer\CustomerController makes.
+        $data = $this->customerRepo->getCustomerNameList(request: $request);
         return response()->json($data);
     }
 

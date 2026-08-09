@@ -192,6 +192,15 @@ class OrderController extends Controller
             'order_note' => $request['order_note'] ?? '',
         ]);
 
+
+        // generateOrder() returns an empty list when it refused the order inside its transaction:
+        // stock ran out between the check above and the write. Nothing was created and no stock was
+        // taken. Reported with the same 403 + message shape this endpoint already uses for the
+        // pre-order stock check, so existing app builds handle it without a change.
+        if (empty($orderIds)) {
+            return response()->json(['message' => translate('The_following_items_in_your_cart_are_currently_out_of_stock')], 403);
+        }
+
         return response()->json([
             'order_ids' => $orderIds,
             'new_user' => (bool)$newCustomerRegister
@@ -311,6 +320,12 @@ class OrderController extends Controller
             'requestObj' => $request,
         ]);
 
+        // Same refusal signal as the other order endpoints: an empty list means the order was
+        // rolled back because stock ran out between the check and the write.
+        if (empty($orderIds)) {
+            return response()->json(['message' => translate('The_following_items_in_your_cart_are_currently_out_of_stock')], 403);
+        }
+
         return response()->json([
             'messages' => translate('order_placed_successfully'),
             'new_user' => (bool)$newCustomerRegister,
@@ -385,6 +400,12 @@ class OrderController extends Controller
                 'coupon_code' => $request['coupon_code'],
                 'requestObj' => $request,
             ]);
+
+            // Guarded before the wallet is touched: debiting for an order that was refused
+            // would take the customer's balance and leave them with nothing to show for it.
+            if (empty($orderIds)) {
+                return response()->json(['message' => translate('The_following_items_in_your_cart_are_currently_out_of_stock')], 403);
+            }
 
             CustomerManager::create_wallet_transaction($user->id, Convert::default($paymentAmount), 'order_place', 'order payment');
             return response()->json([

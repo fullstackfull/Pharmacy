@@ -1005,6 +1005,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('refund-setup', 'updateRefundSetup')->name('refund-setup-update');
             });
 
+            Route::group(['prefix' => 'abandoned-cart', 'as' => 'abandoned-cart.'], function () {
+                Route::controller(\App\Http\Controllers\Admin\Settings\AbandonedCartSettingsController::class)->group(function () {
+                    Route::get('index', 'index')->name('index');
+                    Route::post('update', 'update')->name('update');
+                });
+            });
+
             Route::group(['prefix' => 'shipping-method', 'as' => 'shipping-method.'], function () {
                 Route::controller(ShippingMethodController::class)->group(function () {
                     Route::get('index', 'index')->name('index');

@@ -354,7 +354,7 @@ class POSController extends BaseController
      */
     public function getQuickView(Request $request): JsonResponse
     {
-        $cartId = session(SessionKey::CURRENT_USER);
+        $cartId = $this->cartService->ensureCartSession();
         $cartItems = $this->getCartData(cartName: $cartId);
         $productSubtotal = $cartItems['productSubtotal'] ?? 0;
         $product = $this->productRepo->getFirstWhereWithCount(
