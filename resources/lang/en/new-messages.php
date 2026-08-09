@@ -2952,4 +2952,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"price_saved" => "Price saved",
 	"rates_updated" => "Rates updated",
 	"routing_rule_created" => "Routing rule created",
+	"no_staff_yet" => "No staff yet",
+	"staff_member_added" => "Staff member added",
 ];

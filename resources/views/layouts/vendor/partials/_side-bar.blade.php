@@ -582,6 +582,20 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('vendor.business-settings.staff.index'))
+                            <li
+                                class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/staff*') ? 'active' : '' }}">
+                                <a class="js-navbar-vertical-aside-menu-link nav-link"
+                                    href="{{ route('vendor.business-settings.staff.index') }}"
+                                    title="{{ translate('staff_and_roles') }}">
+                                    <i class="tio-user-add nav-icon"></i>
+                                    <span
+                                        class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate text-capitalize">
+                                        {{ translate('staff_and_roles') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('vendor.business-settings.payouts.index'))
                             <li
                                 class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/payouts*') ? 'active' : '' }}">

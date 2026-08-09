@@ -398,6 +398,22 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::get('/', 'index')->name('index');
                     });
                 });
+
+                // Seller staff & roles (Phase 3, Stage A): the seller defines roles and manages their
+                // team. Permission enforcement / staff sign-in is the named deferred step.
+                Route::group(['prefix' => 'staff', 'as' => 'staff.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerStaffController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::post('/', 'storeStaff')->name('store');
+                        Route::put('{id}', 'updateStaff')->whereNumber('id')->name('update');
+                        Route::delete('{id}', 'destroyStaff')->whereNumber('id')->name('destroy');
+                        Route::group(['prefix' => 'roles', 'as' => 'roles.'], function () {
+                            Route::post('/', 'storeRole')->name('store');
+                            Route::put('{id}', 'updateRole')->whereNumber('id')->name('update');
+                            Route::delete('{id}', 'destroyRole')->whereNumber('id')->name('destroy');
+                        });
+                    });
+                });
             });
 
             Route::controller(SystemController::class)->group(function () {
