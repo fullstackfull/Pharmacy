@@ -39,7 +39,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-4 text-right text-md-left">
+                        <div class="col-md-4 text-end text-md-left">
                             <button type="submit" class="btn btn-primary btn-block">
                                 {{translate('filter')}}
                             </button>

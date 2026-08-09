@@ -45,7 +45,7 @@
                                         {{translate('inhouse')}}
                                     </option>
                                     @foreach($sellers as $seller)
-                                        <option class="text-left text-capitalize"
+                                        <option class="text-start text-capitalize"
                                                 value="{{ $seller->id }}" {{ $seller->id == $seller_id ? 'selected' : '' }}>
                                             {{ $seller->f_name.' '.$seller->l_name }}
                                         </option>
@@ -62,7 +62,7 @@
                                         {{translate('All_Customer')}}
                                     </option>
                                     @foreach($customers as $customer)
-                                        <option class="text-left text-capitalize"
+                                        <option class="text-start text-capitalize"
                                                 value="{{ $customer->id }}" {{ $customer->id == $customer_id ? 'selected' : '' }}>
                                             {{ $customer->f_name.' '.$customer->l_name }}
                                         </option>
@@ -214,7 +214,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h4 class="mb-0 mr-auto">
+                    <h4 class="mb-0 me-auto">
                         {{translate('total_Transactions')}}
                         <span class="badge badge-info text-bg-info">{{ $transactions->total() }}</span>
                     </h4>

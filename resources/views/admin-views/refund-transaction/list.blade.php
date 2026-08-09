@@ -16,7 +16,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h3 class="mb-0 mr-auto">
+                    <h3 class="mb-0 me-auto">
                         {{ translate('total_transaction')}}
                         <span class="badge badge-info text-bg-info">{{$refundTransactions->total()}}</span>
                     </h3>

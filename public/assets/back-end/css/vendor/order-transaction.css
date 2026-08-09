@@ -275,3 +275,21 @@ a {
 .table-title{
     background: #0177CD !important;color: white;font-weight: bold;
 }
+
+/* ---------------------------------------------------------------------------
+   RTL (Arabic) mirroring for the printed transaction statements.
+
+   These documents are standalone <html> pages that load only this stylesheet,
+   so nothing else can flip them. Their <html> now carries dir from the session,
+   the same way admin-views/order/invoice.blade.php already did.
+
+   Overrides rather than a rewrite: .text-left / .text-right stay exactly as they
+   are for LTR, and only take their mirrored meaning under [dir="rtl"], so no
+   existing statement changes for an English store.
+   --------------------------------------------------------------------------- */
+[dir="rtl"] .text-left  { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
+[dir="rtl"] .float-left  { float: right; }
+[dir="rtl"] .float-right { float: left; }
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }

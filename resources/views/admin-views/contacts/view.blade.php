@@ -36,7 +36,7 @@
                             </form>
                         </div>
                         <div class="card-body">
-                            <div class="pl-2 d-flex gap-2 align-items-center mb-3">
+                            <div class="ps-2 d-flex gap-2 align-items-center mb-3">
                                 <strong class="">{{$contact->subject}}</strong>
                                 @if($contact->seen==1)
                                     <label class="badge text-bg-info badge-info mb-0">{{translate('seen')}}</label>

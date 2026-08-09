@@ -123,7 +123,7 @@
                             </strong>
                             <div class="d-flex gap-2 align-items-center fs-12">
                                 <span>{{translate('due_Amount')}}</span>
-                                <span class="trx-y-2 ml-2" data-bs-toggle="tooltip" data-bs-title="{{translate('the_ongoing_order_amount_will_be_shown_here')}}">
+                                <span class="trx-y-2 ms-2" data-bs-toggle="tooltip" data-bs-title="{{translate('the_ongoing_order_amount_will_be_shown_here')}}">
                                       <i class="fi fi-rr-info"></i>
                                 </span>
                             </div>
@@ -134,7 +134,7 @@
                             </strong>
                             <div class="d-flex gap-2 align-items-center fs-12">
                                 <span>{{translate('already_Settled')}}</span>
-                                <span class="trx-y-2 ml-2" data-bs-toggle="tooltip" data-bs-title="{{translate('after_the_order_is_delivered_total_order_amount_will_be_shown_here')}}">
+                                <span class="trx-y-2 ms-2" data-bs-toggle="tooltip" data-bs-title="{{translate('after_the_order_is_delivered_total_order_amount_will_be_shown_here')}}">
                                       <i class="fi fi-rr-info"></i>
                                 </span>
                             </div>

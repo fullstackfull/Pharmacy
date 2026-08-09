@@ -2724,4 +2724,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"draft" => "Draft",
 	"brand_slider" => "Brand slider",
 	"please_select_a_file" => "Please select a file",
+	"no_support_ticket_found" => "No support ticket found",
+	"all_copy_right_reserved_©_2026_" => "All copy right reserved © 2026 ",
+	"product_slider" => "Product slider",
+	"no_templates_yet" => "No templates yet",
 ];

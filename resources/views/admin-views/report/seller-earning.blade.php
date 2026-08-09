@@ -142,7 +142,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
-                    <h3 class="mb-0 mr-auto">
+                    <h3 class="mb-0 me-auto">
                         {{translate('total_Vendor')}}
                         <span class="badge badge-info text-bg-info fs-12">{{ count($seller_earn_table) }}</span>
                     </h3>

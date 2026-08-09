@@ -273,7 +273,7 @@
                                                 <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/send-icon.png') }}" alt="">
                                             </button>
                                         </div>
-                                        <div class="circle-progress ml-auto collapse">
+                                        <div class="circle-progress ms-auto collapse">
                                             <div class="inner">
                                                 <div class="text"></div>
                                                 <svg id="svg" width="24" height="24" viewPort="0 0 12 12" version="1.1"

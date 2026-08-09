@@ -132,10 +132,11 @@ class AuditUiConsistency extends Command
 
             $panel = $this->panelOf($relative);
             [$definedClasses, $cssScope] = $this->resolveStylesheetScope($content, $panel);
+            $mirroredClasses = $this->classesAlreadyMirrored($content);
 
             foreach ($lines as $i => $line) {
                 $lineNo = $i + 1;
-                foreach ($this->inspect($line, $panel, $definedClasses, $cssScope) as $issue) {
+                foreach ($this->inspect($line, $panel, $definedClasses, $cssScope, $mirroredClasses) as $issue) {
                     $findings[$issue['rule']][] = $issue + ['file' => $relative, 'line' => $lineNo];
                 }
             }
@@ -299,6 +300,54 @@ class AuditUiConsistency extends Command
         }
 
         return $sites > 0 && $sites === $wrapped;
+    }
+
+    /**
+     * Directional classes this page already makes direction-aware, so the RTL rule must stay quiet.
+     *
+     * Two mechanisms are in use here, both legitimate:
+     *   - the template redefines the class in its own <style> using the direction variable
+     *     (admin-views/order/invoice.blade.php);
+     *   - a stylesheet it loads carries a [dir="rtl"] override for it (the printed statements).
+     *
+     * @return array<string, true> keyed by the RTL_UNSAFE key ("ml-", "text-left", …)
+     */
+    private function classesAlreadyMirrored(string $content): array
+    {
+        $css = '';
+        if (preg_match_all('#<style\b[^>]*>(.*?)</style>#is', $content, $blocks)) {
+            $css .= implode("\n", $blocks[1]);
+        }
+        if (preg_match_all('#public/assets/[^"\']*\.css#', $content, $hrefs)) {
+            foreach (array_unique($hrefs[0]) as $href) {
+                $path = base_path($href);
+                if (is_file($path)) {
+                    $css .= "\n" . file_get_contents($path);
+                }
+            }
+        }
+
+        if ($css === '') {
+            return [];
+        }
+
+        $mirrored = [];
+        foreach (array_keys(self::RTL_UNSAFE) as $class) {
+            // "ml-" covers ml-1…ml-auto, so match the prefix rather than an exact token.
+            $name = preg_quote($class, '/') . (str_ends_with($class, '-') ? '[\w-]+' : '');
+
+            // (a) a [dir="rtl"] rule for it
+            if (preg_match('/\[dir\s*=\s*["\']?rtl["\']?\][^{]*\.' . $name . '\b/i', $css)) {
+                $mirrored[$class] = true;
+                continue;
+            }
+            // (b) redefined with a direction-dependent value (Blade emits the branch inline)
+            if (preg_match('/\.' . $name . '\s*\{[^}]*\$direction[^}]*\}/i', $css)) {
+                $mirrored[$class] = true;
+            }
+        }
+
+        return $mirrored;
     }
 
     /**
@@ -529,38 +578,33 @@ class AuditUiConsistency extends Command
      * these findings requiring manual investigation. Since the panel determines the stylesheet
      * bundle, and the bundles have been measured, the answer can just be stated.
      */
-    private function rtlFixAdvice(string $bad, string $good, ?string $panel): string
+    private function rtlFixAdvice(string $bad, string $good, ?array $defined, string $cssScope): string
     {
-        if ($panel === null) {
-            return "Use \"{$good}\", but verify first: this template is shared/storefront, so which "
-                . "Bootstrap serves it depends on the including layout.";
-        }
-
-        // Only a *-prefix is known here (e.g. "ms-"), not the exact number, so answer for the
-        // whole family: the spacing scale is what differs between the two panels.
-        $defined = $this->definedClasses($panel);
-        if ($defined === []) {
-            return "Use \"{$good}\" after checking it exists in the {$panel} panel's stylesheets.";
+        if ($defined === null || $defined === []) {
+            return "Use \"{$good}\", but verify first: the stylesheets serving this template could "
+                . "not be resolved, so whether the logical class exists here is unknown.";
         }
 
         if (str_ends_with($good, '-')) {
+            // Only the prefix is known here (e.g. "ms-"), not the step, so answer for the family —
+            // the spacing scale is exactly what differs between the two panels.
             $available = array_values(array_filter(
                 array_map(fn ($n) => $good . $n, range(0, 5)),
                 fn ($c) => isset($defined[$c])
             ));
 
             return $available === []
-                ? "Do NOT swap to \"{$good}*\" here: the {$panel} panel defines none of {$good}0…{$good}5, "
-                . "so the spacing would disappear instead of mirroring. Add the rule to the panel "
-                . "stylesheet, or migrate the panel to Bootstrap 5 first."
-                : "Use \"{$good}*\" — the {$panel} panel defines " . implode(', ', $available)
-                . ". Confirm the specific step you need is in that list.";
+                ? "Do NOT swap to \"{$good}*\" here: {$cssScope} defines none of {$good}0…{$good}5, so "
+                . "the spacing would disappear instead of mirroring. Add the rule to the stylesheet "
+                . "this page loads, or migrate it to Bootstrap 5 first."
+                : "Use \"{$good}*\" — {$cssScope} defines " . implode(', ', $available)
+                . ". Confirm the step you need is in that list.";
         }
 
         return isset($defined[$good])
-            ? "Use \"{$good}\" — verified present in the {$panel} panel's stylesheets, so this swap is safe."
-            : "Do NOT swap to \"{$good}\" here: the {$panel} panel does not define it, so the rule would "
-            . "silently do nothing. Add it to the panel stylesheet first.";
+            ? "Use \"{$good}\" — verified present in the stylesheets {$cssScope} loads, so this swap is safe."
+            : "Do NOT swap to \"{$good}\" here: {$cssScope} does not define it, so the rule would "
+            . "silently do nothing. Add it to the stylesheet this page loads first.";
     }
 
     /**
@@ -579,8 +623,13 @@ class AuditUiConsistency extends Command
     }
 
     /** @return array<int, array{rule:string, severity:string, message:string, fix:string, snippet:string}> */
-    private function inspect(string $line, ?string $panel = null, ?array $definedClasses = null, string $cssScope = ''): array
-    {
+    private function inspect(
+        string $line,
+        ?string $panel = null,
+        ?array $definedClasses = null,
+        string $cssScope = '',
+        array $mirroredClasses = []
+    ): array {
         $issues = [];
         $trimmed = trim($line);
 
@@ -598,6 +647,14 @@ class AuditUiConsistency extends Command
         // 1. RTL-unsafe directional utilities inside class attributes
         if (preg_match('/class\s*=\s*"([^"]*)"/i', $line, $m)) {
             foreach (self::RTL_UNSAFE as $bad => $good) {
+                // Skip a class the page's own CSS already mirrors. invoice.blade.php emits
+                // `.text-left { text-align: {{ $direction === "rtl" ? 'right' : 'left' }} }`, and the
+                // printed statements now carry [dir="rtl"] overrides — in both cases the physical
+                // name is direction-aware, so demanding a logical class would be wrong.
+                if (isset($mirroredClasses[$bad])) {
+                    continue;
+                }
+
                 $pattern = str_ends_with($bad, '-')
                     ? '/(^|\s)' . preg_quote($bad, '/') . '\d/'
                     : '/(^|\s)' . preg_quote($bad, '/') . '(\s|$)/';
@@ -605,7 +662,7 @@ class AuditUiConsistency extends Command
                     $issues[] = [
                         'rule' => 'rtl_directional', 'severity' => 'warning',
                         'message' => "Directional class \"{$bad}\" does not mirror in RTL (Arabic).",
-                        'fix' => $this->rtlFixAdvice($bad, $good, $panel),
+                        'fix' => $this->rtlFixAdvice($bad, $good, $definedClasses, $cssScope),
                         'snippet' => $this->snippet($trimmed),
                     ];
                     break;

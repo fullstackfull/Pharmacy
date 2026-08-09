@@ -35,7 +35,7 @@
                         </div>
                         <div class="">
                             <form action="{{ url()->current() }}" method="GET">
-                                <div class="d-flex gap-2 align-items-center text-left">
+                                <div class="d-flex gap-2 align-items-center text-start">
                                     <div class="select-wrapper">
                                         <select class="form-select text-ellipsis min-w-200" name="admin_role_id">
                                             <option value="all" {{ request('employee_role') == 'all' ? 'selected' : '' }}>{{translate('all')}}</option>

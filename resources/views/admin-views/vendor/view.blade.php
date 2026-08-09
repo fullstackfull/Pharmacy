@@ -118,7 +118,7 @@
                                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span class="ml-3">{{ $seller->single_rating_5 }}</span>
+                                                        <span class="ms-3">{{ $seller->single_rating_5 }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center font-size-sm">
                                                         <span class="me-3">{{ '4' . ' ' . translate('star') }}</span>
@@ -127,7 +127,7 @@
                                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span class="ml-3">{{ $seller->single_rating_4 }}</span>
+                                                        <span class="ms-3">{{ $seller->single_rating_4 }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center font-size-sm">
                                                         <span class="me-3">{{ '3' . ' ' . translate('star') }}</span>
@@ -136,7 +136,7 @@
                                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span class="ml-3">{{ $seller->single_rating_3 }}</span>
+                                                        <span class="ms-3">{{ $seller->single_rating_3 }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center font-size-sm">
                                                         <span class="me-3">{{ '2' . ' ' . translate('star') }}</span>
@@ -145,7 +145,7 @@
                                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span class="ml-3">{{ $seller->single_rating_2 }}</span>
+                                                        <span class="ms-3">{{ $seller->single_rating_2 }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center font-size-sm">
                                                         <span class="me-3">{{ '2' . ' ' . translate('star') }}</span>
@@ -154,7 +154,7 @@
                                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span class="ml-3">{{ $seller->single_rating_1 }}</span>
+                                                        <span class="ms-3">{{ $seller->single_rating_1 }}</span>
                                                     </li>
                                                 </ul>
                                             </div>
