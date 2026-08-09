@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Settings;
 
 use App\Http\Controllers\BaseController;
+use App\Models\ThemeAsset;
 use App\Models\ThemeVersion;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\StorefrontThemeRenderer;
@@ -10,6 +11,8 @@ use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Global theme settings — branding, colors, typography, layout (Phase 1.2).
@@ -39,6 +42,9 @@ class ThemeSettingsController extends BaseController
             'settings' => $this->themeManager->resolveSettings($version),
             'defaults' => $this->themeManager->defaultSettings(),
             'editable' => $version?->status === ThemeVersion::STATUS_DRAFT,
+            // Uploaded images for this theme, so branding fields can be filled by clicking a
+            // thumbnail instead of hand-copying a URL from the theme list.
+            'assets'   => $this->themeAssets($version),
         ]);
     }
 
@@ -104,6 +110,27 @@ class ThemeSettingsController extends BaseController
         }
 
         return $clean;
+    }
+
+    /**
+     * Images uploaded for the version's theme.
+     *
+     * Guarded by hasTable because theme_assets shipped in a later migration than themes: a partially
+     * migrated installation must still be able to open theme settings.
+     *
+     * @return \Illuminate\Support\Collection<int, ThemeAsset>
+     */
+    private function themeAssets(?ThemeVersion $version): Collection
+    {
+        if (!$version || !Schema::hasTable('theme_assets')) {
+            return collect();
+        }
+
+        try {
+            return ThemeAsset::where('theme_id', $version->theme_id)->latest('id')->get();
+        } catch (\Throwable) {
+            return collect();
+        }
     }
 
     /** The active theme's newest draft, creating one from the published version when needed. */

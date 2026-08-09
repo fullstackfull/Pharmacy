@@ -158,6 +158,7 @@
                                             </div>
                                         </td>
                                     </tr>
+
                                 @empty
                                     <tr><td colspan="4" class="text-center py-4 text-muted">{{ translate('no_themes_yet') }}</td></tr>
                                 @endforelse
@@ -170,6 +171,102 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Theme images.
+                 Deliberately OUTSIDE the themes table: .table-responsive is a scroll container with a
+                 constrained height, so an expanding panel inside a cell spilled past the card edge
+                 (measured at 704px of table inside a 640px box). Its own card has no such constraint.
+
+                 <details> rather than a Bootstrap collapse, because this admin serves Bootstrap 4.5
+                 while other areas serve 5.x and the data-toggle/data-bs-toggle attribute differs
+                 between them. <details> needs no JS at all. --}}
+            @if($assetsReady)
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">{{ translate('Theme_Images') }}</h5>
+                            <small class="text-muted">
+                                {{ translate('upload_logos_favicons_and_backgrounds_then_paste_the_url_into_a_theme_setting') }}
+                            </small>
+                        </div>
+                        <div class="card-body">
+                            @forelse($themes as $theme)
+                                <details class="v2-theme-assets mb-2 border rounded p-2" @if($loop->first) open @endif>
+                                    <summary class="text-primary" style="cursor:pointer;">
+                                        {{ $theme->name }}
+                                        <span class="badge badge-soft-info">{{ $theme->assets->count() }}</span>
+                                        @if($theme->is_active)
+                                            <span class="badge badge-soft-success">{{ translate('active') }}</span>
+                                        @endif
+                                    </summary>
+
+                                    <div class="pt-3">
+                                        {{-- `row`, not BS4's `form-row`: this layout loads Bootstrap 5.3, where
+                                             form-row and btn-block were removed and silently do nothing. --}}
+                                        <form action="{{ route('admin.theme.asset.upload') }}" method="post"
+                                              enctype="multipart/form-data" class="row align-items-end mb-3">
+                                            @csrf
+                                            <input type="hidden" name="theme_id" value="{{ $theme->id }}">
+                                            <div class="col-md-5 mb-2">
+                                                <label class="form-label mb-1" for="asset-file-{{ $theme->id }}">{{ translate('image') }}</label>
+                                                <input type="file" id="asset-file-{{ $theme->id }}" name="asset" class="form-control" required
+                                                       accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon">
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label mb-1" for="asset-label-{{ $theme->id }}">{{ translate('label') }}</label>
+                                                <input type="text" id="asset-label-{{ $theme->id }}" name="label" class="form-control" maxlength="120"
+                                                       placeholder="{{ translate('for_example_header_logo') }}">
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <button type="submit" class="btn btn-primary w-100">{{ translate('upload') }}</button>
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="text-muted">
+                                                    {{ translate('images_only_up_to') }}
+                                                    {{ round($maxAssetSize / 1024 / 1024) }}MB.
+                                                    {{ translate('the_file_type_is_verified_from_the_file_contents_not_its_name') }}
+                                                </small>
+                                            </div>
+                                        </form>
+
+                                        <div class="row">
+                                            @forelse($theme->assets->sortByDesc('id') as $asset)
+                                                <div class="col-xl-6 mb-2">
+                                                    <div class="d-flex align-items-center gap-2 border rounded p-2 h-100">
+                                                        <img src="{{ $asset->url }}" alt="{{ $asset->label ?? translate('theme_image') }}"
+                                                             style="width:48px;height:48px;object-fit:contain;flex:0 0 auto;">
+                                                        <div class="flex-grow-1 min-w-0">
+                                                            <div class="fw-bold text-truncate">{{ $asset->label ?? translate('untitled') }}</div>
+                                                            <input type="text" dir="ltr" readonly class="form-control form-control-sm"
+                                                                   onfocus="this.select();" value="{{ $asset->url }}"
+                                                                   title="{{ translate('copy_this_url_into_a_theme_setting') }}">
+                                                            <small class="text-muted">
+                                                                {{ $asset->mime_type }} · {{ $asset->size_for_humans }}
+                                                            </small>
+                                                        </div>
+                                                        <form action="{{ route('admin.theme.asset.delete') }}" method="post"
+                                                              onsubmit="return confirm('{{ translate('delete_this_image') }}?')">
+                                                            @csrf
+                                                            <input type="hidden" name="id" value="{{ $asset->id }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">{{ translate('delete') }}</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            @empty
+                                                <div class="col-12">
+                                                    <p class="text-muted mb-0 small">{{ translate('no_images_uploaded_for_this_theme_yet') }}</p>
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+                                </details>
+                            @empty
+                                <p class="text-muted mb-0">{{ translate('create_a_theme_first_then_upload_its_images_here') }}</p>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

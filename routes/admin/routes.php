@@ -1090,6 +1090,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('version/export', 'exportVersion')->name('version.export');
             Route::post('import', 'importTheme')->name('import');
             Route::post('import-preset', 'importPreset')->name('import-preset');
+            Route::post('asset/upload', 'uploadAsset')->name('asset.upload');
+            // POST, not GET: deleting is state-changing, and a GET delete is reachable by any
+            // <img src> on a page an admin happens to visit (no CSRF token involved).
+            Route::post('asset/delete', 'deleteAsset')->name('asset.delete');
         });
 
         // Global theme settings (branding / colors / typography / layout) — draft-scoped.
