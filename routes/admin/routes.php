@@ -621,6 +621,21 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
             });
         });
+
+        // B2B / wholesale customer groups + pricing (Stage E): a non-breaking price resolver — a
+        // customer in no group keeps the base price.
+        Route::group(['prefix' => 'customer-groups', 'as' => 'customer-groups.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CustomerGroupController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+                Route::post('{id}/members/add', 'addMember')->whereNumber('id')->name('members.add');
+                Route::post('{id}/members/remove', 'removeMember')->whereNumber('id')->name('members.remove');
+                Route::post('{id}/prices/set', 'setPrice')->whereNumber('id')->name('prices.set');
+                Route::delete('{id}/prices/{priceId}', 'removePrice')->whereNumber('id')->whereNumber('priceId')->name('prices.remove');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

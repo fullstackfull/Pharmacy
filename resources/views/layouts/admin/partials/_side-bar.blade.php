@@ -838,6 +838,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.customer-groups.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/customer-groups*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.customer-groups.index') }}"
+                                   title="{{ translate('customer_groups') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('customer_groups') }} (B2B)
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
