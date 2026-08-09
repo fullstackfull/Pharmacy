@@ -503,6 +503,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('update', 'update')->name('update');
             });
         });
+
+        // Seller KYC verification: review submitted documents and arm the (default-off) payout gate.
+        Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerVerificationController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('approve', 'approve')->name('approve');
+                Route::post('reject', 'reject')->name('reject');
+                Route::post('settings', 'updateSettings')->name('settings');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

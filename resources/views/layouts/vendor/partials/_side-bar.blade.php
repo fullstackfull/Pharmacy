@@ -582,6 +582,20 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('vendor.business-settings.seller-verification.index'))
+                            <li
+                                class="navbar-vertical-aside-has-menu {{ Request::is('vendor/business-settings/seller-verification*') ? 'active' : '' }}">
+                                <a class="js-navbar-vertical-aside-menu-link nav-link"
+                                    href="{{ route('vendor.business-settings.seller-verification.index') }}"
+                                    title="{{ translate('verification') }}">
+                                    <i class="tio-verified nav-icon"></i>
+                                    <span
+                                        class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate text-capitalize">
+                                        {{ translate('verification') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         <li
                             class="navbar-vertical-aside-has-menu {{ Request::is('vendor/profile/' . Profile::INDEX[URI]) || Request::is('vendor/profile/' . Profile::BANK_INFO_UPDATE[URI]) ? 'active' : '' }}">
                             <a class="js-navbar-vertical-aside-menu-link nav-link"

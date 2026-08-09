@@ -374,6 +374,15 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
                     });
                 });
+
+                // Seller KYC (Phase 3, Stage A): the seller submits identity/business documents and
+                // sees each one's review state. Alongside payouts because verification gates them.
+                Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerVerificationController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::post('/', 'store')->name('store');
+                    });
+                });
             });
 
             Route::controller(SystemController::class)->group(function () {

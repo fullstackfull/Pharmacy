@@ -59,6 +59,14 @@ class PayoutService
             return ['ok' => false, 'reason' => 'bank_details_recently_changed_payouts_are_temporarily_paused'];
         }
 
+        // KYC gate (Phase 3, Stage A). Off unless an admin turns on `require_kyc_for_payout`, so this
+        // is a no-op for every current install; when on, an unverified seller cannot withdraw. Only
+        // real sellers are subject to it — admin/in-house withdrawals are not KYC-verified entities.
+        if ($sellerIs === 'seller'
+            && !app(SellerVerificationService::class)->isPayoutEligible($sellerId)) {
+            return ['ok' => false, 'reason' => 'kyc_verification_required'];
+        }
+
         return DB::transaction(function () use ($sellerId, $sellerIs, $amount, $method, $methodDetails) {
             // Withdrawable, not the raw available bucket: a payout already in flight is held as a
             // reserved debit, and withdrawable() nets those holds out. Read inside the transaction;

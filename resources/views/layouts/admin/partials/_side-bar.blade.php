@@ -706,6 +706,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.seller-verification.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/seller-verification*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.seller-verification.index') }}"
+                                   title="{{ translate('seller_verification') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_verification') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.product-moderation.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
