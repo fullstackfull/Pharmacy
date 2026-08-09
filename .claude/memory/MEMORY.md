@@ -1,0 +1,2 @@
+- [Auction API docs rule](feedback_auction_docs.md) — Always update payload docs & Postman collections when modifying Auction APIs
+- [Auction Index UI Conditions](auction-index-ui-conditions.md) — When delete/edit/recreate/status toggle/claimer/approve buttons show in admin auction products index
