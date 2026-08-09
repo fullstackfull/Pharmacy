@@ -2854,4 +2854,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"bank_details_recently_changed_payouts_are_temporarily_paused" => "Bank details recently changed payouts are temporarily paused",
 	"no_activity_recorded_yet" => "No activity recorded yet",
 	"record" => "Record",
+	"already_decided_by_this_actor" => "Already decided by this actor",
 ];

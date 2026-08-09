@@ -471,6 +471,17 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
             Route::get('audit-log', 'index')->name('audit-log');
         });
+
+        // The approvals inbox (spec item 82): the operable surface of the reusable maker-checker
+        // engine. The engine enforces maker != checker and one-decision-per-actor; the controller
+        // only carries the admin's identity in.
+        Route::group(['prefix' => 'approvals', 'as' => 'approvals.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ApprovalController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

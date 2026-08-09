@@ -684,6 +684,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.approvals.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/approvals*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.approvals.index') }}"
+                                   title="{{ translate('approvals') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('approvals') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.audit-log'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/audit-log*') ? 'active' : '' }}"
