@@ -1227,8 +1227,8 @@
                             <div class="color-image-` + color_value['color'] + `">
                                 <div class="upload-file position-relative">
                                     <div class="upload--icon-btns d-flex gap-2 position-absolute inset-inline-end-0 z-3 p-2" >
-                                        <button type="button" class="btn text-white icon-btn" style="background: #${color_value['color']}"><i class="fi fi-sr-check"></i></button>
-                                        <button class="btn btn-outline-danger icon-btn remove-color-image-for-product-gallery" data-color="` + color_value['color'] + `"><i class="fi fi-rr-trash"></i></button>
+                                        <button type="button" class="btn text-white icon-btn" aria-label="{{ translate('selected_color') }}" style="background: #${color_value['color']}"><i class="fi fi-sr-check"></i></button>
+                                        <button class="btn btn-outline-danger icon-btn remove-color-image-for-product-gallery" aria-label="{{ translate(\'remove_image\') }}" data-color="` + color_value['color'] + `"><i class="fi fi-rr-trash"></i></button>
                                     </div>
                                     <img class="w-100" height="auto"
                                         onerror="this.src='{{ dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png') }}'"
@@ -1248,7 +1248,7 @@
                             <div class="">
                                 <div class="upload-file position-relative">
                                     <div class="upload--icon-btns d-flex gap-2 position-absolute inset-inline-end-0 z-3 p-2" >
-                                        <button type="button" class="btn text-white icon-btn shadow" style="background: #${color_value['color']}"><i class="fi fi-sr-check"></i></button>
+                                        <button type="button" class="btn text-white icon-btn shadow" aria-label="{{ translate('selected_color') }}" style="background: #${color_value['color']}"><i class="fi fi-sr-check"></i></button>
                                         <a href="` + remove_url + `?id=` + product_id + `&name=` + image_name['key'] + `&color=` + color_value['color'] + `"
                                     class="btn btn-outline-danger icon-btn"><i class="fi fi-rr-trash"></i></a>
                                     </div>
@@ -1285,7 +1285,7 @@
                                         <img id="additional_Image_${value_id}" alt="" class="upload-file-img onerror-add-class-d-none" src="img">
 
                                         <div class="upload-file-textbox text-center">
-                                                <img width="34" height="34" src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="svg">
+                                                <img width="34" height="34" src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="svg" alt="">
                                                 <h6 class="mt-1 fw-medium lh-base text-center">
                                                     <span class="text-info">Click to upload</span>
                                                     <br>
@@ -1337,7 +1337,7 @@
                                 </span>
 
                                  <div class="upload-file-textbox text-center">
-                                        <img width="34" height="34" src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="svg">
+                                        <img width="34" height="34" src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="svg" alt="">
                                         <h6 class="mt-1 fw-medium lh-base text-center">
                                             <span class="text-info">Click to upload</span>
                                             <br>

@@ -2730,4 +2730,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"no_templates_yet" => "No templates yet",
 	"due_to_no_balance_this_button_is_disable" => "Due to no balance this button is disable",
 	"no_coupon_found" => "No coupon found",
+	"remove_the_product_from_the_list_if_the_store_is_temporary_off" => "Remove the product from the list if the store is temporary off",
+	"review_attachment" => "Review attachment",
+	"selected_color" => "Selected color",
+	"order_status_history" => "Order status history",
+	"search_menu" => "Search menu",
 ];

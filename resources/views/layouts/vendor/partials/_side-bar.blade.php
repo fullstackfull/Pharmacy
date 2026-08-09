@@ -38,7 +38,7 @@ $shop = Shop::where(['seller_id' => auth('seller')->id()])->first();
                 <div class="navbar-vertical-content">
                     <div class="sidebar--search-form pb-3 pt-4 mx-3">
                         <div class="search--form-group">
-                            <button type="button" class="btn"><i class="tio-search"></i></button>
+                            <button type="button" class="btn" aria-label="{{ translate('search_menu') }}"><i class="tio-search"></i></button>
                             <input type="text" class="js-form-search form-control form--control"
                                 id="search-bar-input" placeholder="{{ translate('search_menu') . '...' }}">
                         </div>

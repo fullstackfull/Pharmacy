@@ -248,8 +248,8 @@
                             <div class="col-6 col-md-4 col-xl-4 color-image-`+color_value['color']+`">
                                 <div class="position-relative p-2 border-dashed-2">
                                     <div class="upload--icon-btns d-flex gap-2 position-absolute z-index-2 p-2" >
-                                        <button type="button" class="btn btn-square text-white btn-sm" style="background: #${color_value['color']}"><i class="tio-done"></i></button>
-                                        <button class="btn btn-outline-danger btn-sm square-btn remove-color-image-for-product-gallery" data-color="`+color_value['color']+`"><i class="tio-delete"></i></button>
+                                        <button type="button" class="btn btn-square text-white btn-sm" aria-label="{{ translate('selected_color') }}" style="background: #${color_value['color']}"><i class="tio-done"></i></button>
+                                        <button class="btn btn-outline-danger btn-sm square-btn remove-color-image-for-product-gallery" aria-label="{{ translate(\'remove_image\') }}" data-color="`+color_value['color']+`"><i class="tio-delete"></i></button>
                                     </div>
                                     <img class="w-100 aspect-ratio-1-img" height="auto"
                                         onerror="this.src='{{ dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png') }}'"
@@ -269,7 +269,7 @@
                             <div class="col-6 col-md-4 col-xl-4">
                                 <div class="position-relative p-2 border-dashed-2">
                                     <div class="upload--icon-btns d-flex gap-2 position-absolute z-index-2 p-2" >
-                                        <button type="button" class="btn btn-square text-white btn-sm" style="background: #${color_value['color']}"><i class="tio-done"></i></button>
+                                        <button type="button" class="btn btn-square text-white btn-sm" aria-label="{{ translate('selected_color') }}" style="background: #${color_value['color']}"><i class="tio-done"></i></button>
                                         <a href="` + remove_url + `?id=` + product_id + `&name=` + image_name['key'] + `&color=` + color_value['color'] + `"
                                     class="btn btn-outline-danger btn-sm square-btn"><i class="tio-delete"></i></a>
                                     </div>
@@ -301,7 +301,7 @@
 
                                         <div class="h-100 top-0 aspect-1 w-100 d-flex align-content-center justify-content-center overflow-hidden">
                                             <div class="d-flex flex-column justify-content-center align-items-center">
-                                                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="w-100 aspect-ratio-1-img">
+                                                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="w-100 aspect-ratio-1-img" alt="">
                                                 <h3 class="text-muted">{{ translate('Upload_Image') }}</h3>
                                             </div>
                                         </div>
@@ -349,7 +349,7 @@
 
                                 <div class="h-100 top-0 aspect-1 w-100 d-flex align-content-center justify-content-center overflow-hidden">
                                     <div class="d-flex flex-column justify-content-center align-items-center">
-                                        <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="w-100 aspect-ratio-1-img">
+                                        <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/icons/product-upload-icon.svg') }}" class="w-100 aspect-ratio-1-img" alt="">
                                         <h3 class="text-muted">{{ translate('Upload_Image') }}</h3>
                                     </div>
                                 </div>

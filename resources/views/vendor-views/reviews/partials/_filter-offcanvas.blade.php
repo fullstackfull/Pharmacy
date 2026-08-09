@@ -67,7 +67,7 @@
 
                             <div class="dropdown-menu w-100 px-2">
                                 <div class="search-form mb-3">
-                                    <button type="button" class="btn h-100"><i class="tio-search"></i></button>
+                                    <button type="button" class="btn h-100" aria-label="{{ translate('search') }}"><i class="tio-search"></i></button>
                                     <input type="text" class="js-form-search form-control search-bar-input search-product"
                                            placeholder="{{ translate('search menu').'...' }}">
                                 </div>

@@ -170,7 +170,7 @@
                             </td>
                             <td>
                                 @foreach(json_decode($review['attachment'],true) as $attachment)
-                                    <img width="100" onerror="this.src='{{dynamicAsset(path: 'public/assets/admin/img/160x160/img2.jpg')}}'" src="{{dynamicStorage(path: 'storage/app/public')}}/{{$attachment}}">
+                                    <img width="100" alt="{{ translate('review_attachment') }}" onerror="this.src='{{dynamicAsset(path: 'public/assets/admin/img/160x160/img2.jpg')}}'" src="{{dynamicStorage(path: 'storage/app/public')}}/{{$attachment}}">
                                 @endforeach
                             </td>
                             <td>

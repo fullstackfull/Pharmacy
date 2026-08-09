@@ -517,4 +517,8 @@ ____________________________on_search_engines_and_see_the_right_details_while_sh
 	"vs_previous_period" => "مقارنة بالفترة السابقة",
 	"your_meta_description_will_appear_here" => "سيظهر وصف الميتا هنا",
 	"your_seo_title_will_appear_here" => "سيظهر عنوان SEO هنا",
+	"review_attachment" => "مرفق التقييم",
+	"selected_color" => "اللون المحدد",
+	"order_status_history" => "سجل حالات الطلب",
+	"search_menu" => "ابحث في القائمة",
 ];

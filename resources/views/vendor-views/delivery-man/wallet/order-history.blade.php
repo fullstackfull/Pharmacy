@@ -101,7 +101,7 @@
                                             </td>
                                             <td class="text-center">
                                                 <div class="media align-items-center gap-10 flex-wrap justify-content-center">
-                                                    <button class="btn btn-info order-status-history" data-id="{{ $order->id }}" data-toggle="modal" data-target="#exampleModalLong"><i class="tio-history"></i></button>
+                                                    <button class="btn btn-info order-status-history" aria-label="{{ translate('order_status_history') }}" data-id="{{ $order->id }}" data-toggle="modal" data-target="#exampleModalLong"><i class="tio-history"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
