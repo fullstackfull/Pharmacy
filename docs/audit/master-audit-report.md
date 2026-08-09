@@ -223,3 +223,60 @@ the product-editor reproduction can all proceed.
 | Product create/edit bug reproduction against a running app | **BLOCKED** — needs the real `products` schema |
 | Storefront rendering, Theme Builder in a browser, admin/vendor screens | **BLOCKED** — needs the dump |
 | Desktop/tablet/mobile · Arabic RTL / English LTR visual checks | **VISUAL VALIDATION PENDING** — Chromium is available; only the schema is missing |
+
+---
+
+## Appendix B — RUNTIME VERIFIED (dump supplied, environment bootstrapped)
+
+`pharmacysyria_syriastore.sql` was added to `main` (commit `6f0c4b8`), unblocking everything.
+
+**Environment built (fully isolated — no production system touched):** installed MariaDB, created a
+local database `pharmacy_local_test`, imported the dump (**131 tables**), created a dedicated local
+DB user, pointed `.env` at it.
+
+**Results — previously BLOCKED, now verified:**
+
+| Check | Result |
+|---|---|
+| `php artisan migrate` (full 307-migration chain) | **PASSES** against the real schema |
+| Storefront `GET /` | **HTTP 200**, ~500 KB, real data ("Pharmacy Syria", categories, vendors, products) |
+| Admin login `GET /login/admin` | **HTTP 200** |
+| Chromium render, desktop 1440×900 + mobile 390×844 | **Rendered, 0 JavaScript errors** |
+| Full test suite against the **real 6Valley schema** | **221 / 222 pass** |
+
+That last line matters most: the suite was written against hand-built test tables, and it passes
+against the genuine schema — the tests were faithful, not self-confirming.
+
+**Runtime performance observed** (Debugbar, storefront home): **25 queries, 63 views, 689 ms, 12 MB**.
+
+### New finding — storefront routes are structurally untestable
+
+The single test failure is the stock `ExampleTest` (`GET /`), which now genuinely runs. Root cause:
+
+```php
+// app/Providers/ThemeServiceProvider.php:17
+if (!App::runningInConsole()) {
+    define("VIEW_FILE_NAMES", include($path.'/file_names.php'));
+    view()->addLocation($path);
+}
+```
+
+PHPUnit runs in console mode, so the theme view path is never registered and `VIEW_FILE_NAMES` is
+never defined. The storefront therefore works under `artisan serve` (proven by the screenshots) but
+**can never be feature-tested** — which is very likely why this codebase shipped with no real tests.
+Fixing it means letting the provider register theme views under the test environment too; that is a
+change to a boot-path provider and belongs in its own reviewed commit, not bundled here.
+
+### Still pending
+
+- Product create/edit bug reproduction through the running UI, Theme Builder browser walkthrough,
+  and Arabic RTL screenshots — the environment now exists for all three.
+- Product images render as placeholders because the dump contains the database only; the companion
+  `public.zip` asset archive was not supplied.
+
+### Security note on the dump
+
+It is a schema + minimal seed (~1 row per core table), not a mass customer database — but it does
+contain **30 email addresses and 13 bcrypt password hashes**, now committed to the repository.
+Those credentials should be treated as disclosed and rotated, and the file is better distributed
+out-of-band than tracked in git.
