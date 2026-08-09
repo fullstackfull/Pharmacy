@@ -131,14 +131,37 @@ class ThemeBuilderController extends BaseController
         return $done ? $this->ok() : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
     }
 
-    /** Settings schema for a section type — the right-hand panel renders its form from this. */
+    /**
+     * Settings schema for a section type, together with the SAVED settings of the section being
+     * edited — the right-hand panel renders its form from both.
+     *
+     * The saved settings are not optional extra data. Without them the form fell back to schema
+     * defaults for every field, so opening a configured section showed defaults, and because the
+     * autosave posts the whole form, editing one field overwrote every other setting on that
+     * section with its default. That is silent data loss on a merchant's theme.
+     */
     public function sectionSchema(Request $request): JsonResponse
     {
         $type = (string) $request['type'];
 
-        return $this->registry->has($type)
-            ? $this->ok(['schema' => $this->registry->schemaFor($type)])
-            : $this->fail(translate('unknown_section_type'));
+        if (!$this->registry->has($type)) {
+            return $this->fail(translate('unknown_section_type'));
+        }
+
+        $settings = [];
+        if ($request->filled('section_id')) {
+            $section = ThemeSection::find($request['section_id']);
+            // Normalising here means the form receives coerced values and drops stale keys, exactly
+            // as the storefront sees them — so what is edited is what renders.
+            if ($section && $section->type === $type) {
+                $settings = $this->registry->normalizeSettings($type, $section->settings ?? []);
+            }
+        }
+
+        return $this->ok([
+            'schema'   => $this->registry->schemaFor($type),
+            'settings' => $settings,
+        ]);
     }
 
     /** The active theme's draft, creating one from the published version when needed. */
