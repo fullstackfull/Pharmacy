@@ -9311,4 +9311,21 @@ return [
 	"member_removed" => "أُزيل العضو",
 	"price_saved" => "حُفظ السعر",
 	"price_removed" => "أُزيل السعر",
+
+	// Exchange-rate governance (Phase 3, Stage E)
+	"exchange_rates" => "أسعار الصرف",
+	"update_rates_together_and_keep_an_audited_history_conversion_itself_is_unchanged" => "حدّث الأسعار معاً واحفظ سجلّاً مُدقَّقاً، والتحويل نفسه دون تغيير",
+	"rates" => "الأسعار",
+	"rate" => "السعر",
+	"no_currencies" => "لا عملات",
+	"update_rates" => "تحديث الأسعار",
+	"rates_are_relative_to_the_base_currency_only_changed_values_are_recorded" => "الأسعار نسبةً للعملة الأساسية، ولا يُسجَّل إلا ما تغيّر",
+	"change_history" => "سجلّ التغيير",
+	"source" => "المصدر",
+	"no_rate_changes_recorded_yet" => "لا تغييرات أسعار مسجّلة بعد",
+	"rates_updated" => "حُدّثت الأسعار",
+	"no_rates_changed" => "لم يتغيّر أي سعر",
+	"manual" => "يدوي",
+	"bulk" => "دُفعة",
+	"api" => "واجهة برمجية",
 ];

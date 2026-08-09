@@ -2950,4 +2950,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"base_price" => "Base price",
 	"customer_group_created" => "Customer group created",
 	"price_saved" => "Price saved",
+	"rates_updated" => "Rates updated",
 ];

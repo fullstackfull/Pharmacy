@@ -622,6 +622,15 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // Exchange-rate governance (Stage E): bulk rate update + audited change history over the
+        // platform's existing currencies. Conversion itself is unchanged.
+        Route::group(['prefix' => 'exchange-rates', 'as' => 'exchange-rates.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ExchangeRateController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('bulk-update', 'bulkUpdate')->name('bulk-update');
+            });
+        });
+
         // B2B / wholesale customer groups + pricing (Stage E): a non-breaking price resolver — a
         // customer in no group keeps the base price.
         Route::group(['prefix' => 'customer-groups', 'as' => 'customer-groups.'], function () {

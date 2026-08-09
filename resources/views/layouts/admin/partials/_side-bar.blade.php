@@ -838,6 +838,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.exchange-rates.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/exchange-rates*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.exchange-rates.index') }}"
+                                   title="{{ translate('exchange_rates') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('exchange_rates') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.customer-groups.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/customer-groups*') ? 'active' : '' }}"
