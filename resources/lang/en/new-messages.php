@@ -2694,4 +2694,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"Edit_Redirect" => "Edit Redirect",
 	"duplicate" => "Duplicate",
 	"hide_show" => "Hide show",
+	"Product_thumbnail_is_required!" => "Product thumbnail is required!",
+	"select_a_section_to_edit_its_settings" => "Select a section to edit its settings",
 ];
