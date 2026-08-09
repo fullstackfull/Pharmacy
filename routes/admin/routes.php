@@ -85,6 +85,7 @@ use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
+use App\Http\Controllers\Admin\Settings\SeoTranslationController;
 use App\Http\Controllers\Admin\Settings\ThemeBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeSettingsController;
 use App\Http\Controllers\Admin\ThirdParty\SocialMediaChatController;
@@ -1126,6 +1127,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::get('delete-page', 'getPageDelete')->name('delete-page');
                     Route::get('page-content-view', 'getPageAddContentView')->name('page-content-view');
                     Route::post('page-content-update', 'getPageContentUpdate')->name('page-content-update');
+                });
+            });
+
+            Route::group(['prefix' => 'translations', 'as' => 'translations.'], function () {
+                Route::controller(SeoTranslationController::class)->group(function () {
+                    Route::get('', 'index')->name('index');
+                    Route::post('save', 'save')->name('save');
+                    Route::get('delete', 'delete')->name('delete');
                 });
             });
 

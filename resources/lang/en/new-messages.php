@@ -2648,4 +2648,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"save_draft" => "Save draft",
 	"changes_apply_to_the_storefront_only_after_you_publish_the_draft" => "Changes apply to the storefront only after you publish the draft",
 	"this_version_is_published_and_read_only_duplicate_it_to_a_draft_to_edit" => "This version is published and read only duplicate it to a draft to edit",
+	"seo_saved_successfully" => "Seo saved successfully",
+	"unsupported_entity_type" => "Unsupported entity type",
 ];

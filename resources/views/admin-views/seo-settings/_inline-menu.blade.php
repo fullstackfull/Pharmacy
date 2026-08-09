@@ -33,6 +33,12 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link {{ Request::is('admin/seo-settings/translations*') ? 'active' : '' }}"
+               href="{{ route('admin.seo-settings.translations.index') }}">
+                {{ translate('SEO_Content') }}
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link {{ Request::is('admin/seo-settings/templates*') ? 'active' : '' }}"
                href="{{ route('admin.seo-settings.templates.index') }}">
                 {{ translate('SEO_Templates') }}
