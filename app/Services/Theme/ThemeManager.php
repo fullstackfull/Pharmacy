@@ -77,6 +77,8 @@ class ThemeManager
             $theme->is_active = true;
             $theme->save();
 
+            app(StorefrontThemeRenderer::class)->flush();
+
             return $theme->refresh();
         });
     }
@@ -94,6 +96,9 @@ class ThemeManager
             $version->status = ThemeVersion::STATUS_PUBLISHED;
             $version->published_at = now();
             $version->save();
+
+            // The storefront caches the published structure; drop it so the change is live at once.
+            app(StorefrontThemeRenderer::class)->flush();
 
             return $version->refresh();
         });
