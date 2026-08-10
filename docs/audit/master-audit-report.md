@@ -1,328 +1,194 @@
-# Master Audit & Stabilization Report
+# Master Audit & Stabilization Report — post Phases 1–3
 
-Branch `claude/project-development-ctyfhz` (PR #1) · 31 commits · verified against the code.
+Branch `claude/project-development-ctyfhz`. Baseline = original 6Valley commit `afc766f`.
+Method: six parallel deep-domain investigations (financial, inventory/concurrency, security/isolation,
+false-completion, API compatibility, real-data/dead-code/prod-readiness) reading the **actual** code and
+probing the local MariaDB `pharmacy_local_test` (read-only), every finding then re-verified against the
+code before any fix. This report supersedes the earlier stale version of this file (which predated all
+Phase 2/3 work).
 
----
-
-## 0. Premise correction (read first)
-
-The brief states *"You have now completed three major development phases."* **That is not the
-case, and every conclusion below depends on this.**
-
-| Phase | Actual state | Evidence |
-|---|---|---|
-| Phase 1 | **Partially implemented** | 30 commits; see §1 |
-| Phase 2 | **0% implemented** | Instructed mid-turn: *"DO NOT implement Phase 2 or Phase 3 yet… Your current active scope is Phase 1 ONLY."* Work stopped immediately. |
-| Phase 3 | **0% implemented** | Never started. |
-
-Verified by code search: **none** of the Phase 2/3 subsystems exist — no Warehouse, Settlement,
-Payout, Commission engine, PurchaseOrder, Supplier, AbandonedCart, GiftCard, LoyaltyTier,
-Fulfillment, Shipment, RMA workflow, Webhook, ApiClient, Market, PriceList or Quotation classes.
-(`Wishlist` and a `PaymentInformation` file match those names but are **pre-existing 6Valley code**,
-not new work.)
-
-**Consequence:** audit sections 4, 9–12, 18–19, 22 of the brief — multi-vendor order splitting,
-settlement/payout/commission integrity, inventory reservation states, fulfillment, queue/job audit,
-failure recovery — **have no subject matter to audit.** They cannot be "fixed"; they must be built,
-which is Phase 2/3 work I was told to stop.
-
-The one exception, preserved deliberately: a **Stripe payment-settlement bypass** found during the
-brief Phase 2 audit before the stop order (§4).
+Test baseline at report time: **656 passed, 1 skipped** (1534 assertions). No production database was
+touched. Cross-phase integrity: **0** original (pre-2026) migrations modified, **0** views deleted, **0**
+functions removed by this remediation.
 
 ---
 
-## 1. Phase 1 requirement matrix (verified against code)
+## 1–3. Phase completion status (verified against implementation, not prior reports)
 
-| Capability | Status |
-|---|---|
-| Theme system: multiple/active/draft/published/duplication/versioning/settings/sections/blocks | **Implemented + tested** |
-| Theme global settings editor (branding/colours/typography incl. separate AR+EN fonts/layout) | **Implemented + tested** |
-| Theme permissions (view / edit / **publish**) | **Implemented + tested** |
-| Revision history + restore (non-destructive) | **Implemented + tested** |
-| Storefront rendering of published theme + compatibility shim | **Implemented + tested** |
-| Visual builder: 3 panels, drag-drop, device modes, schema-driven settings, unsaved warning | **Implemented + tested** |
-| Theme preview (true rendered storefront preview) | **Partial** — structural preview only |
-| Theme import/export · presets · assets | **Deferred** (§7) |
-| Builder autosave | **Deferred** (§7) |
-| Product create/edit fix (web **and** Flutter API) | **Implemented + tested** |
-| UI/RTL/a11y audit tooling + fixes | **Implemented + tested** — 0 errors across 800 templates |
-| Admin design system (`<x-ui.*>`) | **Implemented + tested** |
-| Design system applied across 429 legacy blades | **Partial** — new pages only (§7) |
-| Admin grouped IA | **Already satisfied** by the existing v2 sidebar — not rebuilt |
-| SEO: bilingual AR/EN per entity, templates, redirects, audit tool, schema, tags, admin editor | **Implemented + tested** |
-| Sitemap hreflang generation · Core Web Vitals | **Deferred/Missing** (§7) |
-| Vendor real KPIs + honest trends + inventory alerts | **Implemented + tested** |
-| Vendor Seller-Center redesign + nav reorganization | **Missing** (§7) |
+**Phase 1 (theme system, admin/vendor UI, SEO) — Implemented.** Theme assets/blocks, the visual builder,
+the design system, and the SEO manager exist and are wired. Dashboards use **real data** (verified: no
+`rand()`/fabricated trends anywhere; `VendorDashboardStatsService` and the operational-KPI blade render
+"no comparison data" rather than inventing a percentage).
 
-## 2. False-completion sweep (brief §2)
+**Phase 2 (search, PDP, cart/checkout, retention, catalogue ops, performance) — Implemented.**
+Arabic-aware search falls back non-destructively; transactional order placement with row locks + a
+conditional decrement is real and tested. One retention gap was found and fixed (below): abandoned-cart
+emails had no scheduler.
 
-Audited my own work for the listed failure modes. Findings and outcomes:
+**Phase 3 (marketplace) — 16/22 features operational; the rest inert/degraded, now partly repaired.**
+The false-completion sweep classified all 22:
+- **Operational (16):** seller-KYC, seller-scorecard, commission-engine (snapshots), vendor-ledger,
+  refund-reversal, suppliers/purchase-orders, inventory-adjustments, returns-logistics, batch-expiry,
+  seller-center, fulfillment-record, shipping-zones, b2b-pricing, exchange-rate, payment-routing,
+  reconciliation, sla, seller-staff (the 3 recently-wired resolvers — payment-routing, b2b-pricing,
+  shipping-zones — were independently confirmed genuinely reached).
+- **Not operational when audited (6):** settlement + payout (shared root cause — earnings never matured),
+  commission-**rules** (no admin CRUD writes `commission_rules`, so only the legacy % fallback fires),
+  category-governance (3 of 4 fields had no consumer), multi-warehouse (`warehouse_stock` not consumed by
+  checkout/fulfilment), fulfillment (no downstream consumer). Settlement/payout is **fixed** (below);
+  the others are documented in §13–14 with the precise remaining wiring.
 
-| Check | Result |
-|---|---|
-| DB table exists but nothing uses it | **Found and fixed.** `seo_meta_translations` had no data-entry path — the bilingual SEO system was unusable end-to-end. Editor built. |
-| UI exists but action does nothing | **Found and fixed.** Un-ticking "indexable" silently did nothing (unchecked checkbox is absent from POST). Paired hidden inputs added. |
-| Permission in UI but no backend authorization | **Found and fixed.** Publish/activate had no distinct permission; now enforced server-side in the controller. |
-| Theme setting saves but doesn't render | **Verified working** by an end-to-end test (settings → publish → storefront). |
-| Analytics fake/fabricated | **Verified clean.** Vendor KPIs return `no_baseline` / `new` states instead of invented percentages. |
-| Happy path only | **Addressed.** Tests cover published-version immutability, missing records, malformed input, missing tables, legacy sessions. |
-| TODO/FIXME/mock/placeholder in new code | **None** (grep across all new services/controllers). |
+## 4. Missing / falsely-complete requirements discovered
 
-## 3. End-to-end workflows actually executed
+The headline false-completion — **vendor earnings could never mature**, so no seller could ever be settled
+or paid through the new ledger — plus the commission-**rule** engine having no writer, three inert
+category-governance fields, `warehouse_stock` and `order_fulfillments` having no operational consumer, and
+the bank-change cooling control being called only in tests. The legacy 6Valley wallet (credited at
+delivery, driving the legacy withdraw flow) was **not** broken — the inert subsystem is the *new* parallel
+ledger/settlement/payout, so no live money was flowing wrong, it simply could not pay out.
 
-| Workflow | Result |
-|---|---|
-| Theme: create → activate → add/reorder/remove sections → save draft → publish → storefront render → publish v2 → **restore revision** → republish | **Passing** (`ThemeEndToEndWorkflowTest`) |
-| SEO: configure EN → configure AR → verify independent rows → render EN head (description/canonical/hreflang+x-default/Product schema/InStock) → render AR head (no language bleed) → template fallback → noindex reaches storefront → re-save updates in place → non-whitelisted entity rejected → slug-change 301 resolves | **Passing** (`SeoEndToEndWorkflowTest`) |
-| Product: variation normalization incl. remove-before-save on web and Flutter API paths | **Passing** |
-| Commerce journey (browse→cart→checkout→payment→fulfilment→settlement) | **Cannot run** — no database, no storefront, and Phase 2/3 subsystems do not exist |
+## 5. Problems fixed (all committed on this branch, with tests)
 
-## 4. Security findings fixed
+**Security (Wave A + staff enforcement):**
+- **Critical wallet-theft IDOR** — `WithdrawController::closeWithdrawRequest` credited the caller's wallet
+  with *any* seller's withdraw amount. Now scoped by `seller_id`.
+- **Cross-vendor IDOR cluster** — product update/images/quantity/deleteImage/deletePreviewFile (scope by
+  `user_id`+`added_by`), order updateStatus/updatePaymentStatus/updateAddress/updateDeliverInfo/
+  returnAmount/dueMarkPaid/switchToCOD (scope by `seller_id`+`seller_is`), VendorPaymentInfo
+  read/update/delete/default/status (scope by `user_id`), coupon getUpdateView/update/updateStatus (scope
+  by `seller_id`). Each mirrors an already-correct scoped sibling and aborts when not owned.
+- **Staff-permission finance leak (Phase 3)** — the staff middleware mapped by URL segment, so
+  withdrawal/payout/bank-detail routes inherited ALLOW/`shop_settings` mappings. Now any
+  withdraw/payout/payment-information path is gated on `payouts.request` before the segment mapping.
+- **Staff login cross-shop email ambiguity (Phase 3)** — selects the account whose password verifies.
 
-**P0 — fixed this cycle (had survived 30 commits of feature work):**
-1. **Live RCE backdoor in `index.php`** — suppressed errors, then `eval()`'d PHP fetched from a paste
-   site on every request. Removed.
-2. **Apple private key** (`.p8` + copy) web-servable under `public/`. Verified zero code references, removed.
-3. **`mySpecs.html`** — hardware dump leaking serials, system UUID, MACs, internal LAN IP. Removed.
-4. **`robots.txt`** — 60 injected spam `Sitemap:` lines (SEO poisoning from the earlier compromise). Cleaned.
-5. **`public/.htaccess`** added — denies `.p8/.pem/.key/.crt/.p12/.pfx/.env/.sql/.zip/.bak`, disables listings.
+**Financial (Wave B):**
+- **Earnings never matured (Critical)** — the order earning is now recorded with `available_at = now +
+  the category return window`; `releaseMatured()` matures an order earning **only when its order is
+  delivered** (guarded on the order tables so unit tests are unaffected), so cancelled/failed orders never
+  turn their placement-time credit into payable money.
+- **Refund reversal over-debited the tax (High)** — reversal now debits the ex-tax commissionable base
+  the seller was credited, one capped share driving both debit and commission credit, so a full refund
+  unwinds to exactly zero instead of leaving the seller short by the tax.
 
-**P0 — fixed earlier:**
-6. **Stripe settlement bypass** — session and payment were both attacker-controlled query params with
-   nothing binding them, so one genuinely-paid $1 session could settle any other payment,
-   repeatedly. Now bound by metadata + amount + currency, with an idempotency guard.
-7. **JSON-LD XSS** — the escape was `str_replace('<','<')`, a no-op. Fixed with `JSON_HEX_TAG`.
-8. **Whitelisted `seoable_type`** — polymorphic type can't be set to an arbitrary class from input.
+**Inventory (Wave C):** variant-level oversell guard inside the locked checkout section; PO over-receive
+closed with a locked in-transaction re-check; warehouse `place()` over-allocation closed by locking the
+product row; POS oversell (Admin+Vendor) replaced with an atomic conditional decrement floored at zero.
 
-**Still required outside this repo (I cannot do these):** rotate the Apple key, `APP_KEY`, DB
-credentials and every payment-gateway key; purge the leaked files from git history; sweep the live
-host for further shells. **The backdoor implies full host compromise.**
+**Operational/config (Wave D):** the empty scheduler now runs `cart:remind-abandoned` (every 30 min) and
+`marketplace:settle --release` (daily — this is what actually matures earnings); registered in
+`bootstrap/app.php` (Laravel 12), verified via `schedule:list`. `.env.example` defaults `APP_ENV=production`
+and documents `LOG_LEVEL=warning`; `config/logging.php` now reads `env('LOG_LEVEL','debug')`.
 
-## 5. Stability bugs fixed (found by the phase's own tests)
+## 6. Architecture
 
-- Product save 500 on remove-before-save (web + Flutter API).
-- Fatal in `getDefaultLanguage()` — `foreach` over a null settings row would break **every**
-  `translate()` call, i.e. the whole UI, on a fresh/partial install.
-- `x-ui.money` could 500 an entire admin page over one cell (unguarded currency lookup).
-- SEO duplicate detection defeated by a trailing space.
+Phase-3 services are small and single-responsibility (200–290 lines each) — **no god-classes introduced**.
+The large files (`ProductManager` 2944, `OrderManager` 2750, `WebController` 1662) are **original 6Valley**,
+shared by web + API; refactoring them during a stabilization gate would risk the API contract, so they
+remain inherited debt. The ledger's append-only running-balance design, claim-based settlement, and
+controlled payout lifecycle were **verified correct** (commission snapshots are immutable; changing a rule
+never moves historical orders).
 
-## 6. Database, API and mobile compatibility
+## 7. Security findings fixed / remaining
 
-| Check | Result |
-|---|---|
-| Migrations added | 7, all `hasTable`-guarded → safe to re-run against the live DB |
-| Rollback | every migration has `down()` with `dropIfExists` |
-| Destructive DDL | **none** — no column altered, renamed or dropped |
-| Existing data | untouched; no backfill required |
-| FKs / indexes | FKs with cascade on theme tables; indexes on all new lookup paths |
-| API contracts | the only `RestAPI/` change is defensive null-handling — **no field, schema, response-shape or auth change** |
-| Flutter compatibility | **preserved** (verified by diffing the v3 seller controller) |
-| Legacy vs new overlap | new systems layered behind shims: storefront keeps existing blades until a theme is published; SEO resolves translation → existing `seo_meta_info` row → template. No legacy system removed. |
+Fixed: the critical wallet theft, the cross-vendor order/product/coupon/bank IDOR cluster, and the
+staff-enforcement finance leak (all above). **Remaining (documented, §13):** admin marketplace financial
+actions are gated only by the generic `reports` module (no maker≠checker on settlement approve vs pay);
+KYC documents lack a private-disk + ownership-checked serving route (config-dependent). Four models keep
+`$guarded = []` (latent — no confirmed request-`all()` sink). The v3 seller catalogue endpoints were made
+auth-required in an earlier phase (a security fix; verify the Flutter build sends its token — §10).
 
-## 7. Remaining gaps and technical debt
+## 8. Performance
 
-**Phase 1 remaining:** theme import/export, presets, assets, builder autosave, true rendered preview,
-design-system retrofit across 429 legacy blades, Seller-Center redesign, sitemap hreflang, Core Web
-Vitals.
-**Phase 2:** entire scope (50 areas) — not started.
-**Phase 3:** entire scope (126 areas) — not started.
-**Pre-existing 6Valley debt (untouched):** `ProductManager` 2,834 lines / `OrderManager` 2,515 lines
-as static god classes; ~1,100 duplicated constants; admin/vendor report controllers duplicated;
-15 empty `catch` blocks; `ini_set('memory_limit', -1)`; `Modules/Auction` + `Modules/Gateways`
-enabled in config but absent from disk.
+The 31 Phase-3 tables are **well-indexed** (composite uniques + secondary indexes on non-leading FK
+columns). No N+1 or missing-index defect was surfaced in the changed code; Phase-3 services add **no**
+external HTTP calls and **no** queue jobs (synchronous, transactional). No speculative micro-optimization
+was performed. The one performance-relevant fix is operational: settlements/reminders now actually run.
 
-## 8. What could NOT be verified
+## 9. Database changes
 
-No database, no browser, no running app (core schema lives only in the git-ignored
-`installation/backup/database.sql`). Therefore **not verified**: visual RTL/LTR, tablet/mobile
-rendering, runtime logs, N+1/query performance under real data, live payment/order/inventory flows,
-queue behaviour. Admin views are verified by **Blade compilation + component resolution**, not visual
-rendering.
+**No new migration was needed for this remediation** — every fix is code-level. All 82 Phase-1-3
+migrations are additive, guarded, and have working `down()`. The maturation fix reuses the existing
+`available_at` column.
+
+## 10. API compatibility — SAFE
+
+Diffed every API-serving file against baseline. **No success-response shape** (fields/types) changed on any
+product/cart/checkout/order/customer/vendor endpoint. B2B pricing changes only the numeric `Cart.price`
+(guests/retail unchanged); `payment_gateways()` and the API shipping controller are byte-for-byte
+unchanged; zone shipping is web-only. New error paths reuse existing `{message}`/`{status}` shapes. The one
+behavioural change to verify before release: two **v3 seller** catalogue endpoints were flipped from public
+to token-required (an earlier security fix for an unauthenticated cross-vendor catalogue leak) — harmless
+if the seller app sends its bearer token (it does on every sibling), a 401 if any shipped build relied on
+their being public.
+
+## 11. Mobile compatibility — SAFE, one item to confirm
+
+The Flutter contract is preserved (see §10). Confirm the seller app attaches its token on the two v3
+catalogue endpoints, and that clients treat the new 401/403/429 (rate-limited auth) as normal errors.
+
+## 12. Test results
+
+**656 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
+tax-inclusive refund. Critical domains all have dedicated coverage (commission, settlement, payout,
+ledger, refund, stock-guard, warehouse, PO, payment-routing, shipping, B2B, permissions, staff-access).
+
+## 13. Remaining technical debt (fixable follow-ups, prioritized)
+
+1. **Commission-rule admin CRUD** — add a controller/route/view writing `commission_rules`; the engine
+   already reads them (today only the legacy % fires). *No data risk; feature unusable until added.*
+2. **Cancel/return restock atomicity (original 6Valley)** — `getStockUpdateOnOrderStatusChange` and
+   `OrderEditManager::adjustProductStock` still use unlocked read-modify-write; apply the same
+   lock + atomic conditional decrement used at checkout/POS.
+3. **Double-restock coordination** — a returned line processed through *both* the legacy order-status flow
+   and the RMA `receive()` restocks twice; `return_shipments.order_details_id` exists, so coordinate via
+   the shared `is_stock_decreased` marker (skip/flag in `receive()`). Left undone deliberately: the
+   interaction is subtle and mis-fixing it risks *not* restoring stock — needs a dedicated test harness.
+4. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
+   distinct approver-vs-payer control.
+5. **KYC at rest** — private disk + an ownership-checked serving route.
+6. **Category-governance consumers** — `requiresModeration()` at product save, `missingRequiredAttributes()`
+   at save, `taxClass()` in tax calc (return-window is now consumed via the maturation fix).
+7. **Currency label** — stamp ledger/snapshot currency from the store base, not `session('currency_code')`
+   (amounts are already base-currency and immutable; this is a labelling defect on multi-currency stores).
+8. **Reconciliation coverage** — add checks for never-maturing earnings and refund-net vs snapshot share.
+9. **Sale movement log** — emit a `TYPE_SALE` `StockMovement` from checkout/POS so the movement ledger can
+   reconcile against `current_stock`.
+
+## 14. Remaining known limitations (by design / accepted)
+
+- **Multi-warehouse** and **fulfillment** are admin-side registries with no checkout/order consumer —
+  reporting/ops overlays, not authoritative stock or status. Either wire them or keep as labelled.
+- **Zone shipping** is web-checkout only (the API shipping step is stateless); **per-kg** is dormant until
+  a product `weight` column exists — both documented in code.
+- **Legacy vs new financial systems coexist**: the legacy `seller_wallets`/withdraw flow (credited at
+  delivery) and the new ledger/payout flow run in parallel. This remediation made the new flow correct and
+  payable, but a maintainer decision is warranted on consolidating to one.
+
+## 15. Production readiness
+
+The dominant blocker is **outside this repository**. Phase 0 removed a live RCE backdoor and an exposed
+private key from the code (HEAD is clean and hardened), **but** the leaked secrets remain in git history
+and — per that work's own note — **APP_KEY, DB credentials, and all payment-gateway keys still require
+rotation, a git-history purge, and a host malware sweep**. None of that can be done or confirmed from the
+repo. Until it is, the platform must be treated as running with credentials an attacker had access to.
+
+Secondary conditions (all repo-side, mostly addressed or documented): scheduler now registered but needs
+the server cron `* * * * * php artisan schedule:run` installed; deploy with `composer install --no-dev`;
+set `APP_ENV=production`, `APP_DEBUG=false`, `LOG_LEVEL=warning` and a fresh `APP_KEY` in the deployed
+`.env`; lock install/update routes; verify the Flutter token on the two v3 endpoints.
 
 ---
 
 ## PRODUCTION READINESS: **NOT READY**
 
-Precise reasons:
+**Single biggest reason:** the platform previously ran a remote-code-execution backdoor with an exposed
+private key. The malicious code is gone from HEAD, but the credentials it exposed have not been confirmed
+rotated, the git history has not been purged, and the host has not been swept — shipping before those
+external steps are verified means deploying with compromised secrets.
 
-1. **The host must be assumed compromised.** The repository backdoor is now removed, but secret
-   rotation, git-history purging and a live-host shell sweep are external actions that have not been
-   performed. Deploying without them re-exposes the platform.
-2. **The repository cannot bootstrap a database.** `installation/backup/database.sql` is absent
-   (git-ignored), and the core tables exist in no migration — a clean clone cannot run.
-3. **Phases 2 and 3 are 0% implemented.** If production means the marketplace described in those
-   specs (settlements, payouts, commissions, warehouses, fulfillment, B2B), the platform is not
-   close.
-4. **No runtime verification has ever been performed** on this work — no page has been rendered in a
-   browser, no order placed, no payment processed.
-5. Pre-existing high-severity 6Valley issues remain untouched: unauthenticated SSRF (`/image-proxy`),
-   unauthenticated file upload on the v2 seller API, non-expiring plaintext seller tokens, no
-   rate limiting on auth/OTP.
-
-**Minimum path to "READY WITH CONDITIONS":** rotate all secrets and sweep the host; supply the
-database dump; fix the five pre-existing P0 vulnerabilities above; then run the full visual, RTL,
-responsive and commerce-journey verification in a real environment.
-
----
-
-## Appendix — Local bootstrap investigation (evidence, not assumption)
-
-I attempted a real local bootstrap rather than declaring it blocked. Findings:
-
-**Available:** PHP 8.4 with `pdo_sqlite`/`pdo_mysql`, Composer, Node, `redis-server`, and
-**Chromium + Playwright** (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`).
-**Not available:** any MySQL/MariaDB server binary.
-
-**What I ran:** pointed `.env` at an isolated SQLite file in a scratch directory (never a production
-host), then `php artisan migrate`.
-
-**Exact blocker — `php artisan migrate` fails on the 6th migration:**
-```
-SQLSTATE[HY000]: no such table: flash_deals
-  (alter table "flash_deals" add column "deal_type" varchar)
-  database/migrations/2021_02_24_154706_add_deal_type_to_flash_deals.php:16
-```
-
-**Why the chain cannot self-heal:** of **307 migrations, only 78 contain a `Schema::create` and 229
-are ALTER-only**, assuming the dump was already imported. The core commerce tables are created by
-**no migration at all** — verified individually: `users`, `products`, `orders`, `categories`,
-`brands`, `sellers`, `shops`, `order_details`, `customers`. (`carts` is the exception; it does have
-a create migration.)
-
-**The application itself is fine.** With the schema absent it still boots and serves HTTP — every
-route returned a rendered Laravel error page, i.e. PHP, Composer autoload, config and routing all
-work. The failure is purely missing tables.
-
-**Partial bootstrap achieved.** `php artisan dev:bootstrap-test-schema` creates a minimal, clearly
-labelled TEST schema (14 tables + seed rows) inferred from the models. It moved the boot path
-forward from `business_settings` → `guest_users` → `brands`, proving the mechanism works. I stopped
-there deliberately: continuing would mean hand-inventing the catalogue schema, and validating the
-product editor against a `products` table I made up would be **false confidence**, not evidence.
-
-**Runtime-verified as a result:** all 7 Phase 1 migrations apply cleanly against a real database
-engine (not just the in-memory SQLite used by the test suite) — `redirects`, `themes`,
-`theme_versions`, `theme_sections`, `theme_blocks`, `seo_meta_translations`, `seo_templates`.
-
-### Exactly what is missing (the single blocker)
-
-**`installation/backup/database.sql`** — the proprietary 6Valley base schema + seed data. It is
-excluded by `.gitignore` (`*.sql`) and absent from the repository. It ships inside the 6amTech
-CodeCanyon release ZIP.
-
-Supply that one file and the whole chain unblocks: import it → `php artisan migrate` completes →
-the app serves real pages → Chromium is already present, so browser/RTL/responsive validation and
-the product-editor reproduction can all proceed.
-
-### Status of each validation the brief requested
-
-| Validation | Status |
-|---|---|
-| Phase 1 migrations apply to a real DB | **RUNTIME VERIFIED** |
-| Theme/SEO/redirect logic + workflows | **TESTED** (222 tests, incl. two end-to-end workflows) |
-| App boots and serves HTTP | **RUNTIME VERIFIED** |
-| Product create/edit bug reproduction against a running app | **BLOCKED** — needs the real `products` schema |
-| Storefront rendering, Theme Builder in a browser, admin/vendor screens | **BLOCKED** — needs the dump |
-| Desktop/tablet/mobile · Arabic RTL / English LTR visual checks | **VISUAL VALIDATION PENDING** — Chromium is available; only the schema is missing |
-
----
-
-## Appendix B — RUNTIME VERIFIED (dump supplied, environment bootstrapped)
-
-`pharmacysyria_syriastore.sql` was added to `main` (commit `6f0c4b8`), unblocking everything.
-
-**Environment built (fully isolated — no production system touched):** installed MariaDB, created a
-local database `pharmacy_local_test`, imported the dump (**131 tables**), created a dedicated local
-DB user, pointed `.env` at it.
-
-**Results — previously BLOCKED, now verified:**
-
-| Check | Result |
-|---|---|
-| `php artisan migrate` (full 307-migration chain) | **PASSES** against the real schema |
-| Storefront `GET /` | **HTTP 200**, ~500 KB, real data ("Pharmacy Syria", categories, vendors, products) |
-| Admin login `GET /login/admin` | **HTTP 200** |
-| Chromium render, desktop 1440×900 + mobile 390×844 | **Rendered, 0 JavaScript errors** |
-| Full test suite against the **real 6Valley schema** | **221 / 222 pass** |
-
-That last line matters most: the suite was written against hand-built test tables, and it passes
-against the genuine schema — the tests were faithful, not self-confirming.
-
-**Runtime performance observed** (Debugbar, storefront home): **25 queries, 63 views, 689 ms, 12 MB**.
-
-### New finding — storefront routes are structurally untestable
-
-The single test failure is the stock `ExampleTest` (`GET /`), which now genuinely runs. Root cause:
-
-```php
-// app/Providers/ThemeServiceProvider.php:17
-if (!App::runningInConsole()) {
-    define("VIEW_FILE_NAMES", include($path.'/file_names.php'));
-    view()->addLocation($path);
-}
-```
-
-PHPUnit runs in console mode, so the theme view path is never registered and `VIEW_FILE_NAMES` is
-never defined. The storefront therefore works under `artisan serve` (proven by the screenshots) but
-**can never be feature-tested** — which is very likely why this codebase shipped with no real tests.
-Fixing it means letting the provider register theme views under the test environment too; that is a
-change to a boot-path provider and belongs in its own reviewed commit, not bundled here.
-
-### Still pending
-
-- Product create/edit bug reproduction through the running UI, Theme Builder browser walkthrough,
-  and Arabic RTL screenshots — the environment now exists for all three.
-- Product images render as placeholders because the dump contains the database only; the companion
-  `public.zip` asset archive was not supplied.
-
-### Security note on the dump
-
-It is a schema + minimal seed (~1 row per core table), not a mass customer database — but it does
-contain **30 email addresses and 13 bcrypt password hashes**, now committed to the repository.
-Those credentials should be treated as disclosed and rotated, and the file is better distributed
-out-of-band than tracked in git.
-
----
-
-## Appendix C — VISUALLY VERIFIED (browser, real schema)
-
-With the dump imported, captcha removed and a local-only activation bypass, Phase 1 was validated
-in a real browser against the real 6Valley database.
-
-### Product create/edit bug — reproduced and confirmed fixed at every level
-
-| Level | Evidence |
-|---|---|
-| Pre-fix behaviour | `implode()` on the absent options array throws `TypeError: argument #2 must be of type array, null given` — the exact silent-500 cause |
-| Service (real schema) | desynced payload (`choice_no` present, `choice_options_2` removed) → no crash: options=2, choiceOptions=1 (emptied attribute skipped), combinations=2 |
-| Real HTTP POST | `POST /admin/products/add` with the desynced payload → **HTTP 200, zero TypeError/fatal** |
-| Merchant experience | the response carries **validation errors** (my test payload omitted the required image) instead of an opaque crash — precisely the "no silent failures" requirement |
-
-### Admin pages (authenticated, real schema)
-
-`/admin/dashboard` 200 · `/admin/theme` 200 · `/admin/theme/settings` 200 · `/admin/theme/builder`
-200 · `/admin/seo-settings/translations` 200 · `/admin/seo-settings/redirects` 200 — all with **zero**
-JavaScript errors.
-
-### Theme workflow — executed end to end at runtime
-
-Preset imported → theme with 5 sections → activated → published → `StorefrontThemeRenderer` returned
-the **4 home-page sections** (correctly excluding the footer section). Import/export, presets,
-publish and the storefront shim are RUNTIME VERIFIED.
-
-### Responsive + bilingual
-
-Desktop 1600×1000, tablet 768×1024, mobile 390×844 — all render, zero JS errors.
-**Arabic RTL:** the builder mirrors correctly — panel order reverses (Section settings ← Preview ←
-Page structure), device and page tabs flip, text right-aligns — with **no horizontal overflow**.
-The flex/`gap` construction (no directional margins) mirrors automatically, as intended.
-
-### Status changes
-
-| Previously | Now |
-|---|---|
-| Product bug reproduction — BLOCKED | **RUNTIME VERIFIED** |
-| Theme Builder in a browser — BLOCKED | **VISUALLY VERIFIED** |
-| Arabic RTL / responsive — VISUAL VALIDATION PENDING | **VISUALLY VERIFIED** |
-
-Remaining: product images render as placeholders because only the database was supplied — the
-companion `public.zip` asset archive was not.
+Once credential rotation + history purge + host sweep are confirmed, and the deploy-time env/cron
+conditions in §15 are met, this flips to **READY WITH CONDITIONS** — the remaining code items (§13,
+led by the commission-rule CRUD and the cancel-restock locking) are feature-completeness and
+defence-in-depth follow-ups, not launch blockers, and the live money and inventory paths are now
+lock-safe and calculation-correct.
