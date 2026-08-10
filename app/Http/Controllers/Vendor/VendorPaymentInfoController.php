@@ -61,9 +61,15 @@ class VendorPaymentInfoController extends Controller
 
     public function update(PaymentInfoRequest $request): JsonResponse
     {
+        // Confirm the payment method belongs to the signed-in seller — an unscoped update let a seller
+        // overwrite (redirect the funds of) another vendor's withdraw method.
+        $owned = $this->vendorWithdrawMethodInfoRepo->getFirstWhere(params: ['id' => $request['id'], 'user_id' => auth('seller')->id()]);
+        if (!$owned) {
+            return response()->json(['status' => false, 'message' => translate('payment_method_not_found')], 403);
+        }
         $fields = $this->withdrawalMethodRepo->getFirstWhere(params: ['id' => $request['withdraw_method_id']]);
         $data = $this->vendorPaymentInformationService->getAddData(request: $request, fields: $fields['method_fields']);
-        $this->vendorWithdrawMethodInfoRepo->updateOrInsert(params: ['id' => $request['id']], data: $data);
+        $this->vendorWithdrawMethodInfoRepo->updateOrInsert(params: ['id' => $request['id'], 'user_id' => auth('seller')->id()], data: $data);
         updateSetupGuideCacheKey(key: 'payment_information', panel: 'vendor');
         return response()->json([
             'status' => true,
@@ -97,7 +103,8 @@ class VendorPaymentInfoController extends Controller
 
     public function getUpdateView($id): JsonResponse
     {
-        $vendorWithdrawMethods = $this->vendorWithdrawMethodInfoRepo->getListWhere(filters: ['id' => $id], relations: ['withdraw_method']);
+        // Scope to the signed-in seller — an unscoped lookup disclosed another vendor's bank details.
+        $vendorWithdrawMethods = $this->vendorWithdrawMethodInfoRepo->getListWhere(filters: ['id' => $id, 'user_id' => auth('seller')->id()], relations: ['withdraw_method']);
         return response()->json([
             'status' => count($vendorWithdrawMethods) > 0,
             'data' => $vendorWithdrawMethods
@@ -106,7 +113,8 @@ class VendorPaymentInfoController extends Controller
 
     public function delete($id): RedirectResponse
     {
-        $this->vendorWithdrawMethodInfoRepo->delete(params: ['id' => $id]);
+        // Scope to the signed-in seller — an unscoped delete removed another vendor's withdraw method.
+        $this->vendorWithdrawMethodInfoRepo->delete(params: ['id' => $id, 'user_id' => auth('seller')->id()]);
         ToastMagic::success(translate("Payment_method_has_been_deleted"));
         return redirect()->back();
     }
@@ -114,8 +122,9 @@ class VendorPaymentInfoController extends Controller
     public function updateDefault(Request $request): RedirectResponse
     {
         $this->vendorWithdrawMethodInfoRepo->updateWhere(params: ['user_id' => auth('seller')->id()], data: ['is_default' => 0]);
+        // Scope by user_id — an unscoped id update let a seller toggle another vendor's method default.
         $this->vendorWithdrawMethodInfoRepo->updateWhere(
-            params: ['id' => $request['id']],
+            params: ['id' => $request['id'], 'user_id' => auth('seller')->id()],
             data: ['is_default' => 1, 'is_active' => 1]
         );
         ToastMagic::success(translate("Payment_method_set_as_default"));
@@ -125,7 +134,8 @@ class VendorPaymentInfoController extends Controller
 
     public function updateStatus(Request $request): RedirectResponse
     {
-        $this->vendorWithdrawMethodInfoRepo->updateWhere(params: ['id' => $request['id']], data: ['is_active' => $request['status'] ?? 0]);
+        // Scope by user_id — an unscoped id update let a seller toggle another vendor's method status.
+        $this->vendorWithdrawMethodInfoRepo->updateWhere(params: ['id' => $request['id'], 'user_id' => auth('seller')->id()], data: ['is_active' => $request['status'] ?? 0]);
         ToastMagic::success(translate("status_updated_successfully"));
         return redirect()->back();
     }

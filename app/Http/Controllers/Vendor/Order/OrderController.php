@@ -211,7 +211,13 @@ class OrderController extends BaseController
             'order_return_payment_note' => 'required|string|max:255',
         ]);
         try {
-            $order = $this->orderRepo->getFirstWhere(params: ['id' => $validated['order_id']], relations: ['latestEditHistory']);
+            // Scope to the signed-in seller's own order — without it a seller could pass another
+            // vendor's order id and debit THAT vendor's wallet (cross-vendor forced disbursement).
+            $order = $this->orderRepo->getFirstWhere(params: ['id' => $validated['order_id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller'], relations: ['latestEditHistory']);
+            if (!$order) {
+                ToastMagic::error(translate('Order_not_found'));
+                return redirect()->back();
+            }
             $customer = Helpers::getCustomerInformation($request);
             if ($validated['amount'] !== $order['edit_return_amount']) {
                 ToastMagic::error(translate('Return amount must be equal to return amount'));
@@ -261,7 +267,7 @@ class OrderController extends BaseController
             'order_id' => 'required|exists:orders,id',
         ]);
 
-        $order = $this->orderRepo->getFirstWhere(['id' => $validated['order_id']]);
+        $order = $this->orderRepo->getFirstWhere(['id' => $validated['order_id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller']);
         if (!$order) {
             ToastMagic::error(translate('Order_not_found'));
             return back();
@@ -521,7 +527,11 @@ class OrderController extends BaseController
             'order_due_amount' => 'required',
         ]);
 
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $validated['order_id']]);
+        $order = $this->orderRepo->getFirstWhere(params: ['id' => $validated['order_id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller']);
+        if (!$order) {
+            ToastMagic::error(translate('Order_not_found'));
+            return redirect()->back();
+        }
         if ($validated['order_due_amount'] != $order['edit_due_amount']) {
             ToastMagic::error(translate('Due_amount_must_be_equal_to_due_amount'));
             return redirect()->back();
@@ -550,7 +560,12 @@ class OrderController extends BaseController
         OrderStatusHistoryService     $orderStatusHistoryService,
     ): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['id']], relations: ['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory']);
+        // Scope to the signed-in seller's own order — an unscoped lookup let a seller force another
+        // vendor's order to any status (triggering that vendor's stock decrement, wallet and loyalty).
+        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller'], relations: ['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory']);
+        if (!$order) {
+            return response()->json(['status' => false, 'message' => translate('Order_not_found')], 404);
+        }
 
         if (!$order['is_guest'] && !isset($order['customer'])) {
             return response()->json([
@@ -708,7 +723,13 @@ class OrderController extends BaseController
 
     public function updateAddress(Request $request): RedirectResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']], relations: ['deliveryMan']);
+        // Scope to the signed-in seller's own order — an unscoped lookup let a seller rewrite another
+        // vendor's order shipping/billing address.
+        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller'], relations: ['deliveryMan']);
+        if (!$order) {
+            ToastMagic::error(translate('Order_not_found'));
+            return back();
+        }
         $shippingAddressData = json_decode(json_encode($order['shipping_address_data']), true);
         $billingAddressData = json_decode(json_encode($order['billing_address_data']), true);
         $commonAddressData = [
@@ -750,7 +771,12 @@ class OrderController extends BaseController
 
     public function updatePaymentStatus(Request $request): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['id']]);
+        // Scope to the signed-in seller's own order — an unscoped lookup let a seller flip another
+        // vendor's order payment status.
+        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller']);
+        if (!$order) {
+            return response()->json(['status' => 0, 'message' => translate('Order_not_found')], 404);
+        }
 
         if ($order['payment_status'] == 'paid') {
             return response()->json([
@@ -783,6 +809,12 @@ class OrderController extends BaseController
 
     public function updateDeliverInfo(Request $request): RedirectResponse
     {
+        // Confirm the order belongs to the signed-in seller before mutating its delivery info.
+        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id'], 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller']);
+        if (!$order) {
+            ToastMagic::error(translate('Order_not_found'));
+            return back();
+        }
         $updateData = [
             'delivery_type' => 'third_party_delivery',
             'delivery_service_name' => $request['delivery_service_name'],
