@@ -7,7 +7,7 @@ probing the local MariaDB `pharmacy_local_test` (read-only), every finding then 
 code before any fix. This report supersedes the earlier stale version of this file (which predated all
 Phase 2/3 work).
 
-Test baseline at report time: **657 passed, 1 skipped** (1534 assertions). No production database was
+Test baseline at report time: **662 passed, 1 skipped** (1534 assertions). No production database was
 touched. Cross-phase integrity: **0** original (pre-2026) migrations modified, **0** views deleted, **0**
 functions removed by this remediation.
 
