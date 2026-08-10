@@ -879,7 +879,13 @@ class OrderController extends BaseController
 
     public function uploadDigitalFileAfterSell(UploadDigitalFileAfterSellRequest $request): RedirectResponse
     {
-        $orderDetails = $this->orderDetailRepo->getFirstWhere(['id' => $request['order_id']]);
+        // Scope to the seller's own order line — otherwise a seller could overwrite the delivered digital
+        // file on any order_detail by supplying another vendor's id.
+        $orderDetails = $this->orderDetailRepo->getFirstWhere(['id' => $request['order_id'], 'seller_id' => auth('seller')->id()]);
+        if (!$orderDetails) {
+            ToastMagic::error(translate('access_denied'));
+            return back();
+        }
         $digitalFileAfterSell = $this->updateFile(dir: 'product/digital-product/', oldImage: $orderDetails['digital_file_after_sell'], format: $request['digital_file_after_sell']->getClientOriginalExtension(), image: $request->file('digital_file_after_sell'), fileType: 'file');
         if ($this->orderDetailRepo->update(id: $orderDetails['id'], data: ['digital_file_after_sell' => $digitalFileAfterSell])) {
             ToastMagic::success(translate('digital_file_upload_successfully'));

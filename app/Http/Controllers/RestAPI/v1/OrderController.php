@@ -88,7 +88,12 @@ class OrderController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
-        $order = Order::where(['id' => $request->order_id])->first();
+        // Scope to the authenticated customer (route is auth:api): only the order's owner may cancel it,
+        // otherwise any caller could enumerate sequential ids and cancel/restock arbitrary orders.
+        $order = Order::where(['id' => $request->order_id, 'customer_id' => auth('api')->id()])->first();
+        if (!$order) {
+            return response()->json(['message' => translate('order_not_found')], 404);
+        }
 
         if ($order['payment_method'] == 'cash_on_delivery' && $order['order_status'] == 'pending') {
             OrderManager::getStockUpdateOnOrderStatusChange($order, 'canceled');

@@ -887,7 +887,13 @@ class UserProfileController extends Controller
 
     public function order_cancel($id)
     {
-        $order = Order::where(['id' => $id])->first();
+        // Ownership scope: a customer may only cancel their OWN order (prevents cancelling/restocking
+        // arbitrary orders by guessing sequential ids).
+        $order = Order::where(['id' => $id, 'customer_id' => auth('customer')->id()])->first();
+        if (!$order) {
+            Toastr::error(translate('order_not_found'));
+            return back();
+        }
         if ($order['payment_method'] == 'cash_on_delivery' && $order['order_status'] == 'pending') {
             OrderManager::getStockUpdateOnOrderStatusChange($order, 'canceled');
             $orderStatusHistoryData = $this->orderStatusHistoryService->getOrderHistoryData(orderId: $id, userId: auth('customer')->id(), userType: 'customer', status: 'canceled');
@@ -982,7 +988,13 @@ class UserProfileController extends Controller
 
     public function generate_invoice($id)
     {
-        $order = Order::with('seller', 'latestEditHistory')->with('shipping')->where('id', $id)->first();
+        // Ownership scope: an invoice carries customer PII (name/address/phone/items) and must only be
+        // downloadable by the order's owner.
+        $order = Order::with('seller', 'latestEditHistory')->with('shipping')
+            ->where('id', $id)->where('customer_id', auth('customer')->id())->first();
+        if (!$order) {
+            abort(404);
+        }
         $invoiceSettings = getWebConfig(name: 'invoice_settings');
         $mpdf_view = \View::make(VIEW_FILE_NAMES['order_invoice'], compact('order', 'invoiceSettings'));
         $this->generatePdf(view: $mpdf_view, filePrefix: 'order_invoice_', filePostfix: $order['id'], pdfType: 'invoice', requestFrom: 'web');

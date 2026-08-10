@@ -2961,4 +2961,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"this_order_has_already_been_dispatched_to_delivery_syria" => "This order has already been dispatched to delivery syria",
 	"parcel_created_but_courier_wallet_balance_is_insufficient_payment_pending" => "Parcel created but courier wallet balance is insufficient payment pending",
 	"please_provide_the_delivery_syria_secret_before_enabling" => "Please provide the delivery syria secret before enabling",
+	"order_not_found" => "Order not found",
+	"access_denied" => "Access denied",
 ];

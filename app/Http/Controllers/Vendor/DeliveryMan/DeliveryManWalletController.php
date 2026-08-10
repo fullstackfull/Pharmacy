@@ -152,6 +152,13 @@ class DeliveryManWalletController extends BaseController
      */
     public function collectCash(DeliveryManWalletRequest $request, string|int $id): RedirectResponse
     {
+        // Scope to the seller's own delivery man — otherwise a seller could debit/transact against
+        // another vendor's delivery-man wallet by supplying that delivery man's id.
+        $ownDeliveryMan = $this->deliveryManRepo->getFirstWhere(params: ['id' => $id, 'seller_id' => auth('seller')->id()]);
+        if (empty($ownDeliveryMan)) {
+            ToastMagic::warning(translate('access_denied') . '!');
+            return redirect()->back();
+        }
         $wallet = $this->deliveryManWalletRepo->getFirstWhere(params: ['delivery_man_id' => $id]);
         if (empty($wallet) || currencyConverter($request->input('amount')) > $wallet['cash_in_hand']) {
             ToastMagic::warning(translate('receive_amount_can_not_be_more_than_cash_in_hand') . '!');
