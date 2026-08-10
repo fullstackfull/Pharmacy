@@ -55,9 +55,23 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
 
+        // Ownership scope: this returns a full order (customer name, address, phone, items). Without a
+        // scope it dumped ANY order by id to an unauthenticated caller. An authenticated customer sees
+        // only their own orders; a guest must present the guest_id the order was placed under.
         $data = Order::with(['deliveryMan', 'orderStatusHistory' => function ($query) {
             return $query->latest();
-        }])->where(['id' => $request['order_id']])->first();
+        }])
+            ->where('id', $request['order_id'])
+            ->where(function ($query) use ($request) {
+                auth('api')->check()
+                    ? $query->where('customer_id', auth('api')->id())
+                    : $query->where(['customer_id' => $request['guest_id'], 'is_guest' => 1]);
+            })
+            ->first();
+
+        if (!$data) {
+            return response()->json(['errors' => [['code' => 'order', 'message' => translate('not_found')]]], 404);
+        }
 
         $data = json_decode(json_encode($data), true);
         return response()->json($data, 200);
@@ -479,6 +493,11 @@ class OrderController extends Controller
     {
         $orderDetails = OrderDetail::find($request->order_details_id);
         $user = $request->user();
+
+        // Ownership: a customer may only refund a line of their OWN order.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $user->id)->exists()) {
+            return response()->json(['errors' => [['code' => 'order-details', 'message' => translate('not_found')]]], 404);
+        }
 
         $orderDetailsReward = OrderDetailsRewards::where('order_details_id', $request->order_details_id)
             ->where('reward_type', '!=', 'loyalty_point')

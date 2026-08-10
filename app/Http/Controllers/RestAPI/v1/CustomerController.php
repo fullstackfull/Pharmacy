@@ -473,7 +473,21 @@ class CustomerController extends Controller
 
     public function getOrderInvoice(Request $request): JsonResponse
     {
-        $order = Order::with('seller')->with('shipping')->where('id', $request['order_id'])->first();
+        // Ownership scope: an invoice carries the customer's PII and must not be downloadable for an
+        // arbitrary order id. Authenticated customer -> own orders; guest -> orders under their guest_id.
+        $order = Order::with('seller')->with('shipping')
+            ->where('id', $request['order_id'])
+            ->where(function ($query) use ($request) {
+                auth('api')->check()
+                    ? $query->where('customer_id', auth('api')->id())
+                    : $query->where(['customer_id' => $request['guest_id'], 'is_guest' => 1]);
+            })
+            ->first();
+
+        if (!$order) {
+            return response()->json(['errors' => [['code' => 'order', 'message' => translate('not_found')]]], 404);
+        }
+
         $invoiceSettings = json_decode(BusinessSetting::where(['type' => 'invoice_settings'])->first()?->value, true);
         $mpdf_view = \View::make(VIEW_FILE_NAMES['order_invoice'], compact('order', 'invoiceSettings'));
         $mpdf = new \Mpdf\Mpdf(['default_font' => 'FreeSerif', 'mode' => 'utf-8', 'format' => [190, 250], 'autoLangToFont' => true]);
@@ -501,7 +515,18 @@ class CustomerController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
 
-        $order = Order::withCount('orderDetails')->with(['deliveryMan', 'offlinePayments', 'verificationImages', 'latestEditHistory', 'orderEditHistory'])->where(['id' => $request['order_id']])->first();
+        // Ownership scope: authenticated customer -> own orders; guest -> orders under their guest_id.
+        $order = Order::withCount('orderDetails')->with(['deliveryMan', 'offlinePayments', 'verificationImages', 'latestEditHistory', 'orderEditHistory'])
+            ->where('id', $request['order_id'])
+            ->where(function ($query) use ($request) {
+                auth('api')->check()
+                    ? $query->where('customer_id', auth('api')->id())
+                    : $query->where(['customer_id' => $request['guest_id'], 'is_guest' => 1]);
+            })
+            ->first();
+        if (!$order) {
+            return response()->json(['errors' => [['code' => 'order', 'message' => translate('not_found')]]], 404);
+        }
         if (isset($order['offlinePayments'])) {
             $order['offlinePayments']->payment_info = $order->offlinePayments->payment_info;
         }

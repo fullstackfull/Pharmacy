@@ -687,6 +687,15 @@ class ProductController extends BaseController
         $product = $this->productRepo->getFirstWhere(params: ['id' => $productId, 'user_id' => auth('seller')->id()]);
         $success = 0;
 
+        // The fetch is seller-scoped, but the elseif branch below writes by raw $productId. Guard on
+        // ownership here so a seller cannot deactivate (status != 1) another seller's product by id.
+        if (!$product) {
+            return response()->json([
+                'success' => 0,
+                'message' => translate("status_updated_failed"),
+            ], 200);
+        }
+
         if ($status == 1 && $product['request_status'] == 1) {
             $this->productRepo->update(id: $productId, data: ['status' => $status]);
             $success = 1;

@@ -513,7 +513,16 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function updateAmountDate(object $request, string|int $userId, string $userType): bool
     {
+        // The column to write is taken from the request, so it MUST be whitelisted: without this a
+        // caller could set field_name to any orders column (payment_status, order_amount, customer_id,
+        // order_status) and field_val to anything, turning this endpoint into an arbitrary order rewrite.
+        // These are the only two fields the amount/date UI ever edits.
+        $allowedFields = ['expected_delivery_date', 'deliveryman_charge'];
         $fieldName = $request['field_name'];
+        if (!in_array($fieldName, $allowedFields, true)) {
+            return false;
+        }
+
         $fieldValues = $request['field_val'];
         $cause = $request['cause'] ?? null;
 
@@ -521,8 +530,23 @@ class OrderRepository implements OrderRepositoryInterface
             $fieldValues = currencyConverter(amount: $fieldValues);
         }
 
+        // Scope the target order to the actor. A seller may only touch orders that belong to them;
+        // without this seller_id filter the raw order_id let one seller edit any order in the system.
+        // Admin (userType 'admin') is unscoped by design.
+        $orderWhere = ['id' => $request['order_id']];
+        if ($userType === 'seller') {
+            $orderWhere['seller_id'] = $userId;
+        }
+
         try {
             DB::beginTransaction();
+
+            // Only proceed for an order the actor is actually allowed to touch, so neither the write
+            // below nor the history row is created for someone else's order.
+            if (!$this->order->where($orderWhere)->exists()) {
+                DB::rollback();
+                return false;
+            }
 
             if ($fieldName == 'expected_delivery_date') {
                 $this->orderExpectedDeliveryHistory->create([
@@ -534,7 +558,7 @@ class OrderRepository implements OrderRepositoryInterface
                 ]);
             }
 
-            $this->order->where(['id' => $request['order_id']])->update([$fieldName => $fieldValues]);
+            $this->order->where($orderWhere)->update([$fieldName => $fieldValues]);
 
             DB::commit();
         } catch (Exception $ex) {

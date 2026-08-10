@@ -26,7 +26,7 @@ class CrossTenantAuthorizationTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['users', 'orders', 'reviews', 'business_settings'] as $t) {
+        foreach (['users', 'orders', 'reviews', 'business_settings', 'order_expected_delivery_histories'] as $t) {
             Schema::dropIfExists($t);
         }
         Schema::create('business_settings', function (Blueprint $t) {
@@ -44,9 +44,23 @@ class CrossTenantAuthorizationTest extends TestCase
         Schema::create('orders', function (Blueprint $t) {
             $t->unsignedBigInteger('id')->primary();
             $t->unsignedBigInteger('customer_id')->nullable();
+            $t->unsignedBigInteger('seller_id')->nullable();
+            $t->string('seller_is')->nullable();
             $t->string('order_status')->nullable();
+            $t->string('payment_status')->nullable();
             $t->string('payment_method')->nullable();
             $t->decimal('order_amount', 24, 2)->default(0);
+            $t->decimal('deliveryman_charge', 24, 2)->default(0);
+            $t->date('expected_delivery_date')->nullable();
+            $t->timestamps();
+        });
+        Schema::create('order_expected_delivery_histories', function (Blueprint $t) {
+            $t->id();
+            $t->unsignedBigInteger('order_id')->nullable();
+            $t->unsignedBigInteger('user_id')->nullable();
+            $t->string('user_type')->nullable();
+            $t->date('expected_delivery_date')->nullable();
+            $t->string('cause')->nullable();
             $t->timestamps();
         });
         Schema::create('reviews', function (Blueprint $t) {
@@ -90,5 +104,58 @@ class CrossTenantAuthorizationTest extends TestCase
         $this->assertSame(403, $response->getStatusCode());
         $rawAttachment = \Illuminate\Support\Facades\DB::table('reviews')->where('id', 7001)->value('attachment');
         $this->assertStringContainsString('target.png', (string) $rawAttachment, 'victim review image must be untouched');
+    }
+
+    // ---- OrderRepository::updateAmountDate: arbitrary-column write + cross-seller order (P0-adjacent) ----
+
+    private function orderRepo(): \App\Contracts\Repositories\OrderRepositoryInterface
+    {
+        return app(\App\Contracts\Repositories\OrderRepositoryInterface::class);
+    }
+
+    private function amountDateRequest(array $data): Request
+    {
+        return Request::create('/vendor/orders/amount-date-update', 'POST', $data);
+    }
+
+    public function test_amount_date_update_rejects_a_non_whitelisted_field(): void
+    {
+        Order::create(['id' => 8001, 'seller_id' => 100, 'seller_is' => 'seller', 'payment_status' => 'unpaid', 'order_amount' => 500]);
+
+        // field_name is attacker-controlled: try to flip payment_status to paid via the amount/date hook.
+        $ok = $this->orderRepo()->updateAmountDate(
+            $this->amountDateRequest(['order_id' => 8001, 'field_name' => 'payment_status', 'field_val' => 'paid']),
+            userId: 100, userType: 'seller'
+        );
+
+        $this->assertFalse($ok, 'a column outside the whitelist must be refused');
+        $this->assertSame('unpaid', Order::find(8001)->payment_status, 'payment_status must be untouched');
+    }
+
+    public function test_amount_date_update_refuses_another_sellers_order(): void
+    {
+        // Order belongs to seller 200; seller 100 tries to set its expected_delivery_date.
+        Order::create(['id' => 8002, 'seller_id' => 200, 'seller_is' => 'seller', 'order_amount' => 500]);
+
+        $ok = $this->orderRepo()->updateAmountDate(
+            $this->amountDateRequest(['order_id' => 8002, 'field_name' => 'expected_delivery_date', 'field_val' => '2030-01-01']),
+            userId: 100, userType: 'seller'
+        );
+
+        $this->assertFalse($ok, 'a seller cannot edit an order that is not theirs');
+        $this->assertNull(Order::find(8002)->expected_delivery_date, 'victim order must be untouched');
+    }
+
+    public function test_amount_date_update_allows_a_seller_to_edit_their_own_order(): void
+    {
+        Order::create(['id' => 8003, 'seller_id' => 100, 'seller_is' => 'seller', 'order_amount' => 500]);
+
+        $ok = $this->orderRepo()->updateAmountDate(
+            $this->amountDateRequest(['order_id' => 8003, 'field_name' => 'expected_delivery_date', 'field_val' => '2030-01-01', 'cause' => 'restock']),
+            userId: 100, userType: 'seller'
+        );
+
+        $this->assertTrue($ok, 'a seller may edit their own order');
+        $this->assertStringContainsString('2030-01-01', (string) Order::find(8003)->expected_delivery_date);
     }
 }

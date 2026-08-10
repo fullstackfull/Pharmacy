@@ -324,8 +324,16 @@ class UserProfileController extends Controller
             'updated_at' => now(),
         ];
         if (auth('customer')->check()) {
-            ShippingAddress::where('id', $request->id)->update($updateAddress);
-            Toastr::success(translate('address_updated_successfully!'));
+            // Scope to the owner: without customer_id any logged-in customer could rewrite another
+            // customer's saved address (e.g. redirect their deliveries) by passing its id.
+            $updated = ShippingAddress::where('id', $request->id)
+                ->where('customer_id', auth('customer')->id())
+                ->update($updateAddress);
+            if ($updated) {
+                Toastr::success(translate('address_updated_successfully!'));
+            } else {
+                Toastr::error(translate('address_not_found!'));
+            }
         } else {
             Toastr::error(translate('Insufficient_permission!'));
         }
@@ -335,7 +343,11 @@ class UserProfileController extends Controller
     public function address_delete(Request $request)
     {
         if (auth('customer')->check()) {
-            ShippingAddress::destroy($request->id);
+            // Scope to the owner: destroy() by raw id let any logged-in customer delete another
+            // customer's saved address.
+            ShippingAddress::where('id', $request->id)
+                ->where('customer_id', auth('customer')->id())
+                ->delete();
             Toastr::success(translate('address_Delete_Successfully'));
             return redirect()->back();
         } else {
@@ -916,6 +928,11 @@ class UserProfileController extends Controller
         $orderDetails = OrderDetail::find($id);
         $user = auth('customer')->user();
 
+        // Ownership: the refund-request form exposes another customer's order line otherwise.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $user->id)->exists()) {
+            abort(404);
+        }
+
         $loyaltyPointStatus = getWebConfig(name: 'loyalty_point_status');
         if ($loyaltyPointStatus == 1) {
             $loyaltyPoint = CustomerManager::countLoyaltyPointForAmount($id);
@@ -950,6 +967,13 @@ class UserProfileController extends Controller
         $orderDetailsReward = $this->orderDetailsRewardsRepo->getFirstWhere(params: ['order_details_id' => $request['order_details_id'], 'reward_type' => 'loyalty_point']);
         $orderDetails = OrderDetail::find($request->order_details_id);
         $user = auth('customer')->user();
+
+        // Ownership: a customer may only file a refund against a line of their OWN order. Without this
+        // a customer could refund another customer's order line by passing its order_details_id.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $user->id)->exists()) {
+            Toastr::error(translate('order_not_found'));
+            return back();
+        }
 
         if ($orderDetailsReward && $user->loyalty_point < $orderDetailsReward['reward_amount']) {
             Toastr::warning(translate('you_have_not_sufficient_loyalty_point_to_refund_this_order') . '!!');

@@ -121,11 +121,16 @@ class DeliveryManController extends BaseController
     public function update(DeliveryManUpdateRequest $request, string|int $id): JsonResponse
     {
         $deliveryMan = $this->deliveryManRepo->getFirstWhere(params:['seller_id' => auth('seller')->id(), 'id' => $id]);
+        // Ownership guard: the write below keys off the raw $id, so a seller could otherwise edit
+        // another seller's delivery man. Fail closed explicitly rather than relying on a null-deref.
+        if (!$deliveryMan) {
+            return response()->json(['errors' => translate('delivery_man_not_found')], 404);
+        }
         $deliveryManExists = $this->deliveryManRepo->getFirstWhere(params:['phone' => $request['phone'], 'country_code' => $request['country_code']]);
         if (isset($deliveryManExists) && $deliveryManExists['id'] != $deliveryMan['id']) {
             return response()->json(['errors' => translate('this_phone_number_is_already_taken')]);
         }
-        $this->deliveryManRepo->update($id, $this->deliveryManService->getDeliveryManUpdateData(
+        $this->deliveryManRepo->update($deliveryMan['id'], $this->deliveryManService->getDeliveryManUpdateData(
             request: $request,
             addedBy: 'seller',
             identityImages: $deliveryMan['identity_image'] ?? [],
@@ -143,6 +148,9 @@ class DeliveryManController extends BaseController
     public function updateStatus(Request $request, string|int $id): JsonResponse
     {
         $deliveryMan = $this->deliveryManRepo->getFirstWhere(params: ['seller_id' => auth('seller')->id(), 'id' => $id]);
+        if (!$deliveryMan) {
+            return response()->json([], 404);
+        }
         $this->deliveryManRepo->update($deliveryMan['id'], data: ['is_active' => $request['status']]);
         return response()->json([], 200);
     }
@@ -155,8 +163,14 @@ class DeliveryManController extends BaseController
     public function delete(string|int $id): RedirectResponse|View
     {
         $deliveryMan = $this->deliveryManRepo->getFirstWhere(['seller_id' => auth('seller')->id(), 'id' => $id]);
+        // Ownership guard: the delete below keyed off the raw $id, so a seller could delete another
+        // seller's delivery man. Fail closed and scope the delete to this seller.
+        if (!$deliveryMan) {
+            ToastMagic::error(translate('delivery-man_not_found') . '!');
+            return redirect()->back();
+        }
         $this->deliveryManService->deleteImages(deliveryMan: $deliveryMan);
-        $this->deliveryManRepo->delete(params: ['id' => $id]);
+        $this->deliveryManRepo->delete(params: ['id' => $deliveryMan['id'], 'seller_id' => auth('seller')->id()]);
         ToastMagic::success(translate('delivery-man_removed') . '!');
         return redirect()->back();
     }

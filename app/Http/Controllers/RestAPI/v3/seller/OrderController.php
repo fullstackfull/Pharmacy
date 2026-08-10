@@ -449,7 +449,13 @@ class OrderController extends Controller
 
     public function address_update(Request $request)
     {
-        $order = $this->order->find($request->order_id)->toArray();
+        $seller = $request->seller;
+        // Only the seller who owns the order may rewrite its shipping/billing address.
+        $orderModel = $this->order->where('seller_id', $seller['id'])->where('seller_is', 'seller')->find($request->order_id);
+        if (!$orderModel) {
+            return response()->json(['message' => translate('order_not_found')], 404);
+        }
+        $order = $orderModel->toArray();
         $shipping_address_data = $order['shipping_address_data'] ? json_decode(json_encode($order['shipping_address_data']), true) : [];
         $billing_address_data = $order['billing_address_data'] ? json_decode(json_encode($order['billing_address_data']), true) : [];
 
@@ -479,7 +485,9 @@ class OrderController extends Controller
         }
 
         if (!empty($update_data)) {
-            DB::table('orders')->where('id', $request->order_id)->update($update_data);
+            DB::table('orders')->where('id', $request->order_id)
+                ->where('seller_id', $seller['id'])->where('seller_is', 'seller')
+                ->update($update_data);
         }
 
         return response()->json(['message' => 'Address updated successfully'], 200);
@@ -497,7 +505,15 @@ class OrderController extends Controller
         }
 
         $seller = $request->seller;
-        $order = Order::with(['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory'])->find($request['order_id']);
+        // Scope to the authenticated seller: every mutation below keys off order_id, so without this
+        // one seller could flip another seller's payment/order status, reassign delivery, etc.
+        $order = Order::with(['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory'])
+            ->where('seller_id', $seller['id'])->where('seller_is', 'seller')
+            ->find($request['order_id']);
+
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('order_not_found')], 404);
+        }
 
         if (isset($order)) {
             if ($order['payment_status'] == 'paid' && $request['payment_status'] != 'paid') {
