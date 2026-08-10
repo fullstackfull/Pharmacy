@@ -110,4 +110,67 @@ class SettlementPayoutExclusionTest extends TestCase
         $this->engine->cancel($settlement);
         $this->assertSame(348.0, $this->ledger->withdrawable(9), 'a released claim returns the money to the payout pool');
     }
+
+    // ---- reverse direction: a released payout reservation must not be settled as new income ----
+
+    /**
+     * Replicate exactly what PayoutService::releaseReservation writes when a seller cancels a payout
+     * request: the reserve debit is voided (relabelled `paid`) and a compensating `payout_release`
+     * credit is added back as `available`. This is the ledger state the over-pay fed on.
+     */
+    private function simulateReserveAndCancel(int $sellerId, float $amount, int $cycle): void
+    {
+        // Reserve (requestPayout) then void it (releaseReservation flips the reserve to `paid`).
+        $this->ledger->record($sellerId, VendorLedgerEntry::TYPE_PAYOUT, debit: $amount,
+            status: VendorLedgerEntry::STATUS_PAID, referenceType: 'payout_reserve', referenceId: "res-$cycle");
+        // ...and the money returns as an `available` `payout_release` credit.
+        $this->ledger->record($sellerId, VendorLedgerEntry::TYPE_MANUAL_ADJUSTMENT, credit: $amount,
+            status: VendorLedgerEntry::STATUS_AVAILABLE, referenceType: 'payout_release', referenceId: "rel-$cycle");
+    }
+
+    public function test_a_released_payout_reservation_is_not_settled_as_new_income(): void
+    {
+        // A single clean earning: 400 credit, 52 commission -> 348 net settleable.
+        $this->availableEarning(11);
+        $this->simulateReserveAndCancel(11, 348, 1);
+
+        // The release credit is back in the balance (the seller genuinely has the money)...
+        $this->assertSame(348.0, $this->ledger->withdrawable(11), 'a cancelled payout returns the money to withdrawable');
+
+        // ...but the settlement must value the seller at their real earning, NOT earning + release.
+        $settlement = $this->engine->calculate(11);
+        $this->assertNotNull($settlement);
+        $this->assertSame(348.0, (float) $settlement->net_amount, 'settlement counts the earning once, not the payout reversal');
+
+        // And once settled, nothing is left to double-settle or double-withdraw.
+        $this->assertSame(0.0, $this->ledger->withdrawable(11));
+        $this->assertNull($this->engine->calculate(11), 'no phantom second settlement from the release credit');
+    }
+
+    public function test_repeated_reserve_and_cancel_cannot_inflate_a_settlement(): void
+    {
+        $this->availableEarning(12); // 348 net
+
+        // Seller-controlled abuse: request a payout and cancel it, over and over.
+        for ($cycle = 1; $cycle <= 5; $cycle++) {
+            $this->simulateReserveAndCancel(12, 348, $cycle);
+        }
+
+        // Before the fix this grew to 348 * (5 + 1) = 2088; the seller earned 348 and was paid 0.
+        $settlement = $this->engine->calculate(12);
+        $this->assertNotNull($settlement);
+        $this->assertSame(348.0, (float) $settlement->net_amount, 'settlement stays bounded at the real earning regardless of reserve/cancel cycles');
+    }
+
+    public function test_a_manual_adjustment_with_no_reference_still_settles(): void
+    {
+        // NULL-safety of the payout-machinery exclusion: a genuine settleable credit that carries no
+        // reference_type (e.g. a manual bonus) must NOT be dropped by the NOT-IN filter.
+        $this->ledger->record(13, VendorLedgerEntry::TYPE_BONUS, credit: 90,
+            status: VendorLedgerEntry::STATUS_AVAILABLE, referenceType: null, referenceId: null);
+
+        $settlement = $this->engine->calculate(13);
+        $this->assertNotNull($settlement, 'a reference-less earning is still settleable');
+        $this->assertSame(90.0, (float) $settlement->net_amount);
+    }
 }

@@ -32,6 +32,21 @@ use Illuminate\Support\Facades\Schema;
 class SettlementEngine
 {
     /**
+     * Ledger entries a settlement must never draw on: the payout channel's own bookkeeping.
+     *
+     * A payout reservation is a `reserved` debit (already invisible to the `available` filter), but a
+     * *released* reservation writes a compensating `available` credit (reference_type `payout_release`).
+     * That credit is real money on the running balance — the seller can request another payout for it,
+     * or have the underlying earning settled — but it is NOT a second earning. Left in the settleable
+     * set it double-counts: the earning settles once on its own, and the release credit settles again,
+     * so a seller who merely requests and cancels a payout inflates their next settlement by the
+     * cancelled amount (unbounded if repeated). The earning the release restores is always still on the
+     * ledger as its own `available` credit, so excluding the payout machinery never strands money — it
+     * only stops the settlement counting a reversal as new income.
+     */
+    private const NON_SETTLEABLE_REFERENCE_TYPES = ['payout_reserve', 'payout_release'];
+
+    /**
      * Build a settlement for one vendor from their unclaimed, available ledger entries.
      *
      * Returns null when there is nothing to settle, which is a normal outcome on a schedule and not
@@ -52,6 +67,7 @@ class SettlementEngine
                 ->forSeller($sellerId, $sellerIs)
                 ->whereNull('settlement_id')
                 ->where('status', VendorLedgerEntry::STATUS_AVAILABLE)
+                ->where(fn ($q) => $this->excludePayoutMachinery($q))
                 ->when($periodStart, fn ($q) => $q->where('created_at', '>=', $periodStart))
                 ->when($periodEnd, fn ($q) => $q->where('created_at', '<=', $periodEnd));
 
@@ -192,6 +208,7 @@ class SettlementEngine
         $sellers = VendorLedgerEntry::query()
             ->whereNull('settlement_id')
             ->where('status', VendorLedgerEntry::STATUS_AVAILABLE)
+            ->where(fn ($q) => $this->excludePayoutMachinery($q))
             ->select('seller_id', 'seller_is')
             ->distinct()
             ->get();
@@ -205,6 +222,20 @@ class SettlementEngine
         }
 
         return $settlements;
+    }
+
+    /**
+     * Constrain a query to entries that are NOT payout bookkeeping.
+     *
+     * NULL-safe on purpose: `reference_type NOT IN (...)` is UNKNOWN (and so excludes the row) when
+     * reference_type IS NULL, which would silently drop legitimate settleable entries that carry no
+     * reference (a manual bonus/adjustment). Keeping the NULL branch means only the two payout
+     * reference_types are excluded and everything else — reference or not — still settles.
+     */
+    private function excludePayoutMachinery($query): void
+    {
+        $query->whereNull('reference_type')
+            ->orWhereNotIn('reference_type', self::NON_SETTLEABLE_REFERENCE_TYPES);
     }
 
     /**
