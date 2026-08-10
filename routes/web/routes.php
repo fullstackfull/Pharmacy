@@ -244,7 +244,10 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
         Route::get('account-order-details-vendor-info', 'account_order_details_seller_info')->name('account-order-details-vendor-info')->middleware('customer');
         Route::get('account-order-details-delivery-man-info', 'account_order_details_delivery_man_info')->name('account-order-details-delivery-man-info')->middleware('customer');
         Route::get('account-order-details-reviews', 'getAccountOrderDetailsReviewsView')->name('account-order-details-reviews')->middleware('customer');
-        Route::get('generate-invoice/{id}', 'generate_invoice')->name('generate-invoice')->middleware('customer');
+        // No 'customer' middleware: the order-success modal links here for GUEST checkouts too, so this
+        // must stay reachable without a customer login. generate_invoice() enforces owner-only access
+        // itself (logged-in customer by customer_id, guest by their session guest_id).
+        Route::get('generate-invoice/{id}', 'generate_invoice')->name('generate-invoice');
         Route::get('account-wishlist', 'account_wishlist')->name('account-wishlist'); //add to card not work
         Route::get('refund-request/{id}', 'refund_request')->name('refund-request')->middleware('customer');
         Route::get('refund-details/{id}', 'refund_details')->name('refund-details')->middleware('customer');

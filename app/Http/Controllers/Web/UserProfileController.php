@@ -1013,9 +1013,17 @@ class UserProfileController extends Controller
     public function generate_invoice($id)
     {
         // Ownership scope: an invoice carries customer PII (name/address/phone/items) and must only be
-        // downloadable by the order's owner.
+        // downloadable by the order's owner. A logged-in customer owns orders by customer_id; a guest
+        // owns the order placed under their session guest_id (customer_id == guest_id, is_guest == 1) —
+        // the guest order-success modal links here, so guests must keep working.
         $order = Order::with('seller', 'latestEditHistory')->with('shipping')
-            ->where('id', $id)->where('customer_id', auth('customer')->id())->first();
+            ->where('id', $id)
+            ->where(function ($query) {
+                auth('customer')->check()
+                    ? $query->where('customer_id', auth('customer')->id())
+                    : $query->where(['customer_id' => session('guest_id'), 'is_guest' => 1]);
+            })
+            ->first();
         if (!$order) {
             abort(404);
         }
