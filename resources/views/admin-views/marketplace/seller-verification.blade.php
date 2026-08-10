@@ -72,7 +72,7 @@
                                 <td>{{ $doc->document_number ?: '—' }}</td>
                                 <td>
                                     @if ($doc->file_path)
-                                        <a href="{{ dynamicStorage('storage/app/public/seller/kyc/' . $doc->file_path) }}" target="_blank" rel="noopener">
+                                        <a href="{{ route('admin.marketplace.seller-verification.document', $doc->id) }}" target="_blank" rel="noopener">
                                             {{ translate('view') }}
                                         </a>
                                     @else

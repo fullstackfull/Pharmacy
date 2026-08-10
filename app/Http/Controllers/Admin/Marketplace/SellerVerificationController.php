@@ -27,6 +27,20 @@ class SellerVerificationController extends BaseController
     {
     }
 
+    /**
+     * Stream a KYC document from the private disk. The admin middleware already restricts this to
+     * admins — this is the only way the file is reachable now that KYC is no longer on the public disk.
+     */
+    public function document(int $id)
+    {
+        $doc = SellerVerificationDocument::findOrFail($id);
+        abort_if(!$doc->file_path, 404);
+        $path = 'seller/kyc/' . $doc->file_path;
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->response($path);
+    }
+
     public function index(Request|null $request, ?string $type = null): View
     {
         $documents = collect();
