@@ -41,8 +41,12 @@ class StaffLoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        $staff = SellerStaff::where('email', $request->input('email'))->first();
-        if (!$staff || !Hash::check($request->input('password'), $staff->password)) {
+        // Staff email is unique only per seller (a colleague at another shop may share it), so match on
+        // the credential that actually verifies rather than an arbitrary first row.
+        $staff = SellerStaff::where('email', $request->input('email'))->get()
+            ->first(fn ($candidate) => $candidate->password && Hash::check($request->input('password'), $candidate->password));
+
+        if (!$staff) {
             ToastMagic::error(translate('credentials_doesnt_match') . '!');
 
             return back();
