@@ -55,6 +55,14 @@ class WarehouseService
         }
 
         return DB::transaction(function () use ($warehouseId, $productId, $qty, $by) {
+            // Serialise all allocation for this product on its catalogue row before measuring the
+            // unallocated remainder. unallocated() sums warehouse_stock without a lock, so two
+            // concurrent place() calls — even to different warehouses — could otherwise both read the
+            // same remainder and each commit, allocating more than the sellable total holds.
+            if (Schema::hasTable('products')) {
+                DB::table('products')->where('id', $productId)->lockForUpdate()->first();
+            }
+
             if ($qty > $this->unallocated($productId)) {
                 return ['ok' => false, 'reason' => 'not_enough_unallocated_stock'];
             }

@@ -119,6 +119,18 @@ class PurchaseOrderService
         }
 
         return DB::transaction(function () use ($item, $qty, $receivedBy, $po) {
+            // Re-read and LOCK the line inside the transaction, then re-check the outstanding cap. The
+            // check above is a fast pre-filter on a stale model; without this locked re-check two
+            // concurrent receiveItem calls could both pass it and each increment stock, over-receiving
+            // (e.g. ordered 10, two receipts of 10 -> +20 stock while the line records only 10).
+            $item = \App\Models\PurchaseOrderItem::where('id', $item->id)->lockForUpdate()->first();
+            if (!$item) {
+                return ['ok' => false, 'reason' => 'item_not_found'];
+            }
+            if ($qty > $item->outstanding()) {
+                return ['ok' => false, 'reason' => 'cannot_receive_more_than_was_ordered'];
+            }
+
             // Increment the catalogue stock this line replenishes. Lock the row first so a concurrent
             // receipt (or an order decrementing it) serialises rather than losing the update.
             if ($item->product_id && Schema::hasTable('products')) {

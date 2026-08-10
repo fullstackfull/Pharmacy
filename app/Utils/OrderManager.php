@@ -1192,12 +1192,30 @@ class OrderManager
             if ($cartSingleItem['variant'] != null) {
                 $type = $cartSingleItem['variant'];
                 $variationData = [];
+                $variantWentNegative = false;
                 foreach (json_decode($product['variation'], true) as $var) {
                     if ($type == $var['type']) {
                         $var['qty'] -= $cartSingleItem['quantity'];
+                        if ($var['qty'] < 0) {
+                            $variantWentNegative = true;
+                        }
                     }
                     $variationData[] = $var;
                 }
+
+                // Guard the SPECIFIC variant, not just the product total. The conditional decrement below
+                // checks current_stock (the sum of all variants), so ordering more of one variant than it
+                // holds could pass — another variant's stock masking the shortfall — and drive that
+                // variant negative. Reject it here, inside the same locked/transactional section, exactly
+                // as the product-total guard does. (allow_oversell — the post-payment path — is honoured.)
+                if ($variantWentNegative && ($product['product_type'] ?? 'physical') === 'physical' && $stockPolicy === 'reject') {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        productId: $product['id'],
+                        productName: $product['name'] ?? null,
+                        requested: (int) $cartSingleItem['quantity'],
+                    );
+                }
+
                 Product::where(['id' => $product['id']])->update([
                     'variation' => json_encode($variationData),
                 ]);
