@@ -63,13 +63,14 @@ class POSController extends Controller
         return $product['discount'];
     }
 
-    public function getProductStockCalculate($cartItem, $product): void
+    public function getProductStockCalculate($cartItem, $product, $orderId = null): void
     {
         if ($cartItem['variant'] != null) {
             $variationStore = [];
             foreach (json_decode($product['variation'], true) as $variation) {
                 if ($cartItem['variant'] == $variation['type']) {
-                    $variation['qty'] -= $cartItem['quantity'];
+                    // Floor at zero so a concurrent race can never drive a variant negative.
+                    $variation['qty'] = max(0, (int) $variation['qty'] - (int) $cartItem['quantity']);
                 }
                 $variationStore[] = $variation;
             }
@@ -77,9 +78,30 @@ class POSController extends Controller
         }
 
         if ($product['product_type'] == 'physical') {
-            $this->productRepo->updateByParams(params: ['id' => $product['id']], data: [
-                'current_stock' => $product['current_stock'] - $cartItem['quantity']
-            ]);
+            // Atomic conditional decrement, floored at zero — mirrors the Admin/Vendor POS fix. The old
+            // absolute write (current_stock = stale_value - qty) lost concurrent decrements and oversold,
+            // and could drive current_stock negative. decrement() never loses an update; the >= guard
+            // stops it going below zero.
+            $taken = Product::where('id', $product['id'])
+                ->where('current_stock', '>=', $cartItem['quantity'])
+                ->decrement('current_stock', $cartItem['quantity']);
+            if ($taken === 0) {
+                Product::where('id', $product['id'])->update(['current_stock' => 0]);
+            }
+            // Record the POS sale in the stock-movement ledger so history reconciles against stock.
+            try {
+                app(\App\Services\Marketplace\InventoryService::class)->record(
+                    productId: $product['id'],
+                    type: \App\Models\StockMovement::TYPE_SALE,
+                    qtyChange: -(int) $cartItem['quantity'],
+                    balanceAfter: (int) (Product::where('id', $product['id'])->value('current_stock') ?? 0),
+                    referenceType: 'pos_order',
+                    referenceId: $orderId,
+                    sellerId: $product['user_id'] ?? $product['seller_id'] ?? null,
+                );
+            } catch (\Throwable $exception) {
+                \Illuminate\Support\Facades\Log::warning('Seller POS sale stock-movement log failed for product ' . $product['id'] . ': ' . $exception->getMessage());
+            }
         }
     }
 
@@ -326,7 +348,7 @@ class POSController extends Controller
                             'created_at' => now(),
                             'updated_at' => now()
                         ];
-                        self::getProductStockCalculate(cartItem: $cartItem, product: $product);
+                        self::getProductStockCalculate(cartItem: $cartItem, product: $product, orderId: $generateOrderID);
                         DB::table('order_details')->insert($orderDetailsData);
                     }
                 }
