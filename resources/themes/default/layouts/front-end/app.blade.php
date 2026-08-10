@@ -84,6 +84,13 @@
         }
     </style>
 
+    {{-- Active published theme's design tokens override the legacy colours above (emitted only when a
+         theme is published; storefront unchanged otherwise). --}}
+    @php($__themeSettings = app(\App\Services\Theme\StorefrontThemeRenderer::class)->publishedGlobalSettings(app(\App\Services\Theme\ThemeManager::class)))
+    @if($__themeSettings)
+        @include('partials.theme-global-tokens', ['themeSettings' => $__themeSettings])
+    @endif
+
     <link rel="stylesheet" href="{{theme_asset(path: 'public/assets/front-end/css/custom.css')}}">
 
     {!! getSystemDynamicPartials(type: 'analytics_script') !!}

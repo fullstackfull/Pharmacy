@@ -91,6 +91,28 @@ class StorefrontThemeRenderer
     }
 
     /**
+     * Resolved global settings ONLY when an active theme has a published version; null otherwise.
+     *
+     * This is what the storefront `<head>` consults to override its design tokens: returning null when
+     * nothing is published preserves the contract that the storefront is unchanged until a merchant
+     * publishes a theme (globalSettings() can't be used for this because it returns defaults either way).
+     */
+    public function publishedGlobalSettings(ThemeManager $manager): ?array
+    {
+        if (!$this->tablesReady()) {
+            return null;
+        }
+
+        try {
+            $version = $this->publishedVersion();
+
+            return $version ? $manager->resolveSettings($version) : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Resolve a setting for a breakpoint, falling back to the base value.
      * $breakpoint: desktop | tablet | mobile
      */
