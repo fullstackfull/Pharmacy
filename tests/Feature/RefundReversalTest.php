@@ -122,6 +122,24 @@ class RefundReversalTest extends TestCase
         $this->assertSame(0.0, $this->ledger->balances(5)['balance'], 'the sale is fully unwound');
     }
 
+    /**
+     * The tax guard: the customer's refund includes tax the seller never earned. Reversing must debit
+     * only the ex-tax commissionable base the seller was credited — debiting the tax-inclusive refund
+     * dropped the seller's balance below what they were paid, by exactly the tax, on every return.
+     */
+    public function test_a_tax_inclusive_refund_never_drives_the_seller_below_zero(): void
+    {
+        $this->soldLine();   // credited 400 ex-tax, commission 52 -> balance 348
+        $this->assertSame(348.0, $this->ledger->balances(5)['balance']);
+
+        // The customer is refunded 460 = 400 base + 60 tax (a full-line refund).
+        $result = $this->reversal->reverseForOrderLine(17, 460.0, refundReference: 901);
+
+        $this->assertSame(0.0, $this->ledger->balances(5)['balance'], 'unwinds to zero, not minus the tax');
+        $this->assertSame(400.0, $result['refund_debit'], 'debited the ex-tax base, not the tax-inclusive refund');
+        $this->assertSame(52.0, $result['commission_credit']);
+    }
+
     public function test_a_partial_refund_reverses_the_commission_proportionally(): void
     {
         $snapshot = $this->soldLine();

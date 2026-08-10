@@ -1069,10 +1069,15 @@ class OrderManager
             // much did we charge this seller in commission last month?" without re-deriving it.
             //
             // They land as PENDING, because money owed during the return window is not money the
-            // seller can be paid. Nothing here moves it to available — that is the settlement
-            // engine's job, and it is not built yet.
+            // seller can be paid. The earning carries an `available_at` = now + the return window so the
+            // settlement command can mature it once the window passes AND the order is delivered
+            // (VendorLedger::releaseMatured gates on order state, so a cancelled/failed order never
+            // matures its placement-time earning). Without this timestamp the earning could never leave
+            // pending and no seller could ever be settled or paid.
             if ($sellerIs === 'seller' && $sellerId) {
                 $ledger = app(\App\Services\Marketplace\VendorLedger::class);
+
+                $returnWindowDays = (int) app(\App\Services\Marketplace\CategoryGovernanceService::class)->returnWindowDays($categoryId);
 
                 $ledger->record(
                     sellerId: $sellerId,
@@ -1081,6 +1086,7 @@ class OrderManager
                     referenceType: 'order_details',
                     referenceId: $orderDetailsId,
                     description: 'Order #' . $orderId,
+                    availableAt: now()->addDays(max(0, $returnWindowDays)),
                 );
 
                 if ((float) $calculated['commission_amount'] > 0) {

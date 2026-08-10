@@ -164,11 +164,32 @@ class VendorLedger
             return 0;
         }
 
-        return VendorLedgerEntry::query()
+        $asOf = $asOf ?? now();
+
+        $query = VendorLedgerEntry::query()
             ->where('status', VendorLedgerEntry::STATUS_PENDING)
             ->whereNotNull('available_at')
-            ->where('available_at', '<=', $asOf ?? now())
-            ->update(['status' => VendorLedgerEntry::STATUS_AVAILABLE, 'updated_at' => now()]);
+            ->where('available_at', '<=', $asOf);
+
+        // Only mature an order earning once its order actually completed. Earnings are credited at
+        // placement, so a cancelled, failed or returned order still carries its credit; without this
+        // gate it would turn into payable money the moment its window passed. An order-linked earning
+        // matures only when the order is `delivered`; anything not linked to an order (a manual
+        // adjustment) matures on time as before. Guarded on the tables existing so unit tests that
+        // exercise the ledger in isolation are unaffected.
+        if (Schema::hasTable('order_details') && Schema::hasTable('orders')) {
+            $query->where(function ($q) {
+                $q->where('reference_type', '!=', 'order_details')
+                    ->orWhereIn('reference_id', function ($sub) {
+                        $sub->select('order_details.id')
+                            ->from('order_details')
+                            ->join('orders', 'orders.id', '=', 'order_details.order_id')
+                            ->where('orders.order_status', 'delivered');
+                    });
+            });
+        }
+
+        return $query->update(['status' => VendorLedgerEntry::STATUS_AVAILABLE, 'updated_at' => now()]);
     }
 
     private function currentCurrency(): ?string
