@@ -32,6 +32,7 @@ class ReconciliationTest extends TestCase
             $t->id(); $t->unsignedBigInteger('seller_id'); $t->string('seller_is')->default('seller');
             $t->string('entry_type')->nullable(); $t->decimal('credit', 24, 2)->default(0); $t->decimal('debit', 24, 2)->default(0);
             $t->decimal('balance_after', 24, 2)->default(0); $t->string('status')->default('available');
+            $t->timestamp('available_at')->nullable();
             $t->unsignedBigInteger('settlement_id')->nullable(); $t->timestamps();
         });
         Schema::create('order_item_commissions', function (Blueprint $t) {
@@ -112,6 +113,30 @@ class ReconciliationTest extends TestCase
         $this->assertSame('settlement ST-9', $check['discrepancies'][0]['ref']);
         $this->assertSame(500.0, $check['discrepancies'][0]['expected']);
         $this->assertSame(80.0, $check['discrepancies'][0]['actual']);
+    }
+
+    public function test_it_flags_a_pending_earning_with_no_maturation_date(): void
+    {
+        // A stuck earning: pending, no available_at → it can never mature and the seller can never be paid.
+        DB::table('vendor_ledger_entries')->insert([
+            'seller_id' => 9, 'seller_is' => 'seller', 'entry_type' => VendorLedgerEntry::TYPE_ORDER_EARNING,
+            'credit' => 50, 'debit' => 0, 'balance_after' => 50, 'status' => VendorLedgerEntry::STATUS_PENDING, 'available_at' => null,
+        ]);
+
+        $result = $this->svc->pendingEarningsCanMature();
+
+        $this->assertNotEmpty($result['discrepancies'], 'a stuck earning is flagged');
+        $this->assertSame(1, $result['discrepancies'][0]['actual']);
+    }
+
+    public function test_a_pending_earning_with_a_maturation_date_reconciles(): void
+    {
+        DB::table('vendor_ledger_entries')->insert([
+            'seller_id' => 9, 'seller_is' => 'seller', 'entry_type' => VendorLedgerEntry::TYPE_ORDER_EARNING,
+            'credit' => 50, 'debit' => 0, 'balance_after' => 50, 'status' => VendorLedgerEntry::STATUS_PENDING, 'available_at' => now(),
+        ]);
+
+        $this->assertEmpty($this->svc->pendingEarningsCanMature()['discrepancies']);
     }
 
     public function test_missing_tables_reconcile_clean_rather_than_fataling(): void

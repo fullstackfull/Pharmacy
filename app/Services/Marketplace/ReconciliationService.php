@@ -35,6 +35,44 @@ class ReconciliationService
             $this->ledgerRunningBalanceIntegrity(),
             $this->commissionSnapshotVsLedger(),
             $this->settlementIntegrity(),
+            $this->pendingEarningsCanMature(),
+        ];
+    }
+
+    /**
+     * Every pending order earning must carry an `available_at`, or `releaseMatured()` can never move it
+     * to available and the seller can never be settled or paid. This is the monitor for the maturation
+     * defect the audit found: a pending `order_earning` with a null `available_at` is stuck money, and a
+     * non-zero count here is the alarm that earnings are being booked without a maturation date again.
+     */
+    public function pendingEarningsCanMature(): array
+    {
+        $discrepancies = [];
+        $checked = 0;
+
+        if (Schema::hasTable('vendor_ledger_entries')) {
+            $checked = 1;
+            $stuck = VendorLedgerEntry::where('entry_type', VendorLedgerEntry::TYPE_ORDER_EARNING)
+                ->where('status', VendorLedgerEntry::STATUS_PENDING)
+                ->whereNull('available_at')
+                ->count();
+
+            if ($stuck > 0) {
+                $discrepancies[] = [
+                    'ref' => 'order earnings with no maturation date',
+                    'expected' => 0,
+                    'actual' => $stuck,
+                    'delta' => $stuck,
+                ];
+            }
+        }
+
+        return [
+            'key' => 'earnings_can_mature',
+            'label' => 'Pending order earnings carry a maturation date',
+            'scope' => 'global count',
+            'checked' => $checked,
+            'discrepancies' => $discrepancies,
         ];
     }
 
