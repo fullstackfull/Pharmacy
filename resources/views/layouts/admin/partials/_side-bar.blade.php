@@ -684,6 +684,17 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.commission-rules.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/commission-rules*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.commission-rules.index') }}"
+                                   title="{{ translate('commission_rules') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('commission_rules') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.approvals.index'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/approvals*') ? 'active' : '' }}"

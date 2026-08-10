@@ -623,6 +623,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // Commission rules (Stage B): the writer for the commission engine's rule table — define a rate
+        // by scope (global/category/vendor/product) and priority. Non-breaking: no active rule leaves the
+        // engine on its legacy flat percentage.
+        Route::group(['prefix' => 'commission-rules', 'as' => 'commission-rules.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CommissionRuleController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/toggle', 'toggle')->whereNumber('id')->name('toggle');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+
         // Payment orchestration (Stage E): gateway routing rules — hide or prefer a gateway by amount
         // or country. Non-breaking: no rule leaves the offered gateways unchanged.
         Route::group(['prefix' => 'payment-routing', 'as' => 'payment-routing.'], function () {

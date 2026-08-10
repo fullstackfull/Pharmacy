@@ -1,6 +1,27 @@
 <?php
 
 return [
+	// Commission rules (Phase 3, Stage B — audit remediation: the missing rule writer)
+	"commission_rules" => "قواعد العمولة",
+	"commission_rule_created" => "تم إنشاء قاعدة العمولة",
+	"commission_rule_updated" => "تم تحديث قاعدة العمولة",
+	"commission_rule_deleted" => "تم حذف قاعدة العمولة",
+	"commission_rule_activated" => "تم تفعيل قاعدة العمولة",
+	"commission_rule_deactivated" => "تم تعطيل قاعدة العمولة",
+	"set_the_marketplace_commission_by_scope_and_priority_with_no_active_rule_the_legacy_flat_percentage_applies" => "حدّد عمولة المتجر حسب النطاق والأولوية؛ عند عدم وجود قاعدة فعّالة تُطبَّق النسبة الثابتة القديمة",
+	"add_rule" => "إضافة قاعدة",
+	"scope" => "النطاق",
+	"scope_id" => "معرّف النطاق",
+	"blank_for_global" => "اتركه فارغًا للعام",
+	"rate_type" => "نوع المعدّل",
+	"e_g_default_rate" => "مثال: المعدّل الافتراضي",
+	"percentage_plus_fixed" => "نسبة + مبلغ ثابت",
+	"resolution_preview" => "معاينة الاحتساب",
+	"commissionable_amount" => "المبلغ الخاضع للعمولة",
+	"seller_net" => "صافي البائع",
+	"no_rules_yet_the_legacy_flat_percentage_applies" => "لا قواعد بعد — تُطبَّق النسبة الثابتة القديمة",
+	"delete_this_rule" => "حذف هذه القاعدة",
+
 	"%" => "%",
 	"(Ex:_$1_if_the_system_default_currency_is_dollar)." => "(على سبيل المثال: 1 دولار إذا كانت العملة الافتراضية للنظام هي الدولار).",
 	"(Ex:_$1_if_the_system_default_currency_is_dollar.)" => "(على سبيل المثال: 1 دولار إذا كانت العملة الافتراضية للنظام هي الدولار.)",
