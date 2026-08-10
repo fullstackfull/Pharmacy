@@ -98,6 +98,20 @@ return Application::configure(basePath: dirname(__DIR__))
             'detectMobile' => \App\Http\Middleware\DetectMobile::class,
         ]);
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        // Laravel 12 reads the schedule here, not from app/Console/Kernel.php.
+
+        // Abandoned-cart reminder emails. This command is the only sender of them, so without a
+        // schedule the retention feature ships but never actually emails anyone.
+        $schedule->command('cart:remind-abandoned')->everyThirtyMinutes()->withoutOverlapping();
+
+        // Mature vendor earnings out of the return window and roll up settlements. Order earnings are
+        // recorded pending with an available_at; `--release` matures a delivered order's earning to
+        // available so the seller can be settled and paid. Without this run nothing ever matures and no
+        // seller can be paid through the ledger. (Requires the server cron `* * * * * php artisan
+        // schedule:run` to be installed — a deployment step.)
+        $schedule->command('marketplace:settle --release')->dailyAt('02:00')->withoutOverlapping();
+    })
     ->withExceptions(function (Exceptions $exceptions) {
         // You can customize exception handling here if needed
     })
