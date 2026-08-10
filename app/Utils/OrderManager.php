@@ -81,51 +81,55 @@ class OrderManager
 
     public static function getStockUpdateOnOrderStatusChange($order, $status): void
     {
-        if ($status == 'returned' || $status == 'failed' || $status == 'canceled') {
-            foreach ($order->details as $detail) {
-                if ($detail['is_stock_decreased'] == 1) {
-                    $product = Product::find($detail['product_id']);
-                    $type = $detail['variant'];
-                    $variationData = [];
-                    foreach (json_decode($product['variation'], true) as $var) {
-                        if ($type == $var['type']) {
-                            $var['qty'] += $detail['qty'];
-                        }
-                        $variationData[] = $var;
-                    }
-                    Product::where(['id' => $product['id']])->update([
-                        'variation' => json_encode($variationData),
-                        'current_stock' => $product['current_stock'] + $detail['qty'],
-                    ]);
-                    OrderDetail::where(['id' => $detail['id']])->update([
-                        'is_stock_decreased' => 0,
-                        'delivery_status' => $status
-                    ]);
-                }
-            }
-        } else {
-            foreach ($order->details as $detail) {
-                if ($detail['is_stock_decreased'] == 0) {
-                    $product = Product::find($detail['product_id']);
+        // Restore stock when an order is returned/failed/cancelled; take it back when it moves out of
+        // those states. Each detail is handled in its own transaction where the `is_stock_decreased`
+        // flag is flipped by a CONDITIONAL update that doubles as the idempotency guard — only the caller
+        // that actually flips the flag adjusts stock, so a double status-change (double-click, retry,
+        // concurrent admin/API) can never restock or re-deduct twice. The product row is locked and the
+        // amount changed with atomic increment/decrement, so the old unlocked absolute write
+        // (current_stock +/- qty from a stale read) can no longer lose a concurrent update or go negative.
+        $restoring = in_array($status, ['returned', 'failed', 'canceled'], true);
 
-                    $type = $detail['variant'];
-                    $variationData = [];
-                    foreach (json_decode($product['variation'], true) as $var) {
-                        if ($type == $var['type']) {
-                            $var['qty'] -= $detail['qty'];
-                        }
-                        $variationData[] = $var;
-                    }
-                    Product::where(['id' => $product['id']])->update([
-                        'variation' => json_encode($variationData),
-                        'current_stock' => $product['current_stock'] - $detail['qty'],
-                    ]);
-                    OrderDetail::where(['id' => $detail['id']])->update([
-                        'is_stock_decreased' => 1,
-                        'delivery_status' => $status
-                    ]);
+        foreach ($order->details as $detail) {
+            DB::transaction(function () use ($detail, $status, $restoring) {
+                $fromFlag = $restoring ? 1 : 0;
+                $toFlag = $restoring ? 0 : 1;
+
+                $flipped = OrderDetail::where(['id' => $detail['id'], 'is_stock_decreased' => $fromFlag])
+                    ->update(['is_stock_decreased' => $toFlag, 'delivery_status' => $status]);
+
+                if (!$flipped) {
+                    return;   // already in the target state — another run handled it; do not touch stock
                 }
-            }
+
+                $product = Product::where('id', $detail['product_id'])->lockForUpdate()->first();
+                if (!$product) {
+                    return;
+                }
+
+                // Adjust the specific variant's quantity under the same lock.
+                $type = $detail['variant'];
+                $variationData = [];
+                foreach (json_decode($product['variation'], true) ?? [] as $var) {
+                    if ($type == $var['type']) {
+                        $var['qty'] = $restoring ? ($var['qty'] + $detail['qty']) : ($var['qty'] - $detail['qty']);
+                    }
+                    $variationData[] = $var;
+                }
+                Product::where(['id' => $product['id']])->update(['variation' => json_encode($variationData)]);
+
+                if ($restoring) {
+                    Product::where(['id' => $product['id']])->increment('current_stock', $detail['qty']);
+                } else {
+                    // Floor at zero on re-deduct so an out-of-band stock change can't drive it negative.
+                    $taken = Product::where('id', $product['id'])
+                        ->where('current_stock', '>=', $detail['qty'])
+                        ->decrement('current_stock', $detail['qty']);
+                    if ($taken === 0) {
+                        Product::where(['id' => $product['id']])->update(['current_stock' => 0]);
+                    }
+                }
+            });
         }
     }
 
