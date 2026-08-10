@@ -24,7 +24,7 @@
         @if(!empty($__t['base_font_size']))
         --theme-base-font-size: {{ (int) $__t['base_font_size'] }}px;
         @endif
-        @if(!empty($__l['border_radius']) || $__l['border_radius'] === 0)
+        @if(isset($__l['border_radius']) && $__l['border_radius'] !== '')
         --theme-border-radius: {{ (int) $__l['border_radius'] }}px;
         @endif
     }

@@ -180,7 +180,9 @@ class POSOrderController extends BaseController
                             $variantStore = [];
                             foreach (json_decode($product['variation'], true) as $variant) {
                                 if ($type == $variant['type']) {
-                                    $variant['qty'] -= $item['quantity'];
+                                    // Floor at zero: a single variant can be short even when the product
+                                    // total passes, so this must not persist a negative variant qty.
+                                    $variant['qty'] = max(0, $variant['qty'] - $item['quantity']);
                                 }
                                 $variantStore[] = $variant;
                             }

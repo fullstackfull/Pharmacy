@@ -127,7 +127,9 @@ class POSService
         $variationData = [];
         foreach ($variation as $variant) {
             if ($type == $variant['type']) {
-                $variant['qty'] -= $quantity;
+                // Floor at zero: another variant's stock can mask a single-variant shortfall past the
+                // product-total check, so this subtraction could otherwise persist a negative variant qty.
+                $variant['qty'] = max(0, $variant['qty'] - $quantity);
             }
             $variationData[] = $variant;
         }
