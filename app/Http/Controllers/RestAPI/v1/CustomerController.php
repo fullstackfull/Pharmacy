@@ -125,6 +125,13 @@ class CustomerController extends Controller
 
     public function reply_support_ticket(Request $request, $ticket_id)
     {
+        // Ownership: without this any authenticated customer could reopen and reply on another
+        // customer's ticket by passing its id.
+        $ownTicket = SupportTicket::where('id', $ticket_id)->where('customer_id', $request->user()->id)->first();
+        if (!$ownTicket) {
+            return response()->json(['message' => translate('ticket_not_found')], 404);
+        }
+
         DB::table('support_tickets')->where(['id' => $ticket_id])->update([
             'status' => 'open',
             'updated_at' => now(),
@@ -157,8 +164,12 @@ class CustomerController extends Controller
 
     public function get_support_ticket_conv($ticket_id)
     {
+        // Ownership: the conversation is private (PII / support messages). Only the ticket's owner may read it.
+        $support_ticket = SupportTicket::where('id', $ticket_id)->where('customer_id', auth('api')->id())->first();
+        if (!$support_ticket) {
+            return response()->json(['message' => translate('ticket_not_found')], 404);
+        }
         $conversations = SupportTicketConv::where('support_ticket_id', $ticket_id)->get();
-        $support_ticket = SupportTicket::find($ticket_id);
 
         $conversations = $conversations->toArray();
 
@@ -181,7 +192,8 @@ class CustomerController extends Controller
 
     public function support_ticket_close($id)
     {
-        $ticket = SupportTicket::find($id);
+        // Ownership: scope to the caller's own ticket.
+        $ticket = SupportTicket::where('id', $id)->where('customer_id', auth('api')->id())->first();
         if ($ticket) {
             $ticket->status = 'close';
             $ticket->updated_at = now();

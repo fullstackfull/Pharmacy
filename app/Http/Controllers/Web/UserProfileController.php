@@ -644,6 +644,14 @@ class UserProfileController extends Controller
 
     public function comment_submit(Request $request, $id)
     {
+        // Ownership: without this any logged-in customer could reopen and inject a message into another
+        // customer's ticket thread by passing its id.
+        $ticket = SupportTicket::where('id', $id)->where('customer_id', auth('customer')->id())->first();
+        if (!$ticket) {
+            Toastr::warning(translate('Invalid_ticket'));
+            return back();
+        }
+
         if ($request->file('image') == null && empty($request['comment'])) {
             Toastr::error(translate('type_something') . '!');
             return back();
@@ -682,7 +690,8 @@ class UserProfileController extends Controller
 
     public function support_ticket_close($id)
     {
-        DB::table('support_tickets')->where(['id' => $id])->update([
+        // Ownership: scope the close to the caller's own ticket.
+        DB::table('support_tickets')->where(['id' => $id])->where('customer_id', auth('customer')->id())->update([
             'status' => 'close',
             'updated_at' => now(),
         ]);
@@ -695,7 +704,13 @@ class UserProfileController extends Controller
     {
 
         if (auth('customer')->check()) {
-            $support = SupportTicket::find($request->id);
+            // Ownership: without the customer_id scope any logged-in customer could delete another
+            // customer's ticket (and its conversations + attachment files) by id.
+            $support = SupportTicket::where('id', $request->id)->where('customer_id', auth('customer')->id())->first();
+            if (!$support) {
+                Toastr::warning(translate('Invalid_ticket'));
+                return back();
+            }
 
             if ($support->attachment && !is_array($support->attachment) && count(json_decode($support->attachment)) > 0) {
                 foreach (json_decode($support->attachment, true) as $image) {

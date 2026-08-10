@@ -230,7 +230,12 @@ class OrderController extends Controller
 
         $deliveryManCharge = $request->deliveryman_charge;
 
-        $order = Order::with('deliveryMan')->find($request->order_id);
+        // Scope to the authenticated seller: this writes deliveryman_charge/expected_delivery_date, so an
+        // unscoped find let one seller rewrite another seller's order.
+        $order = Order::with('deliveryMan')->where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request->order_id);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('order_not_found')], 404);
+        }
         $db_expected_date = $order->expected_delivery_date;
 
         $order->deliveryman_charge = $deliveryManCharge;
@@ -263,7 +268,8 @@ class OrderController extends Controller
     public function digital_file_upload_after_sell(DigitalProductFileUploadAfterSell $request): JsonResponse
     {
         $seller = $request->seller;
-        $order_details = OrderDetail::find($request->order_id);
+        // Scope the order line to the seller so one seller cannot overwrite another's delivered digital file.
+        $order_details = OrderDetail::where('seller_id', $seller['id'])->find($request->order_id);
         if ($order_details) {
             $order_details->digital_file_after_sell = ImageManager::update('product/digital-product/', $order_details->digital_file_after_sell, $request->digital_file_after_sell->getClientOriginalExtension(), $request->file('digital_file_after_sell'), 'file');
             $order_details->save();
@@ -276,7 +282,13 @@ class OrderController extends Controller
     public function order_detail_status(Request $request): JsonResponse
     {
         $seller = $request->seller;
-        $order = Order::with(['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory'])->find($request['id']);
+        // Scope to the seller: this mutates order/payment status with wallet/stock/settlement side-effects,
+        // so an unscoped find let one seller force-deliver or cancel any vendor's order.
+        $order = Order::with(['customer', 'seller.shop', 'deliveryMan', 'latestEditHistory'])
+            ->where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request['id']);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('order_not_found')], 404);
+        }
         if (!$order->is_guest && empty($order->customer)) {
             return response()->json(['success' => 0, 'message' => translate("Customer_account_has_been_deleted") . ' ' . translate("you_cant_update_status")], 202);
         }
@@ -397,7 +409,13 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)]);
         }
 
-        $order = Order::find($request->order_id);
+        // Scope to the authenticated seller: an unscoped find let one seller hijack/wipe the delivery
+        // assignment on any vendor's order.
+        $seller = $request->seller;
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request->order_id);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('order_not_found')], 404);
+        }
         $order->delivery_type = 'third_party_delivery';
         $order->delivery_service_name = $request->delivery_service_name;
         $order->third_party_delivery_tracking_id = $request->third_party_delivery_tracking_id;
@@ -422,7 +440,9 @@ class OrderController extends Controller
         if ($request->payment_status != 'paid') {
             return response()->json(['success' => 0, 'message' => translate('When payment status paid then you can`t change payment status paid to unpaid') . '.'], 200);
         }
-        $order = Order::find($request['order_id']);
+        // Scope to the authenticated seller: an unscoped find let one seller mark any vendor's order paid.
+        $seller = $request->seller;
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request['order_id']);
         if (isset($order)) {
             if ($order->is_guest == '0' && empty($order->customer)) {
                 return response()->json(['success' => 0, 'message' => translate("Customer account has been deleted. you can't update status!")], 202);
