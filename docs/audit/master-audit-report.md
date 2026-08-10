@@ -7,7 +7,7 @@ probing the local MariaDB `pharmacy_local_test` (read-only), every finding then 
 code before any fix. This report supersedes the earlier stale version of this file (which predated all
 Phase 2/3 work).
 
-Test baseline at report time: **662 passed, 1 skipped** (1534 assertions). No production database was
+Test baseline at report time: **663 passed, 1 skipped** (1534 assertions). No production database was
 touched. Cross-phase integrity: **0** original (pre-2026) migrations modified, **0** views deleted, **0**
 functions removed by this remediation.
 
@@ -106,6 +106,8 @@ and documents `LOG_LEVEL=warning`; `config/logging.php` now reads `env('LOG_LEVE
   the shared `is_stock_decreased` marker: a full return atomically claims the restore (and skips if already
   restored); a partial return leaves the marker untouched so it can neither double-count nor block the
   legacy restore. +3 tests.
+- **Settlement separation-of-duties (opt-in)** — an approver≠payer maker-checker on settlements, off by
+  default (single-admin shops unaffected); records `paid_by` and refuses when the paying admin approved it.
 
 ## 6. Architecture
 
@@ -156,7 +158,7 @@ catalogue endpoints, and that clients treat the new 401/403/429 (rate-limited au
 
 ## 12. Test results
 
-**662 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
+**663 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
 tax-inclusive refund, +1 restock idempotency, +2 reconciliation earnings-maturation. Critical domains all have dedicated coverage (commission, settlement, payout,
 ledger, refund, stock-guard, warehouse, PO, payment-routing, shipping, B2B, permissions, staff-access).
 
@@ -168,10 +170,11 @@ atomicity, currency label, KYC at rest, the never-maturing-earnings reconciliati
 double-restock coordination between the RMA and legacy paths. Three items remain — each genuinely needs
 input, a spec, or a design decision rather than a quick fix:)*
 
-1. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
-   distinct approver-vs-payer control (today all admin marketplace finance actions share `module:reports`).
-   **A policy decision** — how finance duties should be split among admin roles — so it awaits the
-   maintainer's steer rather than a unilateral split.
+1. **Dedicated finance module permission** — the approver≠payer control is now built (opt-in maker-checker
+   on settlements). What remains is gating admin marketplace finance *routes* on a dedicated module
+   permission instead of the shared `module:reports`. Deliberately not rushed: adding a new module without
+   also adding it to the employee-role assignment UI would lock out employees who currently reach finance
+   via `reports` — a role-system change with a backward-compat/onboarding step, not a one-liner.
 2. **Category `required_attributes` enforcement** — `missingRequiredAttributes()` exists, but the feature
    never defined how a "required attribute" key maps to a product's attribute data; wiring a validation
    needs that contract pinned down first, or it would either block every save or silently never match.
