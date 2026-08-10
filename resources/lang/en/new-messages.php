@@ -2957,4 +2957,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"shop_owner_login" => "Shop owner login",
 	"sign_in_with_the_credentials_your_shop_owner_gave_you" => "Sign in with the credentials your shop owner gave you",
 	"you_do_not_have_permission_for_this_action" => "You do not have permission for this action",
+	"order_dispatched_to_delivery_syria_successfully" => "Order dispatched to delivery syria successfully",
+	"this_order_has_already_been_dispatched_to_delivery_syria" => "This order has already been dispatched to delivery syria",
+	"parcel_created_but_courier_wallet_balance_is_insufficient_payment_pending" => "Parcel created but courier wallet balance is insufficient payment pending",
+	"please_provide_the_delivery_syria_secret_before_enabling" => "Please provide the delivery syria secret before enabling",
 ];

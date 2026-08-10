@@ -250,6 +250,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     Route::group(['prefix' => 'orders', 'as' => 'orders.', 'middleware' => ['module:orders']], function () {
+        Route::controller(\App\Http\Controllers\Admin\Order\DeliverySyriaDispatchController::class)->group(function () {
+            Route::post('delivery-syria/dispatch', 'dispatchOrder')->name('delivery-syria.dispatch');
+        });
         Route::controller(OrderController::class)->group(function () {
             Route::get('list/{status}', 'index')->name('list');
             Route::get('export-excel/{status}', 'exportList')->name('export-excel');
@@ -459,6 +462,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('calculate', 'calculate')->name('calculate');
+                Route::post('toggle-maker-checker', 'toggleMakerChecker')->name('toggle-maker-checker');
                 Route::get('{id}', 'show')->whereNumber('id')->name('show');
                 Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
                 Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
@@ -508,6 +512,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
             Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerVerificationController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
+                Route::get('document/{id}', 'document')->whereNumber('id')->name('document');
                 Route::post('approve', 'approve')->name('approve');
                 Route::post('reject', 'reject')->name('reject');
                 Route::post('settings', 'updateSettings')->name('settings');
@@ -618,6 +623,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
                 Route::post('toggle', 'toggle')->name('toggle');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+
+        // Commission rules (Stage B): the writer for the commission engine's rule table — define a rate
+        // by scope (global/category/vendor/product) and priority. Non-breaking: no active rule leaves the
+        // engine on its legacy flat percentage.
+        Route::group(['prefix' => 'commission-rules', 'as' => 'commission-rules.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CommissionRuleController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/toggle', 'toggle')->whereNumber('id')->name('toggle');
                 Route::put('{id}', 'update')->whereNumber('id')->name('update');
                 Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
             });
@@ -1137,6 +1155,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::controller(GoogleMapAPIController::class)->group(function () {
                 Route::get('map-api', 'index')->name('map-api');
                 Route::post('map-api', 'update');
+            });
+
+            Route::controller(\App\Http\Controllers\Admin\ThirdParty\DeliverySyriaController::class)->group(function () {
+                Route::get('delivery-syria', 'index')->name('delivery-syria');
+                Route::post('delivery-syria', 'update');
+                Route::post('delivery-syria/verify-sync', 'verifySync')->name('delivery-syria.verify-sync');
             });
 
             Route::group(['prefix' => 'withdraw-method', 'as' => 'withdraw-method.'], function () {

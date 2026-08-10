@@ -200,6 +200,20 @@ class POSOrderController extends BaseController
                             if ($taken === 0) {
                                 \App\Models\Product::where('id', $product['id'])->update(['current_stock' => 0]);
                             }
+                            // Log the POS sale into the stock-movement history (non-throwing).
+                            try {
+                                app(\App\Services\Marketplace\InventoryService::class)->record(
+                                    productId: $product['id'],
+                                    type: \App\Models\StockMovement::TYPE_SALE,
+                                    qtyChange: -(int) $item['quantity'],
+                                    balanceAfter: (int) (\App\Models\Product::where('id', $product['id'])->value('current_stock') ?? 0),
+                                    referenceType: 'pos_order',
+                                    referenceId: $orderId,
+                                    sellerId: $product['seller_id'] ?? null,
+                                );
+                            } catch (\Throwable $exception) {
+                                \Illuminate\Support\Facades\Log::warning('POS sale stock-movement log failed for product ' . $product['id'] . ': ' . $exception->getMessage());
+                            }
                         }
                         $this->orderDetailRepo->add(data: $orderDetail);
 

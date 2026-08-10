@@ -195,7 +195,14 @@ class VendorLedger
     private function currentCurrency(): ?string
     {
         try {
-            return session('currency_code');
+            // The store's base/default currency, NOT the viewer's display currency. Ledger amounts are
+            // stored in base currency (nothing is converted at add-to-cart), so stamping the entry with
+            // session('currency_code') mislabelled every entry for a customer browsing in another
+            // currency — and SettlementEngine/payout take their currency from the entry, so a payout
+            // could carry the wrong code. The amount was always correct; only the label was wrong.
+            $id = getWebConfig(name: 'system_default_currency');
+
+            return $id ? \App\Models\Currency::find($id)?->code : null;
         } catch (\Throwable) {
             return null;
         }

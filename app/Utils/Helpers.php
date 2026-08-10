@@ -269,7 +269,7 @@ class Helpers
     {
         return [
             'ssl_commerz', 'paypal', 'stripe', 'razor_pay', 'paystack', 'senang_pay', 'paymob_accept',
-            'flutterwave', 'paytm', 'paytabs', 'liqpay', 'mercadopago', 'bkash'
+            'flutterwave', 'paytm', 'paytabs', 'liqpay', 'mercadopago', 'bkash', 'paymera'
         ];
     }
 

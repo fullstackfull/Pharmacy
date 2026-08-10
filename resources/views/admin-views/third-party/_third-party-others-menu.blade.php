@@ -36,6 +36,13 @@
         </li>
 
         <li class="nav-item">
+            <a class="nav-link {{ Request::is('admin/third-party/delivery-syria') ?'active':'' }}"
+               href="{{ route('admin.third-party.delivery-syria') }}">
+                {{ translate('delivery_syria') }}
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a class="nav-link {{ Request::is('admin/third-party/storage-connection-settings/index') ?'active':'' }}"
                href="{{ route('admin.third-party.storage-connection-settings.index') }}">
                 {{ translate('storage_Connection') }}

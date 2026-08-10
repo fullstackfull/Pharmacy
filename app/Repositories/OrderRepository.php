@@ -547,56 +547,54 @@ class OrderRepository implements OrderRepositoryInterface
     public function updateStockOnOrderStatusChange(string|int $orderId, string $status): bool
     {
         $order = $this->order->with('details.product')->find($orderId);
-        if ($status == 'returned' || $status == 'failed' || $status == 'canceled') {
-            foreach ($order['details'] as $detail) {
-                if ($detail['is_stock_decreased'] == 1) {
-                    $product = $detail?->product;
-                    $type = $detail['variant'];
-                    $variations = [];
-                    if ($product && $product['variation']) {
-                        foreach (json_decode($product['variation'], true) as $variation) {
-                            if ($type == $variation['type']) {
-                                $variation['qty'] += $detail['qty'];
-                            }
-                            $variations[] = $variation;
-                        }
+        if (!$order) {
+            return false;
+        }
+
+        // See OrderManager::getStockUpdateOnOrderStatusChange — same discipline: per-detail transaction,
+        // a conditional is_stock_decreased flip as the idempotency guard (so a double status-change can
+        // never restock/re-deduct twice), the product row locked, and atomic increment/decrement instead
+        // of an unlocked absolute write that could lose a concurrent update or go negative.
+        $restoring = in_array($status, ['returned', 'failed', 'canceled'], true);
+
+        foreach ($order['details'] as $detail) {
+            DB::transaction(function () use ($detail, $status, $restoring) {
+                $fromFlag = $restoring ? 1 : 0;
+                $toFlag = $restoring ? 0 : 1;
+
+                $flipped = $this->orderDetail->where(['id' => $detail['id'], 'is_stock_decreased' => $fromFlag])
+                    ->update(['is_stock_decreased' => $toFlag, 'delivery_status' => $status]);
+
+                if (!$flipped) {
+                    return;
+                }
+
+                $product = $this->product->where('id', $detail['product_id'])->lockForUpdate()->first();
+                if (!$product) {
+                    return;
+                }
+
+                $type = $detail['variant'];
+                $variations = [];
+                foreach (json_decode($product['variation'], true) ?? [] as $variation) {
+                    if ($type == $variation['type']) {
+                        $variation['qty'] = $restoring ? ($variation['qty'] + $detail['qty']) : ($variation['qty'] - $detail['qty']);
                     }
-                    if ($product) {
-                        $this->product->where(['id' => $product['id']])->update([
-                            'variation' => json_encode($variations),
-                            'current_stock' => $product['current_stock'] + $detail['qty'],
-                        ]);
-                        $this->orderDetail->where(['id' => $detail['id']])->update([
-                            'is_stock_decreased' => 0,
-                            'delivery_status' => $status
-                        ]);
+                    $variations[] = $variation;
+                }
+                $this->product->where(['id' => $product['id']])->update(['variation' => json_encode($variations)]);
+
+                if ($restoring) {
+                    $this->product->where(['id' => $product['id']])->increment('current_stock', $detail['qty']);
+                } else {
+                    $taken = $this->product->where('id', $product['id'])
+                        ->where('current_stock', '>=', $detail['qty'])
+                        ->decrement('current_stock', $detail['qty']);
+                    if ($taken === 0) {
+                        $this->product->where(['id' => $product['id']])->update(['current_stock' => 0]);
                     }
                 }
-            }
-        } else {
-            foreach ($order['details'] as $detail) {
-                if ($detail['is_stock_decreased'] == 0) {
-                    $product = $detail?->product;
-                    if ($product) {
-                        $type = $detail['variant'];
-                        $variations = [];
-                        foreach (json_decode($product['variation'], true) as $variation) {
-                            if ($type == $variation['type']) {
-                                $variation['qty'] -= $detail['qty'];
-                            }
-                            $variations[] = $variation;
-                        }
-                        $this->product->where(['id' => $product['id']])->update([
-                            'variation' => json_encode($variations),
-                            'current_stock' => $product['current_stock'] - $detail['qty'],
-                        ]);
-                    }
-                    $this->orderDetail->where(['id' => $detail['id']])->update([
-                        'is_stock_decreased' => 1,
-                        'delivery_status' => $status
-                    ]);
-                }
-            }
+            });
         }
 
         return true;

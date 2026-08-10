@@ -21,6 +21,10 @@ trait PaymentGatewayTrait
             "bkash" => [
                 "BDT" => "Bangladeshi Taka"
             ],
+            "paymera" => [
+                "SYP" => "Syrian Pound",
+                "USD" => "United States Dollar"
+            ],
             "cashfree" => [
                 "INR" => "Indian Rupee"
             ],

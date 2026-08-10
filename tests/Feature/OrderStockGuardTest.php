@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Exceptions\InsufficientStockException;
+use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Utils\OrderManager;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -35,6 +37,7 @@ class OrderStockGuardTest extends TestCase
             $t->string('name')->nullable();
             $t->string('product_type')->default('physical');
             $t->integer('current_stock')->default(0);
+            $t->text('variation')->nullable();
             $t->timestamps();
         });
         foreach (['translations' => function (Blueprint $t) {
@@ -140,5 +143,46 @@ class OrderStockGuardTest extends TestCase
         Product::where(['id' => $product->id])->decrement('current_stock', 3);
 
         $this->assertSame(-2, Product::find($product->id)->current_stock, 'visible as negative stock, by design');
+    }
+
+    /**
+     * The restock idempotency guard: a returned order restocks exactly once even if the status change
+     * runs twice (double-click, retry, concurrent admin/API). The conditional is_stock_decreased flip is
+     * what makes the second run a no-op.
+     */
+    public function test_a_returned_order_restocks_exactly_once_even_if_run_twice(): void
+    {
+        Schema::dropIfExists('order_details');
+        Schema::create('order_details', function (Blueprint $t) {
+            $t->id();
+            $t->unsignedBigInteger('product_id');
+            $t->integer('qty')->default(0);
+            $t->string('variant')->nullable();
+            $t->boolean('is_stock_decreased')->default(1);
+            $t->string('delivery_status')->nullable();
+            $t->timestamps();
+        });
+        // OrderDetail auto-eager-loads its polymorphic storage relation (6Valley convention).
+        Schema::dropIfExists('storages');
+        Schema::create('storages', function (Blueprint $t) {
+            $t->id();
+            $t->unsignedBigInteger('data_id')->nullable();
+            $t->string('data_type')->nullable();
+            $t->string('key')->nullable();
+            $t->text('value')->nullable();
+            $t->timestamps();
+        });
+
+        $product = Product::create(['name' => 'Serum', 'product_type' => 'physical', 'current_stock' => 10, 'variation' => '[]']);
+        $detail = OrderDetail::create(['product_id' => $product->id, 'qty' => 3, 'variant' => null, 'is_stock_decreased' => 1]);
+
+        // The same status change fires twice.
+        OrderManager::getStockUpdateOnOrderStatusChange((object) ['details' => OrderDetail::all()], 'returned');
+        OrderManager::getStockUpdateOnOrderStatusChange((object) ['details' => OrderDetail::all()], 'returned');
+
+        $this->assertSame(13, (int) $product->fresh()->current_stock, 'restocked once (10 + 3), not twice');
+        $this->assertSame(0, (int) $detail->fresh()->is_stock_decreased);
+
+        Schema::dropIfExists('order_details');
     }
 }

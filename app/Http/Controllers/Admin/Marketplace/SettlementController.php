@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Marketplace;
 
 use App\Http\Controllers\BaseController;
+use App\Models\BusinessSetting;
 use App\Models\VendorLedgerEntry;
 use App\Models\VendorSettlement;
 use App\Services\Marketplace\SettlementEngine;
@@ -49,7 +50,23 @@ class SettlementController extends BaseController
             'status' => $status,
             'counts' => $this->statusCounts(),
             'waiting' => $this->waitingToSettle(),
+            'makerChecker' => (bool) getWebConfig(name: 'settlement_maker_checker'),
         ]);
+    }
+
+    /**
+     * Switch the approver≠payer separation-of-duties control on or off. Off by default so a
+     * single-admin shop can approve and pay; on, the two actions must be performed by different admins.
+     */
+    public function toggleMakerChecker(Request $request): RedirectResponse
+    {
+        $enabled = $request->boolean('status');
+        BusinessSetting::updateOrCreate(['type' => 'settlement_maker_checker'], ['value' => $enabled ? '1' : '0']);
+        clearWebConfigCacheKeys();
+
+        ToastMagic::success($enabled ? translate('separation_of_duties_enabled') : translate('separation_of_duties_disabled'));
+
+        return back();
     }
 
     public function show(int $id): View|RedirectResponse
@@ -110,8 +127,20 @@ class SettlementController extends BaseController
     public function markPaid(Request $request, int $id): RedirectResponse
     {
         $settlement = VendorSettlement::findOrFail($id);
+        $adminId = auth('admin')->id();
 
-        if (!$this->engine->markPaid($settlement, payoutReference: $request->get('payout_reference'))) {
+        // Separation of duties (opt-in via the settlement_maker_checker setting, off by default so a
+        // single-admin shop is unaffected): the admin who approved a settlement may not also mark it
+        // paid — the maker and the checker must be different people.
+        if (getWebConfig(name: 'settlement_maker_checker')
+            && $settlement->approved_by !== null
+            && (int) $settlement->approved_by === (int) $adminId) {
+            ToastMagic::error(translate('the_admin_who_approved_a_settlement_cannot_also_mark_it_paid'));
+
+            return back();
+        }
+
+        if (!$this->engine->markPaid($settlement, payoutReference: $request->get('payout_reference'), paidBy: $adminId)) {
             ToastMagic::error(translate('only_an_approved_settlement_can_be_marked_paid'));
 
             return back();

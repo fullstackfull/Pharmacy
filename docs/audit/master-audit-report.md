@@ -7,7 +7,7 @@ probing the local MariaDB `pharmacy_local_test` (read-only), every finding then 
 code before any fix. This report supersedes the earlier stale version of this file (which predated all
 Phase 2/3 work).
 
-Test baseline at report time: **656 passed, 1 skipped** (1534 assertions). No production database was
+Test baseline at report time: **663 passed, 1 skipped** (1534 assertions). No production database was
 touched. Cross-phase integrity: **0** original (pre-2026) migrations modified, **0** views deleted, **0**
 functions removed by this remediation.
 
@@ -80,6 +80,35 @@ product row; POS oversell (Admin+Vendor) replaced with an atomic conditional dec
 `bootstrap/app.php` (Laravel 12), verified via `schedule:list`. `.env.example` defaults `APP_ENV=production`
 and documents `LOG_LEVEL=warning`; `config/logging.php` now reads `env('LOG_LEVEL','debug')`.
 
+**Follow-up fixes (Wave E — §13 items completed after the first report):**
+- **Commission-rule admin CRUD** — the missing writer for `commission_rules`; the engine already read
+  them, so only the legacy percentage ever fired. Now an admin can define rules by scope/priority with a
+  resolution preview. Verified live: a global 8% rule charges 80 on 1000; a product rule beats it at 50.
+- **Cancel/return restock atomicity** — both `getStockUpdateOnOrderStatusChange` (OrderManager) and its
+  duplicate `updateStockOnOrderStatusChange` (OrderRepository) now use a per-detail transaction with a
+  conditional `is_stock_decreased` flip as the idempotency guard + product lock + atomic inc/dec, so a
+  double status-change can't restock twice. +1 test proving single restock on a doubled call.
+- **Currency label** — ledger entries and commission snapshots are stamped from the store base currency,
+  not the viewer's display currency (verified: display USD → entry SYP).
+- **KYC at rest** — documents now upload to the private `local` disk (not web-accessible) and are served
+  only through admin/seller ownership-checked routes (verified: not reachable at the public web path).
+- **Order-edit stock atomicity** — `OrderEditManager::adjustProductStock` now locks the product row and
+  changes stock with atomic increment/decrement (floored at zero), like the cancel-restock/POS paths.
+- **Reconciliation earnings-maturation check** — a new reconciliation check flags any pending
+  `order_earning` with a null `available_at` (stuck money), so a regression of the maturation defect is
+  caught the next run. +2 tests.
+- **Category `requires_moderation` gate** — a seller product in a moderation-governed category is now set
+  to pending approval even when the global approval flag is off, making that governance field functional.
+- **Sale movement log** — checkout and both POS paths now emit a `TYPE_SALE` `StockMovement` after
+  decrementing (physical only, post-decrement balance, non-throwing), completing the movement ledger so it
+  can reconcile against `current_stock`.
+- **Double-restock coordination** — RMA `receive()` coordinates with the legacy order-status restock via
+  the shared `is_stock_decreased` marker: a full return atomically claims the restore (and skips if already
+  restored); a partial return leaves the marker untouched so it can neither double-count nor block the
+  legacy restore. +3 tests.
+- **Settlement separation-of-duties (opt-in)** — an approver≠payer maker-checker on settlements, off by
+  default (single-admin shops unaffected); records `paid_by` and refuses when the paying admin approved it.
+
 ## 6. Architecture
 
 Phase-3 services are small and single-responsibility (200–290 lines each) — **no god-classes introduced**.
@@ -129,31 +158,28 @@ catalogue endpoints, and that clients treat the new 401/403/429 (rate-limited au
 
 ## 12. Test results
 
-**656 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
-tax-inclusive refund. Critical domains all have dedicated coverage (commission, settlement, payout,
+**663 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
+tax-inclusive refund, +1 restock idempotency, +2 reconciliation earnings-maturation. Critical domains all have dedicated coverage (commission, settlement, payout,
 ledger, refund, stock-guard, warehouse, PO, payment-routing, shipping, B2B, permissions, staff-access).
 
 ## 13. Remaining technical debt (fixable follow-ups, prioritized)
 
-1. **Commission-rule admin CRUD** — add a controller/route/view writing `commission_rules`; the engine
-   already reads them (today only the legacy % fires). *No data risk; feature unusable until added.*
-2. **Cancel/return restock atomicity (original 6Valley)** — `getStockUpdateOnOrderStatusChange` and
-   `OrderEditManager::adjustProductStock` still use unlocked read-modify-write; apply the same
-   lock + atomic conditional decrement used at checkout/POS.
-3. **Double-restock coordination** — a returned line processed through *both* the legacy order-status flow
-   and the RMA `receive()` restocks twice; `return_shipments.order_details_id` exists, so coordinate via
-   the shared `is_stock_decreased` marker (skip/flag in `receive()`). Left undone deliberately: the
-   interaction is subtle and mis-fixing it risks *not* restoring stock — needs a dedicated test harness.
-4. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
-   distinct approver-vs-payer control.
-5. **KYC at rest** — private disk + an ownership-checked serving route.
-6. **Category-governance consumers** — `requiresModeration()` at product save, `missingRequiredAttributes()`
-   at save, `taxClass()` in tax calc (return-window is now consumed via the maturation fix).
-7. **Currency label** — stamp ledger/snapshot currency from the store base, not `session('currency_code')`
-   (amounts are already base-currency and immutable; this is a labelling defect on multi-currency stores).
-8. **Reconciliation coverage** — add checks for never-maturing earnings and refund-net vs snapshot share.
-9. **Sale movement log** — emit a `TYPE_SALE` `StockMovement` from checkout/POS so the movement ledger can
-   reconcile against `current_stock`.
+*(DONE across Waves E–G: commission-rule CRUD, cancel/return restock atomicity, order-edit stock
+atomicity, currency label, KYC at rest, the never-maturing-earnings reconciliation check, the category
+`requires_moderation` product-approval gate, the sale movement log (checkout + POS), and the
+double-restock coordination between the RMA and legacy paths. Three items remain — each genuinely needs
+input, a spec, or a design decision rather than a quick fix:)*
+
+1. **Dedicated finance module permission** — the approver≠payer control is now built (opt-in maker-checker
+   on settlements). What remains is gating admin marketplace finance *routes* on a dedicated module
+   permission instead of the shared `module:reports`. Deliberately not rushed: adding a new module without
+   also adding it to the employee-role assignment UI would lock out employees who currently reach finance
+   via `reports` — a role-system change with a backward-compat/onboarding step, not a one-liner.
+2. **Category `required_attributes` enforcement** — `missingRequiredAttributes()` exists, but the feature
+   never defined how a "required attribute" key maps to a product's attribute data; wiring a validation
+   needs that contract pinned down first, or it would either block every save or silently never match.
+3. **Category `tax_class` in tax calc** — mapping a category tax class into the TaxModule's rate resolution
+   is a non-trivial integration on a shared, money-affecting path; warrants its own scoped change + tests.
 
 ## 14. Remaining known limitations (by design / accepted)
 

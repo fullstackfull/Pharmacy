@@ -1152,6 +1152,14 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        @if(getWebConfig(name: 'delivery_syria')['status'] ?? false)
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                                                        data-bs-toggle="modal" data-bs-target="#delivery_syria_dispatch_modal">
+                                                    {{ translate('dispatch_to_delivery_syria') }}
+                                                </button>
+                                            </div>
+                                        @endif
                                     </li>
                                 @endif
                             </ul>
@@ -2013,6 +2021,10 @@
             </div>
         </div>
     </div>
+
+    @if(getWebConfig(name: 'delivery_syria')['status'] ?? false)
+        @include('admin-views.order._delivery-syria-dispatch-modal')
+    @endif
 
     <div class="modal" id="third_party_delivery_service_modal" role="dialog" tabindex="-1">
         <div class="modal-dialog">

@@ -271,19 +271,31 @@ trait OrderEditManager
     {
         if (!$productId || !$qty) {return;}
 
-        $product = Product::find($productId);
-        if (!$product) {return;}
+        // Lock the product row and change stock atomically. The old unlocked read-modify-write
+        // (current_stock +/- qty from a stale Product::find) lost concurrent updates when two order
+        // edits touched the same product, and the decrement branch could drive stock negative.
+        \Illuminate\Support\Facades\DB::transaction(function () use ($productId, $variant, $qty, $mode) {
+            $product = Product::where('id', $productId)->lockForUpdate()->first();
+            if (!$product) {return;}
 
-        $variationData = [];
-        foreach (json_decode($product['variation'], true) as $var) {
-            if ($variant !== null && $variant === ($var['type'] ?? null)) {
-                $var['qty'] = $mode === 'increment' ? ($var['qty'] ?? 0) + $qty : ($var['qty'] ?? 0) - $qty;
+            $variationData = [];
+            foreach (json_decode($product['variation'], true) ?? [] as $var) {
+                if ($variant !== null && $variant === ($var['type'] ?? null)) {
+                    $var['qty'] = $mode === 'increment' ? ($var['qty'] ?? 0) + $qty : ($var['qty'] ?? 0) - $qty;
+                }
+                $variationData[] = $var;
             }
-            $variationData[] = $var;
-        }
-        Product::where('id', $product['id'])->update([
-            'variation' => json_encode($variationData), 'current_stock' => $mode === 'increment' ? $product['current_stock'] + $qty : $product['current_stock'] - $qty,
-        ]);
+            Product::where('id', $product['id'])->update(['variation' => json_encode($variationData)]);
+
+            if ($mode === 'increment') {
+                Product::where('id', $product['id'])->increment('current_stock', $qty);
+            } else {
+                $taken = Product::where('id', $product['id'])->where('current_stock', '>=', $qty)->decrement('current_stock', $qty);
+                if ($taken === 0) {
+                    Product::where('id', $product['id'])->update(['current_stock' => 0]);
+                }
+            }
+        });
     }
 
     public function generateEditOrderSummary(object|array $request = [], object|array $order = [], object|array $editedOrder = [], object|array $data = []): array

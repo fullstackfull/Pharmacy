@@ -392,6 +392,7 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                 Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
                     Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerVerificationController::class)->group(function () {
                         Route::get('/', 'index')->name('index');
+                        Route::get('document/{id}', 'document')->whereNumber('id')->name('document');
                         Route::post('/', 'store')->name('store');
                     });
                 });

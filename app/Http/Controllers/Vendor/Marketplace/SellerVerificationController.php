@@ -39,6 +39,20 @@ class SellerVerificationController extends BaseController
         ]);
     }
 
+    /**
+     * Stream one of the signed-in seller's own KYC documents from the private disk — scoped by
+     * seller_id, so a seller can never fetch another shop's document by id.
+     */
+    public function document(int $id)
+    {
+        $doc = \App\Models\SellerVerificationDocument::where(['id' => $id, 'seller_id' => auth('seller')->id()])->firstOrFail();
+        abort_if(!$doc->file_path, 404);
+        $path = 'seller/kyc/' . $doc->file_path;
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->response($path);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -52,7 +66,12 @@ class SellerVerificationController extends BaseController
         if ($request->hasFile('document_file')) {
             $clientExt = strtolower($request->file('document_file')->getClientOriginalExtension());
             $ext = in_array($clientExt, self::ALLOWED_EXTENSIONS, true) ? $clientExt : 'pdf';
-            $filePath = ImageManager::file_upload('seller/kyc/', $ext, $request->file('document_file'));
+            // KYC documents (identity / business licence) are stored on the PRIVATE 'local' disk with a
+            // high-entropy name, never the public default disk, and are served only through the
+            // ownership-checked document() route — so they can't be fetched by guessing a public URL.
+            $fileName = date('Y-m-d') . '-' . bin2hex(random_bytes(16)) . '.' . $ext;
+            \Illuminate\Support\Facades\Storage::disk('local')->put('seller/kyc/' . $fileName, file_get_contents($request->file('document_file')));
+            $filePath = $fileName;
         }
 
         $this->verification->submit(
