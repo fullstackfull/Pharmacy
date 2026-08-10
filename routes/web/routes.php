@@ -529,7 +529,11 @@ if (!$isGatewayPublished) {
         //PAYMERA
         Route::group(['prefix' => 'paymera', 'as' => 'paymera.'], function () {
             Route::any('pay', [PaymeraController::class, 'index'])->name('pay');
-            Route::any('callback', [PaymeraController::class, 'callback'])->name('callback');
+            // callbackURL == triggerURL. Paymera's server-to-server trigger carries no CSRF token, so a
+            // POST trigger would be 419'd and only the browser return would finalize — exempt it like the
+            // other gateway callbacks (sslcommerz/stripe/…).
+            Route::any('callback', [PaymeraController::class, 'callback'])->name('callback')
+                ->withoutMiddleware([VerifyCsrfToken::class]);
         });
     });
 }

@@ -211,4 +211,55 @@ class PaymeraPaymentFlowTest extends TestCase
         Http::assertNothingSent();   // no second status check
         $this->assertStringContainsString('flag=success', $response->getTargetUrl());
     }
+
+    // ---- the non-atomic finalize -> double credit fix (stabilization P1) ----
+
+    public function test_the_conditional_finalize_claims_the_row_exactly_once(): void
+    {
+        // The mechanism the fix relies on: callbackURL == triggerURL, so two entrants can both read
+        // is_paid=0. The atomic where('is_paid',0)->update() lets exactly one win.
+        $payment = $this->seedPayment(['additional_data' => json_encode(['paymera_payment_id' => 'pid-race'])]);
+
+        $first = PaymentRequest::where('id', $payment->id)->where('is_paid', 0)->update(['is_paid' => 1]);
+        $second = PaymentRequest::where('id', $payment->id)->where('is_paid', 0)->update(['is_paid' => 1]);
+
+        $this->assertSame(1, $first, 'the first finalize claims the row');
+        $this->assertSame(0, $second, 'a concurrent second finalize claims nothing');
+    }
+
+    public function test_the_success_hook_fires_only_once_across_repeated_callbacks(): void
+    {
+        PaymeraHookSpy::$successCalls = 0;
+        $payment = $this->seedPayment([
+            'additional_data' => json_encode(['paymera_payment_id' => 'pid-hook']),
+            'success_hook' => 'Tests\\Feature\\paymera_spy_success_hook',
+        ]);
+        Http::fake([
+            '*/api/get-payment-status/*' => Http::response([
+                'ErrorMessage' => 'Success', 'ErrorCode' => 0,
+                'Data' => ['status' => 'A', 'rrn' => 'RRN-ONCE'],
+            ], 200),
+        ]);
+
+        // Two deliveries of the same accepted result (browser return + server trigger / a refresh).
+        $this->newController()->callback(Request::create('/payment/paymera/callback', 'GET', ['payment_id' => (string) $payment->id]));
+        $this->newController()->callback(Request::create('/payment/paymera/callback', 'GET', ['payment_id' => (string) $payment->id]));
+
+        $this->assertSame(1, (int) PaymentRequest::find($payment->id)->is_paid);
+        $this->assertSame(1, PaymeraHookSpy::$successCalls, 'the money-moving success hook must fire exactly once');
+    }
+}
+
+/**
+ * Observable stand-in for a money-moving success hook (wallet credit / order create), so the test can
+ * count how many times it fired.
+ */
+class PaymeraHookSpy
+{
+    public static int $successCalls = 0;
+}
+
+function paymera_spy_success_hook($payment): void
+{
+    PaymeraHookSpy::$successCalls++;
 }
