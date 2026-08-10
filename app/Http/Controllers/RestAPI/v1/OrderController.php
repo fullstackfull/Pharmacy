@@ -86,7 +86,18 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
         $orderId = $request['order_id'];
-        $order = Order::find($orderId);
+        // Ownership scope, mirroring track_by_order_id: authenticated customer -> own orders; guest ->
+        // orders under their guest_id. Without it any id returned another order's status timeline.
+        $order = Order::where('id', $orderId)
+            ->where(function ($query) use ($request) {
+                auth('api')->check()
+                    ? $query->where('customer_id', auth('api')->id())
+                    : $query->where(['customer_id' => $request['guest_id'], 'is_guest' => 1]);
+            })
+            ->first();
+        if (!$order) {
+            return response()->json(['errors' => [['code' => 'order', 'message' => translate('not_found')]]], 404);
+        }
         $isOrderOnlyDigital = $this->orderService->getCheckIsOrderOnlyDigital(order: $order);
         $getTrackOrderHistory = OrderManager::getTrackOrderStatusHistory(orderId: $orderId, isOrderOnlyDigital: $isOrderOnlyDigital);
         return response()->json($getTrackOrderHistory, 200);
@@ -439,6 +450,10 @@ class OrderController extends Controller
         $order_details = OrderDetail::find($request->order_details_id);
 
         $user = $request->user();
+        // Ownership: the order line must belong to the requesting customer.
+        if (!$order_details || !Order::where('id', $order_details->order_id)->where('customer_id', $user->id)->exists()) {
+            return response()->json(['errors' => [['code' => 'order-details', 'message' => translate('not_found')]]], 404);
+        }
         $loyaltyPointStatus = getWebConfig(name: 'loyalty_point_status');
         if ($loyaltyPointStatus == 1) {
             $loyaltyPoint = CustomerManager::countLoyaltyPointForAmount($request->order_details_id);
@@ -558,6 +573,10 @@ class OrderController extends Controller
     public function refund_details(Request $request): JsonResponse
     {
         $orderDetails = OrderDetail::find($request->id);
+        // Ownership: the order line (price/qty/discount/tax) must belong to the requesting customer.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $request->user()->id)->exists()) {
+            return response()->json(['errors' => [['code' => 'order-details', 'message' => translate('not_found')]]], 404);
+        }
         $refund = RefundRequest::where('customer_id', $request->user()->id)
             ->with(['refundStatus'])
             ->where('order_details_id', $orderDetails->id)->get();

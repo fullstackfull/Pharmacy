@@ -177,6 +177,13 @@ class ProductController extends BaseController
 
     public function deleteRestock(string|int $id): RedirectResponse
     {
+        // Ownership: restock_products has no seller column, so verify ownership through the product
+        // (product.user_id == this seller). Without it a seller could delete another seller's restock rows.
+        $restock = $this->restockProductRepo->getFirstWhere(params: ['id' => $id]);
+        if (!$restock || !$this->productRepo->getFirstWhere(params: ['id' => $restock->product_id, 'user_id' => auth('seller')->id()])) {
+            ToastMagic::error(translate('product_restock_removed_failed'));
+            return back();
+        }
         $this->restockProductRepo->delete(params: ['id' => $id]);
         $this->restockProductCustomerRepo->delete(params: ['restock_product_id' => $id]);
         ToastMagic::success(translate('product_restock_removed_successfully'));

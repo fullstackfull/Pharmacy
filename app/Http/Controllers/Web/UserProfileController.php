@@ -471,7 +471,8 @@ class UserProfileController extends Controller
         $offlinePaymentStatus = getWebConfig(name: 'offline_payment');
         $cashOnDeliveryStatus = getWebConfig(name: 'cash_on_delivery');
 
-        $order = $this->order->with(['seller.shop'])->find($request->id);
+        // Ownership: scope to the customer's own order so one customer can't read another's order/seller panel.
+        $order = $this->order->with(['seller.shop'])->where('customer_id', auth('customer')->id())->find($request->id);
         if (!$order) {
             Toastr::warning(translate('invalid_order'));
             return redirect()->route('account-oder');
@@ -501,9 +502,10 @@ class UserProfileController extends Controller
         $offlinePaymentStatus = getWebConfig(name: 'offline_payment');
         $cashOnDeliveryStatus = getWebConfig(name: 'cash_on_delivery');
 
+        // Ownership: scope to the customer's own order so one customer can't read another's order details.
         $order = $this->order->with(['verificationImages', 'details.product', 'deliveryMan.rating', 'deliveryManReview', 'deliveryMan' => function ($query) {
             return $query->withCount('review');
-        }])->find($request->id);
+        }])->where('customer_id', auth('customer')->id())->find($request->id);
 
         if (!$order) {
             Toastr::warning(translate('invalid_order'));
@@ -1050,6 +1052,10 @@ class UserProfileController extends Controller
     public function refund_details($id)
     {
         $order_details = OrderDetail::find($id);
+        // Ownership: the order line (price/qty/discount/tax) must belong to the requesting customer.
+        if (!$order_details || !Order::where('id', $order_details->order_id)->where('customer_id', auth('customer')->id())->exists()) {
+            abort(404);
+        }
         $refund = RefundRequest::with(['product', 'order'])->where('customer_id', auth('customer')->id())
             ->where('order_details_id', $order_details->id)->first();
         $product = $this->product->find($order_details->product_id);
