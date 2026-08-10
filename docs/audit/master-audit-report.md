@@ -92,6 +92,13 @@ and documents `LOG_LEVEL=warning`; `config/logging.php` now reads `env('LOG_LEVE
   not the viewer's display currency (verified: display USD → entry SYP).
 - **KYC at rest** — documents now upload to the private `local` disk (not web-accessible) and are served
   only through admin/seller ownership-checked routes (verified: not reachable at the public web path).
+- **Order-edit stock atomicity** — `OrderEditManager::adjustProductStock` now locks the product row and
+  changes stock with atomic increment/decrement (floored at zero), like the cancel-restock/POS paths.
+- **Reconciliation earnings-maturation check** — a new reconciliation check flags any pending
+  `order_earning` with a null `available_at` (stuck money), so a regression of the maturation defect is
+  caught the next run. +2 tests.
+- **Category `requires_moderation` gate** — a seller product in a moderation-governed category is now set
+  to pending approval even when the global approval flag is off, making that governance field functional.
 
 ## 6. Architecture
 
@@ -142,28 +149,25 @@ catalogue endpoints, and that clients treat the new 401/403/429 (rate-limited au
 
 ## 12. Test results
 
-**657 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
-tax-inclusive refund. Critical domains all have dedicated coverage (commission, settlement, payout,
+**659 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
+tax-inclusive refund, +1 restock idempotency, +2 reconciliation earnings-maturation. Critical domains all have dedicated coverage (commission, settlement, payout,
 ledger, refund, stock-guard, warehouse, PO, payment-routing, shipping, B2B, permissions, staff-access).
 
 ## 13. Remaining technical debt (fixable follow-ups, prioritized)
 
-*(Items 1, 2, 5 and 7 from the first cut — commission-rule CRUD, cancel/return restock atomicity, KYC at
-rest, currency label — are now DONE; see Wave E above. What remains:)*
+*(DONE across Waves E/F: commission-rule CRUD, cancel/return restock atomicity, KYC at rest, currency
+label, order-edit stock atomicity, the never-maturing-earnings reconciliation check, and the
+category `requires_moderation` product-approval gate. What remains:)*
 
-1. **Order-edit stock atomicity (original 6Valley)** — `OrderEditManager::adjustProductStock` still uses
-   an unlocked read-modify-write; apply the same lock + atomic conditional decrement now used at
-   checkout/POS/cancel-restock.
-2. **Double-restock coordination** — a returned line processed through *both* the legacy order-status flow
+1. **Double-restock coordination** — a returned line processed through *both* the legacy order-status flow
    and the RMA `receive()` restocks twice; `return_shipments.order_details_id` exists, so coordinate via
    the shared `is_stock_decreased` marker (skip/flag in `receive()`). Left undone deliberately: the
    interaction is subtle and mis-fixing it risks *not* restoring stock — needs a dedicated test harness.
-3. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
+2. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
    distinct approver-vs-payer control (today all admin marketplace finance actions share `module:reports`).
-4. **Category-governance consumers** — `requiresModeration()` at product save, `missingRequiredAttributes()`
-   at save, `taxClass()` in tax calc (return-window is now consumed via the maturation fix).
-5. **Reconciliation coverage** — add checks for never-maturing earnings and refund-net vs snapshot share.
-6. **Sale movement log** — emit a `TYPE_SALE` `StockMovement` from checkout/POS so the movement ledger can
+3. **Remaining category-governance consumers** — `missingRequiredAttributes()` at product save and
+   `taxClass()` in tax calc (return-window and `requires_moderation` are now consumed).
+4. **Sale movement log** — emit a `TYPE_SALE` `StockMovement` from checkout/POS so the movement ledger can
    reconcile against `current_stock`.
 
 ## 14. Remaining known limitations (by design / accepted)
