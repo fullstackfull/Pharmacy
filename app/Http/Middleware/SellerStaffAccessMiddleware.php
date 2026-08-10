@@ -64,6 +64,15 @@ class SellerStaffAccessMiddleware
      */
     private function requiredPermission(Request $request): string
     {
+        // Money movement first — withdrawals, payout requests, and bank/withdraw-method details — needs
+        // the finance permission regardless of the segment it otherwise falls under. Without this these
+        // paths (e.g. dashboard/withdraw-request, shop/payment-information, business-settings/payouts)
+        // would inherit their segment's ALLOW / shop_settings mapping and let a staffer with no finance
+        // rights move funds or redirect payouts.
+        if ($this->isMoneyMovementPath($request->path())) {
+            return 'payouts.request';
+        }
+
         $area = $request->segment(2);          // the part after /vendor/
         $isWrite = !$request->isMethod('get') && !$request->isMethod('head');
 
@@ -98,5 +107,20 @@ class SellerStaffAccessMiddleware
             // Anything not explicitly mapped is refused for staff.
             default => self::DENY,
         };
+    }
+
+    /**
+     * Whether the path moves money or manages the details funds are paid to — withdrawals, payout
+     * requests, and withdraw-method/bank information — wherever it lives in the vendor URL tree.
+     */
+    private function isMoneyMovementPath(string $path): bool
+    {
+        foreach (['withdraw', 'payout', 'payment-information', 'bank-info', 'money-withdraw'] as $needle) {
+            if (str_contains($path, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

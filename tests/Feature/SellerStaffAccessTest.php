@@ -69,6 +69,25 @@ class SellerStaffAccessTest extends TestCase
         $this->assertSame('__deny__', $this->requiredPermissionFor('POST', '/vendor/auction/create'));
     }
 
+    public function test_money_movement_paths_need_the_finance_permission_wherever_they_live(): void
+    {
+        // These sit under ALLOW (dashboard/shop) or shop_settings (business-settings) segments, but must
+        // still demand payouts.request — otherwise a staffer with no finance rights could move funds.
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('POST', '/vendor/dashboard/withdraw-request'));
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('POST', '/vendor/dashboard/withdraw-request-update'));
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('POST', '/vendor/shop/payment-information/add'));
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('GET', '/vendor/shop/payment-information/edit/5'));
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('POST', '/vendor/business-settings/payouts'));
+        $this->assertSame('payouts.request', $this->requiredPermissionFor('GET', '/vendor/business-settings/withdraw/close/5'));
+    }
+
+    public function test_plain_dashboard_and_shop_navigation_stay_allowed(): void
+    {
+        // The finance gate must not over-reach: the dashboard landing and shop profile stay navigable.
+        $this->assertSame('__allow__', $this->requiredPermissionFor('GET', '/vendor/dashboard'));
+        $this->assertSame('__allow__', $this->requiredPermissionFor('GET', '/vendor/shop'));
+    }
+
     public function test_every_mapped_permission_is_a_real_catalog_key(): void
     {
         $catalog = (new SellerPermissionService())->allKeys();
