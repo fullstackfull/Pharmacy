@@ -250,6 +250,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     Route::group(['prefix' => 'orders', 'as' => 'orders.', 'middleware' => ['module:orders']], function () {
+        Route::controller(\App\Http\Controllers\Admin\Order\DeliverySyriaDispatchController::class)->group(function () {
+            Route::post('delivery-syria/dispatch', 'dispatchOrder')->name('delivery-syria.dispatch');
+        });
         Route::controller(OrderController::class)->group(function () {
             Route::get('list/{status}', 'index')->name('list');
             Route::get('export-excel/{status}', 'exportList')->name('export-excel');
@@ -1152,6 +1155,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::controller(GoogleMapAPIController::class)->group(function () {
                 Route::get('map-api', 'index')->name('map-api');
                 Route::post('map-api', 'update');
+            });
+
+            Route::controller(\App\Http\Controllers\Admin\ThirdParty\DeliverySyriaController::class)->group(function () {
+                Route::get('delivery-syria', 'index')->name('delivery-syria');
+                Route::post('delivery-syria', 'update');
+                Route::post('delivery-syria/verify-sync', 'verifySync')->name('delivery-syria.verify-sync');
             });
 
             Route::group(['prefix' => 'withdraw-method', 'as' => 'withdraw-method.'], function () {

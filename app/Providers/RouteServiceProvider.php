@@ -49,6 +49,7 @@ class RouteServiceProvider extends ServiceProvider
         $this->mapApiRoutes();
         $this->mapApiv2Routes();
         $this->mapApiv3Routes();
+        $this->mapDeliverySyriaRoutes();
 
         //$this->mapInstallRoutes();
         //$this->mapUpdateRoutes();
@@ -109,6 +110,20 @@ class RouteServiceProvider extends ServiceProvider
             ->middleware('api')
             ->namespace($this->namespace)
             ->group(base_path('routes/rest_api/v3/seller.php'));
+    }
+
+    /**
+     * Delivery Syria inbound status webhook (optional courier integration).
+     *
+     * Kept in its own file, outside the versioned v1/v2/v3 groups, so the courier's exact spec URL
+     * resolves — POST /api/delivery-syria/orders/update-status — with no version segment.
+     */
+    protected function mapDeliverySyriaRoutes(): void
+    {
+        Route::prefix('api')
+            ->middleware('api')
+            ->namespace($this->namespace)
+            ->group(base_path('routes/rest_api/delivery_syria.php'));
     }
 
     /**
