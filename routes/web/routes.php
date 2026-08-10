@@ -18,6 +18,7 @@ use App\Http\Controllers\Payment_Methods\PaymobController;
 use App\Http\Controllers\Payment_Methods\PaypalPaymentController;
 use App\Http\Controllers\Payment_Methods\PaystackController;
 use App\Http\Controllers\Payment_Methods\PaytabsController;
+use App\Http\Controllers\Payment_Methods\PaymeraController;
 use App\Http\Controllers\Payment_Methods\PaytmController;
 use App\Http\Controllers\Payment_Methods\RazorPayController;
 use App\Http\Controllers\Payment_Methods\SenangPayController;
@@ -523,6 +524,12 @@ if (!$isGatewayPublished) {
             Route::any('pay', [PaytabsController::class, 'payment'])->name('pay');
             Route::any('callback', [PaytabsController::class, 'callback'])->name('callback');
             Route::any('response', [PaytabsController::class, 'response'])->name('response');
+        });
+
+        //PAYMERA
+        Route::group(['prefix' => 'paymera', 'as' => 'paymera.'], function () {
+            Route::any('pay', [PaymeraController::class, 'index'])->name('pay');
+            Route::any('callback', [PaymeraController::class, 'callback'])->name('callback');
         });
     });
 }

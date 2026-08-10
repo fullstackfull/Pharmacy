@@ -1174,7 +1174,8 @@ enum GlobalConstant
         'paytabs',
         'liqpay',
         'mercadopago',
-        'bkash'
+        'bkash',
+        'paymera'
     ];
 
     const DEFAULT_SMS_GATEWAYS = [
