@@ -174,7 +174,13 @@ class WithdrawController extends BaseController
      */
     public function closeWithdrawRequest(string|int $id): RedirectResponse
     {
-        $withdrawRequest = $this->withdrawRequestRepo->getFirstWhere(params: ['id' => $id]);
+        // Scope the lookup to the signed-in seller: without it, passing another seller's request id
+        // credited THIS seller's wallet with that request's amount (cross-vendor wallet theft).
+        $withdrawRequest = $this->withdrawRequestRepo->getFirstWhere(params: ['id' => $id, 'seller_id' => auth('seller')->id()]);
+        if (!$withdrawRequest) {
+            ToastMagic::error(message: translate('invalid_withdraw_request'));
+            return redirect()->back();
+        }
         $wallet = $this->vendorWalletRepo->getFirstWhere(params: ['seller_id' => auth('seller')->id()]);
         if ($withdrawRequest['approved'] == 0) {
             $totalEarning = $wallet['total_earning'] + $withdrawRequest['amount'];

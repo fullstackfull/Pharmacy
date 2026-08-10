@@ -88,7 +88,9 @@ class CouponController extends BaseController
      */
     public function getUpdateView(string|int $id): View
     {
-        $coupon = $this->couponRepo->getFirstWhere(['id' => $id]);
+        // Scope to the owning seller — an unscoped lookup let a seller open/edit another vendor's coupon.
+        $coupon = $this->couponRepo->getFirstWhere(['id' => $id, 'added_by' => 'seller', 'seller_id' => auth('seller')->id()]);
+        abort_if(!$coupon, 404);
         $customers = $this->customerRepo->getListWhereNotIn([0]);
         return view(Coupon::UPDATE[VIEW], compact('coupon', 'customers'));
     }
@@ -105,6 +107,12 @@ class CouponController extends BaseController
         if (!$couponService->checkConditions(request: $request)) {
             return redirect()->back();
         }
+        // Confirm ownership before updating — an unscoped update let a seller rewrite another vendor's coupon.
+        $coupon = $this->couponRepo->getFirstWhere(['id' => $id, 'added_by' => 'seller', 'seller_id' => auth('seller')->id()]);
+        if (!$coupon) {
+            ToastMagic::error(translate('coupon_not_found'));
+            return redirect()->route(Coupon::INDEX[ROUTE]);
+        }
         $this->couponRepo->update(id: $id, data: $couponService->getCouponData(request: $request, addedBy: 'seller'));
         ToastMagic::success(translate('coupon_update_successfully'));
         return redirect()->route(Coupon::INDEX[ROUTE]);
@@ -119,7 +127,11 @@ class CouponController extends BaseController
      */
     public function updateStatus(string|int $id, string|int $status): JsonResponse
     {
-        $coupon = $this->couponRepo->getFirstWhere(['added_by' => 'seller', 'coupon_bearer' => 'seller', 'id' => $id]);
+        // Scope to the owning seller — an unscoped lookup let a seller toggle another vendor's coupon.
+        $coupon = $this->couponRepo->getFirstWhere(['added_by' => 'seller', 'coupon_bearer' => 'seller', 'id' => $id, 'seller_id' => auth('seller')->id()]);
+        if (!$coupon) {
+            return response()->json(['status' => 0, 'message' => translate('coupon_not_found')], 404);
+        }
         $this->couponRepo->update(id: $coupon['id'], data: ['status' => $status]);
         return response()->json([
             'status' => 1,

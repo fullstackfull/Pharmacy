@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Customer;
 use App\Models\User;
 use App\Utils\Helpers;
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\ShippingAddress;
 use App\Models\ShippingMethod;
 use App\Models\CartShipping;
+use App\Services\Marketplace\ShippingRateService;
 use App\Traits\CommonTrait;
 use App\Utils\CartManager;
 use App\Utils\OrderManager;
@@ -49,7 +51,7 @@ class SystemController extends Controller
         }
         $shipping['cart_group_id'] = $request['cart_group_id'];
         $shipping['shipping_method_id'] = $request['id'];
-        $shipping['shipping_cost'] = ShippingMethod::find($request['id'])->cost;
+        $shipping['shipping_cost'] = self::zoneShippingCost($request['cart_group_id'], (float) ShippingMethod::find($request['id'])->cost);
         $shipping->save();
 
         if (session('coupon_code') && session('coupon_discount')) {
@@ -62,6 +64,35 @@ class SystemController extends Controller
                 session()->forget('coupon_seller_id');
             }
         }
+    }
+
+    /**
+     * The shipping cost to charge for a cart group — the chosen method's cost, unless destination-based
+     * (zone) shipping is switched on and a zone serves the customer's selected address (Phase 3, Stage C).
+     *
+     * Off by default: with the `zone_wise_shipping` setting off (the platform default) this returns the
+     * method cost unchanged, so checkout behaves exactly as before. The resolved cost lands on the same
+     * CartShipping row, so order totals, tax on shipping and free-delivery are computed downstream exactly
+     * as they were. Only web checkout consults this — the mobile API keeps method-based shipping, because
+     * its shipping step is stateless and has no bound destination to resolve a zone against. Weight is 0
+     * (the catalogue has no per-product weight), so only a zone's flat base cost and free-over threshold
+     * apply; where no zone matches the destination, the chosen method's cost is used unchanged.
+     */
+    private static function zoneShippingCost(string|int $cartGroupId, float $methodCost): float
+    {
+        if (!getWebConfig(name: 'zone_wise_shipping')) {
+            return $methodCost;
+        }
+
+        $address = session('address_id') ? ShippingAddress::find(session('address_id')) : null;
+        if (!$address) {
+            return $methodCost;
+        }
+
+        $orderValue = (float) Cart::where('cart_group_id', $cartGroupId)->get()
+            ->sum(fn ($item) => ((float) $item->price - (float) $item->discount) * (int) $item->quantity);
+
+        return (new ShippingRateService())->checkoutCost($methodCost, $address->country, 0.0, $orderValue, $address->state);
     }
 
     /*

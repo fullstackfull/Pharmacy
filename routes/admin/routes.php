@@ -471,6 +471,192 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
             Route::get('audit-log', 'index')->name('audit-log');
         });
+
+        // The approvals inbox (spec item 82): the operable surface of the reusable maker-checker
+        // engine. The engine enforces maker != checker and one-decision-per-actor; the controller
+        // only carries the admin's identity in.
+        Route::group(['prefix' => 'approvals', 'as' => 'approvals.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ApprovalController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
+        });
+
+        // Product moderation with history (spec item 7): approve/reject/needs-changes/suspend, single
+        // and bulk, each writing a history event and an audit line. Separate from the legacy product
+        // controller so the moderation trail is added without touching the save path.
+        Route::group(['prefix' => 'product-moderation', 'as' => 'product-moderation.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ProductModerationController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('history/{productId}', 'history')->whereNumber('productId')->name('history');
+                Route::post('moderate', 'moderate')->name('moderate');
+                Route::post('bulk', 'bulk')->name('bulk');
+            });
+        });
+
+        // Per-category governance (spec item 10): return window, tax class, required attributes and a
+        // moderation flag, each inheriting the global default when left blank.
+        Route::group(['prefix' => 'category-governance', 'as' => 'category-governance.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CategoryGovernanceController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('update', 'update')->name('update');
+            });
+        });
+
+        // Seller KYC verification: review submitted documents and arm the (default-off) payout gate.
+        Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerVerificationController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('approve', 'approve')->name('approve');
+                Route::post('reject', 'reject')->name('reject');
+                Route::post('settings', 'updateSettings')->name('settings');
+            });
+        });
+
+        // Seller performance scorecard: quality metrics and a derived health tier per seller.
+        Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerScorecardController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+            });
+        });
+
+        // Procurement (Stage C): suppliers and purchase orders. Receiving a PO line increments the
+        // catalogue stock the storefront sells — the supply side of the same inventory.
+        Route::group(['prefix' => 'suppliers', 'as' => 'suppliers.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SupplierController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+        Route::group(['prefix' => 'purchase-orders', 'as' => 'purchase-orders.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\PurchaseOrderController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('create', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('{id}', 'show')->whereNumber('id')->name('show');
+                Route::post('{id}/place', 'place')->whereNumber('id')->name('place');
+                Route::post('{id}/receive', 'receive')->whereNumber('id')->name('receive');
+                Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+            });
+        });
+
+        // Inventory adjustments + movement log (Stage C): reasoned stock changes with an auditable
+        // history, seeded here and by purchase-order receipts.
+        Route::group(['prefix' => 'inventory-adjustments', 'as' => 'inventory-adjustments.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\InventoryAdjustmentController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('adjust', 'adjust')->name('adjust');
+            });
+        });
+
+        // Seller SLA policy (Stage E): configurable thresholds over the scorecard metrics, evaluated
+        // into a breach ledger that opens on a crossed line and clears on recovery.
+        Route::group(['prefix' => 'sla', 'as' => 'sla.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SlaController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('settings', 'updateSettings')->name('settings');
+                Route::post('evaluate', 'evaluate')->name('evaluate');
+            });
+        });
+
+        // Returns logistics (Stage C): the RMA queue and its state machine — receiving a restockable
+        // return puts stock back through the inventory movement log.
+        Route::group(['prefix' => 'returns', 'as' => 'returns.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ReturnLogisticsController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/transit', 'transit')->whereNumber('id')->name('transit');
+                Route::post('{id}/receive', 'receive')->whereNumber('id')->name('receive');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
+        });
+
+        // Financial reconciliation (Stage E): read-only integrity checks over the ledger, commission
+        // snapshots and settlements.
+        Route::get('reconciliation', [\App\Http\Controllers\Admin\Marketplace\ReconciliationController::class, 'index'])->name('reconciliation');
+
+        // Batch & expiry tracking (Stage C): dated batches, expiry visibility, and write-off of
+        // expired stock through the inventory adjustment path.
+        Route::group(['prefix' => 'batches', 'as' => 'batches.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\BatchController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/write-off', 'writeOff')->whereNumber('id')->name('write-off');
+            });
+        });
+
+        // Multi-warehouse (Stage C): a location registry that partitions the real current_stock, with
+        // placement from the unallocated remainder and inter-warehouse transfers (sellable total kept).
+        Route::group(['prefix' => 'warehouses', 'as' => 'warehouses.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\WarehouseController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::post('place', 'place')->name('place');
+                Route::post('transfer', 'transfer')->name('transfer');
+            });
+        });
+
+        // Fulfilment (Stage C): the pick/pack/ship workflow overlay — forward-only, never touches
+        // order status.
+        Route::group(['prefix' => 'fulfillments', 'as' => 'fulfillments.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\FulfillmentController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('{id}/advance', 'advance')->whereNumber('id')->name('advance');
+                Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+            });
+        });
+
+        // Shipping zones (Stage C): destination-based rate rules with a resolver that falls back to the
+        // existing flat shipping where no zone matches.
+        Route::group(['prefix' => 'shipping-zones', 'as' => 'shipping-zones.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ShippingZoneController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::post('toggle', 'toggle')->name('toggle');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+
+        // Payment orchestration (Stage E): gateway routing rules — hide or prefer a gateway by amount
+        // or country. Non-breaking: no rule leaves the offered gateways unchanged.
+        Route::group(['prefix' => 'payment-routing', 'as' => 'payment-routing.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\PaymentRoutingController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+            });
+        });
+
+        // Exchange-rate governance (Stage E): bulk rate update + audited change history over the
+        // platform's existing currencies. Conversion itself is unchanged.
+        Route::group(['prefix' => 'exchange-rates', 'as' => 'exchange-rates.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\ExchangeRateController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('bulk-update', 'bulkUpdate')->name('bulk-update');
+            });
+        });
+
+        // B2B / wholesale customer groups + pricing (Stage E): a non-breaking price resolver — a
+        // customer in no group keeps the base price.
+        Route::group(['prefix' => 'customer-groups', 'as' => 'customer-groups.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\CustomerGroupController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('{id}', 'update')->whereNumber('id')->name('update');
+                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+                Route::post('{id}/members/add', 'addMember')->whereNumber('id')->name('members.add');
+                Route::post('{id}/members/remove', 'removeMember')->whereNumber('id')->name('members.remove');
+                Route::post('{id}/prices/set', 'setPrice')->whereNumber('id')->name('prices.set');
+                Route::delete('{id}/prices/{priceId}', 'removePrice')->whereNumber('id')->whereNumber('priceId')->name('prices.remove');
+            });
+        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

@@ -176,8 +176,15 @@ class POSOrderController extends BaseController
                         }
 
                         if ($product['product_type'] == 'physical') {
-                            $currentStock = $product['current_stock'] - $item['quantity'];
-                            $this->productRepo->update(id: $product['id'], data: ['current_stock' => $currentStock]);
+                            // Atomic conditional decrement, floored at zero — the old non-atomic write
+                            // lost concurrent updates and could drive stock negative. decrement never
+                            // loses an update; the >= guard stops it going below zero.
+                            $taken = \App\Models\Product::where('id', $product['id'])
+                                ->where('current_stock', '>=', $item['quantity'])
+                                ->decrement('current_stock', $item['quantity']);
+                            if ($taken === 0) {
+                                \App\Models\Product::where('id', $product['id'])->update(['current_stock' => 0]);
+                            }
                         }
                         $this->orderDetailRepo->add(data: $orderDetail);
 

@@ -132,6 +132,19 @@
                                                     @elseif($product->request_status == 2)
                                                         <label class="badge badge-soft-danger m-0 font-weight-normal">{{translate('denied')}}</label>
                                                     @endif
+                                                    {{-- The exact correction the seller must make, from the moderation history
+                                                         (spec item 7). Shown only when denied and only if the moderation trail
+                                                         exists, so an install that has not run the migration is unaffected. --}}
+                                                    @if($product->request_status == 2 && \Illuminate\Support\Facades\Schema::hasTable('product_moderation_events'))
+                                                        @php($lastModeration = \App\Models\ProductModerationEvent::forProduct($product->id)->first())
+                                                        @if($lastModeration && ($lastModeration->reason_codes || $lastModeration->note))
+                                                            <span class="badge badge-soft-info m-0 font-weight-normal" role="button"
+                                                                  data-toggle="tooltip"
+                                                                  title="{{ collect($lastModeration->reason_codes ?? [])->map(fn($r) => translate($r))->implode(', ') }}{{ $lastModeration->note ? ' — ' . $lastModeration->note : '' }}">
+                                                                {{ $lastModeration->action === 'needs_changes' ? translate('needs_changes') : translate('why') }}
+                                                            </span>
+                                                        @endif
+                                                    @endif
                                                 </div>
                                             </div>
                                         </a>

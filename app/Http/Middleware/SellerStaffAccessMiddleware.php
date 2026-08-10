@@ -1,0 +1,126 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\SellerStaff;
+use App\Services\Marketplace\SellerPermissionService;
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+/**
+ * Enforces a seller staff member's permissions across the vendor panel (Phase 3, Stage A).
+ *
+ * Runs after the `seller` guard on the vendor route group. A **real seller** (no `seller_staff_id` in
+ * session) passes straight through — this middleware never changes owner behavior. A **staff** session
+ * is one where the owner signed in through the staff login, which logs the staff in as their parent
+ * seller (so all existing `auth('seller')` scoping keeps working) and stamps `seller_staff_id`.
+ *
+ * For a staff request the required permission is derived from the vendor URL, and `staffCan()` decides.
+ * The map is **deny-by-default**: a navigation/self area is allowed to any active staff, a core domain
+ * requires its catalog permission, and anything unmapped is refused (403) — so a gap fails closed, never
+ * open. Read (GET) needs the `.view` permission where a domain has one; writes need `.manage`.
+ */
+class SellerStaffAccessMiddleware
+{
+    private const ALLOW = '__allow__';
+    private const DENY = '__deny__';
+
+    public function __construct(private readonly SellerPermissionService $permissions)
+    {
+    }
+
+    public function handle(Request $request, Closure $next): mixed
+    {
+        $staffId = session('seller_staff_id');
+        if (!$staffId) {
+            return $next($request);   // a real seller (owner) — untouched
+        }
+
+        // Stale / tampered session: the staff row must still exist, be active, and belong to the seller
+        // currently signed in. Otherwise drop the staff context and send them back to the staff login.
+        $staff = SellerStaff::find($staffId);
+        if (!$staff || $staff->status !== SellerStaff::STATUS_ACTIVE || (int) $staff->seller_id !== (int) auth('seller')->id()) {
+            session()->forget('seller_staff_id');
+            Auth::guard('seller')->logout();
+
+            return redirect()->route('vendor.staff-auth.login');
+        }
+
+        $required = $this->requiredPermission($request);
+        if ($required === self::ALLOW) {
+            return $next($request);
+        }
+        if ($required !== self::DENY && $this->permissions->staffCan($staffId, $required)) {
+            return $next($request);
+        }
+
+        abort(403, translate('you_do_not_have_permission_for_this_action'));
+    }
+
+    /**
+     * The permission a vendor URL requires of a staff member: ALLOW (navigation/self), a catalog key, or
+     * DENY (unmapped → refused).
+     */
+    private function requiredPermission(Request $request): string
+    {
+        // Money movement first — withdrawals, payout requests, and bank/withdraw-method details — needs
+        // the finance permission regardless of the segment it otherwise falls under. Without this these
+        // paths (e.g. dashboard/withdraw-request, shop/payment-information, business-settings/payouts)
+        // would inherit their segment's ALLOW / shop_settings mapping and let a staffer with no finance
+        // rights move funds or redirect payouts.
+        if ($this->isMoneyMovementPath($request->path())) {
+            return 'payouts.request';
+        }
+
+        $area = $request->segment(2);          // the part after /vendor/
+        $isWrite = !$request->isMethod('get') && !$request->isMethod('head');
+
+        return match ($area) {
+            // Navigation, self-service and read-only cockpit — any active staff member.
+            'auth', 'staff-auth', 'dashboard', 'profile', 'notification', 'messages', 'v2', 'system', 'shop', 'seller-center'
+                => self::ALLOW,
+
+            // Catalogue.
+            'products', 'product' => $isWrite ? 'products.manage' : 'products.view',
+
+            // Orders and everything that acts on an order.
+            'orders', 'get-order-data' => $isWrite ? 'orders.manage' : 'orders.view',
+            'pos', 'refund' => 'orders.manage',
+            'customer' => 'orders.view',
+
+            // Promotions.
+            'coupon', 'clearance-sale' => 'promotions.manage',
+
+            // Reviews.
+            'reviews' => 'reviews.view',
+
+            // Money.
+            'transaction', 'report' => 'finance.view',
+
+            // Delivery team is an order-fulfilment concern.
+            'delivery-man' => 'orders.manage',
+
+            // Settings — the staff area itself needs staff.manage; the rest needs shop settings.
+            'business-settings' => $request->segment(3) === 'staff' ? 'staff.manage' : 'shop_settings.manage',
+
+            // Anything not explicitly mapped is refused for staff.
+            default => self::DENY,
+        };
+    }
+
+    /**
+     * Whether the path moves money or manages the details funds are paid to — withdrawals, payout
+     * requests, and withdraw-method/bank information — wherever it lives in the vendor URL tree.
+     */
+    private function isMoneyMovementPath(string $path): bool
+    {
+        foreach (['withdraw', 'payout', 'payment-information', 'bank-info', 'money-withdraw'] as $needle) {
+            if (str_contains($path, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

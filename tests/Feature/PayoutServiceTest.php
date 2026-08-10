@@ -32,9 +32,25 @@ class PayoutServiceTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['vendor_ledger_entries', 'vendor_payout_requests', 'vendor_bank_change_logs'] as $t) {
+        foreach (['vendor_ledger_entries', 'vendor_payout_requests', 'vendor_bank_change_logs', 'approval_requests', 'approval_decisions', 'audit_logs'] as $t) {
             Schema::dropIfExists($t);
         }
+        Schema::create('approval_requests', function (Blueprint $t) {
+            $t->id(); $t->string('reference', 60)->unique(); $t->string('workflow', 60);
+            $t->string('subject_type', 100)->nullable(); $t->string('subject_id', 191)->nullable();
+            $t->string('status', 20)->default('pending'); $t->decimal('amount', 24, 4)->nullable();
+            $t->string('currency', 10)->nullable(); $t->unsignedTinyInteger('required_approvals')->default(1);
+            $t->unsignedTinyInteger('approvals_count')->default(0); $t->string('requested_by_type', 20)->nullable();
+            $t->unsignedBigInteger('requested_by')->nullable(); $t->text('request_note')->nullable();
+            $t->json('payload')->nullable(); $t->timestamp('decided_at')->nullable(); $t->text('decision_note')->nullable(); $t->timestamps();
+        });
+        Schema::create('audit_logs', function (Blueprint $t) {
+            $t->id(); $t->string('actor_type', 40)->nullable(); $t->unsignedBigInteger('actor_id')->nullable();
+            $t->string('actor_name', 191)->nullable(); $t->string('action', 100);
+            $t->string('subject_type', 100)->nullable(); $t->string('subject_id', 191)->nullable();
+            $t->json('before')->nullable(); $t->json('after')->nullable(); $t->json('context')->nullable();
+            $t->string('ip_address', 45)->nullable(); $t->string('user_agent', 255)->nullable(); $t->timestamps();
+        });
 
         Schema::create('vendor_ledger_entries', function (Blueprint $t) {
             $t->id();
@@ -250,5 +266,34 @@ class PayoutServiceTest extends TestCase
 
         $this->assertFalse($this->payouts->requestPayout(5, 0)['ok']);
         $this->assertFalse($this->payouts->requestPayout(5, -50)['ok']);
+    }
+
+    // ---- the payout workflow USES the reusable approval engine (spec 82/83) ----
+
+    public function test_a_large_payout_opens_a_dual_control_approval(): void
+    {
+        $this->giveAvailable(5, 5000);
+        $request = $this->payouts->requestPayout(5, 4000)['request'];
+
+        // Below threshold: nothing opened, ordinary path.
+        $this->assertNull($this->payouts->openApprovalIfLarge($request, threshold: 0));
+
+        // Above threshold: an approval request through the shared engine, needing two approvers.
+        $approval = $this->payouts->openApprovalIfLarge($request, threshold: 1000, requiredApprovals: 2);
+
+        $this->assertNotNull($approval);
+        $this->assertSame('payout', $approval->workflow);
+        $this->assertSame(2, $approval->required_approvals);
+        $this->assertSame((string) $request->id, (string) $approval->subject_id);
+        // The seller who requested it is recorded as the maker, so they cannot be a checker.
+        $this->assertSame('seller', $approval->requested_by_type);
+    }
+
+    public function test_a_small_payout_opens_no_approval(): void
+    {
+        $this->giveAvailable(5, 5000);
+        $request = $this->payouts->requestPayout(5, 200)['request'];
+
+        $this->assertNull($this->payouts->openApprovalIfLarge($request, threshold: 1000));
     }
 }

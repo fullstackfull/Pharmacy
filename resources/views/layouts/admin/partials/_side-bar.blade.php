@@ -684,6 +684,204 @@
                                 </a>
                             </li>
                         @endif
+                        @if (Route::has('admin.marketplace.approvals.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/approvals*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.approvals.index') }}"
+                                   title="{{ translate('approvals') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('approvals') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.category-governance.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/category-governance*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.category-governance.index') }}"
+                                   title="{{ translate('category_governance') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('category_governance') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.seller-verification.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/seller-verification*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.seller-verification.index') }}"
+                                   title="{{ translate('seller_verification') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_verification') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.seller-scorecard.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/seller-scorecard*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.seller-scorecard.index') }}"
+                                   title="{{ translate('seller_scorecard') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_scorecard') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.sla.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/sla*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.sla.index') }}"
+                                   title="{{ translate('seller_sla') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('seller_sla') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.reconciliation'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/reconciliation*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.reconciliation') }}"
+                                   title="{{ translate('financial_reconciliation') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('financial_reconciliation') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.suppliers.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/suppliers*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.suppliers.index') }}"
+                                   title="{{ translate('suppliers') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('suppliers') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.purchase-orders.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/purchase-orders*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.purchase-orders.index') }}"
+                                   title="{{ translate('purchase_orders') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('purchase_orders') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.inventory-adjustments.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/inventory-adjustments*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.inventory-adjustments.index') }}"
+                                   title="{{ translate('inventory_adjustments') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('inventory_adjustments') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.returns.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/returns*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.returns.index') }}"
+                                   title="{{ translate('returns') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('returns') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.batches.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/batches*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.batches.index') }}"
+                                   title="{{ translate('batches_and_expiry') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('batches_and_expiry') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.warehouses.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/warehouses*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.warehouses.index') }}"
+                                   title="{{ translate('warehouses') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('warehouses') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.fulfillments.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/fulfillments*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.fulfillments.index') }}"
+                                   title="{{ translate('fulfilment') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('fulfilment') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.shipping-zones.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/shipping-zones*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.shipping-zones.index') }}"
+                                   title="{{ translate('shipping_zones') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('shipping_zones') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.exchange-rates.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/exchange-rates*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.exchange-rates.index') }}"
+                                   title="{{ translate('exchange_rates') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('exchange_rates') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.payment-routing.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/payment-routing*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.payment-routing.index') }}"
+                                   title="{{ translate('payment_orchestration') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('payment_orchestration') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.customer-groups.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/customer-groups*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.customer-groups.index') }}"
+                                   title="{{ translate('customer_groups') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('customer_groups') }} (B2B)
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
+                        @if (Route::has('admin.marketplace.product-moderation.index'))
+                            <li>
+                                <a class="nav-link {{ Request::is('admin/marketplace/product-moderation*') ? 'active' : '' }}"
+                                   href="{{ route('admin.marketplace.product-moderation.index') }}"
+                                   title="{{ translate('product_moderation') }}">
+                                    <span class="text-truncate">
+                                        {{ translate('product_moderation') }}
+                                    </span>
+                                </a>
+                            </li>
+                        @endif
                         @if (Route::has('admin.marketplace.audit-log'))
                             <li>
                                 <a class="nav-link {{ Request::is('admin/marketplace/audit-log*') ? 'active' : '' }}"

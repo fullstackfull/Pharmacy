@@ -1069,10 +1069,15 @@ class OrderManager
             // much did we charge this seller in commission last month?" without re-deriving it.
             //
             // They land as PENDING, because money owed during the return window is not money the
-            // seller can be paid. Nothing here moves it to available — that is the settlement
-            // engine's job, and it is not built yet.
+            // seller can be paid. The earning carries an `available_at` = now + the return window so the
+            // settlement command can mature it once the window passes AND the order is delivered
+            // (VendorLedger::releaseMatured gates on order state, so a cancelled/failed order never
+            // matures its placement-time earning). Without this timestamp the earning could never leave
+            // pending and no seller could ever be settled or paid.
             if ($sellerIs === 'seller' && $sellerId) {
                 $ledger = app(\App\Services\Marketplace\VendorLedger::class);
+
+                $returnWindowDays = (int) app(\App\Services\Marketplace\CategoryGovernanceService::class)->returnWindowDays($categoryId);
 
                 $ledger->record(
                     sellerId: $sellerId,
@@ -1081,6 +1086,7 @@ class OrderManager
                     referenceType: 'order_details',
                     referenceId: $orderDetailsId,
                     description: 'Order #' . $orderId,
+                    availableAt: now()->addDays(max(0, $returnWindowDays)),
                 );
 
                 if ((float) $calculated['commission_amount'] > 0) {
@@ -1186,12 +1192,30 @@ class OrderManager
             if ($cartSingleItem['variant'] != null) {
                 $type = $cartSingleItem['variant'];
                 $variationData = [];
+                $variantWentNegative = false;
                 foreach (json_decode($product['variation'], true) as $var) {
                     if ($type == $var['type']) {
                         $var['qty'] -= $cartSingleItem['quantity'];
+                        if ($var['qty'] < 0) {
+                            $variantWentNegative = true;
+                        }
                     }
                     $variationData[] = $var;
                 }
+
+                // Guard the SPECIFIC variant, not just the product total. The conditional decrement below
+                // checks current_stock (the sum of all variants), so ordering more of one variant than it
+                // holds could pass — another variant's stock masking the shortfall — and drive that
+                // variant negative. Reject it here, inside the same locked/transactional section, exactly
+                // as the product-total guard does. (allow_oversell — the post-payment path — is honoured.)
+                if ($variantWentNegative && ($product['product_type'] ?? 'physical') === 'physical' && $stockPolicy === 'reject') {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        productId: $product['id'],
+                        productName: $product['name'] ?? null,
+                        requested: (int) $cartSingleItem['quantity'],
+                    );
+                }
+
                 Product::where(['id' => $product['id']])->update([
                     'variation' => json_encode($variationData),
                 ]);

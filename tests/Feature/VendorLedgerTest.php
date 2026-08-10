@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\VendorLedgerEntry;
 use App\Services\Marketplace\VendorLedger;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -161,6 +162,46 @@ class VendorLedgerTest extends TestCase
 
         $this->assertSame(100.0, $entry->fresh()->credit);
         $this->assertSame(100.0, $entry->fresh()->balance_after);
+    }
+
+    /**
+     * The leak guard: an order earning matures only when its order is delivered. Earnings are credited
+     * at placement, so a cancelled order still carries its credit — it must never become payable.
+     */
+    public function test_an_order_earning_matures_only_when_its_order_is_delivered(): void
+    {
+        foreach (['order_details', 'orders'] as $t) {
+            Schema::dropIfExists($t);
+        }
+        Schema::create('orders', function (Blueprint $t) {
+            $t->id();
+            $t->string('order_status', 40)->default('pending');
+        });
+        Schema::create('order_details', function (Blueprint $t) {
+            $t->id();
+            $t->unsignedBigInteger('order_id');
+        });
+        DB::table('orders')->insert([
+            ['id' => 10, 'order_status' => 'delivered'],
+            ['id' => 20, 'order_status' => 'canceled'],
+        ]);
+        DB::table('order_details')->insert([
+            ['id' => 1, 'order_id' => 10],   // delivered
+            ['id' => 2, 'order_id' => 20],   // cancelled
+        ]);
+
+        $delivered = $this->ledger->record(5, VendorLedgerEntry::TYPE_ORDER_EARNING, credit: 100, referenceType: 'order_details', referenceId: 1, availableAt: now()->subDay());
+        $cancelled = $this->ledger->record(5, VendorLedgerEntry::TYPE_ORDER_EARNING, credit: 100, referenceType: 'order_details', referenceId: 2, availableAt: now()->subDay());
+
+        $released = $this->ledger->releaseMatured();
+
+        $this->assertSame(1, $released, 'only the delivered order matured');
+        $this->assertSame(VendorLedgerEntry::STATUS_AVAILABLE, $delivered->fresh()->status);
+        $this->assertSame(VendorLedgerEntry::STATUS_PENDING, $cancelled->fresh()->status, 'a cancelled order never becomes payable');
+
+        foreach (['order_details', 'orders'] as $t) {
+            Schema::dropIfExists($t);
+        }
     }
 
     // ---- corrections are entries, not edits ----

@@ -59,6 +59,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Services\Marketplace\PaymentRoutingService;
 use function App\Utils\payment_gateways;
 
 class WebController extends Controller
@@ -433,6 +434,11 @@ class WebController extends Controller
         $couponDiscount = $vendorWiseCartListCollection?->sum('coupon_discount') ?? 0;
         $amount = $vendorWiseCartListCollection?->sum('order_amount_with_tax') ?? 0;
 
+        // Payment orchestration (Phase 3, Stage E): apply routing rules to the storefront gateway list
+        // for this order's context (total + destination country). Backward-compatible — with no active
+        // rule the resolver returns the gateways unchanged, so checkout behaves exactly as before.
+        $paymentGatewaysList = $this->resolvePaymentGateways((float) $amount);
+
         $inr = Currency::where(['symbol' => '₹'])->first();
         $usd = Currency::where(['code' => 'USD'])->first();
         $myr = Currency::where(['code' => 'MYR'])->first();
@@ -448,7 +454,7 @@ class WebController extends Controller
             $availablePaymentMethod = ['cash_on_delivery'];
         }
 
-        if (getWebConfig(name: 'digital_payment') && count(payment_gateways()) > 0) {
+        if (getWebConfig(name: 'digital_payment') && count($paymentGatewaysList) > 0) {
             $availablePaymentMethod = ['payment_gateways'];
         }
 
@@ -472,7 +478,7 @@ class WebController extends Controller
                 'usd' => $usd,
                 'myr' => $myr,
                 'paymentGatewayPublishedStatus' => $paymentGatewayPublishedStatus,
-                'payment_gateways_list' => payment_gateways(),
+                'payment_gateways_list' => $paymentGatewaysList,
                 'offline_payment_methods' => $offlinePaymentMethods,
                 'activeMinimumMethods' => count($availablePaymentMethod) > 0,
             ]);
@@ -480,6 +486,22 @@ class WebController extends Controller
 
         Toastr::error(translate('incomplete_info'));
         return back();
+    }
+
+    /**
+     * Apply payment-routing rules to the storefront gateway list for the current order context.
+     *
+     * The resolver hides or floats gateways by rules that match this order's total and destination
+     * country; it never invents a gateway that was not already offered. With no active routing rule it
+     * returns the codes unchanged, so the list keeps its original order and checkout behaves exactly as
+     * it did before this hook existed. The returned collection preserves the same model shape the
+     * payment view iterates (`->key_name`, `count()`), so the view is untouched.
+     */
+    private function resolvePaymentGateways(float $amount): \Illuminate\Support\Collection
+    {
+        $country = session('address_id') ? ShippingAddress::find(session('address_id'))?->country : null;
+
+        return (new PaymentRoutingService())->applyToModels(payment_gateways(), $amount, $country);
     }
 
     public function getCashOnDeliveryCheckoutComplete(Request $request): View|RedirectResponse|JsonResponse

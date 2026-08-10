@@ -59,6 +59,14 @@ class PayoutService
             return ['ok' => false, 'reason' => 'bank_details_recently_changed_payouts_are_temporarily_paused'];
         }
 
+        // KYC gate (Phase 3, Stage A). Off unless an admin turns on `require_kyc_for_payout`, so this
+        // is a no-op for every current install; when on, an unverified seller cannot withdraw. Only
+        // real sellers are subject to it — admin/in-house withdrawals are not KYC-verified entities.
+        if ($sellerIs === 'seller'
+            && !app(SellerVerificationService::class)->isPayoutEligible($sellerId)) {
+            return ['ok' => false, 'reason' => 'kyc_verification_required'];
+        }
+
         return DB::transaction(function () use ($sellerId, $sellerIs, $amount, $method, $methodDetails) {
             // Withdrawable, not the raw available bucket: a payout already in flight is held as a
             // reserved debit, and withdrawable() nets those holds out. Read inside the transaction;
@@ -96,6 +104,35 @@ class PayoutService
 
             return ['ok' => true, 'request' => $request];
         }, attempts: 3);
+    }
+
+    /**
+     * Open a dual-control approval for a payout through the reusable engine, when the amount is large
+     * enough to warrant it (spec item 83: maker-checker on large payouts).
+     *
+     * This is the payout workflow *using* the general engine rather than growing its own second copy
+     * of approval logic. It is opt-in: with no threshold configured it opens nothing and the payout
+     * follows the ordinary review path, so existing behaviour is unchanged. Above the threshold it
+     * opens an ApprovalRequest requiring two approvers, and the admin actions it from the approvals
+     * inbox — the maker who requested the payout cannot be one of them.
+     */
+    public function openApprovalIfLarge(VendorPayoutRequest $request, float $threshold, int $requiredApprovals = 2): ?\App\Models\ApprovalRequest
+    {
+        if ($threshold <= 0 || $request->amount < $threshold) {
+            return null;
+        }
+
+        return app(\App\Services\ApprovalEngine::class)->open(
+            workflow: 'payout',
+            subject: $request,
+            amount: $request->amount,
+            requiredApprovals: $requiredApprovals,
+            requestedBy: $request->seller_id,
+            requestedByType: 'seller',
+            payload: ['payout_reference' => $request->reference, 'seller_id' => $request->seller_id],
+            note: 'Payout ' . $request->reference . ' exceeds the dual-control threshold',
+            currency: $request->currency,
+        );
     }
 
     /** Admin moves a request forward without paying: requested -> under_review -> approved. */

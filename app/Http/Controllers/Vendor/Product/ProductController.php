@@ -273,7 +273,13 @@ class ProductController extends BaseController
             return response()->json([], 200);
         }
 
-        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $id], relations: ['translations', 'seoInfo']);
+        // Scope to the owning seller (as the edit-form loader above does): without user_id/added_by a
+        // seller could POST another vendor's product id and rewrite its price, stock, name, SEO, etc.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $id, 'user_id' => auth('seller')->id(), 'added_by' => 'seller'], relations: ['translations', 'seoInfo']);
+        if (!$product) {
+            ToastMagic::error(translate('product_not_found') . '!');
+            return redirect()->back();
+        }
         $dataArray = $service->getUpdateProductData(request: $request, product: $product, updateBy: 'seller');
         $this->updateProductAuthorAndPublishingHouse(request: $request, product: $product);
 
@@ -311,7 +317,12 @@ class ProductController extends BaseController
 
     public function updateProductImages(Request $request, ProductService $productService, int|string $id): RedirectResponse
     {
-        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $id], relations: ['translations', 'seoInfo']);
+        // Scope to the owning seller: an unscoped lookup let a seller overwrite another vendor's images.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $id, 'user_id' => auth('seller')->id(), 'added_by' => 'seller'], relations: ['translations', 'seoInfo']);
+        if (!$product) {
+            ToastMagic::error(translate('product_not_found') . '!');
+            return redirect()->back();
+        }
         $storage = config('filesystems.disks.default') ?? 'public';
         $processedImages = $productService->getProcessedUpdateAdditionalImages(request: $request, product: $product);
         $updateData = [
@@ -776,9 +787,15 @@ class ProductController extends BaseController
         ];
 
         if ($stockCount >= 0) {
-            $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
-            $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: $dataArray);
-            $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
+            // Scope to the owning seller: an unscoped lookup/update let a seller set another vendor's stock.
+            $ownerScope = ['user_id' => auth('seller')->id(), 'added_by' => 'seller'];
+            $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']] + $ownerScope);
+            if (!$product) {
+                ToastMagic::error(translate('product_not_found') . '!');
+                return back();
+            }
+            $this->productRepo->updateByParams(params: ['id' => $request['product_id']] + $ownerScope, data: $dataArray);
+            $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']] + $ownerScope);
             $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
 
             ToastMagic::success(translate('product_quantity_updated_successfully'));
@@ -790,13 +807,19 @@ class ProductController extends BaseController
 
     public function deleteImage(Request $request, ProductService $service): RedirectResponse
     {
-        $this->deleteFile(filePath: '/product/' . $request['image']);
-        $product = $this->productRepo->getFirstWhere(params: ['id' => $request['id']]);
+        // Scope to the owning seller BEFORE touching the filesystem — the old order (delete the file by
+        // request path, then look the product up unscoped) let a seller delete another vendor's images.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['id'], 'user_id' => auth('seller')->id(), 'added_by' => 'seller']);
+        if (!$product) {
+            ToastMagic::error(translate('product_not_found') . '!');
+            return back();
+        }
 
         if (count(json_decode($product['images'])) < 2) {
             ToastMagic::warning(translate('you_can_not_delete_all_images'));
             return back();
         }
+        $this->deleteFile(filePath: '/product/' . $request['image']);
         $imageProcessing = $service->deleteImage(request: $request, product: $product);
         $updateData = [
             'images' => json_encode($imageProcessing['images']),
@@ -938,7 +961,11 @@ class ProductController extends BaseController
 
     public function deletePreviewFile(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['product_id']]);
+        // Scope to the owning seller — an unscoped lookup let a seller wipe another vendor's preview file.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['product_id'], 'user_id' => auth('seller')->id(), 'added_by' => 'seller']);
+        if (!$product) {
+            return response()->json(['status' => 0, 'message' => translate('product_not_found')], 403);
+        }
         $this->productService->deletePreviewFile(product: $product);
         $this->productRepo->update(id: $request['product_id'], data: ['preview_file' => null]);
         return response()->json([

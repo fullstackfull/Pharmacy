@@ -9,6 +9,7 @@ use App\Enums\ViewPaths\Vendor\Review;
 use App\Http\Controllers\Vendor\Auth\ForgotPasswordController;
 use App\Http\Controllers\Vendor\Auth\LoginController;
 use App\Http\Controllers\Vendor\Auth\RegisterController;
+use App\Http\Controllers\Vendor\Auth\StaffLoginController;
 use App\Http\Controllers\Vendor\DashboardController;
 use App\Http\Controllers\Vendor\ChattingController;
 use App\Http\Controllers\Vendor\Coupon\CouponController;
@@ -69,7 +70,18 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
             });
         });
 
-        Route::group(['middleware' => ['seller']], function () {
+        // Seller staff sign-in (Phase 3, Stage A). A staff member signs in with their own credentials
+        // and is logged in as their parent seller; SellerStaffAccessMiddleware then scopes what they may
+        // do. Rate limited like the owner login — this is the brute-force barrier.
+        Route::group(['prefix' => 'staff-auth', 'as' => 'staff-auth.', 'middleware' => ['throttle:20,1']], function () {
+            Route::controller(StaffLoginController::class)->group(function () {
+                Route::get('login', 'getLoginView')->name('login');
+                Route::post('login', 'login')->name('login.submit');
+                Route::get('logout', 'logout')->name('logout');
+            });
+        });
+
+        Route::group(['middleware' => ['seller', 'seller_staff_access']], function () {
             Route::controller(FirebaseController::class)->group(function () {
                 Route::post('system/save-fcm-web-token', 'saveSellerWebToken')->name('system.save-fcm-web-token');
             });
@@ -372,6 +384,46 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         Route::get('/', 'index')->name('index');
                         Route::post('/', 'store')->name('store');
                         Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+                    });
+                });
+
+                // Seller KYC (Phase 3, Stage A): the seller submits identity/business documents and
+                // sees each one's review state. Alongside payouts because verification gates them.
+                Route::group(['prefix' => 'seller-verification', 'as' => 'seller-verification.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerVerificationController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::post('/', 'store')->name('store');
+                    });
+                });
+
+                // Seller's own performance scorecard (Phase 3, Stage A) — the same metrics the admin sees.
+                Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerScorecardController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                    });
+                });
+
+                // Seller Center hub (Phase 3, Stage A): one cockpit over verification, performance,
+                // finance and SLA — composed from the seller-facing services, not re-derived.
+                Route::group(['prefix' => 'seller-center', 'as' => 'seller-center.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerCenterController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                    });
+                });
+
+                // Seller staff & roles (Phase 3, Stage A): the seller defines roles and manages their
+                // team. Permission enforcement / staff sign-in is the named deferred step.
+                Route::group(['prefix' => 'staff', 'as' => 'staff.'], function () {
+                    Route::controller(\App\Http\Controllers\Vendor\Marketplace\SellerStaffController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::post('/', 'storeStaff')->name('store');
+                        Route::put('{id}', 'updateStaff')->whereNumber('id')->name('update');
+                        Route::delete('{id}', 'destroyStaff')->whereNumber('id')->name('destroy');
+                        Route::group(['prefix' => 'roles', 'as' => 'roles.'], function () {
+                            Route::post('/', 'storeRole')->name('store');
+                            Route::put('{id}', 'updateRole')->whereNumber('id')->name('update');
+                            Route::delete('{id}', 'destroyRole')->whereNumber('id')->name('destroy');
+                        });
                     });
                 });
             });
