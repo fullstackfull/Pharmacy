@@ -99,6 +99,13 @@ and documents `LOG_LEVEL=warning`; `config/logging.php` now reads `env('LOG_LEVE
   caught the next run. +2 tests.
 - **Category `requires_moderation` gate** — a seller product in a moderation-governed category is now set
   to pending approval even when the global approval flag is off, making that governance field functional.
+- **Sale movement log** — checkout and both POS paths now emit a `TYPE_SALE` `StockMovement` after
+  decrementing (physical only, post-decrement balance, non-throwing), completing the movement ledger so it
+  can reconcile against `current_stock`.
+- **Double-restock coordination** — RMA `receive()` coordinates with the legacy order-status restock via
+  the shared `is_stock_decreased` marker: a full return atomically claims the restore (and skips if already
+  restored); a partial return leaves the marker untouched so it can neither double-count nor block the
+  legacy restore. +3 tests.
 
 ## 6. Architecture
 
@@ -149,26 +156,27 @@ catalogue endpoints, and that clients treat the new 401/403/429 (rate-limited au
 
 ## 12. Test results
 
-**659 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
+**662 passed, 1 skipped.** New this remediation: +2 staff finance-gate, +1 ledger delivered-gate, +1
 tax-inclusive refund, +1 restock idempotency, +2 reconciliation earnings-maturation. Critical domains all have dedicated coverage (commission, settlement, payout,
 ledger, refund, stock-guard, warehouse, PO, payment-routing, shipping, B2B, permissions, staff-access).
 
 ## 13. Remaining technical debt (fixable follow-ups, prioritized)
 
-*(DONE across Waves E/F: commission-rule CRUD, cancel/return restock atomicity, KYC at rest, currency
-label, order-edit stock atomicity, the never-maturing-earnings reconciliation check, and the
-category `requires_moderation` product-approval gate. What remains:)*
+*(DONE across Waves E–G: commission-rule CRUD, cancel/return restock atomicity, order-edit stock
+atomicity, currency label, KYC at rest, the never-maturing-earnings reconciliation check, the category
+`requires_moderation` product-approval gate, the sale movement log (checkout + POS), and the
+double-restock coordination between the RMA and legacy paths. Three items remain — each genuinely needs
+input, a spec, or a design decision rather than a quick fix:)*
 
-1. **Double-restock coordination** — a returned line processed through *both* the legacy order-status flow
-   and the RMA `receive()` restocks twice; `return_shipments.order_details_id` exists, so coordinate via
-   the shared `is_stock_decreased` marker (skip/flag in `receive()`). Left undone deliberately: the
-   interaction is subtle and mis-fixing it risks *not* restoring stock — needs a dedicated test harness.
-2. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
+1. **Admin finance separation-of-duties** — a dedicated settlement/finance module permission and a
    distinct approver-vs-payer control (today all admin marketplace finance actions share `module:reports`).
-3. **Remaining category-governance consumers** — `missingRequiredAttributes()` at product save and
-   `taxClass()` in tax calc (return-window and `requires_moderation` are now consumed).
-4. **Sale movement log** — emit a `TYPE_SALE` `StockMovement` from checkout/POS so the movement ledger can
-   reconcile against `current_stock`.
+   **A policy decision** — how finance duties should be split among admin roles — so it awaits the
+   maintainer's steer rather than a unilateral split.
+2. **Category `required_attributes` enforcement** — `missingRequiredAttributes()` exists, but the feature
+   never defined how a "required attribute" key maps to a product's attribute data; wiring a validation
+   needs that contract pinned down first, or it would either block every save or silently never match.
+3. **Category `tax_class` in tax calc** — mapping a category tax class into the TaxModule's rate resolution
+   is a non-trivial integration on a shared, money-affecting path; warrants its own scoped change + tests.
 
 ## 14. Remaining known limitations (by design / accepted)
 
