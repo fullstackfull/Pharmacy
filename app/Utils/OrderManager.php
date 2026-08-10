@@ -1266,6 +1266,27 @@ class OrderManager
 
             $orderDetailsId = DB::table('order_details')->insertGetId($orderDetails);
 
+            // Log the sale into the stock-movement history. TYPE_SALE was defined but never emitted, so
+            // the movement ledger was missing its largest, most frequent movement and could never
+            // reconcile against current_stock. Physical products only, and non-throwing — a missing log
+            // line must never roll back the order.
+            if ($isPhysical) {
+                try {
+                    $balanceAfter = (int) (Product::where('id', $product['id'])->value('current_stock') ?? 0);
+                    app(\App\Services\Marketplace\InventoryService::class)->record(
+                        productId: $product['id'],
+                        type: \App\Models\StockMovement::TYPE_SALE,
+                        qtyChange: -$orderedQuantity,
+                        balanceAfter: $balanceAfter,
+                        referenceType: 'order',
+                        referenceId: $orderId,
+                        sellerId: ($product['added_by'] ?? 'admin') === 'admin' ? null : ($product['user_id'] ?? null),
+                    );
+                } catch (\Throwable $exception) {
+                    Log::warning('Sale stock-movement log failed for order detail ' . $orderDetailsId . ': ' . $exception->getMessage());
+                }
+            }
+
             // Freeze the commission for this line, here, inside the order transaction.
             //
             // Until now the only figure kept was one aggregate `orders.admin_commission`, derived
