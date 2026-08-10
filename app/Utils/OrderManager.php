@@ -1062,7 +1062,8 @@ class OrderManager
                     'seller_id' => $sellerId,
                     'seller_is' => $sellerIs,
                     'commission_rule_id' => $calculated['rule_id'],
-                    'currency' => session('currency_code'),
+                    // Base currency, not the viewer's display currency — the amounts are stored in base.
+                    'currency' => optional(\App\Models\Currency::find(getWebConfig(name: 'system_default_currency')))->code ?? session('currency_code'),
                 ])
             );
 
