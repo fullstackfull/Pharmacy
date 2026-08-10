@@ -587,7 +587,12 @@ class ProductService
             'video_provider' => 'youtube',
             'video_url' => $request['video_url'],
             'status' => $addedBy == 'admin' ? 1 : 0,
-            'request_status' => $addedBy == 'admin' ? 1 : (getWebConfig(name: 'new_product_approval') == 1 ? 0 : 1),
+            // A seller product needs approval when the global new-product-approval flag is on OR its
+            // category is governed as requiring moderation — this is what makes the category-governance
+            // `requires_moderation` field actually gate a product. Only ever adds a review step (never
+            // removes one); with no governance configured requiresModeration() returns false, so the
+            // behaviour is unchanged.
+            'request_status' => $addedBy == 'admin' ? 1 : ((getWebConfig(name: 'new_product_approval') == 1 || app(\App\Services\Marketplace\CategoryGovernanceService::class)->requiresModeration($request['category_id'])) ? 0 : 1),
             'shipping_cost' => $request['product_type'] == 'physical' ? currencyConverter(amount: $request['shipping_cost']) : 0,
             'multiply_qty' => ($request['product_type'] == 'physical') ? ($request['multiply_qty'] == 'on' ? 1 : 0) : 0, //to be changed in form multiply_qty
             'color_image' => json_encode($processedImages['colored_image_names']),
