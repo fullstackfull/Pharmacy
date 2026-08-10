@@ -19,6 +19,25 @@
             <p class="mb-0 fs-12">{{ translate('every_figure_here_comes_from_the_vendor_ledger_and_nothing_is_paid_without_approval') }}</p>
         </div>
 
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h6 class="mb-1">{{ translate('separation_of_duties') }}</h6>
+                    <p class="mb-0 fs-12 text-muted">{{ translate('when_on_the_admin_who_approves_a_settlement_cannot_also_mark_it_paid_off_by_default') }}.</p>
+                </div>
+                <form action="{{ route('admin.marketplace.settlements.toggle-maker-checker') }}" method="post" class="d-flex align-items-center gap-2">
+                    @csrf
+                    <input type="hidden" name="status" value="{{ $makerChecker ? 0 : 1 }}">
+                    <span class="badge {{ $makerChecker ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                        {{ $makerChecker ? translate('enabled') : translate('disabled') }}
+                    </span>
+                    <button class="btn btn-sm {{ $makerChecker ? 'btn-outline-danger' : 'btn-primary' }}">
+                        {{ $makerChecker ? translate('turn_off') : translate('turn_on') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- The one number that tells the operator whether Calculate will do anything. --}}
         <div class="card mb-3">
             <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">

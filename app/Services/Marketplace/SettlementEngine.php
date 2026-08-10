@@ -128,18 +128,18 @@ class SettlementEngine
      * Only from approved: paying something nobody approved is exactly the control the maker-checker
      * split exists to enforce.
      */
-    public function markPaid(VendorSettlement $settlement, ?string $payoutReference = null): bool
+    public function markPaid(VendorSettlement $settlement, ?string $payoutReference = null, int|string|null $paidBy = null): bool
     {
         if ($settlement->status !== VendorSettlement::STATUS_APPROVED) {
             return false;
         }
 
-        return DB::transaction(function () use ($settlement, $payoutReference) {
-            $settlement->forceFill([
+        return DB::transaction(function () use ($settlement, $payoutReference, $paidBy) {
+            $settlement->forceFill(array_merge([
                 'status' => VendorSettlement::STATUS_PAID,
                 'paid_at' => now(),
                 'payout_reference' => $payoutReference,
-            ])->save();
+            ], Schema::hasColumn('vendor_settlements', 'paid_by') ? ['paid_by' => $paidBy] : []))->save();
 
             VendorLedgerEntry::where('settlement_id', $settlement->id)
                 ->update(['status' => VendorLedgerEntry::STATUS_PAID, 'updated_at' => now()]);

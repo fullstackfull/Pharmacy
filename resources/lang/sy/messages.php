@@ -1,6 +1,13 @@
 <?php
 
 return [
+	// Settlement separation-of-duties (audit remediation — opt-in maker-checker)
+	"separation_of_duties" => "الفصل بين المهام",
+	"separation_of_duties_enabled" => "تم تفعيل الفصل بين المهام",
+	"separation_of_duties_disabled" => "تم تعطيل الفصل بين المهام",
+	"when_on_the_admin_who_approves_a_settlement_cannot_also_mark_it_paid_off_by_default" => "عند التفعيل، لا يمكن للمشرف الذي اعتمد التسوية أن يضع علامة الدفع عليها بنفسه. مُعطَّل افتراضيًا",
+	"the_admin_who_approved_a_settlement_cannot_also_mark_it_paid" => "لا يمكن للمشرف الذي اعتمد التسوية أن يضع علامة الدفع عليها",
+
 	// Commission rules (Phase 3, Stage B — audit remediation: the missing rule writer)
 	"commission_rules" => "قواعد العمولة",
 	"commission_rule_created" => "تم إنشاء قاعدة العمولة",

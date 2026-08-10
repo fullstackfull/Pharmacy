@@ -459,6 +459,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('calculate', 'calculate')->name('calculate');
+                Route::post('toggle-maker-checker', 'toggleMakerChecker')->name('toggle-maker-checker');
                 Route::get('{id}', 'show')->whereNumber('id')->name('show');
                 Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
                 Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');

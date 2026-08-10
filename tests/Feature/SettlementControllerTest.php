@@ -71,6 +71,7 @@ class SettlementControllerTest extends TestCase
             $t->timestamp('calculated_at')->nullable();
             $t->unsignedBigInteger('approved_by')->nullable();
             $t->timestamp('approved_at')->nullable();
+            $t->unsignedBigInteger('paid_by')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->string('payout_reference', 191)->nullable();
             $t->text('note')->nullable();
@@ -135,6 +136,18 @@ class SettlementControllerTest extends TestCase
 
         $this->assertSame(2, VendorLedgerEntry::where('status', VendorLedgerEntry::STATUS_PAID)->count());
         $this->assertSame('BANK-7788', $settlement->fresh()->payout_reference);
+    }
+
+    /** The payer is recorded so the (opt-in) approver≠payer separation-of-duties control can compare them. */
+    public function test_mark_paid_records_who_paid(): void
+    {
+        $this->availableSale();
+        $settlement = $this->engine->calculate(5);
+        $this->engine->approve($settlement, approvedBy: 4);
+
+        $this->assertTrue($this->engine->markPaid($settlement->fresh(), payoutReference: 'BANK-1', paidBy: 8));
+        $this->assertSame(8, (int) $settlement->fresh()->paid_by);
+        $this->assertSame(4, (int) $settlement->fresh()->approved_by, 'approver and payer are distinct people here');
     }
 
     public function test_calculate_then_cancel_returns_the_money_to_waiting(): void
