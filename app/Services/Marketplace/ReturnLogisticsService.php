@@ -88,7 +88,25 @@ class ReturnLogisticsService
             $balanceAfter = null;
 
             if ($rma->restock && $rma->product_id && Schema::hasTable('products')) {
-                $locked = DB::table('products')->where('id', $rma->product_id)->lockForUpdate()->first();
+                // Coordinate with the legacy order-status restock (getStockUpdateOnOrderStatusChange) so a
+                // line is never restocked twice — once here and once when the order is marked returned. If
+                // this RMA covers the whole order line, atomically CLAIM the restore by flipping the line's
+                // is_stock_decreased 1->0; a zero-row flip means the legacy path already restored it, so we
+                // skip. A partial RMA never touches the marker, so it can neither be double-counted against
+                // the legacy full-line restore nor block it from restoring the remainder (never under-restock).
+                $mayRestock = true;
+                if ($rma->order_details_id && Schema::hasTable('order_details')) {
+                    $line = DB::table('order_details')->where('id', $rma->order_details_id)->first();
+                    if ($line && (int) $line->qty <= (int) $rma->qty) {
+                        $claimed = DB::table('order_details')
+                            ->where('id', $rma->order_details_id)
+                            ->where('is_stock_decreased', 1)
+                            ->update(['is_stock_decreased' => 0]);
+                        $mayRestock = $claimed > 0;
+                    }
+                }
+
+                $locked = $mayRestock ? DB::table('products')->where('id', $rma->product_id)->lockForUpdate()->first() : null;
                 if ($locked) {
                     $balanceAfter = (int) $locked->current_stock + (int) $rma->qty;
                     DB::table('products')->where('id', $rma->product_id)

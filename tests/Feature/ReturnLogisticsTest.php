@@ -100,6 +100,68 @@ class ReturnLogisticsTest extends TestCase
         $this->assertSame($rma->id, $m->reference_id);
     }
 
+    /** A minimal order_details table for the legacy-coordination tests. */
+    private function orderLine(int $qty, int $isStockDecreased): int
+    {
+        Schema::dropIfExists('order_details');
+        Schema::create('order_details', function (Blueprint $t) {
+            $t->id(); $t->integer('qty')->default(0); $t->boolean('is_stock_decreased')->default(1); $t->timestamps();
+        });
+
+        return DB::table('order_details')->insertGetId(['qty' => $qty, 'is_stock_decreased' => $isStockDecreased]);
+    }
+
+    private function linkedRma(int $productId, int $qty, int $detailId)
+    {
+        $rma = $this->svc->authorize(['product_id' => $productId, 'qty' => $qty, 'reason' => 'x']);
+        DB::table('return_shipments')->where('id', $rma->id)->update(['order_details_id' => $detailId]);
+        $this->svc->markInTransit($rma->fresh());
+
+        return $rma->fresh();
+    }
+
+    public function test_a_full_return_claims_the_line_so_the_legacy_path_cannot_double_restock(): void
+    {
+        $detailId = $this->orderLine(qty: 3, isStockDecreased: 1);
+        $productId = $this->product(100);
+
+        $res = $this->svc->receive($this->linkedRma($productId, 3, $detailId), 42);
+
+        $this->assertTrue($res['restocked']);
+        $this->assertSame(103, (int) DB::table('products')->where('id', $productId)->value('current_stock'), 'restocked once');
+        $this->assertSame(0, (int) DB::table('order_details')->where('id', $detailId)->value('is_stock_decreased'), 'claimed, so the legacy restore will skip');
+
+        Schema::dropIfExists('order_details');
+    }
+
+    public function test_a_full_return_skips_restock_when_the_line_was_already_restored(): void
+    {
+        $detailId = $this->orderLine(qty: 3, isStockDecreased: 0);   // legacy already restored it
+        $productId = $this->product(100);
+
+        $res = $this->svc->receive($this->linkedRma($productId, 3, $detailId), 42);
+
+        $this->assertFalse($res['restocked'], 'no second restock');
+        $this->assertSame(100, (int) DB::table('products')->where('id', $productId)->value('current_stock'), 'stock unchanged');
+        $this->assertSame('received', $res['return']->status, 'received, not restocked');
+
+        Schema::dropIfExists('order_details');
+    }
+
+    public function test_a_partial_return_restocks_without_touching_the_marker(): void
+    {
+        $detailId = $this->orderLine(qty: 5, isStockDecreased: 1);
+        $productId = $this->product(100);
+
+        $res = $this->svc->receive($this->linkedRma($productId, 2, $detailId), 42);   // partial: 2 of 5
+
+        $this->assertTrue($res['restocked']);
+        $this->assertSame(102, (int) DB::table('products')->where('id', $productId)->value('current_stock'), 'partial restock');
+        $this->assertSame(1, (int) DB::table('order_details')->where('id', $detailId)->value('is_stock_decreased'), 'marker untouched so the legacy path can restore the rest');
+
+        Schema::dropIfExists('order_details');
+    }
+
     public function test_an_unsellable_return_is_received_but_not_restocked(): void
     {
         $id = $this->product(100);
