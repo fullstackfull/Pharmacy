@@ -74,8 +74,11 @@ class ProfileController extends BaseController
      */
     public function update(VendorRequest $request, string|int $id): JsonResponse
     {
-        $vendor = $this->vendorRepo->getFirstWhere(['id' => $id]);
-        $this->vendorRepo->update(id: $id, data: $this->vendorService->getVendorDataForUpdate(request: $request, vendor: $vendor));
+        // Always act on the authenticated seller — never the route {id} — so one seller cannot overwrite
+        // another seller's profile (IDOR). The read views already enforce this; the write paths did not.
+        $sellerId = auth('seller')->id();
+        $vendor = $this->vendorRepo->getFirstWhere(['id' => $sellerId]);
+        $this->vendorRepo->update(id: $sellerId, data: $this->vendorService->getVendorDataForUpdate(request: $request, vendor: $vendor));
         return response()->json(['message' => translate('profile_updated_successfully')]);
     }
 
@@ -86,7 +89,9 @@ class ProfileController extends BaseController
      */
     public function updatePassword(VendorPasswordRequest $request, string|int $id): JsonResponse
     {
-        $this->vendorRepo->update(id: $id, data: $this->vendorService->getVendorPasswordData(request: $request));
+        // Reset only the authenticated seller's own password (route {id} is ignored) — otherwise any
+        // seller could take over another seller's account.
+        $this->vendorRepo->update(id: auth('seller')->id(), data: $this->vendorService->getVendorPasswordData(request: $request));
         return response()->json(['message' => translate('password_updated_successfully')]);
     }
 
@@ -112,7 +117,9 @@ class ProfileController extends BaseController
      */
     public function updateBankInfo(VendorBankInfoRequest $request, string|int $id): RedirectResponse
     {
-        $vendor = $this->vendorRepo->getFirstWhere(['id' => $id]);
+        // Only the authenticated seller's own bank/payout details — never the route {id} — so a seller
+        // cannot redirect another seller's payouts to their account.
+        $vendor = $this->vendorRepo->getFirstWhere(['id' => auth('seller')->id()]);
         $this->vendorRepo->update(id: $vendor['id'], data: $this->vendorService->getVendorBankInfoData(request: $request));
         ToastMagic::success(translate('Bank_info_updated_successfully') . '!!');
         return redirect()->route('vendor.profile.index');

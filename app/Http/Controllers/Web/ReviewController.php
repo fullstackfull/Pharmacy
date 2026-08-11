@@ -156,7 +156,11 @@ class ReviewController extends Controller
 
     public function deleteReviewImage(Request $request): JsonResponse
     {
-        $review = Review::find($request['id']);
+        // Ownership scope: a customer may only edit their OWN review's images.
+        $review = Review::where('id', $request['id'])->where('customer_id', auth('customer')->id())->first();
+        if (!$review) {
+            return response()->json(['message' => translate('access_denied')], 403);
+        }
         $array = [];
 
         foreach ($review['attachment'] as $image) {

@@ -296,7 +296,7 @@ class WebController extends Controller
         }
 
         $seller_products = Product::active()->withCount('reviews')->whereIn('id', $product_ids)
-            ->orderByRaw("LOCATE('{$request['name']}', name), name")->get();
+            ->orderByRaw('LOCATE(?, name), name', [$request['name']])->get();
 
         return response()->json([
             'result' => view(VIEW_FILE_NAMES['product_search_result'], compact('products', 'seller_products'))->render(),
@@ -824,6 +824,15 @@ class WebController extends Controller
                 'billing_address_id' => session('billing_address_id'),
                 'requestObj' => $request,
             ]);
+
+            if (empty($order_ids)) {
+                // generateOrder returns [] after rolling back its transaction (e.g. an item went out of
+                // stock, or a conditional stock decrement failed). No order exists, so the wallet must
+                // NOT be debited — otherwise the customer loses money for nothing. (The API path already
+                // guards this; the web path did not.)
+                Toastr::error(translate('order_place_failed_please_try_again'));
+                return redirect()->route('shop-cart');
+            }
 
             foreach ($order_ids as $order_id) {
                 OrderManager::generateReferBonusForFirstOrder(orderId: $order_id);

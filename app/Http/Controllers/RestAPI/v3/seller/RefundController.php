@@ -94,7 +94,11 @@ class RefundController extends Controller
     public function refund_details(Request $request):JsonResponse
     {
         $seller = $request->seller;
-        $order_details = OrderDetail::find($request->order_details_id);
+        // Ownership: scope the order line to this seller so one seller can't read another's line/refund detail.
+        $order_details = OrderDetail::where('seller_id', $seller['id'])->find($request->order_details_id);
+        if (!$order_details) {
+            return response()->json(['errors' => [['code' => 'order-details', 'message' => translate('not_found')]]], 404);
+        }
         $refund_request = RefundRequest::with('refundStatus')->where('order_details_id', $request->order_details_id)->get();
 
         $order = Order::find($order_details->order_id);

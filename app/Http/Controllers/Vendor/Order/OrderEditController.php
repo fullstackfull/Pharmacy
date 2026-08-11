@@ -100,12 +100,31 @@ class OrderEditController extends BaseController
         // TODO: Implement index() method.
     }
 
+    /**
+     * Fetch an order that belongs to the authenticated seller, or abort 404.
+     *
+     * Every edit-order action keys off a request order_id. Without this scope one seller could load,
+     * price, add/remove products on, and regenerate another seller's order simply by passing its id.
+     * Vendor orders carry seller_is='seller' and the vendor's own seller_id, so that pair is the
+     * ownership predicate — the same one the rest of the vendor order controller already uses.
+     */
+    private function sellerOwnedOrderOrFail(int|string|null $orderId, array $relations = [])
+    {
+        $order = $this->orderRepo->getFirstWhere(
+            params: ['id' => $orderId, 'seller_id' => auth('seller')->id(), 'seller_is' => 'seller'],
+            relations: $relations,
+        );
+        abort_if(!$order, 404);
+
+        return $order;
+    }
+
     public function getSearchEditOrderProductsView(Request $request): JsonResponse
     {
         $orderId = $request['order_id'] ?? null;
         $searchValue = $request['searchValue'] ?? null;
 
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
 
         $filters = [
             'added_by' => $order['seller_is'] == 'admin' ? 'in_house' : $order['seller_is'],
@@ -129,7 +148,7 @@ class OrderEditController extends BaseController
     public function getEditOrderProductModalView(Request $request): JsonResponse
     {
         $productSubtotal = $cartItems['productSubtotal'] ?? 0;
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
         $product = $this->productRepo->getFirstWhereWithCount(
             params: ['id' => $request['product_id']],
             withCount: ['reviews'],
@@ -163,7 +182,7 @@ class OrderEditController extends BaseController
     public function checkProductVariantPrice(Request $request): JsonResponse
     {
         $variantRequest = $request->all();
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
         $product = $this->productRepo->getFirstWhereWithCount(
             params: ['id' => $request['product_id']],
             withCount: ['reviews'],
@@ -216,7 +235,7 @@ class OrderEditController extends BaseController
 
     public function addEditOrderProduct(Request $request): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
         $color = $this->colorRepo->getFirstWhere(params: ['code' => $request['color']]);
         $result = $this->orderEditService->addOrUpdateProductInOrderSession(request: $request, order: $order, color: $color);
 
@@ -240,7 +259,7 @@ class OrderEditController extends BaseController
 
     public function removeEditOrderProduct(Request $request): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
         $result = $this->orderEditService->removeProductInOrderSession(request: $request, order: $order);
 
         $orderSession = $this->orderEditService->getOrderEditSession(order: $order);
@@ -263,7 +282,7 @@ class OrderEditController extends BaseController
 
     public function updateEditOrderProductList(Request $request): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']]);
+        $order = $this->sellerOwnedOrderOrFail($request['order_id']);
         $result = $this->orderEditService->updateProductListInOrderSession(request: $request, order: $order);
 
         $orderSession = $this->orderEditService->getOrderEditSession(order: $order);
@@ -286,7 +305,7 @@ class OrderEditController extends BaseController
 
     public function generateEditOrderByProductList(Request $request): JsonResponse
     {
-        $order = $this->orderRepo->getFirstWhere(params: ['id' => $request['order_id']], relations: [
+        $order = $this->sellerOwnedOrderOrFail($request['order_id'], relations: [
             'details.productAllStatus', 'verificationImages', 'shipping', 'seller.shop', 'offlinePayments', 'deliveryMan'
         ]);
         $orderSession = $this->orderEditService->getOrderEditSession(order: $order);

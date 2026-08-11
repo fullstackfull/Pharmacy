@@ -244,15 +244,18 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
         Route::get('account-order-details-vendor-info', 'account_order_details_seller_info')->name('account-order-details-vendor-info')->middleware('customer');
         Route::get('account-order-details-delivery-man-info', 'account_order_details_delivery_man_info')->name('account-order-details-delivery-man-info')->middleware('customer');
         Route::get('account-order-details-reviews', 'getAccountOrderDetailsReviewsView')->name('account-order-details-reviews')->middleware('customer');
+        // No 'customer' middleware: the order-success modal links here for GUEST checkouts too, so this
+        // must stay reachable without a customer login. generate_invoice() enforces owner-only access
+        // itself (logged-in customer by customer_id, guest by their session guest_id).
         Route::get('generate-invoice/{id}', 'generate_invoice')->name('generate-invoice');
         Route::get('account-wishlist', 'account_wishlist')->name('account-wishlist'); //add to card not work
-        Route::get('refund-request/{id}', 'refund_request')->name('refund-request');
-        Route::get('refund-details/{id}', 'refund_details')->name('refund-details');
-        Route::post('refund-store', 'store_refund')->name('refund-store');
+        Route::get('refund-request/{id}', 'refund_request')->name('refund-request')->middleware('customer');
+        Route::get('refund-details/{id}', 'refund_details')->name('refund-details')->middleware('customer');
+        Route::post('refund-store', 'store_refund')->name('refund-store')->middleware('customer');
         Route::get('account-tickets', 'account_tickets')->name('account-tickets');
-        Route::get('order-cancel/{id}', 'order_cancel')->name('order-cancel');
+        Route::get('order-cancel/{id}', 'order_cancel')->name('order-cancel')->middleware('customer');
         Route::post('ticket-submit', 'submitSupportTicket')->name('ticket-submit');
-        Route::get('account-delete/{id}', 'account_delete')->name('account-delete');
+        Route::get('account-delete/{id}', 'account_delete')->name('account-delete')->middleware('customer');
         Route::get('refer-earn', 'refer_earn')->name('refer-earn')->middleware('customer');
         Route::get('user-coupons', 'user_coupons')->name('user-coupons')->middleware('customer');
         Route::get('user-restock-requests', 'restockRequestsView')->name('user-restock-requests')->middleware('customer');
@@ -529,7 +532,11 @@ if (!$isGatewayPublished) {
         //PAYMERA
         Route::group(['prefix' => 'paymera', 'as' => 'paymera.'], function () {
             Route::any('pay', [PaymeraController::class, 'index'])->name('pay');
-            Route::any('callback', [PaymeraController::class, 'callback'])->name('callback');
+            // callbackURL == triggerURL. Paymera's server-to-server trigger carries no CSRF token, so a
+            // POST trigger would be 419'd and only the browser return would finalize — exempt it like the
+            // other gateway callbacks (sslcommerz/stripe/…).
+            Route::any('callback', [PaymeraController::class, 'callback'])->name('callback')
+                ->withoutMiddleware([VerifyCsrfToken::class]);
         });
     });
 }

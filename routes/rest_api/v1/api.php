@@ -382,7 +382,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
         Route::controller(OrderController::class)->group(function () {
             Route::get('track', 'track_by_order_id');
             Route::get('track-order-details', 'track_order_details_history');
-            Route::get('cancel-order', 'order_cancel');
+            Route::get('cancel-order', 'order_cancel')->middleware('auth:api');
             Route::post('track-order', 'track_order');
         });
     });

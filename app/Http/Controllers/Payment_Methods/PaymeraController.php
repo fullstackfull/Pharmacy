@@ -138,13 +138,21 @@ class PaymeraController extends Controller
 
         if ($status === 'A') {   // Accepted — the only success state
             $rrn = $json['Data']['rrn'] ?? null;
-            $this->payment::where(['id' => $data->id])->update([
+
+            // Atomic finalize. callbackURL == triggerURL, so Paymera's server trigger and the customer's
+            // browser return both hit this GET, and the get-payment-status call above (up to 30s) widens
+            // the window where both entrants have read is_paid=0. A plain update()+hook would then fire
+            // the money-moving success hook (wallet credit / order create) twice. The conditional
+            // where('is_paid', 0) update is atomic at the row level: exactly one concurrent caller gets
+            // affected===1 and fires the hook; the loser sees 0 and returns success without re-firing.
+            $affected = $this->payment::where(['id' => $data->id])->where('is_paid', 0)->update([
                 'payment_method' => 'paymera',
                 'is_paid' => 1,
                 'transaction_id' => $rrn,
             ]);
+
             $paid = $this->payment::where(['id' => $data->id])->first();
-            if (function_exists($paid->success_hook)) {
+            if ($affected === 1 && function_exists($paid->success_hook)) {
                 call_user_func($paid->success_hook, $paid);
             }
 

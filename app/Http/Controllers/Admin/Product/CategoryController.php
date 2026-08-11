@@ -145,7 +145,9 @@ class CategoryController extends BaseController
                 ['sub_category_id' => $category['id']],
                 [
                     'category_id' => $request['parent_id'],
-                    'category_ids' => DB::raw("JSON_SET(CAST(category_ids AS JSON), '$[0].id', '{$request['parent_id']}')")
+                    // parent_id is interpolated into raw SQL, so it MUST be an integer cast — otherwise a
+                    // crafted parent_id is a SQL injection. Category ids are integers, so the cast is lossless.
+                    'category_ids' => DB::raw("JSON_SET(CAST(category_ids AS JSON), '$[0].id', '" . (int) $request['parent_id'] . "')")
                 ]
             );
         }

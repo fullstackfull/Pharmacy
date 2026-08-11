@@ -1083,6 +1083,13 @@ class OrderManager
                 $ledger = app(\App\Services\Marketplace\VendorLedger::class);
 
                 $returnWindowDays = (int) app(\App\Services\Marketplace\CategoryGovernanceService::class)->returnWindowDays($categoryId);
+                // The earning and its commission MUST mature together. releaseMatured() only matures
+                // pending entries whose available_at is set (whereNotNull('available_at')); a commission
+                // debit booked with a NULL available_at would stay pending forever, so settlement (which
+                // claims only `available`) would settle the GROSS earning and withdrawable (balance −
+                // pending) would add the pending commission debit back — the marketplace would collect no
+                // commission and the seller could draw the gross. Same timestamp => both mature as one.
+                $availableAt = now()->addDays(max(0, $returnWindowDays));
 
                 $ledger->record(
                     sellerId: $sellerId,
@@ -1091,7 +1098,7 @@ class OrderManager
                     referenceType: 'order_details',
                     referenceId: $orderDetailsId,
                     description: 'Order #' . $orderId,
-                    availableAt: now()->addDays(max(0, $returnWindowDays)),
+                    availableAt: $availableAt,
                 );
 
                 if ((float) $calculated['commission_amount'] > 0) {
@@ -1102,6 +1109,7 @@ class OrderManager
                         referenceType: 'order_details',
                         referenceId: $orderDetailsId,
                         description: $calculated['rule_label'] ?? 'Marketplace commission',
+                        availableAt: $availableAt,
                     );
                 }
             }

@@ -177,6 +177,13 @@ class ProductController extends BaseController
 
     public function deleteRestock(string|int $id): RedirectResponse
     {
+        // Ownership: restock_products has no seller column, so verify ownership through the product
+        // (product.user_id == this seller). Without it a seller could delete another seller's restock rows.
+        $restock = $this->restockProductRepo->getFirstWhere(params: ['id' => $id]);
+        if (!$restock || !$this->productRepo->getFirstWhere(params: ['id' => $restock->product_id, 'user_id' => auth('seller')->id()])) {
+            ToastMagic::error(translate('product_restock_removed_failed'));
+            return back();
+        }
         $this->restockProductRepo->delete(params: ['id' => $id]);
         $this->restockProductCustomerRepo->delete(params: ['restock_product_id' => $id]);
         ToastMagic::success(translate('product_restock_removed_successfully'));
@@ -686,6 +693,15 @@ class ProductController extends BaseController
         $productId = $request['id'];
         $product = $this->productRepo->getFirstWhere(params: ['id' => $productId, 'user_id' => auth('seller')->id()]);
         $success = 0;
+
+        // The fetch is seller-scoped, but the elseif branch below writes by raw $productId. Guard on
+        // ownership here so a seller cannot deactivate (status != 1) another seller's product by id.
+        if (!$product) {
+            return response()->json([
+                'success' => 0,
+                'message' => translate("status_updated_failed"),
+            ], 200);
+        }
 
         if ($status == 1 && $product['request_status'] == 1) {
             $this->productRepo->update(id: $productId, data: ['status' => $status]);

@@ -102,6 +102,9 @@ class ShippingMethodController extends BaseController
      */
     public function updateStatus(Request $request): JsonResponse
     {
+        if (!$this->ownedByCurrentSeller($request['id'])) {
+            return response()->json(['message' => translate('access_denied'), 'success' => 0], 403);
+        }
         $this->shippingMethodRepo->update(id: $request['id'], data: ['status' => $request['status']]);
         return response()->json([
             'message' => translate('Shipping_method_status_updated_successfully'),
@@ -115,7 +118,11 @@ class ShippingMethodController extends BaseController
      */
     public function getUpdateView(string|int $id): View|RedirectResponse
     {
-        $shippingMethod = $this->shippingMethodRepo->getFirstWhere(params: ['id' => $id]);
+        $shippingMethod = $this->shippingMethodRepo->getFirstWhere(params: ['id' => $id, 'creator_id' => auth('seller')->id(), 'creator_type' => 'seller']);
+        if (!$shippingMethod) {
+            ToastMagic::error(translate('access_denied'));
+            return redirect()->route(ShippingMethod::INDEX[ROUTE]);
+        }
         return view(ShippingMethod::UPDATE[VIEW], compact('shippingMethod'));
     }
 
@@ -126,6 +133,10 @@ class ShippingMethodController extends BaseController
      */
     public function update(ShippingMethodRequest $request, string|int $id): RedirectResponse
     {
+        if (!$this->ownedByCurrentSeller($id)) {
+            ToastMagic::error(translate('access_denied'));
+            return redirect()->route(ShippingMethod::INDEX[ROUTE]);
+        }
         $this->shippingMethodRepo->update(id: $id, data: $this->shippingMethodService->addShippingMethodData(request: $request, addedBy: 'seller'));
         $this->categoryShippingRepo->updateWhere(params: ['shipping_method_id' => $id], data: ['shipping_cost' => currencyConverter($request['cost'])]);
         ToastMagic::success(translate('Shipping_method_status_updated_successfully'));
@@ -138,10 +149,19 @@ class ShippingMethodController extends BaseController
      */
     public function delete(Request $request): JsonResponse
     {
-        $this->shippingMethodRepo->delete(params: ['id' => $request['id']]);
+        // Scope the delete to the seller's own methods so one vendor cannot delete another's.
+        $this->shippingMethodRepo->delete(params: ['id' => $request['id'], 'creator_id' => auth('seller')->id(), 'creator_type' => 'seller']);
         return response()->json([
             'status' => 1,
             'message' => translate('Shipping_method_deleted_successfully')
         ]);
+    }
+
+    /** True when the shipping method with $id belongs to the authenticated seller. */
+    private function ownedByCurrentSeller(string|int $id): bool
+    {
+        return (bool) $this->shippingMethodRepo->getFirstWhere(
+            params: ['id' => $id, 'creator_id' => auth('seller')->id(), 'creator_type' => 'seller']
+        );
     }
 }

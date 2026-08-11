@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Schema;
 class StorefrontThemeRenderer
 {
     public const CACHE_KEY_PREFIX = 'storefront_theme_page_';
+    public const GLOBAL_SETTINGS_CACHE_KEY = 'storefront_theme_global_settings';
     private const CACHE_TTL = 600; // seconds
 
     public function __construct(private readonly SectionRegistry $registry)
@@ -91,6 +92,36 @@ class StorefrontThemeRenderer
     }
 
     /**
+     * Resolved global settings ONLY when an active theme has a published version; null otherwise.
+     *
+     * This is what the storefront `<head>` consults to override its design tokens: returning null when
+     * nothing is published preserves the contract that the storefront is unchanged until a merchant
+     * publishes a theme (globalSettings() can't be used for this because it returns defaults either way).
+     */
+    public function publishedGlobalSettings(ThemeManager $manager): ?array
+    {
+        if (!$this->tablesReady()) {
+            return null;
+        }
+
+        try {
+            // Cached like sectionsFor(): this runs in the storefront <head> on EVERY request, so an
+            // uncached publishedVersion() lookup would hit the DB per page even with nothing published.
+            // Wrapped in an array so the common "no published theme" (null) result is cached too —
+            // Cache::remember treats a bare null as a miss and would re-query every request.
+            $cached = Cache::remember(self::GLOBAL_SETTINGS_CACHE_KEY, self::CACHE_TTL, function () use ($manager) {
+                $version = $this->publishedVersion();
+
+                return ['settings' => $version ? $manager->resolveSettings($version) : null];
+            });
+
+            return $cached['settings'] ?? null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Resolve a setting for a breakpoint, falling back to the base value.
      * $breakpoint: desktop | tablet | mobile
      */
@@ -111,6 +142,7 @@ class StorefrontThemeRenderer
         foreach ($pages as $page) {
             Cache::forget(self::CACHE_KEY_PREFIX . $page);
         }
+        Cache::forget(self::GLOBAL_SETTINGS_CACHE_KEY);
     }
 
     /** Shared section builder used by both the published path and draft preview. */

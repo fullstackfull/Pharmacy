@@ -324,8 +324,16 @@ class UserProfileController extends Controller
             'updated_at' => now(),
         ];
         if (auth('customer')->check()) {
-            ShippingAddress::where('id', $request->id)->update($updateAddress);
-            Toastr::success(translate('address_updated_successfully!'));
+            // Scope to the owner: without customer_id any logged-in customer could rewrite another
+            // customer's saved address (e.g. redirect their deliveries) by passing its id.
+            $updated = ShippingAddress::where('id', $request->id)
+                ->where('customer_id', auth('customer')->id())
+                ->update($updateAddress);
+            if ($updated) {
+                Toastr::success(translate('address_updated_successfully!'));
+            } else {
+                Toastr::error(translate('address_not_found!'));
+            }
         } else {
             Toastr::error(translate('Insufficient_permission!'));
         }
@@ -335,7 +343,11 @@ class UserProfileController extends Controller
     public function address_delete(Request $request)
     {
         if (auth('customer')->check()) {
-            ShippingAddress::destroy($request->id);
+            // Scope to the owner: destroy() by raw id let any logged-in customer delete another
+            // customer's saved address.
+            ShippingAddress::where('id', $request->id)
+                ->where('customer_id', auth('customer')->id())
+                ->delete();
             Toastr::success(translate('address_Delete_Successfully'));
             return redirect()->back();
         } else {
@@ -459,7 +471,8 @@ class UserProfileController extends Controller
         $offlinePaymentStatus = getWebConfig(name: 'offline_payment');
         $cashOnDeliveryStatus = getWebConfig(name: 'cash_on_delivery');
 
-        $order = $this->order->with(['seller.shop'])->find($request->id);
+        // Ownership: scope to the customer's own order so one customer can't read another's order/seller panel.
+        $order = $this->order->with(['seller.shop'])->where('customer_id', auth('customer')->id())->find($request->id);
         if (!$order) {
             Toastr::warning(translate('invalid_order'));
             return redirect()->route('account-oder');
@@ -489,9 +502,10 @@ class UserProfileController extends Controller
         $offlinePaymentStatus = getWebConfig(name: 'offline_payment');
         $cashOnDeliveryStatus = getWebConfig(name: 'cash_on_delivery');
 
+        // Ownership: scope to the customer's own order so one customer can't read another's order details.
         $order = $this->order->with(['verificationImages', 'details.product', 'deliveryMan.rating', 'deliveryManReview', 'deliveryMan' => function ($query) {
             return $query->withCount('review');
-        }])->find($request->id);
+        }])->where('customer_id', auth('customer')->id())->find($request->id);
 
         if (!$order) {
             Toastr::warning(translate('invalid_order'));
@@ -632,6 +646,14 @@ class UserProfileController extends Controller
 
     public function comment_submit(Request $request, $id)
     {
+        // Ownership: without this any logged-in customer could reopen and inject a message into another
+        // customer's ticket thread by passing its id.
+        $ticket = SupportTicket::where('id', $id)->where('customer_id', auth('customer')->id())->first();
+        if (!$ticket) {
+            Toastr::warning(translate('Invalid_ticket'));
+            return back();
+        }
+
         if ($request->file('image') == null && empty($request['comment'])) {
             Toastr::error(translate('type_something') . '!');
             return back();
@@ -670,7 +692,8 @@ class UserProfileController extends Controller
 
     public function support_ticket_close($id)
     {
-        DB::table('support_tickets')->where(['id' => $id])->update([
+        // Ownership: scope the close to the caller's own ticket.
+        DB::table('support_tickets')->where(['id' => $id])->where('customer_id', auth('customer')->id())->update([
             'status' => 'close',
             'updated_at' => now(),
         ]);
@@ -683,7 +706,13 @@ class UserProfileController extends Controller
     {
 
         if (auth('customer')->check()) {
-            $support = SupportTicket::find($request->id);
+            // Ownership: without the customer_id scope any logged-in customer could delete another
+            // customer's ticket (and its conversations + attachment files) by id.
+            $support = SupportTicket::where('id', $request->id)->where('customer_id', auth('customer')->id())->first();
+            if (!$support) {
+                Toastr::warning(translate('Invalid_ticket'));
+                return back();
+            }
 
             if ($support->attachment && !is_array($support->attachment) && count(json_decode($support->attachment)) > 0) {
                 foreach (json_decode($support->attachment, true) as $image) {
@@ -887,7 +916,13 @@ class UserProfileController extends Controller
 
     public function order_cancel($id)
     {
-        $order = Order::where(['id' => $id])->first();
+        // Ownership scope: a customer may only cancel their OWN order (prevents cancelling/restocking
+        // arbitrary orders by guessing sequential ids).
+        $order = Order::where(['id' => $id, 'customer_id' => auth('customer')->id()])->first();
+        if (!$order) {
+            Toastr::error(translate('order_not_found'));
+            return back();
+        }
         if ($order['payment_method'] == 'cash_on_delivery' && $order['order_status'] == 'pending') {
             OrderManager::getStockUpdateOnOrderStatusChange($order, 'canceled');
             $orderStatusHistoryData = $this->orderStatusHistoryService->getOrderHistoryData(orderId: $id, userId: auth('customer')->id(), userType: 'customer', status: 'canceled');
@@ -909,6 +944,11 @@ class UserProfileController extends Controller
     {
         $orderDetails = OrderDetail::find($id);
         $user = auth('customer')->user();
+
+        // Ownership: the refund-request form exposes another customer's order line otherwise.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $user->id)->exists()) {
+            abort(404);
+        }
 
         $loyaltyPointStatus = getWebConfig(name: 'loyalty_point_status');
         if ($loyaltyPointStatus == 1) {
@@ -944,6 +984,13 @@ class UserProfileController extends Controller
         $orderDetailsReward = $this->orderDetailsRewardsRepo->getFirstWhere(params: ['order_details_id' => $request['order_details_id'], 'reward_type' => 'loyalty_point']);
         $orderDetails = OrderDetail::find($request->order_details_id);
         $user = auth('customer')->user();
+
+        // Ownership: a customer may only file a refund against a line of their OWN order. Without this
+        // a customer could refund another customer's order line by passing its order_details_id.
+        if (!$orderDetails || !Order::where('id', $orderDetails->order_id)->where('customer_id', $user->id)->exists()) {
+            Toastr::error(translate('order_not_found'));
+            return back();
+        }
 
         if ($orderDetailsReward && $user->loyalty_point < $orderDetailsReward['reward_amount']) {
             Toastr::warning(translate('you_have_not_sufficient_loyalty_point_to_refund_this_order') . '!!');
@@ -982,7 +1029,21 @@ class UserProfileController extends Controller
 
     public function generate_invoice($id)
     {
-        $order = Order::with('seller', 'latestEditHistory')->with('shipping')->where('id', $id)->first();
+        // Ownership scope: an invoice carries customer PII (name/address/phone/items) and must only be
+        // downloadable by the order's owner. A logged-in customer owns orders by customer_id; a guest
+        // owns the order placed under their session guest_id (customer_id == guest_id, is_guest == 1) —
+        // the guest order-success modal links here, so guests must keep working.
+        $order = Order::with('seller', 'latestEditHistory')->with('shipping')
+            ->where('id', $id)
+            ->where(function ($query) {
+                auth('customer')->check()
+                    ? $query->where('customer_id', auth('customer')->id())
+                    : $query->where(['customer_id' => session('guest_id'), 'is_guest' => 1]);
+            })
+            ->first();
+        if (!$order) {
+            abort(404);
+        }
         $invoiceSettings = getWebConfig(name: 'invoice_settings');
         $mpdf_view = \View::make(VIEW_FILE_NAMES['order_invoice'], compact('order', 'invoiceSettings'));
         $this->generatePdf(view: $mpdf_view, filePrefix: 'order_invoice_', filePostfix: $order['id'], pdfType: 'invoice', requestFrom: 'web');
@@ -991,6 +1052,10 @@ class UserProfileController extends Controller
     public function refund_details($id)
     {
         $order_details = OrderDetail::find($id);
+        // Ownership: the order line (price/qty/discount/tax) must belong to the requesting customer.
+        if (!$order_details || !Order::where('id', $order_details->order_id)->where('customer_id', auth('customer')->id())->exists()) {
+            abort(404);
+        }
         $refund = RefundRequest::with(['product', 'order'])->where('customer_id', auth('customer')->id())
             ->where('order_details_id', $order_details->id)->first();
         $product = $this->product->find($order_details->product_id);

@@ -148,7 +148,32 @@ class VendorLedger
     {
         $balances = $this->balances($sellerId, $sellerIs);
 
-        return round($balances['balance'] - $balances['pending'], 4);
+        // Also exclude money already claimed by a settlement. SettlementEngine pays earnings through the
+        // settlement channel by stamping `settlement_id` on them (and, on markPaid, relabelling them
+        // `paid` WITHOUT an offsetting debit), so those credits still sit inside `balance`. Counting them
+        // here would let the same earning be withdrawn a second time through a payout request — the two
+        // payout channels drawing on one pool. Netting out the settlement-claimed amount keeps them
+        // mutually exclusive on the same money.
+        return round($balances['balance'] - $balances['pending'] - $this->settlementClaimedNet($sellerId, $sellerIs), 4);
+    }
+
+    /**
+     * The net amount (credits − debits) of this seller's ledger entries that a settlement has claimed
+     * (`settlement_id` set). Guarded on the column existing so ledger-only unit tests are unaffected.
+     */
+    private function settlementClaimedNet(int|string $sellerId, string $sellerIs = 'seller'): float
+    {
+        if (!Schema::hasTable('vendor_ledger_entries') || !Schema::hasColumn('vendor_ledger_entries', 'settlement_id')) {
+            return 0.0;
+        }
+
+        $row = VendorLedgerEntry::query()
+            ->forSeller($sellerId, $sellerIs)
+            ->whereNotNull('settlement_id')
+            ->selectRaw('SUM(credit) as credits, SUM(debit) as debits')
+            ->first();
+
+        return round((float) ($row->credits ?? 0) - (float) ($row->debits ?? 0), 4);
     }
 
     /**
