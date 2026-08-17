@@ -778,70 +778,113 @@ function order_again(orderId) {
     });
 }
 
-$(".search-bar-input-mobile").keyup(function () {
-    $(".search-card").css("display", "block");
-    let name = $(".search-bar-input-mobile").val();
-    if (name.length > 0) {
-        $.get({
-            url: $("#route-searched-products").data("url"),
-            dataType: "json",
-            data: {
-                name: name,
-            },
-            beforeSend: function () {
-                $("#loading").show();
-            },
-            success: function (data) {
-                $(".search-result-box").empty().html(data.result);
-                $(".search-result-product").on("mouseover", function () {
-                    $(".search-bar-input-mobile").val(
-                        $(this).data("product-name")
-                    );
-                });
-            },
-            complete: function () {
-                $("#loading").hide();
-            },
-        });
-    } else {
-        $(".search-result-box").empty();
-    }
-});
+(function () {
+    // Header search typeahead. The old handlers fired an uncancelled GET per
+    // keystroke, flashed the full-page #loading overlay on every key, and let
+    // an out-of-order response paint an older query's results over a newer
+    // one. One debounced, abortable request at a time instead — and the
+    // suggestions gained arrow-key navigation. (A second copy of the handler
+    // targeted .search-bar-input-mobile, a selector this theme never renders.)
+    let searchDebounce = null;
+    let searchRequest = null;
 
-$(".search-bar-input").keyup(function () {
-    let searchBarInputElement = $(".search-bar-input");
-    $(".search-card").css("display", "block");
-    let name = searchBarInputElement.val();
-    searchBarInputElement.data("given-value", name);
-    if (name.length > 0) {
-        $.get({
+    function searchCardOf(input) {
+        return input.closest(".search_form").find(".search-card");
+    }
+
+    function runProductSearch(input) {
+        let name = input.val();
+        input.data("given-value", name);
+        let card = searchCardOf(input);
+        let box = card.find(".search-result-box");
+
+        if (searchRequest) {
+            searchRequest.abort();
+            searchRequest = null;
+        }
+        // The endpoint rejects a blank name with a 422, so whitespace-only
+        // input clears the box instead of asking.
+        if (!name.trim().length) {
+            box.empty();
+            return;
+        }
+
+        card.css("display", "block");
+        searchRequest = $.get({
             url: $("#route-searched-products").data("url"),
             dataType: "json",
             data: {
                 name: name,
             },
             beforeSend: function () {
-                $("#loading").show();
+                card.addClass("search-card--busy");
             },
             success: function (data) {
-                $(".search-result-box").empty().html(data.result);
-                $(".search-result-product").on("mouseover", function () {
-                    searchBarInputElement.val($(this).data("product-name"));
-                });
-                $(".search-result-product").on("mouseleave", function () {
-                    searchBarInputElement.val(
-                        searchBarInputElement.data("given-value")
-                    );
-                });
+                box.empty().html(data.result);
             },
             complete: function () {
-                $("#loading").hide();
+                card.removeClass("search-card--busy");
+                searchRequest = null;
             },
         });
-    } else {
-        $(".search-result-box").empty();
     }
-});
+
+    $(document).on("keyup", ".search-bar-input", function (event) {
+        // Navigation keys are handled in the keydown handler below and must
+        // not refire the search.
+        if (["ArrowDown", "ArrowUp", "Enter", "Escape"].indexOf(event.key) !== -1) {
+            return;
+        }
+        let input = $(this);
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(function () {
+            runProductSearch(input);
+        }, 250);
+    });
+
+    // Hover keeps its old behaviour: preview the suggestion in the input,
+    // restore what was typed on leave. Delegated, because the rows are
+    // re-rendered on every response.
+    $(document).on("mouseover", ".search-result-product", function () {
+        let input = $(this).closest(".search_form").find(".search-bar-input");
+        input.val($(this).data("product-name"));
+    });
+    $(document).on("mouseleave", ".search-result-product", function () {
+        let input = $(this).closest(".search_form").find(".search-bar-input");
+        input.val(input.data("given-value"));
+    });
+
+    // Arrow keys walk the suggestions and write the highlighted name into the
+    // input, so Enter's native form submit searches for exactly what is lit.
+    // Escape puts the typed text back and closes the card.
+    $(document).on("keydown", ".search-bar-input", function (event) {
+        let input = $(this);
+        let card = searchCardOf(input);
+        let rows = card.find(".search-result-product");
+
+        if (event.key === "Escape") {
+            // A search-type input clears itself on Escape by default, which
+            // would wipe the text this handler just restored.
+            event.preventDefault();
+            input.val(input.data("given-value"));
+            card.hide();
+            return;
+        }
+        if (!rows.length || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+            return;
+        }
+
+        event.preventDefault();
+        let current = rows.index(rows.filter(".is-active"));
+        let next = event.key === "ArrowDown"
+            ? (current + 1) % rows.length
+            : (current <= 0 ? rows.length - 1 : current - 1);
+        rows.removeClass("is-active");
+        let row = rows.eq(next).addClass("is-active");
+        input.val(row.data("product-name"));
+        row[0].scrollIntoView({ block: "nearest" });
+    });
+})();
 
 $(".clickable").click(function () {
     window.location = $(this).find("a").attr("href");
