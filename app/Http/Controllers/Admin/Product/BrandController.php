@@ -110,9 +110,13 @@ class BrandController extends BaseController
     public function update(BrandUpdateRequest $request, $id, BrandService $brandService): RedirectResponse
     {
         $brand = $this->brandRepo->getFirstWhere(params: ['id' => $request['id']], relations: ['storage', 'seo']);
+        $oldSlug = $brand->slug ?? null;
         $dataArray = $brandService->getUpdateData(request: $request, data: $brand);
         $this->brandRepo->update(id: $request['id'], data: $dataArray);
         $this->translationRepo->update(request: $request, model: 'App\Models\Brand', id: $request['id']);
+
+        // Preserve SEO value on a slug change: auto-create a 301 from the old brand URL to the new one.
+        app(\App\Services\Seo\SlugRedirectSuggester::class)->suggest('brand', $oldSlug, $dataArray['slug'] ?? $oldSlug);
 
         $seoMetaData = $this->seoMetaInfoService->getModelSEOData(request: $request, seoMetaInfo: $brand?->seo, type: 'App\Models\Brand', modelId: $brand->id, action: 'update');
         $this->seoMetaInfoRepo->updateOrInsert(params: ['seoable_type' => 'App\Models\Brand', 'seoable_id' => $brand['id']], data: $seoMetaData);

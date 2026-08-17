@@ -1403,6 +1403,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 });
             });
 
+            // SEO Health: read-only audit over resolved product SEO (surfaces SeoAuditService).
+            Route::get('health', [\App\Http\Controllers\Admin\Settings\SeoHealthController::class, 'index'])->name('health');
+
             Route::controller(SiteMapController::class)->group(function () {
                 Route::get('sitemap', 'index')->name('sitemap');
                 Route::get('sitemap-generate-download', 'getGenerateAndDownload')->name('sitemap-generate-download');

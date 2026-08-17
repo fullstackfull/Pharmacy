@@ -120,12 +120,22 @@ class SiteMapController extends BaseController
                 && !str_contains($url, '/vendor-shop');
         });
 
+        // Installed languages drive hreflang alternates: with more than one language, each product URL
+        // advertises its per-language variants so AR/EN pages stop competing in search.
+        $languages = collect(getWebConfig(name: 'language') ?? [])->pluck('code')->filter()->values();
+
         $productsUrl = $this->productRepo->getWebListWithScope(scope: 'active', dataLimit: 'all')->pluck('slug');
         foreach ($productsUrl as $productSingleUrl) {
-            $urlObject = Url::create(route('product', ['slug' => $productSingleUrl]))
+            $productUrl = route('product', ['slug' => $productSingleUrl]);
+            $urlObject = Url::create($productUrl)
                 ->setLastModificationDate($currentTime)
                 ->setChangeFrequency('weekly')
                 ->setPriority(0.8);
+            if ($languages->count() > 1) {
+                foreach ($languages as $languageCode) {
+                    $urlObject->addAlternate($productUrl . '?language=' . $languageCode, $languageCode);
+                }
+            }
             $generator->getSitemap()->add($urlObject);
         }
 

@@ -152,9 +152,13 @@ class CategoryController extends BaseController
             );
         }
 
+        $oldSlug = $category->slug ?? null;
         $dataArray = $this->categoryService->getUpdateData(request: $request, data: $category);
         $this->categoryRepo->update(id: $request['id'], data: $dataArray);
         $this->translationRepo->update(request: $request, model: 'App\Models\Category', id: $request['id']);
+
+        // Preserve SEO value on a slug change: auto-create a 301 from the old category URL to the new one.
+        app(\App\Services\Seo\SlugRedirectSuggester::class)->suggest('category', $oldSlug, $dataArray['slug'] ?? $oldSlug);
 
         $request->merge(['meta_index' => 'index']);
         $request->merge(['meta_no_follow' => 0]);

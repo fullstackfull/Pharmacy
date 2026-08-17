@@ -44,6 +44,14 @@
                 {{ translate('SEO_Templates') }}
             </a>
         </li>
+        @if (Route::has('admin.seo-settings.health'))
+            <li class="nav-item">
+                <a class="nav-link {{ Request::is('admin/seo-settings/health*') ? 'active' : '' }}"
+                   href="{{ route('admin.seo-settings.health') }}">
+                    {{ translate('SEO_Health') }}
+                </a>
+            </li>
+        @endif
     </ul>
     <div class="nav--tab__prev">
         <button type="button" class="btn btn-circle border-0 bg-white text-primary">
