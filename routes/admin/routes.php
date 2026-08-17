@@ -464,6 +464,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('ledger/{sellerId}', 'ledger')->whereNumber('sellerId')->name('ledger');
         });
 
+        // Admin lifecycle for seller-initiated ledger payouts: review/approve, mark paid, or reject
+        // (releasing the reservation). The seller side shipped without this, leaving requested payouts
+        // with no way to be approved or paid.
+        Route::controller(\App\Http\Controllers\Admin\Marketplace\PayoutController::class)->group(function () {
+            Route::group(['prefix' => 'payouts', 'as' => 'payouts.'], function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
+        });
+
         // The unified audit center (spec item 84). Read-only: no edit or delete path exists.
         Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
             Route::get('audit-log', 'index')->name('audit-log');

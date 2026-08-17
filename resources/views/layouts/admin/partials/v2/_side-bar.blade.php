@@ -639,6 +639,12 @@
                             <span class="v2-nav-child-dot" data-tone="primary"></span>
                             <span class="v2-nav-child-label">{{ translate('vendor_settlements') }}</span>
                         </a>
+                        @if (Route::has('admin.marketplace.payouts.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/payouts*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.payouts.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="success"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_payouts') }}</span>
+                            </a>
+                        @endif
                         @if (Route::has('admin.marketplace.commission-rules.index'))
                             <a class="v2-nav-child {{ Request::is('admin/marketplace/commission-rules*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.commission-rules.index') }}">
                                 <span class="v2-nav-child-dot" data-tone="primary"></span>

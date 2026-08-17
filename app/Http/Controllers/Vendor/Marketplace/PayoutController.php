@@ -63,6 +63,14 @@ class PayoutController extends BaseController
             return back();
         }
 
+        // Dual control on large payouts (spec item 83): above the configured threshold the request is
+        // routed through the maker-checker approval engine and surfaces in the admin approvals inbox.
+        // Opt-in — with no threshold set nothing opens and the ordinary review path applies.
+        $threshold = (float) (getWebConfig(name: 'payout_dual_control_threshold') ?? 0);
+        if ($threshold > 0) {
+            $this->payouts->openApprovalIfLarge($result['request'], $threshold);
+        }
+
         ToastMagic::success(translate('payout_requested') . ' — ' . $result['request']->reference);
 
         return back();
