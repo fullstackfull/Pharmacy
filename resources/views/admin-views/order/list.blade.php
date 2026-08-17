@@ -3,416 +3,287 @@
 @section('title', translate('order_List'))
 
 @section('content')
+    @php
+        use App\Utils\OrderManager;
+
+        $statusHeading = match ($status) {
+            'processing' => translate('packaging_Orders'),
+            'failed'     => translate('failed_to_Deliver_Orders'),
+            'all'        => translate('all_Orders'),
+            default      => translate(str_replace('_', ' ', $status)) . ' ' . translate('Orders'),
+        };
+
+        // Everything the export link and the pagination have to carry so a filtered
+        // view exports and paginates the same rows it is showing.
+        $currentFilters = [
+            'delivery_man_id'          => request('delivery_man_id'),
+            'from'                     => $from,
+            'to'                       => $to,
+            'filter'                   => $filter,
+            'searchValue'              => $searchValue,
+            'seller_id'                => $vendorId,
+            'customer_id'              => $customerId,
+            'date_type'                => $dateType,
+            'payment_status'           => request('payment_status'),
+            'order_current_status'     => request('order_current_status'),
+            'order_amount_settlement'  => request('order_amount_settlement'),
+        ];
+        $hasFilters = collect($currentFilters)->filter(fn ($value) => !is_null($value) && $value !== '' && $value !== [])->isNotEmpty();
+
+        $statusTiles = [
+            ['key' => 'pending',          'label' => translate('Pending'),           'value' => $allOrdersInfo['pending_order'],          'icon' => 'clock'],
+            ['key' => 'confirmed',        'label' => translate('Confirmed'),         'value' => $allOrdersInfo['confirmed_order'],        'icon' => 'check'],
+            ['key' => 'processing',       'label' => translate('Packaging'),         'value' => $allOrdersInfo['processing_order'],       'icon' => 'catalog'],
+            ['key' => 'out_for_delivery', 'label' => translate('Out_For_Delivery'),  'value' => $allOrdersInfo['out_for_delivery_order'], 'icon' => 'arrow-end'],
+            ['key' => 'delivered',        'label' => translate('Delivered'),         'value' => $allOrdersInfo['delivered_order'],        'icon' => 'orders'],
+            ['key' => 'canceled',         'label' => translate('Canceled'),          'value' => $allOrdersInfo['canceled_order'],         'icon' => 'close'],
+            ['key' => 'returned',         'label' => translate('Returned'),          'value' => $allOrdersInfo['returned_order'],         'icon' => 'refresh'],
+            ['key' => 'failed',           'label' => translate('Failed_to_Deliver'), 'value' => $allOrdersInfo['failed_order'],           'icon' => 'alert'],
+        ];
+
+        // A bulk action may only set statuses that need no per-order input; the
+        // endpoint enforces the same list.
+        $bulkStatuses = [
+            'confirmed'        => translate('Confirmed'),
+            'processing'       => translate('Packaging'),
+            'out_for_delivery' => translate('Out_For_Delivery'),
+            'delivered'        => translate('Delivered'),
+            'canceled'         => translate('Canceled'),
+        ];
+
+        $statusTone = fn ($value) => match ($value) {
+            'delivered', 'confirmed' => 'success',
+            'processing', 'out_for_delivery' => 'warning',
+            'pending' => 'info',
+            default => 'danger',
+        };
+    @endphp
+
     <div class="content container-fluid">
-        <div>
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-                <h2 class="h1 mb-0">
-                    <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/all-orders.png') }}" class="mb-1 me-1"
-                         alt="">
-                    <span class="page-header-title">
-                        @if ($status == 'processing')
-                            {{ translate('packaging_Orders') }}
-                        @elseif($status == 'failed')
-                            {{ translate('failed_to_Deliver_Orders') }}
-                        @elseif($status == 'all')
-                            {{ translate('all_Orders') }}
-                        @else
-                            {{ translate(str_replace('_', ' ', $status)) }} {{ translate('Orders') }}
-                        @endif
-                    </span>
-                </h2>
-                <span class="badge text-dark bg-body-secondary fw-semibold rounded-45">{{ $orders->total() }}</span>
+        <x-k.page-header :title="$statusHeading">
+            <x-slot:actions>
+                <x-k.button variant="secondary" icon="download"
+                            :href="route('admin.orders.export-excel', ['status' => $status] + $currentFilters)">
+                    {{ translate('export') }}
+                </x-k.button>
+            </x-slot:actions>
+        </x-k.page-header>
+
+        @if ($status == 'all')
+            <div class="k-stats" style="margin-block-end:var(--k-size-4)">
+                @foreach ($statusTiles as $tile)
+                    <x-k.stat :label="$tile['label']" :value="$tile['value']" :icon="$tile['icon']"
+                              :href="route('admin.orders.list', [$tile['key']])" />
+                @endforeach
             </div>
+        @endif
 
-            @if($status == 'all')
-                <div class="card card-body mb-20">
-                    <h3 class="mb-20">{{ translate('Current_Order_Summary') }}</h3>
-                    <div class="row g-3">
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded"
-                               href="{{ route('admin.orders.list',['pending']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/pending.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Pending') }}</h4>
-                                </div>
-                                <span class="text-primary h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['pending_order'] }}
-                            </span>
-                            </a>
-                        </div>
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_confirmed"
-                               href="{{ route('admin.orders.list',['confirmed']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/confirmed.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Confirmed') }}</h4>
-                                </div>
-                                <span class="text-success h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['confirmed_order'] }}
-                            </span>
-                            </a>
-                        </div>
+        <x-k.data-view :title="translate('order_List')" :count="$orders->total()" :selectable="true"
+                       searchName="searchValue" :searchValue="$searchValue"
+                       :searchPlaceholder="translate('search_by_Order_ID')">
 
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_packaging"
-                               href="{{ route('admin.orders.list',['processing']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/packaging.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Packaging') }}</h4>
-                                </div>
-                                <span class="text-danger h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['processing_order'] }}
-                            </span>
-                            </a>
-                        </div>
-
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_out-for-delivery"
-                               href="{{ route('admin.orders.list',['out_for_delivery']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/out-of-delivery.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Out_for_Delivery') }}</h4>
-                                </div>
-                                <span class="text-success h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['out_for_delivery_order'] }}
-                            </span>
-                            </a>
-                        </div>
-
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_delivered cursor-pointer"
-                               href="{{ route('admin.orders.list',['delivered']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/delivered.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Delivered') }}</h4>
-                                </div>
-                                <span class="text-primary h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['delivered_order'] }}
-                            </span>
-                            </a>
-                        </div>
-
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_canceled cursor-pointer"
-                               href="{{ route('admin.orders.list',['canceled']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/canceled.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Canceled') }}</h4>
-                                </div>
-                                <span class="text-danger h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['canceled_order'] }}
-                            </span>
-                            </a>
-                        </div>
-
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_returned cursor-pointer"
-                               href="{{ route('admin.orders.list',['returned']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/returned.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Returned') }}</h4>
-                                </div>
-                                <span class="text-warning h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['returned_order'] }}
-                            </span>
-                            </a>
-                        </div>
-
-                        <div class="col-lg-6 col-xl-3">
-                            <a class="d-flex gap-3 align-items-center justify-content-between p-20 bg-section rounded order-stats_failed cursor-pointer"
-                               href="{{ route('admin.orders.list',['failed']) }}">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <img width="20"
-                                         src="{{ dynamicAsset(path: 'public/assets/back-end/img/failed-to-deliver.png') }}"
-                                         alt="">
-                                    <h4 class="mb-0">{{ translate('Failed_to_Deliver') }}</h4>
-                                </div>
-                                <span class="text-danger h3 mb-0 overflow-wrap-anywhere">
-                                {{ $allOrdersInfo['failed_order'] }}
-                            </span>
-                            </a>
-                        </div>
-                    </div>
+            <x-slot:actions>
+                <div class="position-relative">
+                    @if ($hasFilters)
+                        {{-- A filtered list that looks unfiltered is how people misread a report. --}}
+                        <span class="position-absolute inset-inline-end-0 top-0 mt-n1 me-n1 btn-circle bg-danger border border-white border-2"
+                              style="--size: 10px;"></span>
+                    @endif
+                    <x-k.button variant="secondary" icon="filter" data-bs-toggle="offcanvas"
+                                data-bs-target="#offcanvasOrderFilter">
+                        {{ translate('Filter') }}
+                    </x-k.button>
                 </div>
+            </x-slot:actions>
+
+            @if ($hasFilters)
+                <x-slot:filters>
+                    @foreach ($currentFilters as $key => $value)
+                        @continue(is_null($value) || $value === '' || $value === [])
+                        <x-k.chip :key="translate(str_replace('_', ' ', $key))" :removable="false">
+                            {{ is_array($value) ? implode(', ', $value) : $value }}
+                        </x-k.chip>
+                    @endforeach
+                    <a class="k-btn k-btn--ghost k-btn--sm" href="{{ route('admin.orders.list', [$status]) }}">
+                        {{ translate('clear_all') }}
+                    </a>
+                </x-slot:filters>
             @endif
 
-            <div class="card mt-3">
-                <div class="card-body d-flex flex-column gap-20">
+            <x-slot:bulk>
+                @foreach ($bulkStatuses as $value => $label)
+                    <x-k.button variant="secondary" size="sm" data-k-bulk-status="{{ $value }}">
+                        {{ translate('mark_as') }} {{ $label }}
+                    </x-k.button>
+                @endforeach
+            </x-slot:bulk>
 
-                    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center">
-                        <h3 class="mb-0 d-flex gap-2 align-items-center">
-                            {{ translate('order_List') }}
-                            <span class="badge text-dark bg-body-secondary fw-semibold rounded-45">
-                                {{ $orders->total() }}
-                            </span>
-                        </h3>
+            <table class="k-table" id="order-table">
+                <thead>
+                <tr>
+                    <th style="inline-size:44px">
+                        <input type="checkbox" data-k-select-all aria-label="{{ translate('select_all') }}">
+                    </th>
+                    <th>{{ translate('order_ID') }}</th>
+                    <th>{{ translate('order_date') }}</th>
+                    <th>{{ translate('customer_info') }}</th>
+                    <th>{{ translate('Store') }}</th>
+                    <th class="k-table__num">{{ translate('total_amount') }}</th>
+                    <th>{{ $status == 'all' ? translate('order_status') : translate('payment_method') }}</th>
+                    <th></th>
+                </tr>
+                </thead>
 
-                        <div class="d-flex gap-3 align-items-center flex-wrap">
-                            <form action="{{ url()->current() }}" method="GET" class="flex-grow-1">
-                                <div class="form-group">
-                                    <div class="input-group min-w-300">
-                                        <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control" placeholder="{{ translate('search_by_Order_ID') }}"
-                                               aria-label="Search by Order ID" value="{{ $searchValue }}">
-                                        <div class="input-group-append search-submit">
-                                            <button type="submit">
-                                                <i class="fi fi-rr-search"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
+                <tbody>
+                @foreach ($orders as $key => $order)
+                    @php $orderTotalPriceSummary = OrderManager::getOrderTotalPriceSummary(order: $order); @endphp
+                    <tr class="status-{{ $order['order_status'] }} class-all">
+                        <td>
+                            <input type="checkbox" data-k-row-select value="{{ $order['id'] }}"
+                                   aria-label="{{ translate('select_order') }} {{ $order['id'] }}">
+                        </td>
 
-                            <a type="button" class="btn btn-outline-primary"
-                               href="{{ route('admin.orders.export-excel', [
-                                                    'delivery_man_id' => request('delivery_man_id'),
-                                                    'status' => $status, 'from' => $from, 'to' => $to,
-                                                    'filter' => $filter, 'searchValue' => $searchValue,
-                                                    'seller_id' => $vendorId,
-                                                    'customer_id' => $customerId,
-                                                    'date_type' => $dateType,
-                                                    'payment_status' => request('payment_status'),
-                                                    'order_current_status' => request('order_current_status'),
-                                                    'order_amount_settlement' => request('order_amount_settlement')
-                                                    ]) }}">
-                                <i class="fi fi-sr-inbox-in"></i>
-                                <span class="fs-12">{{ translate('export') }}</span>
-                            </a>
-                            <div class="position-relative">
-                                @if((request('delivery_man_id') || $from || $to || $filter || $searchValue || $vendorId || $customerId || $dateType))
-                                    <div
-                                        class="position-absolute inset-inline-end-0 top-0 mt-n1 me-n1 btn-circle bg-danger border border-white border-2"
-                                        style="--size: 12px;"></div>
+                        <td>
+                            <div class="k-row" style="gap:var(--k-size-1)">
+                                <a href="{{ route('admin.orders.details', ['id' => $order['id']]) }}" style="font-weight:500">
+                                    <span class="k-num">{{ $order['id'] }}</span>
+                                </a>
+                                @if ($order->order_type == 'POS')
+                                    <x-k.badge tone="accent" :dot="false">{{ translate('POS') }}</x-k.badge>
                                 @endif
-                                <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas"
-                                        data-bs-target="#offcanvasOrderFilter">
-                                    <i class="fi fi-sr-settings-sliders"></i>
-                                    {{ translate('Filter') }}
-                                </button>
+                                @if ($order->edited_status == 1 && $order?->latestEditHistory?->order_due_payment_status == 'unpaid' && $order?->latestEditHistory?->order_due_payment_method != 'offline_payment' && $order?->latestEditHistory?->order_due_payment_method != 'cash_on_delivery' && $order?->latestEditHistory?->order_due_amount > 0)
+                                    <span title="{{ translate('customer_will_pay_due_the_amount') }}" class="k-text-subtle">
+                                        <x-k.icon name="alert" :size="14" />
+                                    </span>
+                                @elseif ($order->edited_status == 1 && $order?->latestEditHistory?->order_return_payment_status == 'pending' && $order?->latestEditHistory?->order_return_amount > 0)
+                                    <span title="{{ translate('you_need_to_return_the_excess_amount_to_the_customer.') }}" class="k-text-subtle">
+                                        <x-k.icon name="refresh" :size="14" />
+                                    </span>
+                                @endif
                             </div>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-borderless">
-                            <thead class="text-capitalize">
-                            <tr>
-                                <th>{{ translate('SL') }}</th>
-                                <th>{{ translate('order_ID') }}</th>
-                                <th class="text-capitalize">{{ translate('order_date') }}</th>
-                                <th class="text-capitalize">{{ translate('customer_info') }}</th>
-                                <th>{{ translate('Store') }}</th>
-                                <th class="text-capitalize text-end">{{ translate('total_amount') }}</th>
-                                @if ($status == 'all')
-                                    <th class="text-center">{{ translate('order_status') }} </th>
-                                @else
-                                    <th class="text-capitalize">{{ translate('payment_method') }} </th>
-                                @endif
-                                <th class="text-center">{{ translate('action') }}</th>
-                            </tr>
-                            </thead>
+                            @if ($order->edited_status == 1)
+                                <x-k.badge tone="info" :dot="false">{{ translate('Edited') }}</x-k.badge>
+                            @endif
+                        </td>
 
-                            <tbody>
-                            @foreach ($orders as $key => $order)
+                        <td class="k-text-muted">
+                            <div>{{ date('d M Y', strtotime($order['created_at'])) }}</div>
+                            <div class="k-text-subtle">{{ date('h:i A', strtotime($order['created_at'])) }}</div>
+                        </td>
 
-                                <tr class="status-{{ $order['order_status'] }} class-all">
-                                    <td class="">
-                                        {{ $orders->firstItem() + $key }}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1 flex-column">
-                                            <div class="d-flex align-items-center gap-1">
-                                                <a class="hover-primary text-dark"
-                                                   href="{{ route('admin.orders.details', ['id' => $order['id']]) }}">
-                                                    {{ $order['id'] }}
-                                                    {!! $order->order_type == 'POS' ? '<span class="text--primary">(POS)</span>' : '' !!}
-                                                </a>
-                                                @if($order->edited_status == 1 && $order?->latestEditHistory?->order_due_payment_status == 'unpaid' && $order?->latestEditHistory?->order_due_payment_method != "offline_payment" && $order?->latestEditHistory?->order_due_payment_method != "cash_on_delivery" && $order?->latestEditHistory?->order_due_amount > 0)
-                                                    <span class="flex-shrink-0" data-bs-toggle="tooltip"
-                                                          title="{{ translate('customer_will_pay_due_the_amount') }}">
-                                                        <img width="14"
-                                                             src="{{ dynamicAsset(path: 'public/assets/back-end/img/due-amount-icon.png') }}"
-                                                             alt="">
-                                                    </span>
-                                                @elseif($order->edited_status == 1 && $order?->latestEditHistory?->order_return_payment_status == 'pending' && $order?->latestEditHistory?->order_return_amount > 0)
-                                                    <span class="flex-shrink-0" data-bs-toggle="tooltip"
-                                                          title="{{ translate('you_need_to_return_the_excess_amount_to_the_customer.') }}">
-                                                        <img width="16"
-                                                             src="{{ dynamicAsset(path: 'public/assets/back-end/img/return-amount-icon.png') }}"
-                                                             alt="">
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            @if($order->edited_status == 1)
-                                                <span class="badge badge-info text-bg-info w-max-content">
-                                                        {{ translate('Edited') }}
-                                                    </span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div>{{ date('d M Y', strtotime($order['created_at'])) }},</div>
-                                        <div>{{ date('h:i A', strtotime($order['created_at'])) }}</div>
-                                    </td>
-                                    <td>
-                                        @if ($order->is_guest)
-                                            <strong class="text-dark">{{ translate('guest_customer') }}</strong>
-                                        @elseif($order->customer_id == 0)
-                                            <strong class="text-dark">{{ translate('Walk-In-Customer') }}</strong>
+                        <td>
+                            @if ($order->is_guest)
+                                <strong>{{ translate('guest_customer') }}</strong>
+                            @elseif ($order->customer_id == 0)
+                                <strong>{{ translate('Walk-In-Customer') }}</strong>
+                            @elseif ($order->customer)
+                                <span class="k-row">
+                                    <x-k.avatar :name="$order->customer['f_name'] . ' ' . $order->customer['l_name']" />
+                                    <span style="min-inline-size:0">
+                                        <a class="k-truncate" style="display:block;font-weight:500"
+                                           href="{{ route('admin.customer.view', ['user_id' => $order->customer['id']]) }}">
+                                            {{ $order->customer['f_name'] . ' ' . $order->customer['l_name'] }}
+                                        </a>
+                                        @if ($order->customer['phone'])
+                                            <a class="k-text-subtle" href="tel:{{ $order->customer['phone'] }}">{{ $order->customer['phone'] }}</a>
                                         @else
-                                            @if ($order->customer)
-                                                <a class="text-capitalize hover-primary text-dark"
-                                                   href="{{ route('admin.customer.view', ['user_id' => $order->customer['id']]) }}">
-                                                    <strong
-                                                        class="title-name fw-semibold">{{ $order->customer['f_name'] . ' ' . $order->customer['l_name'] }}</strong>
-                                                </a>
-                                                @if ($order->customer['phone'])
-                                                    <a class="d-block text-dark"
-                                                       href="tel:{{ $order->customer['phone'] }}">{{ $order->customer['phone'] }}</a>
-                                                @else
-                                                    <a class="d-block text-dark"
-                                                       href="mailto:{{ $order->customer['email'] }}">{{ $order->customer['email'] }}</a>
-                                                @endif
-                                            @else
-                                                <label class="badge badge-danger text-bg-danger">
-                                                    {{ translate('customer_not_found') }}
-                                                </label>
-                                            @endif
+                                            <a class="k-text-subtle" href="mailto:{{ $order->customer['email'] }}">{{ $order->customer['email'] }}</a>
                                         @endif
-                                    </td>
-                                    <td>
-                                        @if (isset($order->seller_id) && isset($order->seller_is))
-                                            <a href="{{ $order->seller_is == 'seller' && $order->seller?->shop ? route('admin.vendors.view', ['id' => $order->seller->shop->id]) : route('admin.business-settings.inhouse-shop') }}"
-                                               class="store-name fw-medium hover-primary text-dark text-wrap d-block max-w-360">
-                                                @if ($order->seller_is == 'seller')
-                                                    {{ isset($order->seller?->shop) ? $order->seller?->shop?->name : translate('Store_not_found') }}
-                                                @elseif($order->seller_is == 'admin')
-                                                    {{ getInHouseShopConfig(key: 'name') }}
-                                                @endif
-                                            </a>
-                                        @else
-                                            {{ translate('Store_not_found') }}
-                                        @endif
-                                    </td>
-                                    <td class="text-end">
-                                        <div>
-                                            @php($orderTotalPriceSummary = \App\Utils\OrderManager::getOrderTotalPriceSummary(order: $order))
-                                            {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $orderTotalPriceSummary['totalAmount']), currencyCode: getCurrencyCode()) }}
-                                        </div>
+                                    </span>
+                                </span>
+                            @else
+                                <x-k.badge tone="danger">{{ translate('customer_not_found') }}</x-k.badge>
+                            @endif
+                        </td>
 
-                                        @if ($order->payment_status == 'paid')
-                                            <span
-                                                class="fs-12 fw-medium text-success">{{ translate('paid') }}</span>
-                                        @else
-                                            <span
-                                                class="fs-12 fw-medium text-danger">{{ translate('unpaid') }}</span>
-                                        @endif
-                                    </td>
-                                    @if ($status == 'all')
-                                        <td class="text-center text-capitalize">
-                                            @if ($order['order_status'] == 'pending')
-                                                <span class="badge badge-info text-bg-info">
-                                                        {{ translate($order['order_status']) }}
-                                                    </span>
-                                            @elseif($order['order_status'] == 'processing' || $order['order_status'] == 'out_for_delivery')
-                                                <span class="badge badge-warning text-bg-warning">
-                                                        {{ str_replace('_', ' ', $order['order_status'] == 'processing' ? translate('packaging') : translate($order['order_status'])) }}
-                                                    </span>
-                                            @elseif($order['order_status'] == 'confirmed')
-                                                <span class="badge badge-success text-bg-success">
-                                                        {{ translate($order['order_status']) }}
-                                                    </span>
-                                            @elseif($order['order_status'] == 'failed')
-                                                <span class="badge badge-danger text-bg-danger">
-                                                        {{ translate('failed_to_deliver') }}
-                                                    </span>
-                                            @elseif($order['order_status'] == 'delivered')
-                                                <span class="badge badge-success text-bg-success">
-                                                        {{ translate($order['order_status']) }}
-                                                    </span>
-                                            @else
-                                                <span class="badge badge-danger text-bg-danger">
-                                                        {{ translate($order['order_status']) }}
-                                                    </span>
-                                            @endif
-                                        </td>
+                        <td>
+                            @if (isset($order->seller_id) && isset($order->seller_is))
+                                <a class="k-truncate" style="display:block;max-inline-size:220px"
+                                   href="{{ $order->seller_is == 'seller' && $order->seller?->shop ? route('admin.vendors.view', ['id' => $order->seller->shop->id]) : route('admin.business-settings.inhouse-shop') }}">
+                                    @if ($order->seller_is == 'seller')
+                                        {{ $order->seller?->shop?->name ?? translate('Store_not_found') }}
                                     @else
-                                        <td class="text-capitalize">
-                                            {{ str_replace('_', ' ', $order['payment_method']) }}
-                                        </td>
+                                        {{ getInHouseShopConfig(key: 'name') }}
                                     @endif
-                                    <td>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            @if($order->edited_status == 1 && $order?->edit_return_amount > 0)
-                                                <button type="button" class="btn btn-outline-warning icon-btn"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#returnDueAmountModal-{{$order['id']}}">
-                                                    <i class="fi fi-sr-undo-alt d-flex"></i>
-                                                </button>
-                                            @endif
-                                            <a class="btn btn-outline-success btn-outline-success-dark icon-btn"
-                                               title="{{ translate('view') }}"
-                                               href="{{ route('admin.orders.details', ['id' => $order['id']]) }}">
-                                                <i class="fi fi-sr-eye d-flex"></i>
-                                            </a>
-                                            <a class="btn btn-outline-success btn-outline-success-dark icon-btn"
-                                               target="_blank" title="{{ translate('invoice') }}"
-                                               href="{{ route('admin.orders.generate-invoice', [$order['id']]) }}">
-                                                <i class="fi fi-sr-down-to-line d-flex"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="table-responsive">
-                        <div class="d-flex justify-content-lg-end">
-                            {!! $orders->links() !!}
-                        </div>
-                    </div>
-                    @if (count($orders) == 0)
-                        @include(
-                            'layouts.admin.partials._empty-state',
-                            ['text' => 'no_order_found'],
-                            ['image' => 'default']
-                        )
-                    @endif
-                </div>
-            </div>
-            <div class="js-nav-scroller hs-nav-scroller-horizontal d-none">
-                <span class="hs-nav-scroller-arrow-prev d-none">
-                    <a class="hs-nav-scroller-arrow-link" href="javascript:">
-                        <i class="fi fi-rr-angle-left"></i>
-                    </a>
-                </span>
+                                </a>
+                            @else
+                                <span class="k-text-subtle">{{ translate('Store_not_found') }}</span>
+                            @endif
+                        </td>
 
-                <span class="hs-nav-scroller-arrow-next d-none">
-                    <a class="hs-nav-scroller-arrow-link" href="javascript:">
-                        <i class="fi fi-rr-angle-right"></i>
-                    </a>
-                </span>
-                <ul class="nav nav-tabs page-header-tabs">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#">{{ translate('order_list') }}</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+                        <td class="k-table__num">
+                            <div class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $orderTotalPriceSummary['totalAmount']), currencyCode: getCurrencyCode()) }}</div>
+                            @if ($order->payment_status == 'paid')
+                                <span class="k-text-subtle" style="color:var(--k-success-text)">{{ translate('paid') }}</span>
+                            @else
+                                <span class="k-text-subtle" style="color:var(--k-danger-text)">{{ translate('unpaid') }}</span>
+                            @endif
+                        </td>
+
+                        <td>
+                            @if ($status == 'all')
+                                <x-k.badge :tone="$statusTone($order['order_status'])">
+                                    @if ($order['order_status'] == 'processing')
+                                        {{ translate('packaging') }}
+                                    @elseif ($order['order_status'] == 'failed')
+                                        {{ translate('failed_to_deliver') }}
+                                    @else
+                                        {{ translate(str_replace('_', ' ', $order['order_status'])) }}
+                                    @endif
+                                </x-k.badge>
+                            @else
+                                <span class="k-text-muted">{{ translate(str_replace('_', ' ', $order['payment_method'])) }}</span>
+                            @endif
+                        </td>
+
+                        <td>
+                            <div class="k-table__actions">
+                                @if ($order->edited_status == 1 && $order?->edit_return_amount > 0)
+                                    <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                            title="{{ translate('return_amount') }}"
+                                            data-bs-toggle="modal" data-bs-target="#returnDueAmountModal-{{ $order['id'] }}">
+                                        <x-k.icon name="refresh" :size="15" />
+                                    </button>
+                                @endif
+                                <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}"
+                                   href="{{ route('admin.orders.details', ['id' => $order['id']]) }}">
+                                    <x-k.icon name="eye" :size="15" />
+                                </a>
+                                <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" target="_blank" title="{{ translate('invoice') }}"
+                                   href="{{ route('admin.orders.generate-invoice', [$order['id']]) }}">
+                                    <x-k.icon name="download" :size="15" />
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+
+            @if (count($orders) == 0)
+                <x-k.empty icon="orders" :title="translate('no_order_found')"
+                           :text="$hasFilters ? translate('no_order_matches_the_filters_you_applied') : translate('orders_will_appear_here_as_soon_as_a_customer_checks_out')">
+                    @if ($hasFilters)
+                        <x-slot:action>
+                            <x-k.button variant="secondary" :href="route('admin.orders.list', [$status])">
+                                {{ translate('clear_all') }}
+                            </x-k.button>
+                        </x-slot:action>
+                    @endif
+                </x-k.empty>
+            @endif
+
+            @if ($orders->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                    </span>
+                    <div>{!! $orders->appends($currentFilters)->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 
     <span id="message-date-range-text" data-text="{{ translate('invalid_date_range') }}"></span>
@@ -420,13 +291,75 @@
 
     @include('admin-views.order.partials._filter-offcanvas')
 
-    @if($orders->isNotEmpty())
-        @foreach($orders as $order)
-            @include('admin-views.order.partials.modal.order-edit-return-amount-modal',['order'=>$order])
+    @if ($orders->isNotEmpty())
+        @foreach ($orders as $order)
+            @include('admin-views.order.partials.modal.order-edit-return-amount-modal', ['order' => $order])
         @endforeach
     @endif
 @endsection
 
 @push('script')
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/admin/order.js') }}"></script>
+    <script>
+        "use strict";
+        (function () {
+            var view = document.querySelector('[data-k-selectable]');
+            if (!view) return;
+
+            var endpoint = @json(route('admin.orders.bulk-status'));
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+            var labels = {
+                confirm: @json(translate('change_the_status_of')),
+                orders: @json(translate('orders')),
+                working: @json(translate('updating_orders')),
+                failed: @json(translate('could_not_update_the_orders')),
+                skipped: @json(translate('skipped')),
+            };
+
+            view.addEventListener('click', function (event) {
+                var trigger = event.target.closest('[data-k-bulk-status]');
+                if (!trigger) return;
+
+                var ids = Kohl.selectedIds(view);
+                if (!ids.length) return;
+
+                // State-changing and hard to walk back: name the count and the target
+                // status before doing it.
+                var status = trigger.getAttribute('data-k-bulk-status');
+                if (!confirm(labels.confirm + ' ' + ids.length + ' ' + labels.orders + '?')) return;
+
+                trigger.disabled = true;
+                Kohl.toast({title: labels.working, tone: 'neutral', duration: 2000});
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : ''
+                    },
+                    body: JSON.stringify({ids: ids, order_status: status})
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (body) {
+                        // Partial success is normal — an order failing its own guards is
+                        // skipped, and the operator needs to know which and why.
+                        var skipped = body.skipped || [];
+                        Kohl.toast({
+                            title: body.message || labels.failed,
+                            text: skipped.length
+                                ? labels.skipped + ': #' + skipped.map(function (s) { return s.id; }).join(', #')
+                                : null,
+                            tone: body.status === 1 ? (skipped.length ? 'warning' : 'success') : 'danger',
+                        });
+                        if (body.updated) setTimeout(function () { location.reload(); }, 1200);
+                        else trigger.disabled = false;
+                    })
+                    .catch(function () {
+                        Kohl.toast({title: labels.failed, tone: 'danger'});
+                        trigger.disabled = false;
+                    });
+            });
+        })();
+    </script>
 @endpush

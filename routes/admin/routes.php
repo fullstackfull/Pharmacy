@@ -265,6 +265,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('inhouse-order-filter', 'filterInHouseOrder')->name('inhouse-order-filter');
             Route::post('digital-file-upload-after-sell', 'uploadDigitalFileAfterSell')->name('digital-file-upload-after-sell');
             Route::post('status', 'updateStatus')->name('status');
+            // Bulk status change. Delegates per order to updateStatus, so every guard
+            // and side effect of a single change applies to each one in the batch.
+            Route::post('bulk-status', 'bulkUpdateStatus')->name('bulk-status');
             Route::post('customer-return-amount', 'orderReturnAmountToCustomer')->name('customer-return-amount');
             Route::post('customer-due-amount', 'orderDueAmountSwitchToCOD')->name('customer-due-amount');
             Route::post('customer-due-amount-mark-as-paid', 'orderDueAmountMarkAsPaid')->name('customer-due-amount-mark-as-paid');

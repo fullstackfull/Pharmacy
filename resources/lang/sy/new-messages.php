@@ -231,4 +231,8 @@ return [
 	"100" => "100",
 	"store_banner_renders_whatever_you_publish_in_promotion_banners_so_a_banner_added_there_appears_in_the_theme" => "Store banner renders whatever you publish in promotion banners so a banner added there appears in the theme",
 	"no_images_uploaded_yet" => "No images uploaded yet",
+	"could_not_update_the_orders" => "Could not update the orders",
+	"updating_orders" => "Updating orders",
+	"change_the_status_of" => "Change the status of",
+	"mark_as" => "Mark as",
 ];

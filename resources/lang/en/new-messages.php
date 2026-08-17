@@ -3008,4 +3008,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"loading_states" => "Loading states",
 	"selected" => "Selected",
 	"select_order" => "Select order",
+	"skipped" => "Skipped",
+	"could_not_update_the_orders" => "Could not update the orders",
+	"updating_orders" => "Updating orders",
+	"change_the_status_of" => "Change the status of",
+	"mark_as" => "Mark as",
+	"create_a_theme_first_then_upload_its_images_here" => "Create a theme first then upload its images here",
+	"no_images_uploaded_yet" => "No images uploaded yet",
 ];
