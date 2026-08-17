@@ -1,0 +1,41 @@
+/* ============================================================================
+   Kohl Store — the storefront skin.
+   ----------------------------------------------------------------------------
+   Same tokens and base layer as the console, different resolution: warmer
+   neutrals, a gold accent, a display serif, and looser vertical rhythm. One
+   system so a fix lands in both places; two skins so an operator tool and a
+   beauty storefront do not look alike.
+   ========================================================================= */
+
+@import 'tokens';
+@import 'base';
+
+.k-store {
+    /* The storefront rebinds the accent rather than inventing new colours,
+       so every Kohl component picks the change up without a store-specific rule. */
+    --k-accent:          var(--k-gold-500);
+    --k-accent-hover:    var(--k-gold-600);
+    --k-accent-soft:     var(--k-gold-100);
+    --k-accent-contrast: #ffffff;
+
+    --k-canvas:  #ffffff;
+    --k-surface: #ffffff;
+    --k-surface-sunk: #f8f4ef;
+    --k-border: #ece5db;
+    --k-border-strong: #ddd3c5;
+    --k-text: #191512;
+    --k-text-muted: #8a8079;
+
+    --k-control-height: 44px;
+    --k-card-radius: 2px;
+    --k-card-pad: var(--k-size-6);
+
+    --k-store-measure: 1280px;
+    --k-store-section-gap: var(--k-size-16);
+}
+
+.k-store :is(h1, h2, h3) {
+    font-family: var(--k-font-display);
+    font-weight: var(--k-weight-semibold);
+    letter-spacing: .01em;
+}

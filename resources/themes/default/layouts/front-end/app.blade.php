@@ -92,6 +92,10 @@
 
     <link rel="stylesheet" href="{{theme_asset(path: 'public/assets/front-end/css/custom.css')}}">
 
+    {{-- Kohl Store: token + base layer, loaded last so it can take over section by
+         section. It styles nothing that does not opt in with a .k- class. --}}
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/kohl/css/store.css') }}">
+
     {!! getSystemDynamicPartials(type: 'analytics_script') !!}
 
     @if(env('APP_MODE')=='demo')
@@ -105,7 +109,7 @@
     @endif
 </head>
 
-<body class="toolbar-enabled {{ env('APP_MODE')=='demo'?'demo':'' }}" id="demo">
+<body class="k k-store toolbar-enabled {{ env('APP_MODE')=='demo'?'demo':'' }}" id="demo">
 
 @include('layouts.front-end.partials._modals')
 
