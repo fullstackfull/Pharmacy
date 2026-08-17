@@ -369,6 +369,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('view/{user_id}', 'getView')->name('view');
             Route::get('order-list-export/{user_id}', 'exportOrderList')->name('order-list-export');
             Route::post('status-update', 'updateStatus')->name('status-update');
+            // Bulk block / unblock. Delegates per customer so each one still has their
+            // tokens revoked and receives the notification.
+            Route::post('bulk-status', 'bulkUpdateStatus')->name('bulk-status');
             Route::delete('delete/{id}', 'deleteCustomer')->name('delete');
             Route::get('subscriber-list', 'getSubscriberListView')->name('subscriber-list');
             Route::get('subscriber-list/export', 'exportSubscribersList')->name('subscriber-list.export');

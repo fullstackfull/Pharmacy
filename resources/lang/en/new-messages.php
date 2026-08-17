@@ -3022,4 +3022,12 @@ ____________________________________________________on_search_engines_and_see_th
 	"unpublish" => "Unpublish",
 	"store_banner_renders_whatever_you_publish_in_promotion_banners_so_a_banner_added_there_appears_in_the_theme" => "Store banner renders whatever you publish in promotion banners so a banner added there appears in the theme",
 	"uploading" => "Uploading",
+	"could_not_update_the_customers" => "Could not update the customers",
+	"customers_updated" => "Customers updated",
+	"updating_customers" => "Updating customers",
+	"Account_Unblocked" => "Account Unblocked",
+	"each_customer_is_emailed_about_the_change" => "Each customer is emailed about the change",
+	"Account_Blocked" => "Account Blocked",
+	"section_types" => "Section types",
+	"library" => "Library",
 ];

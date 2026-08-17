@@ -239,4 +239,7 @@ return [
 	"updating_products" => "Updating products",
 	"apply_this_to" => "Apply this to",
 	"toggle_featured" => "Toggle featured",
+	"could_not_update_the_customers" => "Could not update the customers",
+	"updating_customers" => "Updating customers",
+	"each_customer_is_emailed_about_the_change" => "Each customer is emailed about the change",
 ];
