@@ -21,7 +21,6 @@
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/back-end/css/style.css') }}">
     <link rel="stylesheet"
         href="{{ dynamicAsset(path: 'public/assets/back-end/plugins/intl-tel-input/css/intlTelInput.css') }}">
-    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.css') }}">
 
     @if ($web_config['primary_color'])
         <style>
@@ -35,7 +34,6 @@
     {!! ToastMagic::styles() !!}
 </head>
 
-@php($recaptcha = getWebConfig(name: 'recaptcha'))
 
 <body>
     <main id="content" role="main" class="main">
@@ -108,27 +106,6 @@
                                 </div>
                                 @if ($web_config['firebase_otp_verification'] && $web_config['firebase_otp_verification']['status'])
                                     <div class="generate-firebase-auth-recaptcha" id="firebase-auth-recaptcha-{{ rand(111, 999) }}"></div>
-                                @elseif(isset($recaptcha) && $recaptcha['status'] == 1)
-                                    <div class="dynamic-default-and-recaptcha-section">
-                                        <input type="hidden" name="g-recaptcha-response" class="render-grecaptcha-response"
-                                               data-input="#login-default-captcha-section" data-action="vendor_forgot_password"
-                                               data-default-captcha="#login-default-captcha-section"
-                                        >
-
-                                        <div class="default-captcha-container d-none" id="login-default-captcha-section"
-                                             data-placeholder="{{ translate('enter_captcha_value') }}"
-                                             data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                             data-session="{{ 'default_recaptcha_id_vendor_forgot_password' }}"
-                                        >
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="default-captcha-container"
-                                         data-placeholder="{{ translate('enter_captcha_value') }}"
-                                         data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                         data-session="{{ 'default_recaptcha_id_vendor_forgot_password' }}"
-                                    >
-                                    </div>
                                 @endif
 
                                 <button type="submit" id="vendor-forgot-password-btn"
@@ -175,27 +152,6 @@
 
                                 @if ($web_config['firebase_otp_verification'] && $web_config['firebase_otp_verification']['status'])
                                     <div class="generate-firebase-auth-recaptcha" id="firebase-auth-recaptcha-{{ rand(111, 999) }}"></div>
-                                @elseif(isset($recaptcha) && $recaptcha['status'] == 1)
-                                    <div class="dynamic-default-and-recaptcha-section">
-                                        <input type="hidden" name="g-recaptcha-response" class="render-grecaptcha-response" data-action="vendor_forgot_password"
-                                               data-input="#login-default-captcha-section"
-                                               data-default-captcha="#login-default-captcha-section"
-                                        >
-
-                                        <div class="default-captcha-container d-none" id="login-default-captcha-section"
-                                             data-placeholder="{{ translate('enter_captcha_value') }}"
-                                             data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                             data-session="{{ 'default_recaptcha_id_vendor_forgot_password' }}"
-                                        >
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="default-captcha-container"
-                                         data-placeholder="{{ translate('enter_captcha_value') }}"
-                                         data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                         data-session="{{ 'default_recaptcha_id_vendor_forgot_password' }}"
-                                    >
-                                    </div>
                                 @endif
 
                                 <button type="submit" id="vendor-forgot-password-btn"
@@ -252,10 +208,7 @@
     </div>
 
     <span class="system-default-country-code" data-value="{{ getWebConfig(name: 'country_code') ?? 'us' }}"></span>
-    <span id="message-please-check-recaptcha" data-text="{{ translate('please_check_the_recaptcha') }}"></span>
     <span id="message-copied_success" data-text="{{ translate('copied_successfully') }}"></span>
-    <span id="route-get-session-recaptcha-code" data-route="{{ route('get-session-recaptcha-code') }}"
-        data-mode="{{ env('APP_MODE') }}"></span>
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/vendor.min.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/theme.min.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/backend/vendor/js/auth.js') }}"></script>
@@ -271,12 +224,6 @@
         </script>
     @endif
 
-    <span id="get-google-recaptcha-key" data-value="{{ isset($recaptcha) && $recaptcha['status'] == 1 ? $recaptcha['site_key'] : '' }}"></span>
-    @if ($web_config['firebase_otp_verification'] && $web_config['firebase_otp_verification']['status'])
-    @elseif(isset($recaptcha) && $recaptcha['status'] == 1)
-        <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
-    @endif
-    <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.js') }}"></script>
 
     <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/intl-tel-input/js/intlTelInput.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/intl-tel-input/js/utils.js') }}"></script>

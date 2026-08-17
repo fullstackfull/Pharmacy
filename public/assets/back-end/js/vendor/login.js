@@ -10,16 +10,7 @@ $(document).on('ready', function () {
 });
 
 $('.submit-login-form').on('click',function (){
-    var response = 1;
-    try{
-        response = grecaptcha.getResponse();
-    }catch (e) {
-
-    }
-    if (response.length === 0) {
-        e.preventDefault();
-        toastMagic.error($('#message-please-check-recaptcha').data('text'));
-    }else {
+    {
         $.ajaxSetup({
             headers: {
                 'X-XSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -91,9 +82,6 @@ $('.submit-login-form').on('click',function (){
 $('.clear-alter-message').on('click',function (){
     $('.vendor-suspend').addClass('d-none')
 })
-$('.get-login-recaptcha-verify').on('click', function () {
-    document.getElementById('default_recaptcha_id').src = $(this).data('link') + "/" + Math.random()+'?captcha_session_id=vendorRecaptchaSessionKey';
-});
 
 $('#copyLoginInfo').on('click', function () {
     let vendorEmail = $('#vendor-email').data('email');
@@ -109,48 +97,3 @@ $('.onerror-logo').on('error', function () {
 });
 
 
-function getSessionRecaptchaCode(sessionKey, inputSelector) {
-    try {
-        let routeGetSessionRecaptchaCode = $('#route-get-session-recaptcha-code');
-        if (routeGetSessionRecaptchaCode.data('mode').toString() === 'dev') {
-            let string = '.';
-            let intervalId = setInterval(() => {
-                if (string === '......') {
-                    string = '.';
-                }
-                string = string + '.';
-                $(inputSelector).val(string);
-            }, 100);
-
-            setTimeout(() => {
-                clearInterval(intervalId);
-                $.ajaxSetup({
-                    headers: {
-                        "X-CSRF-TOKEN": $('meta[name="_token"]').attr("content"),
-                    },
-                });
-                $.ajax({
-                    type: "POST",
-                    url: $('#route-get-session-recaptcha-code').data('route'),
-                    data: {
-                        _token: $('meta[name="_token"]').attr("content"),
-                        sessionKey: sessionKey,
-                    },
-                    success: function (response) {
-                        $(inputSelector).val(response?.code);
-                    },
-                });
-            }, 1000);
-        }
-    } catch (e) {
-        console.log(e);
-    }
-}
-
-$('.get-session-recaptcha-auto-fill').each(function () {
-    getSessionRecaptchaCode($(this).data('session'), $(this).data('input'))
-});
-
-$('.get-session-recaptcha-auto-fill').on('click', function () {
-    getSessionRecaptchaCode($(this).data('session'), $(this).data('input'));
-});

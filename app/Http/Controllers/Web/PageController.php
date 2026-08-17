@@ -47,8 +47,7 @@ class PageController extends Controller
         if (!$robotsMetaContentData) {
             $robotsMetaContentData = $this->robotsMetaContentRepo->getFirstWhere(params: ['page_name' => 'default']);
         }
-        $recaptcha = getWebConfig(name: 'recaptcha');
-        return view(VIEW_FILE_NAMES['contacts'], compact('recaptcha', 'robotsMetaContentData'));
+        return view(VIEW_FILE_NAMES['contacts'], compact('robotsMetaContentData'));
     }
 
     public function getHelpTopicView(): View

@@ -30,10 +30,6 @@ class LocalDatabaseRefresh extends Command
         $this->upsertBusinessSetting('timezone', 'Asia/Dhaka');
         $this->upsertBusinessSetting('country_code', 'BD');
 
-        $recaptcha = getWebConfig(name: 'recaptcha');
-        $recaptchaValue = json_encode(['status' => 0, 'site_key' => $recaptcha['site_key'], 'secret_key' => $recaptcha['secret_key']]);
-        $this->upsertBusinessSetting('recaptcha', $recaptchaValue);
-
         Artisan::call('optimize:clear');
         $this->info('Local database settings refreshed successfully.');
     }

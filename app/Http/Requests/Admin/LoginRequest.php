@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\SessionKey;
 use App\Enums\UserRole;
-use App\Traits\RecaptchaTrait;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -17,7 +16,6 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class LoginRequest extends FormRequest
 {
-    use RecaptchaTrait;
 
     /**
      * Determine if the user is authorized to make this request.

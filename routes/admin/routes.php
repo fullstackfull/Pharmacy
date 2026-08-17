@@ -53,7 +53,6 @@ use App\Http\Controllers\Admin\CategoryShippingCostController;
 use App\Http\Controllers\Admin\Settings\FileManagerController;
 use App\Http\Controllers\Admin\Settings\InhouseShopController;
 use App\Http\Controllers\Admin\Settings\SEOSettingsController;
-use App\Http\Controllers\Admin\ThirdParty\RecaptchaController;
 use App\Http\Controllers\Admin\ThirdParty\SMSModuleController;
 use App\Http\Controllers\Admin\ProductWishlistReportController;
 use App\Http\Controllers\Admin\Shipping\ShippingTypeController;
@@ -111,9 +110,7 @@ Route::get('search', function () {
 });
 Route::controller(SharedController::class)->group(function () {
     Route::post('change-language', 'changeLanguage')->name('change-language');
-    Route::post('get-session-recaptcha-code', 'getSessionRecaptchaCode')->name('get-session-recaptcha-code');
     Route::post('g-recaptcha-response-store', 'storeRecaptchaResponse')->name('g-recaptcha-response-store');
-    Route::get('g-recaptcha-session-store', 'storeRecaptchaSession')->name('g-recaptcha-session-store');
     Route::get('activation-check', 'getActivationCheckView')->name('system.activation-check');
     Route::post('activation-check', 'activationCheck');
 });
@@ -126,7 +123,6 @@ Route::controller(FirebaseController::class)->group(function () {
 // Rate limited: captcha was removed by product decision, so this is now the brute-force barrier.
 Route::group(['prefix' => 'login', 'middleware' => ['throttle:20,1']], function () {
     Route::get('{loginUrl}', [LoginController::class, 'index']);
-    Route::get('recaptcha/{tmp}', [LoginController::class, 'generateReCaptcha'])->name('recaptcha');
     Route::post('/', [LoginController::class, 'login'])->name('login');
 });
 
@@ -1147,10 +1143,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('send-test-sms', 'sendSMS')->name('send-test-sms');
             });
 
-            Route::controller(RecaptchaController::class)->group(function () {
-                Route::get('recaptcha', 'index')->name('captcha');
-                Route::post('recaptcha', 'update');
-            });
 
             Route::controller(GoogleMapAPIController::class)->group(function () {
                 Route::get('map-api', 'index')->name('map-api');

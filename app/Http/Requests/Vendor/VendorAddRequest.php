@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Vendor;
 
-use App\Traits\RecaptchaTrait;
 use App\Traits\CalculatorTrait;
 use App\Traits\ResponseHandler;
 use Illuminate\Validation\Validator;
@@ -12,7 +11,6 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 class VendorAddRequest extends FormRequest
 {
-    use RecaptchaTrait;
     use CalculatorTrait, ResponseHandler;
 
     /**

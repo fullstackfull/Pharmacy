@@ -140,7 +140,6 @@ class AppServiceProvider extends ServiceProvider
                             return $query->approved();
                         })->take(9)->get();
 
-                        $recaptcha = getWebConfig(name: 'recaptcha');
                         $paymentGatewayPublishedStatus = config('get_payment_publish_status') ?? 0;
 
                         $paymentGatewaysQuery = Setting::whereIn('settings_type', ['payment_config'])->where('is_active', 1);
@@ -194,7 +193,6 @@ class AppServiceProvider extends ServiceProvider
                             'shops' => $shops,
                             'brand_setting' => getWebConfig(name: 'product_brand'),
                             'discount_product' => $totalDiscountProducts,
-                            'recaptcha' => $recaptcha,
                             'socials_login' => getWebConfig(name: 'social_login'),
                             'social_login_text' => $socialLoginTextShowStatus,
                             'popup_banner' => $this->cacheBannerTable(bannerType: 'Popup Banner'),

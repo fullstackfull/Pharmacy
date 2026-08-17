@@ -50,8 +50,6 @@ use App\Utils\SMSModule;
 use Brian2694\Toastr\Facades\Toastr;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
-use Gregwar\Captcha\CaptchaBuilder;
-use Gregwar\Captcha\PhraseBuilder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -1254,28 +1252,6 @@ class WebController extends Controller
         $contact->save();
         Toastr::success(translate('Your_Message_Send_Successfully'));
         return back();
-    }
-
-    public function captcha($tmp)
-    {
-
-        $phrase = new PhraseBuilder;
-        $code = $phrase->build(4);
-        $builder = new CaptchaBuilder($code, $phrase);
-        $builder->setBackgroundColor(220, 210, 230);
-        $builder->setMaxAngle(25);
-        $builder->setMaxBehindLines(0);
-        $builder->setMaxFrontLines(0);
-        $builder->build($width = 100, $height = 40, $font = null);
-        $phrase = $builder->getPhrase();
-
-        if (Session::has('default_captcha_code')) {
-            Session::forget('default_captcha_code');
-        }
-        Session::put('default_captcha_code', $phrase);
-        header("Cache-Control: no-cache, must-revalidate");
-        header("Content-Type:image/jpeg");
-        $builder->output();
     }
 
     public function order_note(Request $request): JsonResponse

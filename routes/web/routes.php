@@ -297,7 +297,6 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
     Route::group(['prefix' => 'contact', 'as' => 'contact.'], function () {
         Route::controller(WebController::class)->group(function () {
             Route::post('store', 'contact_store')->name('store');
-            Route::get('/code/captcha/{tmp}', 'captcha')->name('default-captcha');
         });
     });
 });

@@ -215,69 +215,6 @@ $(".get-view-by-onclick").on("click", function () {
     location.href = $(this).data("link");
 });
 
-$(".get-login-recaptcha-verify").on("click", function () {
-    let url = $(this).data("link");
-    customerLoginRecaptcha(url);
-});
-$(".get-login-verify-recaptcha-verify").on("click", function () {
-    let url = $(this).data("link");
-    customerLoginVerifyRecaptcha(url);
-});
-
-function customerLoginVerifyRecaptcha(url) {
-    url =
-        url +
-        "/" +
-        Math.random() +
-        "?captcha_session_id=default_recaptcha_id_customer_login_verify";
-    document.getElementById("customer_login_verify_recaptcha_id").src = url;
-}
-function customerLoginRecaptcha(url) {
-    url =
-        url +
-        "/" +
-        Math.random() +
-        "?captcha_session_id=default_recaptcha_id_customer_login";
-    document.getElementById("customer_login_recaptcha_id").src = url;
-}
-
-$(".get-regi-recaptcha-verify").on("click", function () {
-    let url = $(this).data("link");
-    customerRegiRecaptcha(url);
-});
-$(".get-seller-regi-recaptcha-verify").on("click", function () {
-    let url = $(this).data("link");
-    let genUrl = url.replace(":dummy-id", Math.random());
-    sellerRegiRecaptcha(genUrl);
-});
-function sellerRegiRecaptcha(url) {
-    url = url + "?captcha_session_id=vendorRecaptchaSessionKey";
-    let inputElement = $('#default_recaptcha_id');
-    if (inputElement?.length > 0) {
-        inputElement.attr('src', url);
-    }
-}
-function customerRegiRecaptcha(url) {
-    url =
-        url +
-        "/" +
-        Math.random() +
-        "?captcha_session_id=default_recaptcha_id_customer_regi";
-    document.getElementById("default_recaptcha_id").src = url;
-}
-
-$(".get-vendor-regi-recaptcha-verify").on("click", function () {
-    let genUrl = $(this).data("link");
-    genUrl = genUrl.replace(":dummy-id", Math.random());
-    vendorRegiRecaptcha(genUrl);
-});
-
-function vendorRegiRecaptcha(url) {
-    let genUrl = url + "?captcha_session_id=default_recaptcha_id_seller_registration";
-    document.getElementById("default_recaptcha_id").src = genUrl;
-
-}
-
 $("#inputChecked").change(function () {
     if ($(this).is(":checked")) {
         $("#sign-up").removeAttr("disabled");
@@ -409,11 +346,6 @@ $("#customerOtpVerify").click(function () {
     });
 });
 
-$(".get-contact-recaptcha-verify").on("click", function () {
-    let url = $(this).data("link");
-    url = url + "/" + Math.random();
-    document.getElementById("default_recaptcha_id").src = url;
-});
 
 $(".check-password-match").on("change", function () {
     checkPasswordMatch();
@@ -2585,13 +2517,6 @@ $(".sidebar-overlay").on("click", function () {
     $(".cz-sidebar").removeClass("show active");
 });
 
-$(".get-session-recaptcha-auto-fill").each(function () {
-    getSessionRecaptchaCode($(this).data("session"), $(this).data("input"));
-});
-
-$(".get-session-recaptcha-auto-fill").on("click", function () {
-    getSessionRecaptchaCode($(this).data("session"), $(this).data("input"));
-});
 
 $(".otp-login-btn").on("click", function () {
     $(this).addClass("d-none");
@@ -2618,17 +2543,6 @@ $(".manual-login-btn").on("click", function () {
 $(".customer-centralize-login-form").on("submit", async function (event) {
     event.preventDefault();
 
-    var recaptchaContainer = document.getElementById("recaptcha_element");
-    if (
-        recaptchaContainer &&
-        recaptchaContainer.innerHTML.trim()?.toString() !== ""
-    ) {
-        var response = grecaptcha.getResponse($('#recaptcha_element').attr('data-login-id'));
-        if (response.length === 0) {
-            toastr.error($("#message-please-check-recaptcha").data("text"));
-            return false;
-        }
-    }
     $.ajax({
         url: $(this).attr("action"),
         method: $(this).attr("method"),
@@ -2641,10 +2555,6 @@ $(".customer-centralize-login-form").on("submit", async function (event) {
         },
         complete: function () {
             $("#loading").hide();
-            const widgetId = $('#recaptcha_element').attr('data-login-id');
-            if (widgetId) {
-                grecaptcha.reset(widgetId);
-            }
         },
     });
 });

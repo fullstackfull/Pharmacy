@@ -34,7 +34,6 @@ class LogUserBrowsingNavigationMiddleware
                 'login/*',
                 'customer/auth/*',
                 'customer/reward-points/*',
-                'g-recaptcha-session-store*',
                 'vendor/auth/*',
                 'user-account',
                 'user-profile',

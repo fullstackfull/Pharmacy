@@ -12,8 +12,4 @@
 <span id="digital-product-download-otp-reset" data-route="{{ route('digital-product-download-otp-reset') }}"></span>
 <span id="order_again_url" data-action="{{ route('cart.order-again') }}"></span>
 <span id="route-product-restock-request" data-url="{{ route('cart.product-restock-request') }}"></span>
-<span id="route-get-session-recaptcha-code"
-      data-route="{{ route('get-session-recaptcha-code') }}"
-      data-mode="{{ env('APP_MODE') }}"
-></span>
 <span id="route-pay-offline-method-list" data-url="{{ route('pay-offline-method-list') }}"></span>
