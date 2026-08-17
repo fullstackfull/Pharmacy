@@ -100,105 +100,98 @@
         </div>
         <div class="row mt-20">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="px-3 py-4 d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                        <h3 class="mb-0 text-capitalize d-flex gap-2">
-                            {{ translate('deal_of_the_day') }}
-                            <span
-                                class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $deals->total() }}</span>
-                        </h3>
-                        <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                            <form action="{{ url()->current() }}" method="GET">
-                                <div class="input-group">
-                                    <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control"
-                                               placeholder="{{ translate('search_by_Title') }}" aria-label="Search orders"
-                                               value="{{ request('searchValue') }}" required>
-                                        <div class="input-group-append search-submit">
-                                            <button type="submit">
-                                                <i class="fi fi-rr-search"></i>
-                                            </button>
-                                        </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-borderless table-thead-bordered align-middle">
-                            <thead class="text-capitalize">
-                            <tr>
-                                <th>{{ translate('SL') }}</th>
-                                <th>{{ translate('title') }}</th>
-                                <th>{{ translate('product_info') }}</th>
-                                <th>{{ translate('status') }}</th>
-                                <th class="text-center">{{ translate('action') }}</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($deals as $k=>$deal)
-                                <tr>
-                                    <th>{{ $deals->firstItem()+ $k}}</th>
-                                    <td class="max-w-250 text-truncate">
-                                        <a href="javascript:" target="_blank"
-                                           class="fw-semibold text-dark text-hover-primary">{{ $deal['title'] }}
-                                        </a>
-                                    </td>
-                                    <td>{{ isset($deal->product) ? $deal->product->name : translate("not_selected" ) }}</td>
-                                    <td>
-                                        <form action="{{route('admin.deal.day-status-update') }}" method="post"
-                                              id="deal-of-the-day{{ $deal['id'] }}-form" class="no-reload-form reload-true">
-                                            @csrf
-                                            <input type="hidden" name="id" value="{{ $deal['id'] }}">
+                <x-k.data-view :title="translate('deal_of_the_day')" :count="$deals->total()"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_Title')">
 
-                                            <label class="switcher" for="deal-of-the-day{{ $deal['id'] }}">
-                                                <input
-                                                    class="switcher_input custom-modal-plugin"
-                                                    type="checkbox" value="1" name="status"
-                                                    id="deal-of-the-day{{ $deal['id'] }}"
-                                                    {{ $deal['status'] == 1 ? 'checked':'' }}
-                                                    data-modal-type="input-change-form"
-                                                    data-modal-form="#deal-of-the-day{{ $deal['id'] }}-form"
-                                                    data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/deal-of-the-day-status-on.png') }}"
-                                                    data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/deal-of-the-day-status-off.png') }}"
-                                                    data-on-title = "{{ translate('want_to_Turn_ON_Deal_of_the_Day_Status').'?' }}"
-                                                    data-off-title = "{{ translate('want_to_Turn_OFF_Deal_of_the_Day_Status').'?' }}"
-                                                    data-on-message = "<p>{{ translate('if_enabled_this_deal_of_the_day_will_be_available_on_the_website_and_customer_app') }}</p>"
-                                                    data-off-message = "<p>{{ translate('if_disabled_this_deal_of_the_day_will_be_hidden_from_the_website_and_customer_app') }}</p>"
-                                                    data-on-button-text="{{ translate('turn_on') }}"
-                                                    data-off-button-text="{{ translate('turn_off') }}">
-                                                <span class="switcher_control"></span>
-                                            </label>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-center gap-3">
-                                            <a title="{{ trans ('edit') }}"
-                                               href="{{route('admin.deal.day-update',[$deal['id']]) }}"
-                                               class="btn btn-outline-primary icon-btn edit">
-                                                <i class="fi fi-sr-pencil"></i>
-                                            </a>
-                                            <a title="{{ trans ('delete') }}"
-                                               class="btn btn-outline-danger icon-btn delete-data-without-form"
-                                               data-action="{{route('admin.deal.day-delete') }}"
-                                               data-id="{{ $deal['id'] }}">
-                                                <i class="fi fi-rr-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {{ $deals->links() }}
-                        </div>
-                    </div>
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('title') }}</th>
+                            <th>{{ translate('product_info') }}</th>
+                            <th>{{ translate('status') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($deals as $deal)
+                            <tr>
+                                <td>
+                                    <span class="k-truncate" style="display:block;max-inline-size:250px" title="{{ $deal['title'] }}">
+                                        {{ $deal['title'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (isset($deal->product))
+                                        <span class="k-truncate" style="display:block;max-inline-size:280px" title="{{ $deal->product->name }}">
+                                            {{ $deal->product->name }}
+                                        </span>
+                                    @else
+                                        <x-k.badge tone="warning">{{ translate('not_selected') }}</x-k.badge>
+                                    @endif
+                                </td>
+                                <td>
+                                    <form action="{{route('admin.deal.day-status-update') }}" method="post"
+                                          id="deal-of-the-day{{ $deal['id'] }}-form" class="no-reload-form reload-true">
+                                        @csrf
+                                        <input type="hidden" name="id" value="{{ $deal['id'] }}">
+
+                                        <label class="switcher" for="deal-of-the-day{{ $deal['id'] }}">
+                                            <input
+                                                class="switcher_input custom-modal-plugin"
+                                                type="checkbox" value="1" name="status"
+                                                id="deal-of-the-day{{ $deal['id'] }}"
+                                                {{ $deal['status'] == 1 ? 'checked':'' }}
+                                                data-modal-type="input-change-form"
+                                                data-modal-form="#deal-of-the-day{{ $deal['id'] }}-form"
+                                                data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/deal-of-the-day-status-on.png') }}"
+                                                data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/deal-of-the-day-status-off.png') }}"
+                                                data-on-title = "{{ translate('want_to_Turn_ON_Deal_of_the_Day_Status').'?' }}"
+                                                data-off-title = "{{ translate('want_to_Turn_OFF_Deal_of_the_Day_Status').'?' }}"
+                                                data-on-message = "<p>{{ translate('if_enabled_this_deal_of_the_day_will_be_available_on_the_website_and_customer_app') }}</p>"
+                                                data-off-message = "<p>{{ translate('if_disabled_this_deal_of_the_day_will_be_hidden_from_the_website_and_customer_app') }}</p>"
+                                                data-on-button-text="{{ translate('turn_on') }}"
+                                                data-off-button-text="{{ translate('turn_off') }}">
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a title="{{ translate('edit') }}"
+                                           href="{{route('admin.deal.day-update',[$deal['id']]) }}"
+                                           class="k-btn k-btn--ghost k-btn--sm k-btn--icon">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <a title="{{ translate('delete') }}"
+                                           class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data-without-form"
+                                           data-action="{{route('admin.deal.day-delete') }}"
+                                           data-id="{{ $deal['id'] }}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+
                     @if(count($deals)==0)
-                        @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
+                        <x-k.empty icon="marketing" :title="translate('no_data_found')"
+                                   :text="request('searchValue') ? translate('no_deal_matches_your_search') : null" />
                     @endif
-                </div>
+
+                    @if ($deals->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $deals->firstItem() }}–{{ $deals->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $deals->total() }}</span>
+                            </span>
+                            <div>{!! $deals->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>
