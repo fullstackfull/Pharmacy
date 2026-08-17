@@ -674,3 +674,7 @@
     <script src="{{ theme_asset(path: 'public/assets/front-end/js/tracking.js') }}"></script>
     <script src="{{ theme_asset(path: 'public/assets/front-end/js/payment.js') }}"></script>
 @endpush
+
+@push('phone_input_assets')
+    @include('layouts.front-end.partials._phone-input-assets')
+@endpush

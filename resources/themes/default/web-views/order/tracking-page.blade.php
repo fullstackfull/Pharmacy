@@ -70,3 +70,7 @@
 @push('script')
     <script src="{{theme_asset(path: 'public/assets/front-end/vendor/nouislider/distribute/nouislider.min.js')}}"></script>
 @endpush
+
+@push('phone_input_assets')
+    @include('layouts.front-end.partials._phone-input-assets')
+@endpush

@@ -196,3 +196,7 @@
         });
     </script>
 @endpush
+
+@push('phone_input_assets')
+    @include('layouts.front-end.partials._phone-input-assets')
+@endpush
