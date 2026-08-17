@@ -227,6 +227,55 @@ class PayoutServiceTest extends TestCase
         $this->assertSame(100.0, $this->ledger->withdrawable(5));
     }
 
+    public function test_paying_the_same_payout_twice_is_a_noop(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+        $this->payouts->review($request, approve: true, reviewer: 7);
+
+        $this->assertTrue($this->payouts->markPaid($request->fresh(), paymentReference: 'BANK-1'));
+        // Second call sees PAID under the row lock and refuses — no second ledger effect.
+        $this->assertFalse($this->payouts->markPaid($request->fresh(), paymentReference: 'BANK-2'));
+        $this->assertSame(100.0, $this->ledger->withdrawable(5));
+    }
+
+    public function test_a_paid_payout_cannot_then_be_released_double_spend_guard(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+        $this->payouts->review($request, approve: true, reviewer: 7);
+        $this->assertTrue($this->payouts->markPaid($request->fresh(), paymentReference: 'BANK-1'));
+
+        // The race the reviewer flagged: releasing an already-paid payout would credit the amount back
+        // to withdrawable, letting the seller draw money they were already paid. The status re-check
+        // under the lock must refuse it.
+        $this->assertFalse($this->payouts->releaseReservation($request->fresh()));
+        $this->assertSame(VendorPayoutRequest::STATUS_PAID, $request->fresh()->status);
+        $this->assertSame(100.0, $this->ledger->withdrawable(5), 'paid money must not return to withdrawable');
+    }
+
+    public function test_a_pending_dual_control_approval_blocks_payment(): void
+    {
+        $this->giveAvailable(5, 4000);
+        $request = $this->payouts->requestPayout(5, 3000)['request'];
+        $this->payouts->review($request, approve: true, reviewer: 7);
+
+        // A large-payout approval is opened and still pending -> payment is blocked.
+        \App\Models\ApprovalRequest::create([
+            'reference' => 'APR-TEST-1', 'workflow' => 'payout',
+            'subject_type' => VendorPayoutRequest::class, 'subject_id' => $request->id,
+            'status' => \App\Models\ApprovalRequest::STATUS_PENDING, 'required_approvals' => 2,
+        ]);
+        $this->assertFalse($this->payouts->dualControlSatisfied($request->fresh()));
+        $this->assertFalse($this->payouts->markPaid($request->fresh()), 'a pending dual-control approval must block payment');
+        $this->assertSame(VendorPayoutRequest::STATUS_APPROVED, $request->fresh()->status);
+
+        // Once the approval reaches its required approvers, payment is allowed.
+        \App\Models\ApprovalRequest::where('subject_id', $request->id)
+            ->update(['status' => \App\Models\ApprovalRequest::STATUS_APPROVED]);
+        $this->assertTrue($this->payouts->markPaid($request->fresh(), paymentReference: 'BANK-OK'));
+    }
+
     // ---- the cooling period ----
 
     public function test_a_bank_change_blocks_payouts_during_the_cooling_window(): void

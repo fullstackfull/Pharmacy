@@ -138,24 +138,30 @@ class PayoutService
     /** Admin moves a request forward without paying: requested -> under_review -> approved. */
     public function review(VendorPayoutRequest $request, bool $approve, int|string|null $reviewer = null, ?string $note = null): bool
     {
-        if (!in_array($request->status, [VendorPayoutRequest::STATUS_REQUESTED, VendorPayoutRequest::STATUS_UNDER_REVIEW], true)) {
-            return false;
-        }
+        return DB::transaction(function () use ($request, $approve, $reviewer, $note) {
+            // Lock the row and re-read status under the lock: two admins acting on the same request
+            // must not both win. The caller's in-memory status is stale by the time we get here.
+            $locked = VendorPayoutRequest::whereKey($request->getKey())->lockForUpdate()->first();
+            if (!$locked || !in_array($locked->status, [VendorPayoutRequest::STATUS_REQUESTED, VendorPayoutRequest::STATUS_UNDER_REVIEW], true)) {
+                return false;
+            }
 
-        $request->forceFill([
-            'status' => $approve ? VendorPayoutRequest::STATUS_APPROVED : VendorPayoutRequest::STATUS_UNDER_REVIEW,
-            'reviewed_by' => $reviewer,
-            'reviewed_at' => now(),
-            'review_note' => $note,
-        ])->save();
+            $locked->forceFill([
+                'status' => $approve ? VendorPayoutRequest::STATUS_APPROVED : VendorPayoutRequest::STATUS_UNDER_REVIEW,
+                'reviewed_by' => $reviewer,
+                'reviewed_at' => now(),
+                'review_note' => $note,
+            ])->save();
+            $request->setRawAttributes($locked->getAttributes(), true);
 
-        app(\App\Services\AuditLogger::class)->record(
-            action: $approve ? 'payout.approved' : 'payout.under_review',
-            subject: $request,
-            context: ['reference' => $request->reference, 'amount' => $request->amount, 'seller_id' => $request->seller_id],
-        );
+            app(\App\Services\AuditLogger::class)->record(
+                action: $approve ? 'payout.approved' : 'payout.under_review',
+                subject: $locked,
+                context: ['reference' => $locked->reference, 'amount' => $locked->amount, 'seller_id' => $locked->seller_id],
+            );
 
-        return true;
+            return true;
+        });
     }
 
     /**
@@ -165,29 +171,39 @@ class PayoutService
      */
     public function markPaid(VendorPayoutRequest $request, ?string $paymentReference = null): bool
     {
-        if ($request->status !== VendorPayoutRequest::STATUS_APPROVED) {
-            return false;
-        }
-
         return DB::transaction(function () use ($request, $paymentReference) {
-            // The reserved entry becomes the paid payout. Status is the only thing that changes; the
-            // amount it reserved is the amount it pays.
-            if ($request->reserve_entry_id) {
-                VendorLedgerEntry::where('id', $request->reserve_entry_id)
+            // Lock + re-assert status under the lock so markPaid and releaseReservation can never both
+            // process the same APPROVED payout — that race would pay the seller AND release the funds
+            // back to withdrawable, letting the same money be drawn twice.
+            $locked = VendorPayoutRequest::whereKey($request->getKey())->lockForUpdate()->first();
+            if (!$locked || $locked->status !== VendorPayoutRequest::STATUS_APPROVED) {
+                return false;
+            }
+
+            // Enforce dual control: if a large-payout approval was opened for this request, it must be
+            // fully approved (all required approvers) before any money leaves. Without this the 2-approver
+            // gate would be advisory — payable through the ordinary single-review path.
+            if (!$this->dualControlSatisfied($locked)) {
+                return false;
+            }
+
+            if ($locked->reserve_entry_id) {
+                VendorLedgerEntry::where('id', $locked->reserve_entry_id)
                     ->update(['status' => VendorLedgerEntry::STATUS_PAID, 'updated_at' => now()]);
             }
 
-            $request->forceFill([
+            $locked->forceFill([
                 'status' => VendorPayoutRequest::STATUS_PAID,
                 'paid_at' => now(),
                 'payment_reference' => $paymentReference,
-                'payout_entry_id' => $request->reserve_entry_id,
+                'payout_entry_id' => $locked->reserve_entry_id,
             ])->save();
+            $request->setRawAttributes($locked->getAttributes(), true);
 
             app(\App\Services\AuditLogger::class)->record(
                 action: 'payout.paid',
-                subject: $request,
-                context: ['reference' => $request->reference, 'amount' => $request->amount, 'payment_reference' => $paymentReference],
+                subject: $locked,
+                context: ['reference' => $locked->reference, 'amount' => $locked->amount, 'payment_reference' => $paymentReference],
             );
 
             return true;
@@ -202,33 +218,37 @@ class PayoutService
      */
     public function releaseReservation(VendorPayoutRequest $request, string $toStatus = VendorPayoutRequest::STATUS_REJECTED, ?string $note = null): bool
     {
-        if (!$request->isOpen()) {
-            return false;
-        }
-
         return DB::transaction(function () use ($request, $toStatus, $note) {
-            if ($request->reserve_entry_id) {
+            // Lock + re-assert isOpen() under the lock (see markPaid): a payout being paid concurrently
+            // must not also be released, or the reserved money would be handed back after payment.
+            $locked = VendorPayoutRequest::whereKey($request->getKey())->lockForUpdate()->first();
+            if (!$locked || !$locked->isOpen()) {
+                return false;
+            }
+
+            if ($locked->reserve_entry_id) {
                 // Void the reservation so it no longer counts against "reserved"...
-                VendorLedgerEntry::where('id', $request->reserve_entry_id)
+                VendorLedgerEntry::where('id', $locked->reserve_entry_id)
                     ->update(['status' => VendorLedgerEntry::STATUS_PAID, 'updated_at' => now()]);
 
                 // ...and put the money back as available.
                 $this->ledger->record(
-                    sellerId: $request->seller_id,
+                    sellerId: $locked->seller_id,
                     entryType: VendorLedgerEntry::TYPE_MANUAL_ADJUSTMENT,
-                    credit: $request->amount,
+                    credit: $locked->amount,
                     status: VendorLedgerEntry::STATUS_AVAILABLE,
                     referenceType: 'payout_release',
-                    referenceId: $request->id,
-                    description: 'Released reservation for ' . $toStatus . ' payout ' . $request->reference,
-                    sellerIs: $request->seller_is,
+                    referenceId: $locked->id,
+                    description: 'Released reservation for ' . $toStatus . ' payout ' . $locked->reference,
+                    sellerIs: $locked->seller_is,
                 );
             }
 
-            $request->forceFill([
+            $locked->forceFill([
                 'status' => $toStatus,
-                'review_note' => $note ?? $request->review_note,
+                'review_note' => $note ?? $locked->review_note,
             ])->save();
+            $request->setRawAttributes($locked->getAttributes(), true);
 
             return true;
         });
@@ -265,6 +285,32 @@ class PayoutService
         );
 
         return $log;
+    }
+
+    /**
+     * Has the large-payout dual-control gate been satisfied for this request?
+     *
+     * True when no approval was opened (small payout / feature off — the ordinary single review path
+     * governs), or when the opened approval reached its required approver count. False only while a
+     * dual-control approval is still pending or was rejected — blocking payment until it clears.
+     */
+    public function dualControlSatisfied(VendorPayoutRequest $request): bool
+    {
+        if (!Schema::hasTable('approval_requests')) {
+            return true;
+        }
+
+        $approval = \App\Models\ApprovalRequest::where([
+            'workflow' => 'payout',
+            'subject_type' => VendorPayoutRequest::class,
+            'subject_id' => $request->id,
+        ])->latest('id')->first();
+
+        if (!$approval) {
+            return true;
+        }
+
+        return $approval->status === \App\Models\ApprovalRequest::STATUS_APPROVED;
     }
 
     /** Is this seller inside a bank-change cooling window right now? */

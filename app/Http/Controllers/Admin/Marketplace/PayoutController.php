@@ -92,6 +92,12 @@ class PayoutController extends BaseController
             return back();
         }
 
+        // Large-payout dual control: a still-pending approval must clear before payment.
+        if (!$this->payoutService->dualControlSatisfied($request)) {
+            ToastMagic::error(translate('this_payout_needs_its_dual-control_approval_completed_before_it_can_be_paid'));
+            return back();
+        }
+
         $done = $this->payoutService->markPaid(request: $request, paymentReference: request('payment_reference'));
 
         $done ? ToastMagic::success(translate('payout_marked_paid'))
