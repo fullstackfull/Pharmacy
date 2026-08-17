@@ -135,3 +135,13 @@ html[dir="rtl"] .k-cart-open .k-cart-drawer {
         transition-duration: .01s;
     }
 }
+
+/* Header search typeahead: the arrow-key highlight, and a quiet busy state
+   while a request is in flight (the old code flashed the full-page loader). */
+.k-store .search-result-product.is-active {
+    background: var(--k-surface-sunk);
+}
+
+.k-store .search-card--busy .search-result-box {
+    opacity: .55;
+}

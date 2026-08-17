@@ -164,152 +164,154 @@
 
         <div class="row mt-20">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-body d-flex flex-column gap-20">
-                        <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                            <h3 class="mb-0">
-                                {{translate('coupon_list')}}
-                                <span class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $coupons->total() }}</span>
-                            </h3>
-                            <div class="d-flex flex-wrap gap-3 align-items-center justify-content-sm-end flex-grow-1">
-                                <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                                    <form action="{{ url()->current() }}" method="GET">
-                                        <div class="input-group">
-                                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                           placeholder="{{translate('search_by_Title_or_Code_or_Discount_Type')}}"
-                                           value="{{ request('searchValue') }}" aria-label="Search orders" required>
-                                            <div class="input-group-append search-submit">
-                                                <button type="submit">
-                                                    <i class="fi fi-rr-search"></i>
-                                                </button>
-                                            </div>
-                                        </div>
+                <x-k.data-view :title="translate('coupon_list')" :count="$coupons->total()" :selectable="true"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_Title_or_Code_or_Discount_Type')">
+
+                    <x-slot:tabs>
+                        <a class="k-tab" href="{{ route('admin.coupon.add', ['searchValue' => request('searchValue')]) }}"
+                           aria-selected="{{ request()->filled('status') ? 'false' : 'true' }}">{{ translate('all') }}</a>
+                        <a class="k-tab" href="{{ route('admin.coupon.add', ['status' => 1, 'searchValue' => request('searchValue')]) }}"
+                           aria-selected="{{ request('status') === '1' ? 'true' : 'false' }}">{{ translate('active') }}</a>
+                        <a class="k-tab" href="{{ route('admin.coupon.add', ['status' => 0, 'searchValue' => request('searchValue')]) }}"
+                           aria-selected="{{ request('status') === '0' ? 'true' : 'false' }}">{{ translate('disabled') }}</a>
+                    </x-slot:tabs>
+
+                    <x-slot:bulk>
+                        <x-k.button variant="secondary" size="sm" icon="check" data-k-bulk-status="1">
+                            {{ translate('turn_on') }}
+                        </x-k.button>
+                        <x-k.button variant="secondary" size="sm" icon="eye-off" data-k-bulk-status="0">
+                            {{ translate('turn_off') }}
+                        </x-k.button>
+                        <a class="k-btn k-btn--secondary k-btn--sm"
+                           href="{{ route('admin.coupon.export', ['searchValue' => request('searchValue')]) }}">
+                            <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                        </a>
+                    </x-slot:bulk>
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th style="inline-size:44px">
+                                <input type="checkbox" data-k-select-all aria-label="{{ translate('select_all') }}">
+                            </th>
+                            <th>{{ translate('coupon') }}</th>
+                            <th>{{ translate('coupon_type') }}</th>
+                            <th>{{ translate('duration') }}</th>
+                            <th class="k-table__num">{{ translate('Limit') }}</th>
+                            <th class="k-table__num">{{ translate('Total_Used') }}</th>
+                            <th>{{ translate('discount_bearer') }}</th>
+                            <th>{{ translate('status') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($coupons as $coupon)
+                            @php
+                                // The switch answers "is it enabled"; the badge answers "is it
+                                // doing anything right now" — a coupon can be on yet expired.
+                                $couponStartsAt = strtotime($coupon['start_date']);
+                                $couponExpiresAt = strtotime($coupon['expire_date']);
+                                $today = strtotime('today');
+                            @endphp
+                            <tr>
+                                <td>
+                                    <input type="checkbox" data-k-row-select value="{{ $coupon['id'] }}"
+                                           aria-label="{{ translate('select_coupon') }} {{ $coupon['id'] }}">
+                                </td>
+                                <td>
+                                    <span class="k-truncate" style="display:block;max-inline-size:230px" title="{{ $coupon['title'] }}">
+                                        {{ $coupon['title'] }}
+                                    </span>
+                                    <code class="k-text-subtle">{{ $coupon['code'] }}</code>
+                                </td>
+                                <td class="text-capitalize">{{ translate(str_replace('_', ' ', $coupon['coupon_type'])) }}</td>
+                                <td>
+                                    <span class="k-num">{{ date('d M, y', $couponStartsAt) }} – {{ date('d M, y', $couponExpiresAt) }}</span>
+                                    @if ($couponExpiresAt < $today)
+                                        <x-k.badge tone="danger">{{ translate('expired') }}</x-k.badge>
+                                    @elseif ($couponStartsAt > $today)
+                                        <x-k.badge tone="info">{{ translate('upcoming') }}</x-k.badge>
+                                    @else
+                                        <x-k.badge tone="warning">{{ translate('live') }}</x-k.badge>
+                                    @endif
+                                </td>
+                                <td class="k-table__num"><span class="k-num">{{ $coupon['limit'] ?? '—' }}</span></td>
+                                <td class="k-table__num"><span class="k-num">{{ $coupon['order_count'] }}</span></td>
+                                <td>{{ translate($coupon['coupon_bearer'] == 'inhouse' ? 'admin' : $coupon['coupon_bearer']) }}</td>
+                                <td>
+                                    <form
+                                        action="{{route('admin.coupon.status',[$coupon['id'],$coupon['status']?0:1])}}"
+                                        method="GET" id="coupon_status{{$coupon['id'] }}-form"
+                                        class="coupon_status_form">
+                                        <label class="switcher mx-auto" for="coupon_status{{$coupon['id'] }}">
+                                            <input
+                                                class="switcher_input custom-modal-plugin"
+                                                type="checkbox" value="1" name="status"
+                                                id="coupon_status{{$coupon['id'] }}"
+                                                {{ $coupon['status'] == 1 ? 'checked':'' }}
+                                                data-modal-type="input-change-form"
+                                                data-modal-form="#coupon_status{{$coupon['id'] }}-form"
+                                                data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/coupon-status-on.png') }}"
+                                                data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/coupon-status-off.png') }}"
+                                                data-on-title="{{translate('Want_to_Turn_ON_Coupon_Status').'?' }}"
+                                                data-off-title="{{translate('Want_to_Turn_OFF_Coupon_Status').'?' }}"
+                                                data-on-message="<p>{{translate('if_enabled_this_coupon_will_be_available_on_the_website_and_customer_app')}}</p>"
+                                                data-off-message="<p>{{translate('if_disabled_this_coupon_will_be_hidden_from_the_website_and_customer_app')}}</p>"
+                                                data-on-button-text="{{ translate('turn_on') }}"
+                                                data-off-button-text="{{ translate('turn_off') }}">
+                                            <span class="switcher_control"></span>
+                                        </label>
                                     </form>
-                                </div>
-                                <div class="dropdown">
-                                    <a type="button" class="btn btn-outline-primary min-h-40" href="{{ route('admin.coupon.export',['searchValue'=>request('searchValue')]) }}">
-                                        <i class="fi fi-sr-inbox-in"></i>
-                                        <span class="fs-12">{{ translate('export') }}</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table id="datatable"
-                                   class="table table-hover table-borderless table-thead-bordered align-middle">
-                                <thead class="text-capitalize">
-                                <tr>
-                                    <th>{{translate('SL')}}</th>
-                                    <th>{{translate('coupon')}}</th>
-                                    <th>{{translate('coupon_type')}}</th>
-                                    <th>{{translate('duration')}}</th>
-                                    <th>{{translate('Limit')}}</th>
-                                    <th class="text-center">{{translate('discount_bearer')}}</th>
-                                    <th>{{translate('status')}}</th>
-                                    <th class="text-center">{{translate('action')}}</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @foreach($coupons as $key => $coupon )
-                                    <tr>
-                                        <td>{{$coupons->firstItem() + $key }}</td>
-                                        <td>
-                                            <div class="max-w-250 text-truncate">{{$coupon['title']}}</div>
-                                            <strong>{{translate('code')}}: {{$coupon['code'] }}</strong>
-                                        </td>
-                                        <td class="text-capitalize">{{translate(str_replace('_',' ',$coupon['coupon_type']))}}</td>
-                                        <td>
-                                            <div class="d-flex flex-wrap gap-1">
-                                                <span>{{date('d M, y',strtotime($coupon['start_date']))}} - </span>
-                                                <span>{{date('d M, y',strtotime($coupon['expire_date']))}}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex flex-column gap-2">
-                                                <span>
-                                                    {{translate('Same_User_Limit')}}:
-                                                    <strong>{{ $coupon['limit'] }}</strong>
-                                                </span>
-
-                                                <span class="ms-1">
-                                                    {{translate('Total_Used')}}:
-                                                    <strong>{{ $coupon['order_count'] }}</strong>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="text-center">{{ translate($coupon['coupon_bearer'] == 'inhouse' ? 'admin':$coupon['coupon_bearer']) }}</td>
-                                        <td>
-                                            <form
-                                                action="{{route('admin.coupon.status',[$coupon['id'],$coupon['status']?0:1])}}"
-                                                method="GET" id="coupon_status{{$coupon['id'] }}-form"
-                                                class="coupon_status_form">
-                                                <label class="switcher mx-auto" for="coupon_status{{$coupon['id'] }}">
-                                                    <input
-                                                        class="switcher_input custom-modal-plugin"
-                                                        type="checkbox" value="1" name="status"
-                                                        id="coupon_status{{$coupon['id'] }}"
-                                                        {{ $coupon['status'] == 1 ? 'checked':'' }}
-                                                        data-modal-type="input-change-form"
-                                                        data-modal-form="#coupon_status{{$coupon['id'] }}-form"
-                                                        data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/coupon-status-on.png') }}"
-                                                        data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/coupon-status-off.png') }}"
-                                                        data-on-title="{{translate('Want_to_Turn_ON_Coupon_Status').'?' }}"
-                                                        data-off-title="{{translate('Want_to_Turn_OFF_Coupon_Status').'?' }}"
-                                                        data-on-message="<p>{{translate('if_enabled_this_coupon_will_be_available_on_the_website_and_customer_app')}}</p>"
-                                                        data-off-message="<p>{{translate('if_disabled_this_coupon_will_be_hidden_from_the_website_and_customer_app')}}</p>"
-                                                        data-on-button-text="{{ translate('turn_on') }}"
-                                                        data-off-button-text="{{ translate('turn_off') }}">
-                                                    <span class="switcher_control"></span>
-                                                </label>
-                                            </form>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-3 justify-content-center">
-                                                <button class="btn btn-outline-info btn-outline-info-dark icon-btn get-quick-view" data-id="{{ $coupon['id'] }}">
-                                                    <i class="fi fi-sr-eye"></i>
-                                                </button>
-                                                <a class="btn btn-outline-info icon-btn edit"
-                                                   href="{{route('admin.coupon.update',[$coupon['id']])}}"
-                                                   title="{{ translate('edit')}}"
-                                                >
-                                                    <i class="fi fi-sr-pencil"></i>
-                                                </a>
-                                                <a class="btn btn-outline-danger icon-btn delete delete-data"
-                                                   href="javascript:"
-                                                   data-id="coupon-{{$coupon['id'] }}"
-                                                   title="{{translate('delete')}}"
-                                                >
-                                                    <i class="fi fi-rr-trash"></i>
-                                                </a>
-                                                <form action="{{route('admin.coupon.delete',[$coupon['id']])}}"
-                                                      method="post" id="coupon-{{$coupon['id'] }}">
-                                                    @csrf @method('delete')
-                                                </form>
-                                            </div>
-
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                </tbody>
-                            </table>
-                            <div class="modal fade" id="quick-view" tabindex="-1" role="dialog"
-                                 aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered coupon-details" role="document">
-                                    <div class="modal-content border-0" id="quick-view-modal">
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <button class="k-btn k-btn--ghost k-btn--sm k-btn--icon get-quick-view"
+                                                data-id="{{ $coupon['id'] }}" title="{{ translate('view') }}">
+                                            <x-k.icon name="eye" :size="15" />
+                                        </button>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                           href="{{ route('admin.coupon.update', [$coupon['id']]) }}" title="{{ translate('edit') }}">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data" href="javascript:"
+                                           data-id="coupon-{{ $coupon['id'] }}" title="{{ translate('delete') }}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </a>
+                                        <form action="{{ route('admin.coupon.delete', [$coupon['id']]) }}"
+                                              method="post" id="coupon-{{ $coupon['id'] }}">
+                                            @csrf @method('delete')
+                                        </form>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
 
-                        <div class="table-responsive">
-                            <div class="px-4 d-flex justify-content-lg-end">
-                                {{$coupons->links()}}
-                            </div>
-                        </div>
+                    @if (count($coupons) == 0)
+                        <x-k.empty icon="marketing" :title="translate('no_coupon_found')"
+                                   :text="request('searchValue') ? translate('no_coupon_matches_your_search') : null" />
+                    @endif
 
-                        @if(count($coupons)==0)
-                            @include('layouts.admin.partials._empty-state',['text'=>'no_coupon_found'],['image'=>'default'])
-                        @endif
+                    @if ($coupons->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $coupons->firstItem() }}–{{ $coupons->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $coupons->total() }}</span>
+                            </span>
+                            <div>{!! $coupons->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
+
+                <div class="modal fade" id="quick-view" tabindex="-1" role="dialog"
+                     aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered coupon-details" role="document">
+                        <div class="modal-content border-0" id="quick-view-modal">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -323,6 +325,56 @@
 @push('script')
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/admin/coupon.js')}}"></script>
     <script>
+        "use strict";
+        (function () {
+            var view = document.querySelector('[data-k-selectable]');
+            if (!view) return;
+
+            var endpoint = @json(route('admin.coupon.bulk-status'));
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+            var labels = {
+                confirm: @json(translate('apply_this_to')),
+                coupons: @json(translate('coupons')),
+                working: @json(translate('updating_coupons')),
+                failed: @json(translate('could_not_update_the_coupons')),
+            };
+
+            view.addEventListener('click', function (event) {
+                var trigger = event.target.closest('[data-k-bulk-status]');
+                if (!trigger) return;
+
+                var ids = Kohl.selectedIds(view);
+                if (!ids.length) return;
+                if (!confirm(labels.confirm + ' ' + ids.length + ' ' + labels.coupons + '?')) return;
+
+                trigger.disabled = true;
+                Kohl.toast({title: labels.working, duration: 2000});
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : ''
+                    },
+                    body: JSON.stringify({ids: ids, status: Number(trigger.getAttribute('data-k-bulk-status'))})
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (body) {
+                        Kohl.toast({
+                            title: body.message || labels.failed,
+                            tone: body.status === 1 ? 'success' : 'danger',
+                        });
+                        if (body.updated) setTimeout(function () { location.reload(); }, 1000);
+                        else trigger.disabled = false;
+                    })
+                    .catch(function () {
+                        Kohl.toast({title: labels.failed, tone: 'danger'});
+                        trigger.disabled = false;
+                    });
+            });
+        })();
+
         $(document).ready(function () {
 
             function toggleCustomDate(wrapper) {

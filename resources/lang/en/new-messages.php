@@ -3056,4 +3056,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"could_not_save_try_again" => "Could not save try again",
 	"what_file_format_is_expected" => "What file format is expected",
 	"saved" => "Saved",
+	"could_not_update_the_coupons" => "Could not update the coupons",
+	"disabled" => "Disabled",
+	"select_coupon" => "Select coupon",
+	"updating_coupons" => "Updating coupons",
 ];
