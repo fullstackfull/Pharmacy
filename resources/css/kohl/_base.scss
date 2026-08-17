@@ -12,12 +12,18 @@
    flip with `dir` at no cost, so RTL cannot regress component by component.
    ========================================================================= */
 
+/* Colour and its ground are always set together.
+   Setting `color` alone here produced light text on the legacy light background
+   the moment dark mode was switched on — the page was unreadable, and the cause
+   was invisible in light mode. A token that paints text must also own what sits
+   behind it. */
 .k,
 .k-scope {
     font-family: var(--k-font-ui);
     font-size: var(--k-text-md);
     line-height: var(--k-leading-normal);
     color: var(--k-text);
+    background-color: var(--k-canvas);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }

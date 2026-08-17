@@ -157,6 +157,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         });
     });
 
+    // Kohl design-system gallery. Every primitive on one page, so a change to the
+    // system is reviewable in the real admin shell — in light/dark and LTR/RTL —
+    // rather than discovered later on a production screen.
+    Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
+
     Route::get('logout', [LoginController::class, 'logout'])->name('logout');
 
     Route::group(['prefix' => 'pos', 'as' => 'pos.', 'middleware' => ['module:pos']], function () {
