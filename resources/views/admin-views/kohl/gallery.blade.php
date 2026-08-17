@@ -251,6 +251,5 @@
             </x-slot:footer>
         </x-k.drawer>
 
-        <x-k.toasts />
     </div>
 @endsection

@@ -143,13 +143,21 @@ body.v2-active {
     "header header"
     "main   rail";
 }
-/* Restore RTL text flow on shell children (.app-v2 itself stays LTR). */
+/* Restore RTL text flow on shell children (.app-v2 itself stays LTR).
+   This list is the whole contract: anything rendered inside .app-v2 that is not
+   named here inherits the forced direction: ltr and renders Arabic left-aligned.
+   The command palette and the alert popups were both missing, so both read as
+   LTR panels on an Arabic page — and the popups' logical inset resolved to the
+   wrong edge as a result. */
 [dir="rtl"] .app-v2 > .v2-header,
 [dir="rtl"] .app-v2 > .v2-rail,
 [dir="rtl"] .app-v2 > .v2-ctxpanel,
 [dir="rtl"] .app-v2 > .v2-main,
 [dir="rtl"] .v2-rail-flyout,
-[dir="rtl"] .v2-setup-popover {
+[dir="rtl"] .v2-setup-popover,
+[dir="rtl"] .v2-palette-scrim,
+[dir="rtl"] .alert--container,
+[dir="rtl"] .k-toasts {
   direction: rtl;
 }
 

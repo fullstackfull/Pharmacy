@@ -2999,4 +2999,13 @@ ____________________________________________________on_search_engines_and_see_th
 	"create_a_test_order" => "Create a test order",
 	"orders_will_appear_here_as_soon_as_a_customer_checks_out" => "Orders will appear here as soon as a customer checks out",
 	"no_orders_yet" => "No orders yet",
+	"to_close" => "To close",
+	"to_open" => "To open",
+	"to_navigate" => "To navigate",
+	"results" => "Results",
+	"search_pages_orders_products_customers" => "Search pages orders products customers",
+	"empty_state" => "Empty state",
+	"loading_states" => "Loading states",
+	"selected" => "Selected",
+	"select_order" => "Select order",
 ];

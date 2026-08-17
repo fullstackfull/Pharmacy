@@ -876,15 +876,70 @@
       data: query ? { keyword: query } : {},
       success: function (response) {
         if (!list) return;
-        const html = (response && response.htmlView) ? response.htmlView : '';
-        list.innerHTML = html ||
-          '<div class="v2-palette-empty">No results</div>';
+        // Render the endpoint's JSON into palette rows rather than injecting its
+        // htmlView. The htmlView is the classic modal's markup: dropping it in here
+        // loses the row styling AND leaves state.paletteFiltered empty, so the
+        // arrow keys and Enter stop working the moment a query returns results.
+        var groups = (response && response.result) || {};
+        var rows = [];
+        Object.keys(groups).forEach(function (type) {
+          (groups[type] || []).slice(0, 6).forEach(function (row) {
+            var label = v2PaletteRowLabel(row);
+            var href = row.uri || row.url || row.route;
+            if (!label || !href) return;
+            if (!/^https?:\/\//.test(href) && href.charAt(0) !== '/') href = '/' + href;
+            rows.push({ label: label, href: href, section: v2PaletteGroupLabel(type), group: row.keywords || '' });
+          });
+        });
+        state.paletteFiltered = rows;
+        if (state.paletteIdx >= rows.length) state.paletteIdx = 0;
+        list.innerHTML = rows.length
+          ? v2PaletteRowsHtml(rows)
+          : '<div class="v2-palette-empty">No results</div>';
       },
       error: function (_xhr, status) {
         if (status === 'abort') return;
-        list.innerHTML = '<div class="v2-palette-empty">Search failed</div>';
+        // A failed search should still leave the palette usable, so fall back to
+        // the menu index instead of showing a dead end.
+        v2PaletteRenderMenu(query);
       }
     });
+  }
+  function v2PaletteMoveHighlight() {
+    var list = $anyById('v2-palette-list');
+    if (!list) return;
+    var rows = list.querySelectorAll('.v2-palette-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle('v2-is-active', i === state.paletteIdx);
+    }
+    var active = rows[state.paletteIdx];
+    if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+  }
+  function v2PaletteTitleCase(text) {
+    return String(text || '').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+  /* Menu rows from the search endpoint share one page_title_value per section, so
+     six order pages all render as "Orders". The distinguishing part is the last,
+     most specific keyword. */
+  function v2PaletteRowLabel(row) {
+    var base = row.page_title_value || row.name || row.title || row.page_title || row.email || '';
+    var keywords = String(row.keywords || '').split(',').map(function (k) { return k.trim(); }).filter(Boolean);
+    var specific = keywords.length ? keywords[keywords.length - 1] : '';
+    if (!specific || base.toLowerCase().indexOf(specific.toLowerCase()) !== -1) return base;
+    return base + ' · ' + v2PaletteTitleCase(specific);
+  }
+  function v2PaletteGroupLabel(type) {
+    return String(type || '').replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+  function v2PaletteRowsHtml(rows) {
+    return rows.map(function (it, i) {
+      return '<div class="v2-palette-row ' + (i === state.paletteIdx ? 'v2-is-active' : '') + '"'
+        + ' data-p-idx="' + i + '" data-href="' + escapeAttr(it.href) + '">'
+        + '<div class="v2-palette-row-text">'
+        + '<span class="v2-palette-row-label">' + escapeHtml(it.label) + '</span>'
+        + '<span class="v2-palette-row-path">' + escapeHtml(it.section) + (it.group ? ' › ' + escapeHtml(it.group) : '') + '</span>'
+        + '</div></div>';
+    }).join('');
   }
   // Fallback when no AJAX endpoint is available — keep the original
   // sidebar-menu filter so the palette still does something useful.
@@ -1247,10 +1302,14 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    // ⌘K / Ctrl+K is owned by the v2 advance-search wiring (opens the
-    // classic #advanceSearchModal). Skip the v2 palette shortcut so both
-    // don't fire on the same keystroke.
+    // ⌘K / Ctrl+K opens this palette. It was previously skipped in favour of the
+    // classic #advanceSearchModal, which left openPalette() defined but never
+    // called from anywhere — a finished feature (markup, styles, index, keyboard
+    // navigation) that no user could reach. The modal is still available from the
+    // header's search button; the keyboard shortcut now lands on the palette.
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (state.paletteOpen) { closePalette(); } else { openPalette(); }
       return;
     }
     if (!state.paletteOpen) return;
@@ -1260,11 +1319,11 @@
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       state.paletteIdx = Math.min(list.length - 1, state.paletteIdx + 1);
-      renderPalette();
+      v2PaletteMoveHighlight();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       state.paletteIdx = Math.max(0, state.paletteIdx - 1);
-      renderPalette();
+      v2PaletteMoveHighlight();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const pick = list[state.paletteIdx];
