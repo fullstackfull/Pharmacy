@@ -44,6 +44,9 @@ use Modules\Auction\app\Models\AuctionWithdraw;
 
 class CustomerController extends BaseController
 {
+    /** Each id in a batch emails that customer, so this cap is deliberately low. */
+    private const BULK_LIMIT = 50;
+
     use PaginatorTrait, EmailTemplateTrait;
 
     public function __construct(
@@ -132,6 +135,58 @@ class CustomerController extends BaseController
         ];
         event(new CustomerStatusUpdateEvent(email: $customer['email'], data: $data));
         return response()->json(['message' => translate('update_successfully')]);
+    }
+
+    /**
+     * Block or unblock many customers at once.
+     *
+     * Delegates to updateStatus() per customer, which revokes their API tokens and
+     * emails them that the account was blocked or unblocked. That notification is
+     * the point — a customer locked out without being told files a support ticket —
+     * so the batch is capped tighter than the catalogue ones: every id here sends
+     * a real email.
+     */
+    public function bulkUpdateStatus(Request $request): JsonResponse
+    {
+        $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
+        $action = (string) $request->input('action', '');
+
+        if (empty($ids)) {
+            return response()->json(['status' => 0, 'message' => translate('select_at_least_one_customer')], 422);
+        }
+        if (!in_array($action, ['block', 'unblock'], true)) {
+            return response()->json(['status' => 0, 'message' => translate('unsupported_action')], 422);
+        }
+        if (count($ids) > self::BULK_LIMIT) {
+            return response()->json([
+                'status' => 0,
+                'message' => translate('select_no_more_than') . ' ' . self::BULK_LIMIT . ' ' . translate('customers'),
+            ], 422);
+        }
+
+        $updated = 0;
+        $skipped = [];
+
+        foreach ($ids as $id) {
+            // One customer failing must not abandon the rest of the batch half-applied,
+            // which is what an uncaught throw part-way through the loop produces.
+            try {
+                $this->updateStatus(new Request(['id' => $id, 'is_active' => $action === 'unblock' ? 1 : 0]));
+                $updated++;
+            } catch (\Throwable $exception) {
+                report($exception);
+                $skipped[] = ['id' => $id, 'reason' => translate('could_not_be_updated')];
+            }
+        }
+
+        return response()->json([
+            'status' => $updated > 0 ? 1 : 0,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $updated > 0
+                ? $updated . ' ' . translate('customers_updated')
+                : translate('no_customers_could_be_updated'),
+        ]);
     }
 
     public function getView(Request $request, $id): View|RedirectResponse

@@ -10,7 +10,7 @@
                 {{translate('announcement_setup')}}
             </h2>
         </div>
-        <form action="{{ route('admin.business-settings.announcement') }}" method="post" enctype="multipart/form-data">
+        <form data-k-save-bar action="{{ route('admin.business-settings.announcement') }}" method="post" enctype="multipart/form-data">
             @csrf
             @if (isset($announcement))
                 <div class="card h-100">
@@ -59,6 +59,7 @@
                     </div>
                 </div>
             @endif
+            <x-k.save-bar />
         </form>
     </div>
 @endsection

@@ -4,188 +4,247 @@
 @section('title', translate('vendor_List'))
 
 @section('content')
+    @php
+        $currentFilters = ['searchValue' => request('searchValue'), 'sort_by' => request('sort_by')];
+        $sortOptions = [
+            'latest'         => translate('latest'),
+            'oldest'         => translate('oldest'),
+            'most-favorite'  => translate('most_favorite'),
+            'orders_count'   => translate('orders_count'),
+        ];
+        $activeSort = request('sort_by');
+    @endphp
+
     <div class="content container-fluid">
-        <div class="mb-4">
-            <h2 class="h1 mb-0 text-capitalize d-flex align-items-center gap-2">
-                <img src="{{dynamicAsset(path: 'public/assets/back-end/img/add-new-seller.png')}}" alt="">
-                {{translate('vendor_List')}}
-                <span class="badge badge-info text-bg-info">{{ $vendors->total() }}</span>
-            </h2>
-        </div>
+        <x-k.page-header :title="translate('vendor_List')" :subtitle="$vendors->total() . ' ' . translate('vendors')">
+            <x-slot:actions>
+                <x-k.button variant="secondary" icon="download"
+                            :href="route('admin.vendors.export', ['searchValue' => request('searchValue')])">
+                    {{ translate('export') }}
+                </x-k.button>
+                <x-k.button variant="primary" icon="plus" :href="route('admin.vendors.add')">
+                    {{ translate('add_new_vendor') }}
+                </x-k.button>
+            </x-slot:actions>
+        </x-k.page-header>
 
-        <div class="card">
-            <div class="px-3 py-4">
-                <div class="d-flex justify-content-between gap-3 flex-wrap align-items-center mb-4">
-                    <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                        <form action="{{ url()->current() }}" method="GET">
-                            <div class="input-group">
-                                <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                       placeholder="{{translate('search_by_shop_name_or_vendor_name_or_phone_or_email')}}" aria-label="Search orders" value="{{ request('searchValue') }}">
-                                <div class="input-group-append search-submit">
-                                    <button type="submit">
-                                        <i class="fi fi-rr-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="d-flex flex-wrap justify-content-start justify-content-md-end align-items-center gap-3 min-w-100-mobile">
-                        <a type="button" class="btn btn-outline-primary" href="{{route('admin.vendors.export',['searchValue' => request('searchValue')])}}">
-                            <i class="fi fi-sr-inbox-in"></i>
-                            <span class="fs-12">{{ translate('export') }}</span>
-                        </a>
+        <x-k.data-view :title="translate('vendor_List')" :count="$vendors->total()" :selectable="true"
+                       searchName="searchValue" :searchValue="request('searchValue')"
+                       :searchPlaceholder="translate('search_by_shop_name_or_vendor_name_or_phone_or_email')">
 
-                        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-sm-end flex-grow-1">
-                            <div class="dropdown">
-                                <div class="position-relative">
-                                    @if(!empty(request('sort_by')))
-                                        <div class="position-absolute inset-inline-end-0 top-0 mt-n1 me-n1 btn-circle bg-danger border border-white border-2" style="--size: 14px;"></div>
+            {{-- Sorting was a dropdown whose current choice was only visible as a red dot.
+                 As tabs the active order is the thing you read first. --}}
+            <x-slot:tabs>
+                <a class="k-tab" href="{{ route('admin.vendors.vendor-list', ['searchValue' => request('searchValue')]) }}"
+                   aria-selected="{{ empty($activeSort) ? 'true' : 'false' }}">{{ translate('all') }}</a>
+                @foreach ($sortOptions as $value => $label)
+                    <a class="k-tab" aria-selected="{{ $activeSort === $value ? 'true' : 'false' }}"
+                       href="{{ route('admin.vendors.vendor-list', ['sort_by' => $value, 'searchValue' => request('searchValue')]) }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </x-slot:tabs>
+
+            <x-slot:bulk>
+                <x-k.button variant="secondary" size="sm" icon="check" data-k-bulk-status="approved">
+                    {{ translate('approve') }}
+                </x-k.button>
+                <x-k.button variant="secondary" size="sm" icon="eye-off" data-k-bulk-status="suspended">
+                    {{ translate('suspend') }}
+                </x-k.button>
+                <x-k.button variant="danger" size="sm" icon="close" data-k-bulk-status="rejected">
+                    {{ translate('reject') }}
+                </x-k.button>
+                <span class="k-field__hint">{{ translate('each_vendor_is_emailed_and_suspending_ends_their_session') }}</span>
+            </x-slot:bulk>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th style="inline-size:44px">
+                        <input type="checkbox" data-k-select-all aria-label="{{ translate('select_all') }}">
+                    </th>
+                    <th>{{ translate('shop_name') }}</th>
+                    <th>{{ translate('vendor_name') }}</th>
+                    <th>{{ translate('contact_info') }}</th>
+                    <th>{{ translate('status') }}</th>
+                    <th class="k-table__num">{{ translate('total_products') }}</th>
+                    <th class="k-table__num">{{ translate('total_orders') }}</th>
+                    <th></th>
+                </tr>
+                </thead>
+
+                <tbody>
+                @foreach ($vendors as $seller)
+                    <tr>
+                        <td>
+                            <input type="checkbox" data-k-row-select value="{{ $seller->id }}"
+                                   aria-label="{{ translate('select_vendor') }} {{ $seller->id }}">
+                        </td>
+
+                        <td>
+                            <a href="{{ route('admin.vendors.view', ['id' => $seller->id]) }}" class="k-row">
+                                <img src="{{ getStorageImages(path: $seller?->shop?->image_full_url, type: 'backend-basic') }}"
+                                     alt="" width="34" height="34"
+                                     style="border-radius:50%;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                <span style="min-inline-size:0">
+                                    <span class="k-truncate" style="display:block;max-inline-size:190px">
+                                        {{ $seller->shop ? Str::limit($seller->shop->name, 26) : translate('shop_not_found') }}
+                                    </span>
+                                    {{-- A closed or vacationing shop still shows "active" by status, so the
+                                         reason it is not selling has to be visible on the row itself. --}}
+                                    @if (checkVendorAbility(type: 'vendor', status: 'temporary_close', vendor: $seller?->shop))
+                                        <x-k.badge tone="warning">{{ translate('temporary_closed') }}</x-k.badge>
+                                    @elseif (checkVendorAbility(type: 'vendor', status: 'vacation_status', vendor: $seller?->shop))
+                                        <x-k.badge tone="warning">{{ translate('On_Vacation') }}</x-k.badge>
                                     @endif
-                                </div>
-                                <button type="button" class="btn {{ !empty(request('sort_by')) ? 'btn-primary' : 'btn-outline-primary' }}" data-bs-toggle="dropdown">
-                                    <i class="fi fi-sr-sort-alt"></i>
-                                    <span class="fs-12">{{ translate('Sorting') }}</span>
-                                    <i class="fi fi-rr-angle-small-down"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-right">
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2"
-                                           href="{{ route('admin.vendors.vendor-list', ['sort_by' => 'latest', 'searchValue' => request('searchValue')]) }}">
-                                            <span class="text-success pt-1">
-                                                <input type="radio" name="sort_by" {{ empty(request('sort_by')) || request('sort_by') == 'latest' ? 'checked' : '' }}>
-                                            </span>
-                                            {{ translate('Default') }} ({{ translate('Recent created') }})
-                                        </a>
-                                    </li>
+                                </span>
+                            </a>
+                        </td>
 
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2"
-                                           href="{{ route('admin.vendors.vendor-list', ['sort_by' => 'oldest', 'searchValue' => request('searchValue')]) }}">
-                                            <span class="text-success pt-1">
-                                                <input type="radio" name="sort_by" {{ request('sort_by') == 'oldest' ? 'checked' : '' }}>
-                                            </span>
-                                            {{ translate('Show Older First') }}
-                                        </a>
-                                    </li>
+                        <td>
+                            <a href="{{ route('admin.vendors.view', $seller->id) }}" class="k-truncate"
+                               style="display:block;max-inline-size:170px" title="{{ $seller->f_name }} {{ $seller->l_name }}">
+                                {{ $seller->f_name }} {{ $seller->l_name }}
+                            </a>
+                        </td>
 
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2"
-                                           href="{{ route('admin.vendors.vendor-list', ['sort_by' => 'most-favorite', 'searchValue' => request('searchValue')]) }}">
-                                            <span class="text-info pt-1">
-                                                <input type="radio" name="sort_by" {{ request('sort_by') == 'most-favorite' ? 'checked' : '' }}>
-                                            </span>
-                                            {{ translate('Most Popular Store') }}
-                                        </a>
-                                    </li>
+                        <td>
+                            <a href="mailto:{{ $seller->email }}" class="k-truncate" style="display:block;max-inline-size:210px">
+                                {{ $seller->email }}
+                            </a>
+                            <a href="tel:{{ $seller->phone }}" class="k-text-subtle">{{ $seller->phone }}</a>
+                        </td>
 
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2"
-                                           href="{{ route('admin.vendors.vendor-list', ['sort_by' => 'orders_count', 'searchValue' => request('searchValue')]) }}">
-                                            <span class="text-info pt-1">
-                                                <input type="radio" name="sort_by" {{ request('sort_by') == 'orders_count' ? 'checked' : '' }}>
-                                            </span>
-                                            {{ translate('Top Selling Store') }}
-                                        </a>
-                                    </li>
-                                </ul>
+                        <td>
+                            {{-- The old list collapsed every non-approved state into "inactive", which
+                                 hid the difference between a vendor waiting on you and one you rejected. --}}
+                            @switch($seller->status)
+                                @case('approved')
+                                    <x-k.badge tone="success">{{ translate('active') }}</x-k.badge>
+                                    @break
+                                @case('pending')
+                                    <x-k.badge tone="warning">{{ translate('pending') }}</x-k.badge>
+                                    @break
+                                @case('suspended')
+                                    <x-k.badge tone="danger">{{ translate('suspended') }}</x-k.badge>
+                                    @break
+                                @case('rejected')
+                                    <x-k.badge tone="danger">{{ translate('rejected') }}</x-k.badge>
+                                    @break
+                                @default
+                                    <x-k.badge>{{ translate($seller->status) }}</x-k.badge>
+                            @endswitch
+                        </td>
+
+                        <td class="k-table__num">
+                            <a href="{{ route('admin.vendors.view', ['id' => $seller['id'], 'tab' => 'product']) }}" class="k-num">
+                                {{ $seller->product->count() }}
+                            </a>
+                        </td>
+
+                        <td class="k-table__num">
+                            <a href="{{ route('admin.vendors.view', ['id' => $seller['id'], 'tab' => 'order']) }}" class="k-num">
+                                {{ $seller->orders->where('seller_is', 'seller')->where('order_type', 'default_type')->count() }}
+                            </a>
+                        </td>
+
+                        <td>
+                            <div class="k-table__actions">
+                                <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}"
+                                   href="{{ route('admin.vendors.view', $seller->id) }}">
+                                    <x-k.icon name="eye" :size="15" />
+                                </a>
                             </div>
-                        </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                        <a href="{{route('admin.vendors.add')}}" type="button" class="btn btn-primary text-nowrap">
-                            <i class="fi fi-rr-plus-small"></i>
-                            {{translate('add_New_Vendor')}}
-                        </a>
-                    </div>
-                </div>
+            @if (count($vendors) == 0)
+                <x-k.empty icon="customers" :title="translate('no_vendor_found')"
+                           :text="request('searchValue') ? translate('no_vendor_matches_your_search') : null">
+                    <x-slot:action>
+                        <x-k.button variant="primary" icon="plus" :href="route('admin.vendors.add')">
+                            {{ translate('add_new_vendor') }}
+                        </x-k.button>
+                    </x-slot:action>
+                </x-k.empty>
+            @endif
 
-                <div class="table-responsive">
-                    <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
-                            <tr>
-                                <th>{{translate('SL')}}</th>
-                                <th>{{translate('shop_name')}}</th>
-                                <th>{{translate('vendor_name')}}</th>
-                                <th>{{translate('contact_info')}}</th>
-                                <th>{{translate('status')}}</th>
-                                <th class="text-center">{{translate('total_products')}}</th>
-                                <th class="text-center">{{translate('total_orders')}}</th>
-                                <th class="text-center">{{translate('action')}}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($vendors as $key=>$seller)
-                            <tr>
-                                <td>{{$vendors->firstItem()+$key}}</td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-10 w-max-content">
-                                        <img width="50"
-                                        class="avatar rounded-circle object-fit-cover" src="{{ getStorageImages(path: $seller?->shop?->image_full_url, type: 'backend-basic') }}"
-                                            alt="">
-                                        <div>
-                                            <a class="text-dark text-hover-primary" href="{{ route('admin.vendors.view', ['id' => $seller->id]) }}">{{ $seller->shop ? Str::limit($seller->shop->name, 20) : translate('shop_not_found')}}</a>
-                                            <span class="text-danger fs-12">
-                                                @if(checkVendorAbility(type: 'vendor', status: 'temporary_close', vendor: $seller?->shop))
-                                                    <br>
-                                                    {{ translate('temporary_closed') }}
-                                                @elseif(checkVendorAbility(type: 'vendor', status: 'vacation_status', vendor: $seller?->shop))
-                                                    <br>
-                                                    {{ translate('On_Vacation') }}
-                                                @endif
-                                            </span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a title="{{translate('view')}}"
-                                        class="text-dark text-hover-primary"
-                                        href="{{route('admin.vendors.view',$seller->id)}}">
-                                        {{$seller->f_name}} {{$seller->l_name}}
-                                    </a>
-                                </td>
-                                <td>
-                                    <div class="mb-1">
-                                        <strong><a class="text-dark text-hover-primary" href="mailto:{{$seller->email}}">{{$seller->email}}</a></strong>
-                                    </div>
-                                    <a class="text-dark text-hover-primary" href="tel:{{$seller->phone}}">{{$seller->phone}}</a>
-                                </td>
-                                <td>
-                                    {!! $seller->status=='approved'?'<label class="badge badge-success text-bg-success">'.translate('active').'</label>':'<label class="badge badge-danger text-bg-danger">'.translate('inactive').'</label>' !!}
-                                </td>
-                                <td class="text-center">
-                                    <a href="{{ route('admin.vendors.view', ['id'=>$seller['id'], 'tab'=>'product']) }}"
-                                        class="badge badge-info text-bg-info">
-                                        {{$seller->product->count()}}
-                                    </a>
-                                </td>
-                                <td class="text-center">
-                                    <a href="{{ route('admin.vendors.view',['id'=>$seller['id'], 'tab'=>'order']) }}"
-                                        class="badge badge-info text-bg-info">
-                                        {{ $seller->orders->where('seller_is', 'seller')->where('order_type', 'default_type')->count() }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-center gap-2">
-                                        <a title="{{translate('view')}}"
-                                            class="btn btn-outline-info icon-btn"
-                                            href="{{route('admin.vendors.view',$seller->id)}}">
-                                            <i class="fi fi-rr-eye"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4">
-                    <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                        {!! $vendors->links() !!}
-                    </div>
-                </div>
-                @if(count($vendors)==0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_vendor_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+            @if ($vendors->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $vendors->firstItem() }}–{{ $vendors->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $vendors->total() }}</span>
+                    </span>
+                    <div>{!! $vendors->appends($currentFilters)->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection
+
+@push('script')
+    <script>
+        "use strict";
+        (function () {
+            var view = document.querySelector('[data-k-selectable]');
+            if (!view) return;
+
+            var endpoint = @json(route('admin.vendors.bulk-status'));
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+            var labels = {
+                confirm: @json(translate('apply_this_to')),
+                vendors: @json(translate('vendors')),
+                notice: @json(translate('each_vendor_is_emailed_and_suspending_ends_their_session')),
+                working: @json(translate('updating_vendors')),
+                failed: @json(translate('could_not_update_the_vendors')),
+                skipped: @json(translate('skipped')),
+            };
+
+            view.addEventListener('click', function (event) {
+                var trigger = event.target.closest('[data-k-bulk-status]');
+                if (!trigger) return;
+
+                var ids = Kohl.selectedIds(view);
+                if (!ids.length) return;
+                // Suspending logs the vendor out and emails them, so both consequences are
+                // named before it happens.
+                if (!confirm(labels.confirm + ' ' + ids.length + ' ' + labels.vendors + '?\n' + labels.notice)) return;
+
+                trigger.disabled = true;
+                Kohl.toast({title: labels.working, duration: 2000});
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : ''
+                    },
+                    body: JSON.stringify({ids: ids, status: trigger.getAttribute('data-k-bulk-status')})
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (body) {
+                        var skipped = body.skipped || [];
+                        Kohl.toast({
+                            title: body.message || labels.failed,
+                            text: skipped.length
+                                ? labels.skipped + ': #' + skipped.map(function (s) { return s.id; }).join(', #')
+                                : null,
+                            tone: body.status === 1 ? (skipped.length ? 'warning' : 'success') : 'danger',
+                        });
+                        if (body.updated) setTimeout(function () { location.reload(); }, 1200);
+                        else trigger.disabled = false;
+                    })
+                    .catch(function () {
+                        Kohl.toast({title: labels.failed, tone: 'danger'});
+                        trigger.disabled = false;
+                    });
+            });
+        })();
+    </script>
+@endpush

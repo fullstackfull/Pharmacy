@@ -606,3 +606,73 @@
 .k-row--between { justify-content: space-between; }
 .k-grow { flex: 1; min-inline-size: 0; }
 .k-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ------------------------------------------------------- settings index link */
+/* A destination in the settings hub: title, one line of what it actually does,
+   and an affordance that it goes somewhere. The description is the point — a
+   grid of bare titles is the same lookup problem the hub exists to solve. */
+.k-setting-link {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--k-size-2);
+    padding: var(--k-size-3);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-sm);
+    background: var(--k-surface);
+    color: var(--k-text);
+    text-decoration: none;
+    transition: border-color var(--k-duration-fast) var(--k-ease),
+                background var(--k-duration-fast) var(--k-ease);
+}
+.k-setting-link:hover {
+    border-color: var(--k-accent);
+    background: var(--k-accent-soft);
+    text-decoration: none;
+    color: var(--k-text);
+}
+.k-setting-link__title { font-weight: var(--k-weight-medium); grid-column: 1; }
+.k-setting-link__desc {
+    grid-column: 1;
+    font-size: var(--k-text-sm);
+    color: var(--k-text-muted);
+    line-height: 1.45;
+}
+.k-setting-link__go { grid-column: 2; grid-row: 1 / span 2; color: var(--k-text-subtle); }
+.k-setting-link:hover .k-setting-link__go { color: var(--k-accent); }
+
+/* ----------------------------------------------------------------- save bar */
+/* A settings form's save button sits at the bottom of a long page. Change one
+   field near the top and the way to keep it is off-screen — which is how edits
+   get lost to a stray navigation. This bar appears the moment a form is dirty
+   and stays in view until the change is saved or discarded. */
+.k-savebar {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: var(--k-z-sticky);
+    display: none;
+    align-items: center;
+    gap: var(--k-size-3);
+    margin-block-start: var(--k-size-4);
+    padding: var(--k-size-3) var(--k-size-4);
+    border: 1px solid var(--k-border-strong);
+    border-radius: var(--k-radius-md);
+    background: var(--k-surface);
+    box-shadow: var(--k-shadow-3);
+}
+.k-savebar.is-dirty { display: flex; }
+.k-savebar__dot {
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: var(--k-warning);
+    flex: 0 0 auto;
+}
+.k-savebar__text { flex: 1; min-inline-size: 0; font-weight: var(--k-weight-medium); }
+.k-savebar__actions { display: flex; gap: var(--k-size-2); }
+
+@media (max-width: 640px) {
+    .k-savebar { flex-wrap: wrap; }
+    .k-savebar__actions { inline-size: 100%; }
+    .k-savebar__actions .k-btn { flex: 1; }
+}

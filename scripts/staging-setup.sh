@@ -70,7 +70,10 @@ foreach ([
     'DB_PASSWORD' => '$STAGING_PASS',
     // A staging box must never be able to email a real customer or charge a real card.
     'MAIL_MAILER' => 'log',
-    'QUEUE_CONNECTION' => 'sync',
+    // Matches production. 'sync' would run queued listeners inline and hide the very
+    // latency they were queued to avoid — a blocked-customer email against an
+    // unreachable SMTP host takes ~60s per customer when it is not queued.
+    'QUEUE_CONNECTION' => 'database',
 ] as \$k => \$v) { \$env = \$set(\$env, \$k, \$v); }
 file_put_contents('.env', \$env);
 PHP

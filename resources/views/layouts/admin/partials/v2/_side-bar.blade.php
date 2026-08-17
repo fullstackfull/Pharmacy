@@ -857,6 +857,12 @@
 
             @if (Helpers::module_permission_check('business_settings'))
                 <div class="v2-ctx-group">
+                <a class="v2-nav-item {{ Request::is('admin/settings') ? 'v2-is-active' : '' }}" data-item="settings-index" href="{{ route('admin.settings.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('All_Settings') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="settings-index" aria-label="Pin"></button></div>
+                </a>
+            </div>
+            <div class="v2-ctx-group">
                     <div class="v2-ctx-group-head"><span>{{ translate('Business_Settings') }}</span></div>
                     <a class="v2-nav-item {{ (Request::is('admin/business-settings/web-config') || Request::is('admin/business-settings/refund-setup') || Request::is('admin/business-settings/website-setup') || Request::is('admin/business-settings/product-settings') || Request::is('admin/business-settings/payment-method/payment-option') || Request::is('admin/business-settings/vendor-settings') || Request::is('admin/business-settings/customer-settings') || Request::is('admin/business-settings/delivery-man-settings') || Request::is('admin/business-settings/shipping-method/update*') || Request::is('admin/business-settings/shipping-method/index') || Request::is('admin/business-settings/order-settings/index') || Request::is('admin/business-settings/invoice-settings') || Request::is('admin/business-settings/delivery-zone') || Request::is('admin/business-settings/auction-config')) ? 'v2-is-active' : '' }}" data-item="business-setup" href="{{ route('admin.business-settings.web-config.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Business_Setup') }}</span></span>

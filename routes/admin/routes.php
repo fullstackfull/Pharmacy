@@ -157,6 +157,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         });
     });
 
+    // One searchable index over every settings page. The 71 templates under
+    // business-settings alone span four route prefixes with no shared entry point.
+    Route::get('settings', function (\App\Services\Admin\SettingsIndexService $settings) {
+        $groups = $settings->groups();
+        return view('admin-views.settings.index', ['groups' => $groups, 'total' => $settings->count($groups)]);
+    })->name('settings.index');
+
     // Kohl design-system gallery. Every primitive on one page, so a change to the
     // system is reviewable in the real admin shell — in light/dark and LTR/RTL —
     // rather than discovered later on a production screen.
@@ -369,6 +376,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('view/{user_id}', 'getView')->name('view');
             Route::get('order-list-export/{user_id}', 'exportOrderList')->name('order-list-export');
             Route::post('status-update', 'updateStatus')->name('status-update');
+            // Bulk block / unblock. Delegates per customer so each one still has their
+            // tokens revoked and receives the notification.
+            Route::post('bulk-status', 'bulkUpdateStatus')->name('bulk-status');
             Route::delete('delete/{id}', 'deleteCustomer')->name('delete');
             Route::get('subscriber-list', 'getSubscriberListView')->name('subscriber-list');
             Route::get('subscriber-list/export', 'exportSubscribersList')->name('subscriber-list.export');
@@ -414,6 +424,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::POST('add', 'add');
             Route::get('order-list-export/{vendor_id}', 'exportOrderList')->name('order-list-export');
             Route::post('status', 'updateStatus')->name('updateStatus');
+            // Bulk approve / suspend / reject. Delegates per vendor so each transition
+            // still picks its own email template and suspension still rotates the token.
+            Route::post('bulk-status', 'bulkUpdateStatus')->name('bulk-status');
             Route::get('export', 'exportList')->name('export');
 
             Route::post('sales-commission-update/{id}', 'updateSalesCommission')->name('sales-commission-update');
