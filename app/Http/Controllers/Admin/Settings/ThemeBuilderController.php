@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Admin\Settings;
 
 use App\Http\Controllers\BaseController;
+use App\Models\Theme;
+use App\Models\ThemeAsset;
+use App\Models\ThemeBlock;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Http\RedirectResponse;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
+use App\Services\Theme\ThemeAssetService;
 use App\Services\Theme\ThemeBuilderService;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route as RouteFacade;
 
 /**
  * Visual Theme Builder (Phase 1.2).
@@ -29,6 +34,7 @@ class ThemeBuilderController extends BaseController
         private readonly ThemeBuilderService $builder,
         private readonly SectionRegistry     $registry,
         private readonly ThemeManager        $themeManager,
+        private readonly ThemeAssetService   $assets,
     )
     {
     }
@@ -51,6 +57,7 @@ class ThemeBuilderController extends BaseController
 
         return view('admin-views.theme.builder', [
             'version'       => $version,
+            'theme'         => $version?->theme,
             'page'          => $page,
             'previewUrl'    => $this->builderPreviewUrl($page),
             'structure'     => $version ? $this->builder->getPageStructure($version, $page) : [],
@@ -58,6 +65,7 @@ class ThemeBuilderController extends BaseController
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
+            'uploadAccept'  => '.' . implode(',.', ThemeAssetService::acceptedExtensions()),
         ]);
     }
 
@@ -69,7 +77,7 @@ class ThemeBuilderController extends BaseController
     private function builderPreviewUrl(string $page): ?string
     {
         try {
-            return \Illuminate\Support\Facades\Route::has('home') ? route('home') : url('/');
+            return RouteFacade::has('home') ? route('home') : url('/');
         } catch (\Throwable) {
             return null;
         }
@@ -171,19 +179,200 @@ class ThemeBuilderController extends BaseController
         }
 
         $settings = [];
+        $blocks = [];
         if ($request->filled('section_id')) {
             $section = ThemeSection::find($request['section_id']);
             // Normalising here means the form receives coerced values and drops stale keys, exactly
             // as the storefront sees them — so what is edited is what renders.
             if ($section && $section->type === $type) {
                 $settings = $this->registry->normalizeSettings($type, $section->settings ?? []);
+                $blocks = $this->builder->getBlocks($section);
             }
         }
 
         return $this->ok([
-            'schema'   => $this->registry->schemaFor($type),
-            'settings' => $settings,
+            'schema'       => $this->registry->schemaFor($type),
+            'settings'     => $settings,
+            // The builder splits the form into Content / Design tabs; the registry decides which
+            // fields belong where, so a new section type needs no UI change.
+            'contentKeys'  => array_keys($this->registry->ownSchemaFor($type)),
+            'styleKeys'    => array_keys($this->registry->commonSchema()),
+            'accepts'      => $this->registry->blockTypesFor($type),
+            'blockLabels'  => $this->blockLabelMap($type),
+            'blocks'       => $blocks,
         ]);
+    }
+
+    /** Schema + saved settings for one block, so the inspector can render its form. */
+    public function blockSchema(Request $request): JsonResponse
+    {
+        $block = ThemeBlock::find($request['block_id']);
+        if (!$block) {
+            return $this->fail(translate('block_not_found'));
+        }
+
+        return $this->ok([
+            'schema'   => $this->registry->blockSchemaFor($block->type),
+            'settings' => $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
+            'type'     => $block->type,
+            'label'    => $this->registry->blockLabel($block->type, $block->settings ?? []),
+        ]);
+    }
+
+    public function addBlock(Request $request): JsonResponse
+    {
+        $section = ThemeSection::find($request['section_id']);
+        if (!$section) {
+            return $this->fail(translate('section_not_found'));
+        }
+
+        $type = (string) ($request['type'] ?: $this->registry->defaultBlockType($section->type));
+        $block = $this->builder->addBlock($section, $type);
+
+        return $block
+            ? $this->ok(['id' => $block->id, 'blocks' => $this->builder->getBlocks($section->fresh())])
+            : $this->fail(translate('this_block_could_not_be_added_check_the_type_and_that_the_version_is_a_draft'));
+    }
+
+    public function updateBlock(Request $request): JsonResponse
+    {
+        $block = ThemeBlock::find($request['block_id']);
+        if (!$block) {
+            return $this->fail(translate('block_not_found'));
+        }
+
+        $settings = $request->get('settings', []);
+        $saved = $this->builder->updateBlock($block, is_array($settings) ? $settings : []);
+
+        return $saved
+            ? $this->ok([
+                'settings' => $block->fresh()->settings,
+                'blocks'   => $this->builder->getBlocks($block->section),
+            ])
+            : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
+    }
+
+    public function toggleBlock(Request $request): JsonResponse
+    {
+        $block = ThemeBlock::find($request['block_id']);
+        if (!$block) {
+            return $this->fail(translate('block_not_found'));
+        }
+
+        $done = $this->builder->setBlockVisibility($block, $request->boolean('visible'));
+
+        return $done
+            ? $this->ok(['blocks' => $this->builder->getBlocks($block->section)])
+            : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
+    }
+
+    public function reorderBlocks(Request $request): JsonResponse
+    {
+        $section = ThemeSection::find($request['section_id']);
+        if (!$section) {
+            return $this->fail(translate('section_not_found'));
+        }
+
+        $ids = $request->get('order', []);
+        $done = $this->builder->reorderBlocks($section, is_array($ids) ? $ids : []);
+
+        return $done
+            ? $this->ok(['blocks' => $this->builder->getBlocks($section)])
+            : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
+    }
+
+    public function duplicateBlock(Request $request): JsonResponse
+    {
+        $block = ThemeBlock::find($request['block_id']);
+        if (!$block) {
+            return $this->fail(translate('block_not_found'));
+        }
+
+        $copy = $this->builder->duplicateBlock($block);
+
+        return $copy
+            ? $this->ok(['id' => $copy->id, 'blocks' => $this->builder->getBlocks($block->section)])
+            : $this->fail(translate('this_block_could_not_be_duplicated'));
+    }
+
+    public function deleteBlock(Request $request): JsonResponse
+    {
+        $block = ThemeBlock::find($request['block_id']);
+        if (!$block) {
+            return $this->fail(translate('block_not_found'));
+        }
+
+        $section = $block->section;
+        $done = $this->builder->deleteBlock($block);
+
+        return $done
+            ? $this->ok(['blocks' => $section ? $this->builder->getBlocks($section) : []])
+            : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
+    }
+
+    /**
+     * Upload an image straight from the builder's image field.
+     *
+     * Reuses ThemeAssetService, which sniffs the real MIME with finfo, generates the filename and
+     * fixes the directory — the builder adds no new upload surface of its own.
+     */
+    public function uploadMedia(Request $request): JsonResponse
+    {
+        $theme = $this->resolveThemeFor($request);
+        if (!$theme) {
+            return $this->fail(translate('theme_not_found'));
+        }
+
+        $file = $request->file('image');
+        if (!$file) {
+            return $this->fail(translate('no_file_was_uploaded'));
+        }
+
+        $result = $this->assets->upload($theme, $file, $request->get('label'), auth('admin')->id());
+
+        return $result['asset']
+            ? $this->ok(['url' => $result['asset']->url, 'id' => $result['asset']->id])
+            : $this->fail(translate($result['error'] ?? 'the_upload_failed'));
+    }
+
+    /** Images already uploaded for this theme — the builder's "choose from library" picker. */
+    public function mediaLibrary(Request $request): JsonResponse
+    {
+        $theme = $this->resolveThemeFor($request);
+        if (!$theme) {
+            return $this->ok(['items' => []]);
+        }
+
+        $items = ThemeAsset::where('theme_id', $theme->id)
+            ->latest('id')->take(60)->get()
+            ->map(fn (ThemeAsset $asset) => [
+                'id' => $asset->id, 'url' => $asset->url, 'label' => $asset->label, 'size' => $asset->size_for_humans,
+            ])
+            ->filter(fn (array $item) => !empty($item['url']))
+            ->values()->all();
+
+        return $this->ok(['items' => $items]);
+    }
+
+    private function resolveThemeFor(Request $request): ?Theme
+    {
+        $version = ThemeVersion::find($request['version_id']);
+        if ($version?->theme) {
+            return $version->theme;
+        }
+
+        return Theme::where('is_active', true)->first();
+    }
+
+    /** type => translated label, for every block type a section accepts. */
+    private function blockLabelMap(string $sectionType): array
+    {
+        $labels = [];
+        foreach ($this->registry->blockTypesFor($sectionType) as $blockType) {
+            $labels[$blockType] = translate($this->registry->blockTypes()[$blockType]['label'] ?? $blockType);
+        }
+
+        return $labels;
     }
 
     /** The active theme's draft, creating one from the published version when needed. */

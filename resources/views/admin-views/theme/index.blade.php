@@ -16,6 +16,22 @@
             </div>
         </div>
 
+        {{-- Two theme systems exist side by side and are constantly confused for each other, so the
+             difference is stated here rather than left for support to explain: "Theme Setup" installs
+             a whole storefront template (a folder of blades); this screen designs the pages OF the
+             installed template. A theme created here will never appear in the Available Themes list. --}}
+        <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <span>
+                <strong>{{ translate('this_is_the_page_designer') }}.</strong>
+                {{ translate('themes_created_here_design_the_pages_of_the_installed_storefront_template_they_do_not_appear_under_theme_setup_available_themes_which_installs_a_different_storefront_template_altogether') }}
+            </span>
+            @if (Route::has('admin.system-setup.theme.setup'))
+                <a href="{{ route('admin.system-setup.theme.setup') }}" class="btn btn-sm btn-outline-primary text-nowrap">
+                    {{ translate('Theme_Setup') }}
+                </a>
+            @endif
+        </div>
+
         <div class="row g-3">
             {{-- Create theme --}}
             <div class="col-lg-4">
@@ -56,6 +72,9 @@
                                 <small class="text-muted">{{ translate('imported_themes_are_created_inactive_as_a_draft_and_never_overwrite_an_existing_theme') }}</small>
                             </div>
                             <button type="submit" class="btn btn-sm btn-secondary">{{ translate('import') }}</button>
+                            <a href="{{ route('admin.theme.example') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fi fi-rr-download"></i> {{ translate('download_example_theme') }}
+                            </a>
                         </form>
 
                         {{-- Format help: this system uses its own JSON theme file (not a WordPress-style
@@ -83,7 +102,9 @@
                                 <ul class="mb-0 ps-3">
                                     <li>{{ translate('start_from_a_preset_above_-_the_fastest_way') }}.</li>
                                     <li>{{ translate('or_click_export_on_any_theme_version_to_get_a_real_file_you_can_re-import') }}.</li>
-                                    <li>{{ translate('section_types') }}: hero_banner, category_grid, product_slider, promotional_banner, brand_slider, newsletter, custom_html, spacer.</li>
+                                    <li>{{ translate('or_download_the_example_theme_above_edit_it_and_import_it_back') }}.</li>
+                                    <li>{{ translate('section_types') }}: hero_banner, category_grid, product_slider, promotional_banner, split_banner, banner_mosaic, banner_strip, store_banner, usp_strip, brand_slider, newsletter, custom_html, spacer.</li>
+                                    <li>{{ translate('store_banner_renders_whatever_you_publish_in_promotion_banners_so_a_banner_added_there_appears_in_the_theme') }}.</li>
                                 </ul>
                             </div>
                         </details>

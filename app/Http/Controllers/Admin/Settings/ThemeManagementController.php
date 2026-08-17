@@ -204,6 +204,21 @@ class ThemeManagementController extends BaseController
         }, $filename, ['Content-Type' => 'application/json']);
     }
 
+    /**
+     * Download the example theme file.
+     *
+     * Same payload the Minimal Luxury preset imports, handed over as a .json so a merchant can see
+     * exactly what a theme file looks like, edit it, and import it back.
+     */
+    public function downloadExample(): StreamedResponse
+    {
+        $payload = $this->portability->exampleTheme();
+
+        return response()->streamDownload(function () use ($payload) {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }, 'example-theme-minimal-luxury.json', ['Content-Type' => 'application/json']);
+    }
+
     /** Import an uploaded theme file into a NEW inactive theme (never overwrites, never publishes). */
     public function importTheme(Request $request): RedirectResponse
     {

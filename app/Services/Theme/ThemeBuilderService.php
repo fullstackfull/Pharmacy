@@ -162,6 +162,154 @@ class ThemeBuilderService
         });
     }
 
+    // -----------------------------------------------------------------------------------------
+    // Blocks — the repeatable children of a section (hero slides, promo tiles, footer columns).
+    //
+    // Same guard rails as sections: draft-only, schema-normalized settings, and a type must be one
+    // the parent section actually declares, so a crafted payload cannot graft a footer column into
+    // a hero carousel.
+    // -----------------------------------------------------------------------------------------
+
+    /** Append a block to a section. Returns null when the section is not editable or rejects the type. */
+    public function addBlock(ThemeSection $section, string $type, array $settings = []): ?ThemeBlock
+    {
+        if (!$this->isEditable($section->version) || !$this->registry->hasBlockType($section->type, $type)) {
+            return null;
+        }
+
+        if ($section->blocks()->count() >= SectionRegistry::MAX_BLOCKS_PER_SECTION) {
+            return null;
+        }
+
+        $nextOrder = (int) ThemeBlock::where('theme_section_id', $section->id)->max('sort_order');
+
+        return ThemeBlock::create([
+            'theme_section_id' => $section->id,
+            'type'             => $type,
+            'sort_order'       => $nextOrder + 1,
+            'is_visible'       => true,
+            'settings'         => $this->registry->normalizeBlockSettings($type, $settings),
+        ]);
+    }
+
+    public function updateBlock(ThemeBlock $block, array $settings): bool
+    {
+        if (!$block->section || !$this->isEditable($block->section->version)) {
+            return false;
+        }
+
+        $block->settings = $this->registry->normalizeBlockSettings($block->type, $settings);
+        return $block->save();
+    }
+
+    public function setBlockVisibility(ThemeBlock $block, bool $visible): bool
+    {
+        if (!$block->section || !$this->isEditable($block->section->version)) {
+            return false;
+        }
+
+        $block->is_visible = $visible;
+        return $block->save();
+    }
+
+    /** Reorder a section's blocks; ids not belonging to it are ignored, omitted ones keep their tail order. */
+    public function reorderBlocks(ThemeSection $section, array $orderedIds): bool
+    {
+        if (!$this->isEditable($section->version)) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($section, $orderedIds) {
+            $byId = ThemeBlock::where('theme_section_id', $section->id)
+                ->orderBy('sort_order')->get()->keyBy('id');
+            $order = 1;
+
+            foreach ($orderedIds as $id) {
+                $block = $byId->get((int) $id);
+                if ($block) {
+                    $block->sort_order = $order++;
+                    $block->save();
+                    $byId->forget((int) $id);
+                }
+            }
+            foreach ($byId as $block) {
+                $block->sort_order = $order++;
+                $block->save();
+            }
+
+            return true;
+        });
+    }
+
+    public function duplicateBlock(ThemeBlock $block): ?ThemeBlock
+    {
+        $section = $block->section;
+        if (!$section || !$this->isEditable($section->version)) {
+            return null;
+        }
+
+        if ($section->blocks()->count() >= SectionRegistry::MAX_BLOCKS_PER_SECTION) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($block, $section) {
+            ThemeBlock::where('theme_section_id', $section->id)
+                ->where('sort_order', '>', $block->sort_order)
+                ->increment('sort_order');
+
+            return ThemeBlock::create([
+                'theme_section_id' => $section->id,
+                'type'             => $block->type,
+                'sort_order'       => $block->sort_order + 1,
+                'is_visible'       => $block->is_visible,
+                'settings'         => $block->settings,
+            ]);
+        });
+    }
+
+    public function deleteBlock(ThemeBlock $block): bool
+    {
+        $section = $block->section;
+        if (!$section || !$this->isEditable($section->version)) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($block, $section) {
+            $order = $block->sort_order;
+            $block->delete();
+
+            ThemeBlock::where('theme_section_id', $section->id)
+                ->where('sort_order', '>', $order)
+                ->decrement('sort_order');
+
+            return true;
+        });
+    }
+
+    /** The block list of one section, shaped for the builder panel. */
+    public function getBlocks(ThemeSection $section): array
+    {
+        return $section->blocks()->orderBy('sort_order')->get()
+            ->map(fn (ThemeBlock $block) => $this->presentBlock($block))
+            ->all();
+    }
+
+    private function presentBlock(ThemeBlock $block): array
+    {
+        $settings = $block->settings ?? [];
+        $imageKey = $this->registry->blockImageKey($block->type);
+
+        return [
+            'id'         => $block->id,
+            'type'       => $block->type,
+            'label'      => $this->registry->blockLabel($block->type, $settings),
+            'image'      => $imageKey ? ($settings[$imageKey] ?? null) : null,
+            'sort_order' => $block->sort_order,
+            'is_visible' => $block->is_visible,
+            'settings'   => $settings,
+        ];
+    }
+
     /** The full ordered structure of a page — what the builder's left panel renders. */
     public function getPageStructure(ThemeVersion $version, string $page): array
     {
@@ -177,11 +325,8 @@ class ThemeBuilderService
                 'sort_order' => $s->sort_order,
                 'is_visible' => $s->is_visible,
                 'settings'   => $s->settings,
-                'blocks'     => $s->blocks->map(fn (ThemeBlock $b) => [
-                    'id' => $b->id, 'type' => $b->type,
-                    'sort_order' => $b->sort_order, 'is_visible' => $b->is_visible,
-                    'settings' => $b->settings,
-                ])->all(),
+                'accepts'    => $this->registry->blockTypesFor($s->type),
+                'blocks'     => $s->blocks->map(fn (ThemeBlock $b) => $this->presentBlock($b))->all(),
             ])->all();
     }
 }

@@ -169,11 +169,20 @@ class StorefrontThemeRenderer
         }
 
         return $sections->map(fn (ThemeSection $section) => [
+            // The id travels to the storefront as a data attribute so the visual builder can map a
+            // click in its preview iframe back to the section in its structure panel.
+            'id'       => $section->id,
             'type'     => $section->type,
             'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
             'blocks'   => $section->blocks
                 ->where('is_visible', true)
-                ->map(fn ($block) => ['type' => $block->type, 'settings' => $block->settings ?? []])
+                ->map(fn ($block) => [
+                    'id'       => $block->id,
+                    'type'     => $block->type,
+                    // Normalized like sections: a block's settings reach the storefront coerced to
+                    // their declared types, so a stale or hand-imported value cannot reach a view raw.
+                    'settings' => $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
+                ])
                 ->values()->all(),
         ])->all();
     }

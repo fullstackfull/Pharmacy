@@ -192,12 +192,23 @@ class ThemePortabilityService
                     if (!is_array($block) || empty($block['type'])) {
                         continue;
                     }
+                    $blockType = (string) $block['type'];
+                    // Only block types the parent section actually declares, with settings
+                    // normalized against their schema — an imported file is untrusted input, so it
+                    // may not graft an arbitrary block type or arbitrary keys into a section.
+                    if (!$this->registry->hasBlockType((string) $raw['type'], $blockType)) {
+                        continue;
+                    }
+
                     ThemeBlock::create([
                         'theme_section_id' => $section->id,
-                        'type'             => (string) $block['type'],
+                        'type'             => $blockType,
                         'sort_order'       => ++$blockOrder,
                         'is_visible'       => (bool) ($block['is_visible'] ?? true),
-                        'settings'         => is_array($block['settings'] ?? null) ? $block['settings'] : [],
+                        'settings'         => $this->registry->normalizeBlockSettings(
+                            $blockType,
+                            is_array($block['settings'] ?? null) ? $block['settings'] : []
+                        ),
                     ]);
                 }
             }
@@ -257,17 +268,97 @@ class ThemePortabilityService
                         'typography' => ['base_font_size' => 16, 'line_height' => 1.7],
                         'layout' => ['container_width' => 1240, 'page_spacing' => 32, 'border_radius' => 2, 'button_style' => 'square', 'card_style' => 'flat'],
                     ],
-                    'sections' => [
-                        ['page' => 'home', 'type' => 'hero_banner',        'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 560, 'interval' => 6000]],
-                        ['page' => 'home', 'type' => 'category_grid',      'sort_order' => 2, 'is_visible' => true, 'settings' => ['title' => 'Shop by Category', 'limit' => 6, 'columns' => 6, 'padding_top' => 72, 'padding_bottom' => 40]],
-                        ['page' => 'home', 'type' => 'product_slider',     'sort_order' => 3, 'is_visible' => true, 'settings' => ['title' => 'New Arrivals', 'source' => 'new_arrival', 'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 40]],
-                        ['page' => 'home', 'type' => 'promotional_banner', 'sort_order' => 4, 'is_visible' => true, 'settings' => ['columns' => 2, 'padding_top' => 32, 'padding_bottom' => 32]],
-                        ['page' => 'home', 'type' => 'product_slider',     'sort_order' => 5, 'is_visible' => true, 'settings' => ['title' => 'Bestsellers', 'source' => 'best_selling', 'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 40]],
-                        ['page' => 'home', 'type' => 'brand_slider',       'sort_order' => 6, 'is_visible' => true, 'settings' => ['title' => 'Our Brands', 'padding_top' => 40, 'padding_bottom' => 40, 'background' => '#f7f3ee']],
-                        ['page' => 'home', 'type' => 'newsletter',         'sort_order' => 7, 'is_visible' => true, 'settings' => ['title' => 'Join the List', 'subtitle' => 'Be first to know about new arrivals and exclusive offers.', 'padding_top' => 0, 'padding_bottom' => 0]],
-                    ],
+                    'sections' => $this->minimalLuxurySections(),
                 ],
             ],
+        ];
+    }
+
+    /**
+     * The example storefront, as a downloadable export file.
+     *
+     * Same payload the one-click preset imports — offered as a file so a merchant can read the
+     * format, edit it, and import it back, which is the answer to "what shape does a theme file
+     * have and where do I get one".
+     */
+    public function exampleTheme(): array
+    {
+        return $this->presets()['minimal_luxury']['payload'];
+    }
+
+    /**
+     * A complete beauty home page: hero with three slides, highlights, categories, an editorial
+     * split, product rows, a mosaic, the dashboard's own Main Banner, brands and a newsletter.
+     *
+     * Images are left blank on purpose — the storefront falls back to its placeholder, so the
+     * layout is visible immediately and the merchant only has to drop their own photos in.
+     */
+    private function minimalLuxurySections(): array
+    {
+        return [
+            ['page' => 'home', 'type' => 'hero_banner', 'sort_order' => 1, 'is_visible' => true,
+             'settings' => ['height' => 620, 'interval' => 6000, 'autoplay' => true, 'ken_burns' => true,
+                            'width' => 'full', 'padding_top' => 0, 'padding_bottom' => 0],
+             'blocks' => [
+                 ['type' => 'slide', 'is_visible' => true, 'settings' => [
+                     'eyebrow' => 'New Season', 'title' => 'Radiance, refined.',
+                     'subtitle' => 'Clean formulas and considered rituals for skin that looks like itself.',
+                     'button_text' => 'Shop the edit', 'align' => 'start', 'overlay' => 38]],
+                 ['type' => 'slide', 'is_visible' => true, 'settings' => [
+                     'eyebrow' => 'Bestsellers', 'title' => 'The glow everyone asks about',
+                     'subtitle' => 'Our most-loved serums, back in stock.',
+                     'button_text' => 'Discover', 'align' => 'center', 'overlay' => 42]],
+                 ['type' => 'slide', 'is_visible' => true, 'settings' => [
+                     'eyebrow' => 'Gifting', 'title' => 'Wrapped, ready, unforgettable',
+                     'subtitle' => 'Limited sets curated for the season.',
+                     'button_text' => 'Explore gifts', 'align' => 'end', 'overlay' => 40]],
+             ]],
+            ['page' => 'home', 'type' => 'usp_strip', 'sort_order' => 2, 'is_visible' => true,
+             'settings' => ['columns' => 4, 'boxed' => true, 'padding_top' => 36, 'padding_bottom' => 36],
+             'blocks' => [
+                 ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'shipping', 'title' => 'Free delivery', 'subtitle' => 'On orders over the free-shipping threshold']],
+                 ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'authentic', 'title' => '100% authentic', 'subtitle' => 'Sourced from authorised suppliers']],
+                 ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'returns', 'title' => 'Easy returns', 'subtitle' => 'Change your mind within the return window']],
+                 ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'support', 'title' => 'Beauty advice', 'subtitle' => 'Talk to us before you buy']],
+             ]],
+            ['page' => 'home', 'type' => 'category_grid', 'sort_order' => 3, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Explore', 'title' => 'Shop by Category', 'limit' => 6, 'columns' => 6,
+                            'padding_top' => 64, 'padding_bottom' => 40]],
+            ['page' => 'home', 'type' => 'product_slider', 'sort_order' => 4, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Just In', 'title' => 'New Arrivals', 'source' => 'new_arrival',
+                            'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 48]],
+            ['page' => 'home', 'type' => 'split_banner', 'sort_order' => 5, 'is_visible' => true,
+             'settings' => ['height' => 480, 'gap' => 0, 'padding_top' => 8, 'padding_bottom' => 48],
+             'blocks' => [
+                 ['type' => 'split', 'is_visible' => true, 'settings' => [
+                     'media_side' => 'start', 'eyebrow' => 'The Ritual',
+                     'title' => 'Three steps to a quiet glow',
+                     'body' => 'Cleanse, treat, protect. A short routine built from formulas that respect the skin barrier.',
+                     'button_text' => 'Build your routine']],
+             ]],
+            ['page' => 'home', 'type' => 'banner_mosaic', 'sort_order' => 6, 'is_visible' => true,
+             'settings' => ['height' => 240, 'gap' => 16, 'padding_top' => 8, 'padding_bottom' => 48],
+             'blocks' => [
+                 ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'large', 'eyebrow' => 'Skincare', 'title' => 'Serums & Essences', 'button_text' => 'Shop']],
+                 ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'small', 'title' => 'Lips']],
+                 ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'small', 'title' => 'Fragrance']],
+                 ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'wide', 'title' => 'Hair care', 'button_text' => 'Shop']],
+             ]],
+            ['page' => 'home', 'type' => 'product_slider', 'sort_order' => 7, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Loved by many', 'title' => 'Bestsellers', 'source' => 'best_selling',
+                            'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 48,
+                            'background' => '#f8f4ef']],
+            // Proof that the dashboard's Banners screen feeds the theme: whatever is published as a
+            // "Main Banner" appears here as a full-width strip, no theme edit needed.
+            ['page' => 'home', 'type' => 'store_banner', 'sort_order' => 8, 'is_visible' => true,
+             'settings' => ['banner_type' => 'Main Banner', 'layout' => 'strip', 'limit' => 1, 'height' => 360,
+                            'width' => 'full', 'padding_top' => 0, 'padding_bottom' => 0]],
+            ['page' => 'home', 'type' => 'brand_slider', 'sort_order' => 9, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Houses we carry', 'title' => 'Our Brands', 'limit' => 12,
+                            'marquee' => true, 'padding_top' => 56, 'padding_bottom' => 56]],
+            ['page' => 'home', 'type' => 'newsletter', 'sort_order' => 10, 'is_visible' => true,
+             'settings' => ['title' => 'Join the List', 'subtitle' => 'Be first to know about new arrivals and exclusive offers.',
+                            'width' => 'full', 'padding_top' => 0, 'padding_bottom' => 0]],
         ];
     }
 

@@ -1324,6 +1324,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
             Route::post('version/restore', 'restoreVersion')->name('version.restore');
             Route::get('version/export', 'exportVersion')->name('version.export');
+            Route::get('example', 'downloadExample')->name('example');
             Route::post('import', 'importTheme')->name('import');
             Route::post('import-preset', 'importPreset')->name('import-preset');
             Route::post('asset/upload', 'uploadAsset')->name('asset.upload');
@@ -1353,6 +1354,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('section/toggle', 'toggleSection')->name('section.toggle');
                 Route::post('section/duplicate', 'duplicateSection')->name('section.duplicate');
                 Route::post('section/delete', 'deleteSection')->name('section.delete');
+
+                // Blocks: the repeatable children of a section (hero slides, promo tiles, footer columns).
+                Route::get('block-schema', 'blockSchema')->name('block-schema');
+                Route::post('block/add', 'addBlock')->name('block.add');
+                Route::post('block/update', 'updateBlock')->name('block.update');
+                Route::post('block/reorder', 'reorderBlocks')->name('block.reorder');
+                Route::post('block/toggle', 'toggleBlock')->name('block.toggle');
+                Route::post('block/duplicate', 'duplicateBlock')->name('block.duplicate');
+                Route::post('block/delete', 'deleteBlock')->name('block.delete');
+
+                // Images for image fields, stored through the hardened ThemeAssetService.
+                Route::post('media/upload', 'uploadMedia')->name('media.upload');
+                Route::get('media/library', 'mediaLibrary')->name('media.library');
             });
         });
     });

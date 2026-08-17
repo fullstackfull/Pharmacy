@@ -6,6 +6,7 @@ use App\Models\Theme;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use App\Services\Theme\SectionRegistry;
+use App\Services\Theme\ThemeAssetService;
 use App\Services\Theme\ThemeBuilderService;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Database\Schema\Blueprint;
@@ -67,7 +68,7 @@ class ThemeBuilderApiContractTest extends TestCase
 
         $registry = new SectionRegistry();
         $this->controller = new \App\Http\Controllers\Admin\Settings\ThemeBuilderController(
-            new ThemeBuilderService($registry), $registry, new ThemeManager()
+            new ThemeBuilderService($registry), $registry, new ThemeManager(), new ThemeAssetService()
         );
 
         $theme = Theme::create(['name' => 'T', 'slug' => 't', 'is_active' => true]);
