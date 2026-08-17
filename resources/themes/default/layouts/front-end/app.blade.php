@@ -21,7 +21,9 @@
     <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/vendor/drift-zoom/dist/drift-basic.min.css') }}">
     <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/vendor/lightgallery.js/dist/css/lightgallery.min.css') }}">
     <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/css/theme.css') }}">
-    <link rel="stylesheet" media="screen" href="{{ theme_asset(path: 'public/assets/front-end/css/slick.css') }}">
+    {{-- slick was removed: nothing in this theme calls .slick() and no markup carries a
+         slick- class, so its 54 KB shipped on every page for nothing. Owl, Swiper and
+         tiny-slider all have real callers and stay. --}}
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/font-awesome.min.css') }}">
     {{-- These two icon-font stylesheets are 500 KB together and define 7,867 classes. Measured
          across the storefront's home, product list, login and contact pages, exactly TWO of them
@@ -267,7 +269,6 @@
 <script src="{{ theme_asset(path: 'public/assets/front-end/plugin/easyzoom/easyzoom.min.js')}}"></script>
 <script src="{{ theme_asset(path: "public/assets/back-end/js/toastr.js" )}}"></script>
 <script src="{{ theme_asset(path: 'public/assets/front-end/js/theme.js') }}"></script>
-<script src="{{ theme_asset(path: 'public/assets/front-end/js/slick.js') }}"></script>
 <script src="{{ theme_asset(path: 'public/assets/front-end/js/sweet_alert.js') }}"></script>
 <script src="{{ theme_asset(path: 'public/assets/front-end/js/custom.js') }}"></script>
 <script src="{{ theme_asset(path: 'public/assets/front-end/js/seller-filter.js') }}"></script>
