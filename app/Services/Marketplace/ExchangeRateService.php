@@ -95,6 +95,35 @@ class ExchangeRateService
         return $changed;
     }
 
+    /**
+     * Convert an amount between two currency codes using the governed `currencies.exchange_rate`
+     * (each rate is relative to USD, so the ratio to/from cancels the USD base).
+     *
+     * Fails safe: identical codes, a missing currencies table, or a non-positive rate returns the
+     * amount unchanged at rate 1 — a payout must never be mis-scaled by a bad rate.
+     *
+     * @return array{amount: float, rate: float, from: string, to: string}
+     */
+    public function convert(float $amount, string $fromCode, string $toCode): array
+    {
+        $from = strtoupper(trim($fromCode));
+        $to = strtoupper(trim($toCode));
+
+        if ($from === '' || $to === '' || $from === $to || !Schema::hasTable('currencies')) {
+            return ['amount' => round($amount, 4), 'rate' => 1.0, 'from' => $from, 'to' => $to];
+        }
+
+        $fromRate = (float) (Currency::where('code', $from)->value('exchange_rate') ?? 0);
+        $toRate = (float) (Currency::where('code', $to)->value('exchange_rate') ?? 0);
+        if ($fromRate <= 0 || $toRate <= 0) {
+            return ['amount' => round($amount, 4), 'rate' => 1.0, 'from' => $from, 'to' => $to];
+        }
+
+        $rate = $toRate / $fromRate;
+
+        return ['amount' => round($amount * $rate, 4), 'rate' => round($rate, 8), 'from' => $from, 'to' => $to];
+    }
+
     /** The change history for one currency (or all), newest first. */
     public function history(int|string|null $currencyId = null, int $limit = 50)
     {

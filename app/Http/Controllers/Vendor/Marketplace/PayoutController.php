@@ -30,10 +30,18 @@ class PayoutController extends BaseController
     {
         $sellerId = auth('seller')->id();
 
+        // Offer a payout currency only when the store runs multi-currency; single-currency stores keep
+        // the simple form (the payout is in the base currency).
+        $payoutCurrencies = collect();
+        if (getWebConfig(name: 'currency_model') === 'multi_currency' && \Illuminate\Support\Facades\Schema::hasTable('currencies')) {
+            $payoutCurrencies = \App\Models\Currency::orderBy('code')->pluck('code');
+        }
+
         return view('vendor-views.marketplace.payouts', [
             'balances' => $this->ledger->balances($sellerId),
             'withdrawable' => $this->ledger->withdrawable($sellerId),
             'inCoolingPeriod' => $this->payouts->isInCoolingPeriod($sellerId),
+            'payoutCurrencies' => $payoutCurrencies,
             'requests' => VendorPayoutRequest::where('seller_id', $sellerId)
                 ->where('seller_is', 'seller')
                 ->latest('id')
@@ -46,6 +54,7 @@ class PayoutController extends BaseController
         $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'method' => 'nullable|string|max:40',
+            'payout_currency' => 'nullable|string|max:10',
         ]);
 
         // The seller id comes from the session, never the request — a seller cannot request a payout
@@ -55,6 +64,7 @@ class PayoutController extends BaseController
             amount: (float) $request->get('amount'),
             method: $request->get('method', 'bank_transfer'),
             methodDetails: $request->get('method_details', []),
+            payoutCurrency: $request->get('payout_currency'),
         );
 
         if (!$result['ok']) {

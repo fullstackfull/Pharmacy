@@ -113,4 +113,40 @@ class ExchangeRateTest extends TestCase
         $this->assertCount(2, $history);
         $this->assertSame('14000.000000', (string) $history->first()->new_rate, 'newest first');
     }
+
+    // ---- multi-currency conversion (payouts) ----
+
+    public function test_convert_scales_by_the_ratio_of_the_two_rates(): void
+    {
+        // Base USD (rate 1), target SYP (rate 13000): 100 USD -> 1,300,000 SYP.
+        $this->currency('USD', 1);
+        $this->currency('SYP', 13000);
+
+        $result = $this->svc->convert(100, 'USD', 'SYP');
+
+        $this->assertEqualsWithDelta(1300000, $result['amount'], 0.001);
+        $this->assertEqualsWithDelta(13000, $result['rate'], 0.000001);
+        $this->assertSame('SYP', $result['to']);
+    }
+
+    public function test_convert_between_two_non_usd_currencies_uses_their_ratio(): void
+    {
+        $this->currency('AED', 3.67);
+        $this->currency('EUR', 0.92);
+
+        // 100 AED -> EUR at ratio 0.92/3.67.
+        $result = $this->svc->convert(100, 'AED', 'EUR');
+
+        $this->assertEqualsWithDelta(100 * (0.92 / 3.67), $result['amount'], 0.001);
+    }
+
+    public function test_convert_is_a_noop_for_the_same_currency_or_a_bad_rate(): void
+    {
+        $this->currency('USD', 1);
+        $this->currency('ZZZ', 0); // non-positive rate must not scale the amount to zero
+
+        $this->assertSame(100.0, $this->svc->convert(100, 'USD', 'USD')['amount']);
+        $this->assertSame(1.0, $this->svc->convert(100, 'USD', 'USD')['rate']);
+        $this->assertSame(100.0, $this->svc->convert(100, 'USD', 'ZZZ')['amount'], 'a zero rate falls back to 1:1');
+    }
 }

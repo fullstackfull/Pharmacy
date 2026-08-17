@@ -249,6 +249,7 @@ class AuditLoggerTest extends TestCase
         Schema::create('vendor_payout_requests', function (Blueprint $t) {
             $t->id(); $t->string('reference', 60)->unique(); $t->unsignedBigInteger('seller_id'); $t->string('seller_is', 20)->default('seller');
             $t->decimal('amount', 24, 4); $t->string('currency', 10)->nullable(); $t->string('status', 20)->default('requested');
+            $t->string('payout_currency', 10)->nullable(); $t->decimal('payout_amount', 24, 4)->nullable(); $t->decimal('exchange_rate', 20, 8)->nullable();
             $t->string('method', 40)->nullable(); $t->json('method_details')->nullable();
             $t->unsignedBigInteger('reserve_entry_id')->nullable(); $t->unsignedBigInteger('payout_entry_id')->nullable();
             $t->unsignedBigInteger('reviewed_by')->nullable(); $t->timestamp('reviewed_at')->nullable(); $t->text('review_note')->nullable();

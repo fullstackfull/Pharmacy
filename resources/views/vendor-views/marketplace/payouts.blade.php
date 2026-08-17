@@ -55,22 +55,33 @@
         {{-- Request form, disabled when there is nothing to withdraw or a cooling window is open. --}}
         <div class="card mb-3">
             <div class="card-body">
+                @php($hasPayoutCurrencies = isset($payoutCurrencies) && $payoutCurrencies->count() > 1)
                 <form action="{{ route('vendor.business-settings.payouts.store') }}" method="post" class="row g-2 align-items-end">
                     @csrf
-                    <div class="col-sm-4">
+                    <div class="{{ $hasPayoutCurrencies ? 'col-sm-3' : 'col-sm-4' }}">
                         <label class="form-label" for="amount">{{ translate('amount') }}</label>
                         <input type="number" step="0.01" min="0.01" max="{{ $withdrawable }}"
                                class="form-control" id="amount" name="amount"
                                {{ ($withdrawable <= 0 || $inCoolingPeriod) ? 'disabled' : '' }} required>
                     </div>
-                    <div class="col-sm-4">
+                    <div class="{{ $hasPayoutCurrencies ? 'col-sm-3' : 'col-sm-4' }}">
                         <label class="form-label" for="method">{{ translate('method') }}</label>
                         <select class="form-control" id="method" name="method" {{ ($withdrawable <= 0 || $inCoolingPeriod) ? 'disabled' : '' }}>
                             <option value="bank_transfer">{{ translate('bank_transfer') }}</option>
                             <option value="manual">{{ translate('manual') }}</option>
                         </select>
                     </div>
-                    <div class="col-sm-4">
+                    @if ($hasPayoutCurrencies)
+                        <div class="col-sm-3">
+                            <label class="form-label" for="payout_currency">{{ translate('pay_in_currency') }}</label>
+                            <select class="form-control" id="payout_currency" name="payout_currency" {{ ($withdrawable <= 0 || $inCoolingPeriod) ? 'disabled' : '' }}>
+                                @foreach ($payoutCurrencies as $code)
+                                    <option value="{{ $code }}">{{ $code }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="{{ $hasPayoutCurrencies ? 'col-sm-3' : 'col-sm-4' }}">
                         <button type="submit" class="btn btn-primary w-100"
                                 {{ ($withdrawable <= 0 || $inCoolingPeriod) ? 'disabled' : '' }}>
                             <i class="fi fi-rr-paper-plane"></i> {{ translate('request_payout') }}
@@ -100,7 +111,12 @@
                                 <tr>
                                     <td class="fw-medium">{{ $payout->reference }}</td>
                                     <td class="fs-12">{{ $payout->created_at?->format('d M Y H:i') }}</td>
-                                    <td class="text-end fw-semibold">{{ setCurrencySymbol($payout->amount) }}</td>
+                                    <td class="text-end fw-semibold">
+                                        {{ setCurrencySymbol($payout->amount) }}
+                                        @if ($payout->payout_currency && $payout->payout_amount)
+                                            <span class="d-block fs-12 text-muted">→ {{ number_format($payout->payout_amount, 2) }} {{ $payout->payout_currency }}</span>
+                                        @endif
+                                    </td>
                                     <td class="fs-12">{{ translate($payout->method ?? 'bank_transfer') }}</td>
                                     <td>
                                         <span class="badge bg-{{ $statusColours[$payout->status] ?? 'secondary' }}">

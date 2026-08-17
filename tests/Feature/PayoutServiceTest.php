@@ -79,6 +79,9 @@ class PayoutServiceTest extends TestCase
             $t->string('seller_is', 20)->default('seller');
             $t->decimal('amount', 24, 4);
             $t->string('currency', 10)->nullable();
+            $t->string('payout_currency', 10)->nullable();
+            $t->decimal('payout_amount', 24, 4)->nullable();
+            $t->decimal('exchange_rate', 20, 8)->nullable();
             $t->string('status', 20)->default('requested');
             $t->string('method', 40)->nullable();
             $t->json('method_details')->nullable();

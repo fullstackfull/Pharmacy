@@ -5,6 +5,7 @@ namespace App\Services\Marketplace;
 use App\Models\VendorBankChangeLog;
 use App\Models\VendorLedgerEntry;
 use App\Models\VendorPayoutRequest;
+use App\Services\Marketplace\ExchangeRateService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -44,7 +45,7 @@ class PayoutService
      *
      * @return array{ok: bool, reason?: string, request?: VendorPayoutRequest}
      */
-    public function requestPayout(int|string $sellerId, float $amount, string $method = 'bank_transfer', array $methodDetails = [], string $sellerIs = 'seller'): array
+    public function requestPayout(int|string $sellerId, float $amount, string $method = 'bank_transfer', array $methodDetails = [], string $sellerIs = 'seller', ?string $payoutCurrency = null): array
     {
         if (!Schema::hasTable('vendor_payout_requests')) {
             return ['ok' => false, 'reason' => 'payouts_unavailable'];
@@ -67,7 +68,7 @@ class PayoutService
             return ['ok' => false, 'reason' => 'kyc_verification_required'];
         }
 
-        return DB::transaction(function () use ($sellerId, $sellerIs, $amount, $method, $methodDetails) {
+        return DB::transaction(function () use ($sellerId, $sellerIs, $amount, $method, $methodDetails, $payoutCurrency) {
             // Withdrawable, not the raw available bucket: a payout already in flight is held as a
             // reserved debit, and withdrawable() nets those holds out. Read inside the transaction;
             // the reserve written below is what stops two concurrent requests both passing here.
@@ -90,12 +91,24 @@ class PayoutService
                 sellerIs: $sellerIs,
             );
 
+            // Multi-currency: the reserve stays in the ledger base currency (the unit of account); we
+            // additionally snapshot how much to pay in the seller's chosen currency and the rate used,
+            // so the actual bank transfer amount is fixed at request time and the ledger math is untouched.
+            $baseCurrency = $reserve?->currency;
+            $conversion = null;
+            if ($payoutCurrency && $baseCurrency && strtoupper($payoutCurrency) !== strtoupper($baseCurrency)) {
+                $conversion = app(ExchangeRateService::class)->convert($amount, $baseCurrency, $payoutCurrency);
+            }
+
             $request = VendorPayoutRequest::create([
                 'reference' => $this->nextReference(),
                 'seller_id' => $sellerId,
                 'seller_is' => $sellerIs,
                 'amount' => $amount,
-                'currency' => $reserve?->currency,
+                'currency' => $baseCurrency,
+                'payout_currency' => $conversion['to'] ?? null,
+                'payout_amount' => $conversion['amount'] ?? null,
+                'exchange_rate' => $conversion['rate'] ?? null,
                 'status' => VendorPayoutRequest::STATUS_REQUESTED,
                 'method' => $method,
                 'method_details' => $methodDetails,
