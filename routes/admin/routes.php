@@ -450,7 +450,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     // Marketplace financial core (Phase 3, Stage B): settlements, and the vendor ledger they read.
     // Under the same reports module the earning reports already live under, since it is the same
     // audience — whoever reconciles the marketplace's money.
-    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:reports']], function () {
+    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:marketplace']], function () {
         Route::controller(\App\Http\Controllers\Admin\Marketplace\SettlementController::class)->group(function () {
             Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
                 Route::get('/', 'index')->name('index');

@@ -400,6 +400,15 @@ class SellerController extends Controller
 
         $seller = $request->seller;
 
+        // Same anti-takeover controls the ledger payout path enforces, so the seller app cannot be used
+        // to bypass them: block during the bank-change cooling window and honor the KYC-for-payout gate.
+        if (app(\App\Services\Marketplace\PayoutService::class)->isInCoolingPeriod($seller['id'])) {
+            return response()->json(['message' => translate('bank_details_recently_changed_payouts_are_temporarily_paused')], 403);
+        }
+        if (!app(\App\Services\Marketplace\SellerVerificationService::class)->isPayoutEligible($seller['id'])) {
+            return response()->json(['message' => translate('kyc_verification_required')], 403);
+        }
+
         $wallet = SellerWallet::where('seller_id', $seller['id'])->first();
         if (($wallet->total_earning) >= Convert::usd($request['amount']) && $request['amount'] > 0) {
             DB::table('withdraw_requests')->insert([

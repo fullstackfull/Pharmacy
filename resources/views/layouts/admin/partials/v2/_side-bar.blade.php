@@ -563,7 +563,7 @@
     @endif
 
     {{-- ================= REPORTS ================= --}}
-    @if (Helpers::module_permission_check('reports'))
+    @if (Helpers::module_permission_check('reports') || Helpers::module_permission_check('marketplace'))
         <div class="v2-ctx-section" data-section="reports">
             <div class="v2-ctx-head"><div class="v2-ctx-title">{{ translate('reports') }}</div></div>
             <div class="v2-ctx-group v2-is-pinned" style="display:none;">
@@ -618,6 +618,7 @@
                 </a>
             </div>
 
+            @if (Helpers::module_permission_check('marketplace'))
             <div class="v2-ctx-group">
                 <div class="v2-ctx-group-head"><span>{{ translate('marketplace') }}</span></div>
 
@@ -799,6 +800,7 @@
                     </a>
                 @endif
             </div>
+            @endif
 
             @if ($v2Tax && count($v2TaxReportRoutes))
                 <div class="v2-ctx-group">
