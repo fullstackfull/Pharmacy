@@ -52,18 +52,24 @@ export async function loginAdmin(page) {
  */
 export async function setDirection(page, dir) {
     const code = dir === 'rtl' ? 'sy' : 'en';
-    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' });
-    const token = await page.getAttribute('meta[name="csrf-token"]', 'content').catch(() => null);
-    const status = await page.evaluate(async ({ base, code, token }) => {
-        const body = new URLSearchParams({ language_code: code });
-        const res = await fetch(base + '/change-language', {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': token || '' },
-            body,
-        });
-        return res.status;
-    }, { base: BASE, code, token });
-    return status;
+    // The single-process dev server drops connections under load, which leaves the
+    // csrf meta unread and turns the POST into a 419 — so try up to three times.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' }).catch(() => {});
+        const token = await page.getAttribute('meta[name="csrf-token"]', 'content').catch(() => null);
+        if (!token) continue;
+        const status = await page.evaluate(async ({ base, code, token }) => {
+            const body = new URLSearchParams({ language_code: code });
+            const res = await fetch(base + '/change-language', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': token || '' },
+                body,
+            }).catch(() => null);
+            return res ? res.status : 0;
+        }, { base: BASE, code, token });
+        if (status === 200) return status;
+    }
+    return 0;
 }
 
 /**
