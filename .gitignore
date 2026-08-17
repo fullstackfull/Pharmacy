@@ -20,3 +20,12 @@
 *.pfx
 # PHPUnit run cache — a local artifact, regenerated on every test run
 .phpunit.result.cache
+
+# Node dependencies — 700+ packages, restored by `npm install`
+/node_modules/
+
+# Symlink created by `php artisan storage:link`, environment-specific
+/public/storage
+
+# Local browser-test output
+/tests/browser/screenshots/

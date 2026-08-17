@@ -1,0 +1,33 @@
+/* ============================================================================
+   Kohl Console — the admin and vendor skin.
+   ----------------------------------------------------------------------------
+   Entry point. Loads the shared token and base layers, then the component
+   tokens that make the console feel like an operator tool rather than a
+   storefront: denser spacing, a violet accent, flatter surfaces.
+
+   Loaded AFTER the legacy admin stylesheets so Kohl can take over surface by
+   surface. Nothing here restyles an existing selector — a page only changes
+   when it starts using a .k- class.
+   ========================================================================= */
+
+@import 'tokens';
+@import 'base';
+
+.k-console {
+    /* Component tokens: the console's own density, resolved from semantics. */
+    --k-console-rail-width: 60px;
+    --k-console-panel-width: 232px;
+    --k-console-header-height: 54px;
+
+    --k-control-height: 34px;
+    --k-control-height-sm: 28px;
+    --k-control-pad-inline: var(--k-size-3);
+
+    --k-table-row-height: 46px;
+    --k-table-row-hover: var(--k-surface-sunk);
+    --k-table-head-bg: var(--k-surface-sunk);
+
+    --k-card-pad: var(--k-size-5);
+    --k-card-radius: var(--k-radius-md);
+    --k-card-border: 1px solid var(--k-border);
+}

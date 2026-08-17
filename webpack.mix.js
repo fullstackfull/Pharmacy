@@ -2,14 +2,30 @@ const mix = require('laravel-mix');
 
 /*
  |--------------------------------------------------------------------------
- | Mix Asset Management
+ | Kohl asset build
  |--------------------------------------------------------------------------
  |
- | Mix provides a clean, fluent API for defining some Webpack build steps
- | for your Laravel application. By default, we are compiling the Sass
- | file for the application as well as bundling up all the JS files.
+ | This file previously compiled resources/js/app.js and resources/sass/app.scss,
+ | neither of which exists — resources/sass/ is absent and resources/js/ held a
+ | stray image. Every stylesheet in public/assets was therefore hand-edited, which
+ | is why the codebase has 175 CSS files, three parallel admin asset trees and no
+ | token layer.
+ |
+ | Output goes to public/assets/kohl/ only. Nothing here touches the legacy
+ | back-end / backend / new trees, so a build can never break an existing page:
+ | the Kohl bundles are loaded last and additively.
  |
  */
 
-mix.js('resources/js/app.js', 'public/js')
-   .sass('resources/sass/app.scss', 'public/css');
+mix.setPublicPath('public');
+
+mix.sass('resources/css/kohl/console.scss', 'assets/kohl/css')
+   .sass('resources/css/kohl/store.scss', 'assets/kohl/css')
+   .js('resources/js/kohl/index.js', 'assets/kohl/js/kohl.js')
+   .options({
+       processCssUrls: false,   // asset URLs are resolved by the app's dynamicAsset() helper
+   });
+
+if (mix.inProduction()) {
+    mix.version();
+}

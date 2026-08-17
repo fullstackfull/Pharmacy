@@ -19,10 +19,18 @@
 
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/back-end/css/admin-v2.css') }}">
 
+    {{-- Kohl Console: token + base layer, loaded last so it can take over surface by
+         surface. It styles nothing that does not opt in with a .k- class, so adding it
+         cannot change an existing page. Built by `npm run prod` from resources/css/kohl. --}}
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/kohl/css/console.css') }}">
+
     @stack('css_or_js')
 </head>
 
-<body data-bs-theme="light" class="{{ env('APP_MODE') == 'demo' ? 'demo' : '' }} v2-active">
+{{-- Resolve the stored colour-scheme choice before first paint, so a dark-mode admin
+     never sees a white flash. Inline and synchronous on purpose. --}}
+<script>(function(){try{var t=localStorage.getItem('k-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-k-theme',t);}}catch(e){}})();</script>
+<body data-bs-theme="light" class="k k-console {{ env('APP_MODE') == 'demo' ? 'demo' : '' }} v2-active">
 <script type="text/javascript">
     localStorage.getItem('aside-mini') === 'true' ? document.body.classList.add('aside-mini') : document.body.classList.remove('aside-mini');
 </script>
@@ -59,6 +67,7 @@
 
 <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/admin-v2.js') }}"></script>
 <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/v2-pjax.js') }}"></script>
+<script src="{{ dynamicAsset(path: 'public/assets/kohl/js/kohl.js') }}"></script>
 
 @stack('script')
 

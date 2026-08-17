@@ -202,4 +202,7 @@ return [
 	"return_to_my_cart" => "Return to my cart",
 	"prices_and_availability_are_confirmed_at_checkout" => "Prices and availability are confirmed at checkout",
 	"you_are_receiving_this_because_you_left_items_in_your_cart_on_our_store" => "You are receiving this because you left items in your cart on our store",
+	"appearance" => "Appearance",
+	"supply_chain" => "Supply chain",
+	"seller_governance" => "Seller governance",
 ];
