@@ -264,12 +264,23 @@ class WebController extends Controller
             'name.required' => 'Product name is required!',
         ]);
 
-        $result = ProductManager::getSearchProductsForWeb($request['name'], $request['category_id'] ?? 'all');
+        // Prefer the normalized (Arabic-aware) search index so the typeahead resolves the same variants
+        // the full results page does; fall back to the legacy raw-LIKE and translated paths.
+        $result = ProductManager::normalizedSearchProducts($request, $request['name']);
         $products = $result['products'];
+        if ($products == null || count($products) === 0) {
+            $result = ProductManager::getSearchProductsForWeb($request['name'], $request['category_id'] ?? 'all');
+            $products = $result['products'];
+        }
         if ($products == null) {
             $result = ProductManager::getTranslatedProductSearchForWeb($request['name'], $request['category_id'] ?? 'all');
             $products = $result['products'];
         }
+
+        // When nothing matched, tell the shopper which words drew a blank instead of a silent dead end.
+        $unmatchedTerms = (!$products || count($products) === 0)
+            ? app(\App\Services\Search\ProductSearchService::class)->unmatchedTerms($request['name'])
+            : [];
 
         $sellers = Shop::where(function ($query) use ($request) {
             $query->orWhere('name', 'like', "%{$request['name']}%");
@@ -299,6 +310,7 @@ class WebController extends Controller
         return response()->json([
             'result' => view(VIEW_FILE_NAMES['product_search_result'], compact('products', 'seller_products'))->render(),
             'seller_products' => $seller_products->count(),
+            'unmatched_terms' => $unmatchedTerms,
         ]);
     }
 

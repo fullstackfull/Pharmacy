@@ -78,6 +78,12 @@
                                         <td>
                                             {{ translate($doc->document_type) }}
                                             @if ($doc->document_number)<div class="fs-10 text-muted">{{ $doc->document_number }}</div>@endif
+                                            @if ($doc->file_path && Route::has('vendor.business-settings.seller-verification.document'))
+                                                <a class="fs-10 d-inline-block mt-1" target="_blank"
+                                                   href="{{ route('vendor.business-settings.seller-verification.document', $doc->id) }}">
+                                                    {{ translate('view_file') }}
+                                                </a>
+                                            @endif
                                         </td>
                                         <td class="fs-12">{{ $doc->created_at?->toDateString() }}</td>
                                         <td>

@@ -563,7 +563,7 @@
     @endif
 
     {{-- ================= REPORTS ================= --}}
-    @if (Helpers::module_permission_check('reports'))
+    @if (Helpers::module_permission_check('reports') || Helpers::module_permission_check('marketplace'))
         <div class="v2-ctx-section" data-section="reports">
             <div class="v2-ctx-head"><div class="v2-ctx-title">{{ translate('reports') }}</div></div>
             <div class="v2-ctx-group v2-is-pinned" style="display:none;">
@@ -618,6 +618,7 @@
                 </a>
             </div>
 
+            @if (Helpers::module_permission_check('marketplace'))
             <div class="v2-ctx-group">
                 <div class="v2-ctx-group-head"><span>{{ translate('marketplace') }}</span></div>
 
@@ -639,6 +640,12 @@
                             <span class="v2-nav-child-dot" data-tone="primary"></span>
                             <span class="v2-nav-child-label">{{ translate('vendor_settlements') }}</span>
                         </a>
+                        @if (Route::has('admin.marketplace.payouts.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/payouts*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.payouts.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="success"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_payouts') }}</span>
+                            </a>
+                        @endif
                         @if (Route::has('admin.marketplace.commission-rules.index'))
                             <a class="v2-nav-child {{ Request::is('admin/marketplace/commission-rules*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.commission-rules.index') }}">
                                 <span class="v2-nav-child-dot" data-tone="primary"></span>
@@ -793,6 +800,7 @@
                     </a>
                 @endif
             </div>
+            @endif
 
             @if ($v2Tax && count($v2TaxReportRoutes))
                 <div class="v2-ctx-group">

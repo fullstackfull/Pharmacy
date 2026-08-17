@@ -1295,6 +1295,7 @@ enum GlobalConstant
         'marketing' => 'marketing',
         'people' => 'people',
         'reports' => 'reports',
+        'marketplace' => 'marketplace',
         'business_settings' => 'business_settings',
         'system_settings' => 'system_settings',
         '3rd_party_setup' => '3rd_party_setup',

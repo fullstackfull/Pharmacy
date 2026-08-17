@@ -222,6 +222,22 @@
                                                         {{ getProductPriceByType(product: $product, type: 'discounted_unit_price', result: 'string') }}
                                                     </span>
                                                 </h3>
+
+                                                {{-- B2B wholesale price: shown to a logged-in customer whose group offers a lower
+                                                     price, so wholesale buyers see their price on the page — not only in the cart. --}}
+                                                @php
+                                                    $__b2bBase = (float) getProductPriceByType(product: $product, type: 'discounted_unit_price', result: 'value');
+                                                    $__b2b = auth('customer')->check()
+                                                        ? app(\App\Services\Marketplace\B2BPricingService::class)->priceFor($product->id, auth('customer')->id(), $__b2bBase)
+                                                        : ['price' => $__b2bBase, 'source' => 'base'];
+                                                @endphp
+                                                @if (($__b2b['source'] ?? 'base') !== 'base' && $__b2b['price'] < $__b2bBase)
+                                                    <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                                                        <span class="badge badge-primary">{{ translate('wholesale_price') }}</span>
+                                                        <span class="fs-20 font-bold text-accent">{{ webCurrencyConverter(amount: $__b2b['price']) }}</span>
+                                                        <span class="fs-12 text-muted">{{ translate('applied_at_checkout_for_your_group') }}</span>
+                                                    </div>
+                                                @endif
                                             </div>
 
                                             @csrf

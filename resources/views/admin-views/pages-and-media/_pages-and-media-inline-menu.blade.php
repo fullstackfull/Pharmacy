@@ -10,6 +10,13 @@
                href="{{route('admin.helpTopic.list') }}">{{ translate('FAQ') }}</a>
         </li>
 
+        @if (Route::has('admin.pages-and-media.features-section'))
+            <li class="nav-item">
+                <a class="nav-link {{ Request::is('admin/pages-and-media/features-section') ?'active':'' }}"
+                   href="{{ route('admin.pages-and-media.features-section') }}">{{ translate('Features_Section') }}</a>
+            </li>
+        @endif
+
         @if(theme_root_path() == 'default')
             <li class="nav-item">
                 <a class="nav-link {{ Request::is('admin/pages-and-media/company-reliability') ? 'active':'' }}"

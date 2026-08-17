@@ -7,6 +7,7 @@
 @section('content')
     @if (auth('admin')->user()->admin_role_id == 1 || Helpers::module_permission_check('dashboard'))
         <div class="content container-fluid">
+            @include('admin-views.partials._system-health')
             <div class="mb-3">
                 <h1 class="page-header-title">{{ translate('welcome') . ' ' . auth('admin')->user()->name }}</h1>
                 <p>{{ translate('monitor_your_business_analytics_and_statistics') . '.' }}</p>

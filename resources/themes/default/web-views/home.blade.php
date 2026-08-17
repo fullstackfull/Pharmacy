@@ -24,6 +24,10 @@
 
 @section('content')
 
+{{-- Visual Theme Builder home sections (Phase 1). Renders only when a published theme defines home
+     sections; otherwise outputs nothing and the default home below is shown unchanged. --}}
+@include('theme-sections.home')
+
 @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
 <div class="auction__badge dropdown">
     <a href="javascript:" class="btn_auction p-0 d-flex align-items-center justify-content-center" role="button" data-toggle="dropdown" aria-expanded="false">

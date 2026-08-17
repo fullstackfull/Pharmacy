@@ -112,6 +112,28 @@ return Application::configure(basePath: dirname(__DIR__))
         // seller can be paid through the ledger. (Requires the server cron `* * * * * php artisan
         // schedule:run` to be installed — a deployment step.)
         $schedule->command('marketplace:settle --release')->dailyAt('02:00')->withoutOverlapping();
+
+        // Second-touch abandoned-cart reminder. The command supports staged drips but only stage 1 was
+        // scheduled, so a second reminder never sent. Runs daily; still gated by the admin toggle.
+        $schedule->command('cart:remind-abandoned --stage=2')->dailyAt('10:00')->withoutOverlapping();
+
+        // Evaluate seller SLA thresholds into the breach ledger. Previously only the admin button ran
+        // this, so breaches went stale between manual clicks.
+        $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
+
+        // Reconcile the storefront search index against the catalogue in case a bulk import bypassed the
+        // model observer that keeps it fresh in realtime.
+        $schedule->command('search:reindex-products')->weekly()->sundays()->at('04:00')->withoutOverlapping();
+
+        // Heartbeat: record the last scheduler run in the DB (not cache, which optimize:clear wipes) so
+        // the admin dashboard can warn when the server cron `schedule:run` has stopped firing — the
+        // failure mode where settlements silently never mature.
+        $schedule->call(function () {
+            \App\Models\BusinessSetting::updateOrCreate(
+                ['type' => 'scheduler_last_run_at'],
+                ['value' => now()->toDateTimeString()]
+            );
+        })->everyFiveMinutes()->name('scheduler-heartbeat')->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // You can customize exception handling here if needed

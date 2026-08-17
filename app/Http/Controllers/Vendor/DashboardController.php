@@ -209,6 +209,20 @@ class DashboardController extends BaseController
     public function getWithdrawRequest(WithdrawRequest $request): RedirectResponse
     {
         $vendorId = auth('seller')->id();
+
+        // Same anti-takeover controls the ledger payout path enforces, applied to the legacy withdraw
+        // flow so it can't be used as a bypass: block during the bank-change cooling window, and honor
+        // the (default-off) KYC-for-payout gate.
+        $payoutService = app(\App\Services\Marketplace\PayoutService::class);
+        if ($payoutService->isInCoolingPeriod($vendorId)) {
+            ToastMagic::error(translate('bank_details_recently_changed_payouts_are_temporarily_paused'));
+            return redirect()->back();
+        }
+        if (!app(\App\Services\Marketplace\SellerVerificationService::class)->isPayoutEligible($vendorId)) {
+            ToastMagic::error(translate('kyc_verification_required'));
+            return redirect()->back();
+        }
+
         $withdrawMethod = $this->withdrawalMethodRepo->getFirstWhere(params: ['id' => $request['withdraw_method']]);
         $wallet = $this->vendorWalletRepo->getFirstWhere(params: ['seller_id' => auth('seller')->id()]);
         if (($wallet['total_earning'] ?? 0) >= currencyConverter($request['amount']) && $request['amount'] > 0) {

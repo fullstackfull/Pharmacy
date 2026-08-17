@@ -14,6 +14,6 @@ enum RefundTransaction
     ];
     const GENERATE_PDF = [
         URI => 'refund-transaction-summary-pdf',
-        VIEW => 'admin-views.refund_transaction_summary_report_pdf'
+        VIEW => 'admin-views.refund-transaction.refund_transaction_summary_report_pdf'
     ];
 }

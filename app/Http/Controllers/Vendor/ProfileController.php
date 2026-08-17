@@ -120,7 +120,28 @@ class ProfileController extends BaseController
         // Only the authenticated seller's own bank/payout details — never the route {id} — so a seller
         // cannot redirect another seller's payouts to their account.
         $vendor = $this->vendorRepo->getFirstWhere(['id' => auth('seller')->id()]);
-        $this->vendorRepo->update(id: $vendor['id'], data: $this->vendorService->getVendorBankInfoData(request: $request));
+
+        $bankData = $this->vendorService->getVendorBankInfoData(request: $request);
+        $previous = [
+            'bank_name' => $vendor['bank_name'] ?? null, 'branch' => $vendor['branch'] ?? null,
+            'holder_name' => $vendor['holder_name'] ?? null, 'account_no' => $vendor['account_no'] ?? null,
+        ];
+
+        $this->vendorRepo->update(id: $vendor['id'], data: $bankData);
+
+        // Arm the payout cooling window on a real change so a hijacked account cannot immediately
+        // redirect earnings — the delay lets the real seller notice a payout they did not make.
+        if ($previous !== $bankData) {
+            app(\App\Services\Marketplace\PayoutService::class)->recordBankChange(
+                sellerId: $vendor['id'],
+                previous: $previous,
+                current: $bankData,
+                changedBy: auth('seller')->id(),
+                changedByType: 'seller',
+                ip: $request->ip(),
+            );
+        }
+
         ToastMagic::success(translate('Bank_info_updated_successfully') . '!!');
         return redirect()->route('vendor.profile.index');
     }

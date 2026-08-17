@@ -299,6 +299,9 @@ class ProductController extends BaseController
         $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
         $this->updateStockClearanceProduct(product: $updatedProduct);
 
+        // Preserve SEO value on a slug change: auto-create a 301 from the old product URL to the new one.
+        app(\App\Services\Seo\SlugRedirectSuggester::class)->suggest('product', $product['slug'] ?? null, $updatedProduct['slug'] ?? null);
+
         $cartList = $this->cartRepo->getListWhere(filters: ['product_id' => $product['id']], dataLimit: 'all');
         CartManager::updateProductShippingCost(cartList: $cartList);
 

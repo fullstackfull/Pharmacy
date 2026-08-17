@@ -65,7 +65,7 @@ class RefundTransactionController extends BaseController
             companyWebLogo: $companyWebLogo,
             refundTransactions: $refundTransactions,
         );
-        $mpdfView = PdfView::make('admin-views.refund_transaction_summary_report_pdf', compact($PDFData)
+        $mpdfView = PdfView::make('admin-views.refund-transaction.refund_transaction_summary_report_pdf', compact($PDFData)
         );
         $this->generatePdf(view: $mpdfView, filePrefix: 'refund_transaction_summary_report_', filePostfix: data('Y'));
     }

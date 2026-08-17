@@ -21,6 +21,29 @@ class SystemController extends Controller
 {
     use CommonTrait;
 
+    /**
+     * Fetch an address by id ONLY when it belongs to the current actor (logged-in customer or the
+     * session's guest). Returns null otherwise so an update can never touch another user's row —
+     * the address id arrives from client input (shipping_method_id / billing_method_id).
+     */
+    private function getOwnedAddress(int|string|null $addressId): ?ShippingAddress
+    {
+        if (!$addressId) {
+            return null;
+        }
+
+        $query = ShippingAddress::where('id', $addressId);
+        if (auth('customer')->check()) {
+            $query->where('customer_id', auth('customer')->id())->where('is_guest', 0);
+        } elseif (session()->has('guest_id')) {
+            $query->where('customer_id', session('guest_id'))->where('is_guest', 1);
+        } else {
+            return null;
+        }
+
+        return $query->first();
+    }
+
     public function setPaymentMethod($name): JsonResponse
     {
         if (auth('customer')->check() || session()->has('mobile_app_payment_customer_id')) {
@@ -435,7 +458,12 @@ class SystemController extends Controller
             ]);
 
         } elseif (isset($shipping['update_address']) && $shipping['update_address'] == 'on') {
-            $getShipping = ShippingAddress::find($addressId);
+            $getShipping = $this->getOwnedAddress($addressId);
+            if (!$getShipping) {
+                return response()->json([
+                    'errors' => translate('Address_not_found')
+                ], 403);
+            }
             $getShipping->contact_person_name = $shipping['contact_person_name'];
             $getShipping->address_type = $shipping['address_type'];
             $getShipping->address = $shipping['address'];
@@ -501,7 +529,12 @@ class SystemController extends Controller
                     'is_billing' => 1,
                 ]);
             } elseif (isset($billing['update_billing_address']) && $billing['update_billing_address'] == 'on') {
-                $getBilling = ShippingAddress::find($billingAddressId);
+                $getBilling = $this->getOwnedAddress($billingAddressId);
+                if (!$getBilling) {
+                    return response()->json([
+                        'errors' => translate('Address_not_found')
+                    ], 403);
+                }
                 $getBilling->contact_person_name = $billing['billing_contact_person_name'];
                 $getBilling->address_type = $billing['billing_address_type'];
                 $getBilling->address = $billing['billing_address'];

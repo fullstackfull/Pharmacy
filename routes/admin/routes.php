@@ -105,9 +105,6 @@ use App\Http\Controllers\Admin\Settings\VendorRegistrationSettingController;
 use App\Http\Controllers\Admin\Notification\PushNotificationSettingsController;
 
 
-Route::get('search', function () {
-    return view('layouts.admin.partials._advance-search-result');
-});
 Route::controller(SharedController::class)->group(function () {
     Route::post('change-language', 'changeLanguage')->name('change-language');
     Route::post('g-recaptcha-response-store', 'storeRecaptchaResponse')->name('g-recaptcha-response-store');
@@ -453,7 +450,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     // Marketplace financial core (Phase 3, Stage B): settlements, and the vendor ledger they read.
     // Under the same reports module the earning reports already live under, since it is the same
     // audience — whoever reconciles the marketplace's money.
-    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:reports']], function () {
+    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:marketplace']], function () {
         Route::controller(\App\Http\Controllers\Admin\Marketplace\SettlementController::class)->group(function () {
             Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
                 Route::get('/', 'index')->name('index');
@@ -465,6 +462,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
             });
             Route::get('ledger/{sellerId}', 'ledger')->whereNumber('sellerId')->name('ledger');
+        });
+
+        // Admin lifecycle for seller-initiated ledger payouts: review/approve, mark paid, or reject
+        // (releasing the reservation). The seller side shipped without this, leaving requested payouts
+        // with no way to be approved or paid.
+        Route::controller(\App\Http\Controllers\Admin\Marketplace\PayoutController::class)->group(function () {
+            Route::group(['prefix' => 'payouts', 'as' => 'payouts.'], function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
+                Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
+            });
         });
 
         // The unified audit center (spec item 84). Read-only: no edit or delete path exists.
@@ -1393,6 +1402,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::get('delete', 'delete')->name('delete');
                 });
             });
+
+            // SEO Health: read-only audit over resolved product SEO (surfaces SeoAuditService).
+            Route::get('health', [\App\Http\Controllers\Admin\Settings\SeoHealthController::class, 'index'])->name('health');
 
             Route::controller(SiteMapController::class)->group(function () {
                 Route::get('sitemap', 'index')->name('sitemap');
