@@ -29,8 +29,16 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
+      # Authenticate Composer with the workflow token so codeload.github.com dist downloads are not
+      # rate-limited (unauthenticated pulls hit HTTP 429 and fail the job). Retry once with source
+      # fallback for the rare case a dist zip is still unavailable.
+      - name: Configure Composer auth
+        run: composer config -g github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress \
+            || composer install --no-interaction --prefer-source --no-progress
 
       - name: Prepare environment
         run: |
