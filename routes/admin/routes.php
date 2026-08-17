@@ -797,6 +797,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('update/{id}', 'getUpdateView')->name('update');
             Route::post('update/{id}', 'update');
             Route::get('status/{id}/{status}', 'updateStatus')->name('status');
+            Route::post('bulk-status', 'bulkStatus')->name('bulk-status');
             Route::post('ajax-get-vendor', 'getVendorList')->name('ajax-get-vendor');
             Route::delete('delete/{id}', 'delete')->name('delete');
         });

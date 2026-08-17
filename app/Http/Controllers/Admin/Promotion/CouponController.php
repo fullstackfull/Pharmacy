@@ -48,7 +48,11 @@ class CouponController extends BaseController
 
     public function getAddListView(Request $request): View
     {
-        $coupons = $this->couponRepo->getListWhere(searchValue: $request['searchValue'], filters: ['added_by' => 'admin'], dataLimit: getWebConfig(name: 'pagination_limit'));
+        $filters = ['added_by' => 'admin'];
+        if ($request->filled('status')) {
+            $filters['status'] = (int) $request['status'];
+        }
+        $coupons = $this->couponRepo->getListWhere(searchValue: $request['searchValue'], filters: $filters, dataLimit: getWebConfig(name: 'pagination_limit'));
         $customers = $this->customerRepo->getListWhereNotIn([0]);
         return view('admin-views.coupon.add-new', compact('coupons', 'customers'));
     }
@@ -125,6 +129,35 @@ class CouponController extends BaseController
         }
         ToastMagic::success(translate('coupon_status_updated'));
         return back();
+    }
+
+    /**
+     * Enable or disable several coupons at once. Scoped to admin coupons the
+     * same way delete() and quickView() are, so vendor coupons cannot be
+     * flipped from this screen no matter what ids arrive.
+     */
+    public function bulkStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+            'status' => 'required|in:0,1',
+        ]);
+
+        $updated = 0;
+        foreach ($request['ids'] as $id) {
+            $coupon = $this->couponRepo->getFirstWhere(params: ['id' => $id, 'added_by' => 'admin']);
+            if ($coupon) {
+                $this->couponRepo->update(id: $id, data: ['status' => (int) $request['status']]);
+                $updated++;
+            }
+        }
+
+        return response()->json([
+            'status' => 1,
+            'updated' => $updated,
+            'message' => translate('coupon_status_updated'),
+        ]);
     }
 
     public function quickView(Request $request): JsonResponse
