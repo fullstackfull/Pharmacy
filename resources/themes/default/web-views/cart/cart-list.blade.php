@@ -11,7 +11,9 @@
     <meta property="twitter:title" content="{{$web_config['company_name']}}"/>
     <meta property="twitter:url" content="{{env('APP_URL')}}">
     <meta property="twitter:description" content="{{ $web_config['meta_description'] }}">
-    <link rel="stylesheet" href="{{dynamicStorage(path: 'public/assets/front-end/css/shop-cart.css')}}">
+    {{-- theme_asset, not dynamicStorage: the latter never strips the public/
+         prefix from asset paths, so this stylesheet 404'd on every load. --}}
+    <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/shop-cart.css') }}">
 @endpush
 
 @section('content')

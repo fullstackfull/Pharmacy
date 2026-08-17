@@ -40,3 +40,98 @@
     font-weight: var(--k-weight-semibold);
     letter-spacing: .01em;
 }
+
+/* ============================================================================
+   Cart drawer
+   ----------------------------------------------------------------------------
+   The theme's cart was a Bootstrap dropdown that opened on hover — unreachable
+   on touch, and add-to-cart only answered with a toast. These rules re-home
+   that same dropdown (.k-cart-drawer, still rendered and refreshed through the
+   nav-cart endpoint) as a fixed panel on the inline-end edge. Everything inside
+   the panel — items, quantity controls, free-delivery progress, totals — is the
+   markup the dropdown always had; only the container changed.
+
+   Open state lives in one place: body.k-cart-open. The panel and its backdrop
+   are re-rendered wholesale by updateNavCart(), so no element may hold state.
+
+   The panel stays below Bootstrap modals (1050): quick-view can sit above an
+   open drawer, and the drawer opens after it closes.
+   ========================================================================= */
+
+.k-store .k-cart-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1044;
+    background: rgba(15, 12, 8, .45);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .28s ease, visibility .28s ease;
+}
+
+.k-store .k-cart-drawer {
+    /* Beats .dropdown-menu's display:none and the :hover display:block. */
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: min(25.5rem, 94vw);
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    z-index: 1045;
+    background: var(--k-surface);
+    box-shadow: var(--k-shadow-3);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility .28s ease;
+}
+
+/* inline-end is the left edge in RTL, so the hidden position flips with it. */
+html[dir="rtl"] .k-store .k-cart-drawer {
+    transform: translateX(-100%);
+}
+
+body.k-cart-open {
+    /* Also keeps the sticky header's entrance animation from firing while the
+       drawer is open — its transform would briefly re-parent the fixed panel. */
+    overflow: hidden;
+}
+
+.k-cart-open .k-cart-drawer,
+html[dir="rtl"] .k-cart-open .k-cart-drawer {
+    transform: none;
+    visibility: visible;
+}
+
+.k-cart-open .k-cart-drawer-backdrop {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* The dropdown sized its pieces for a 20rem hover panel; in a full-height
+   drawer the header pins, the body scrolls, and the item list gives up its
+   own 35vh scroller in favour of the drawer's. */
+.k-store .k-cart-drawer .widget-cart-top {
+    flex: none;
+    border-radius: 0;
+}
+
+.k-store .k-cart-drawer .widget-cart {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.k-store .k-cart-drawer .widget-cart > .max-h-35vh {
+    max-height: none;
+    flex: 1 1 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .k-store .k-cart-drawer,
+    .k-store .k-cart-drawer-backdrop {
+        transition-duration: .01s;
+    }
+}

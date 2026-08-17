@@ -1085,11 +1085,25 @@ function addToCart(
                     }
                 }
                 if (response.status == 1) {
-                    updateNavCart();
-                    toastr.success(response.message, {
-                        CloseButton: true,
-                        ProgressBar: true,
+                    // Open the cart drawer once the refreshed cart is in the DOM,
+                    // so the added item is visible — unless this add is about to
+                    // redirect to checkout, where a drawer would only flash. When
+                    // the drawer opens it IS the confirmation, so the toast only
+                    // shows on the paths where no drawer will appear.
+                    let drawerWillOpen =
+                        redirectToCheckoutValue !== "true" &&
+                        typeof window.openCartDrawer === "function";
+                    updateNavCart(function () {
+                        if (drawerWillOpen) {
+                            window.openCartDrawer();
+                        }
                     });
+                    if (!drawerWillOpen) {
+                        toastr.success(response.message, {
+                            CloseButton: true,
+                            ProgressBar: true,
+                        });
+                    }
 
                     let actionAddToCartBtn = $(formSelector).find(".product-add-to-cart-button");
                     $(formSelector).find('.product-exist-in-cart-list[name="key"]').val(response.in_cart_key);
@@ -1495,7 +1509,7 @@ function removeFromCart(key) {
     );
 }
 
-function updateNavCart() {
+function updateNavCart(afterUpdate) {
     $.post(
         $("#route-cart-nav-cart").data("url"),
         {
@@ -1504,6 +1518,9 @@ function updateNavCart() {
         function (response) {
             $("#cart_items").html(response.data);
             cartListQuantityUpdateInit();
+            if (typeof afterUpdate === "function") {
+                afterUpdate();
+            }
         }
     );
 }

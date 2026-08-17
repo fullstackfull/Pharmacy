@@ -100,6 +100,25 @@ $admin->save();
 echo "admin id=" . $admin->id . PHP_EOL;
 '
 
+echo "==> Creating the throwaway QA customer (storefront checks sign in with it)"
+php artisan tinker --execute='
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+$email = "qa.customer@localhost.test";
+$user = User::where("email", $email)->first() ?: new User();
+$user->f_name = "QA";
+$user->l_name = "Customer";
+$user->email = $email;
+$user->phone = "+96550001111";
+$user->password = Hash::make("QaCustomer!2026");
+$user->is_active = 1;
+$user->email_verified_at = now();
+$user->is_email_verified = 1;
+$user->is_phone_verified = 1;
+$user->save();
+echo "customer id=" . $user->id . PHP_EOL;
+'
+
 echo "==> Restoring bundled demo images"
 # installation/backup/public.zip holds the images the install ships with (icons,
 # categories, banners). The merchant's own product photos live on their server and
