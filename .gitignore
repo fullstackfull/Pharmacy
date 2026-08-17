@@ -29,3 +29,9 @@
 
 # Local browser-test output
 /tests/browser/screenshots/
+
+# Runtime storage. Receives user uploads in production, and staging-setup.sh
+# extracts installation/backup/public.zip into it, so its contents are either
+# regenerable or environment-specific. Files already tracked here stay tracked —
+# an ignore rule does not untrack anything.
+/storage/app/public/

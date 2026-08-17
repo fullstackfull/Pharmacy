@@ -3015,4 +3015,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"mark_as" => "Mark as",
 	"create_a_theme_first_then_upload_its_images_here" => "Create a theme first then upload its images here",
 	"no_images_uploaded_yet" => "No images uploaded yet",
+	"could_not_update_the_products" => "Could not update the products",
+	"updating_products" => "Updating products",
+	"apply_this_to" => "Apply this to",
+	"toggle_featured" => "Toggle featured",
+	"unpublish" => "Unpublish",
+	"store_banner_renders_whatever_you_publish_in_promotion_banners_so_a_banner_added_there_appears_in_the_theme" => "Store banner renders whatever you publish in promotion banners so a banner added there appears in the theme",
+	"uploading" => "Uploading",
 ];

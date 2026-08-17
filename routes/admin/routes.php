@@ -214,6 +214,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('featured-status', 'updateFeaturedStatus')->name('featured-status');
             Route::get('get-categories', 'getCategories')->name('get-categories');
             Route::post('status-update', 'updateStatus')->name('status-update');
+            // Bulk publish / unpublish / feature. Delegates per product, so the
+            // vendor-approval rule stays in updateStatus() alone.
+            Route::post('bulk-product-status', 'bulkUpdateStatus')->name('bulk-product-status');
             Route::get('barcode/{id}', 'getBarcodeView')->name('barcode');
             Route::get('export-excel/{type}', 'exportList')->name('export-excel');
             Route::get('stock-limit-list/{type}', 'getStockLimitListView')->name('stock-limit-list');

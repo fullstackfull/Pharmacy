@@ -339,6 +339,10 @@
 
 .k-table__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .k-table__actions { display: flex; gap: var(--k-size-1); justify-content: flex-end; }
+/* The trailing actions column is empty until a row is hovered, so it collapses and
+   the buttons then overflow the row. Shrink-to-fit reserves exactly their width. */
+.k-table th:last-child:empty,
+.k-table td:has(> .k-table__actions) { inline-size: 1%; white-space: nowrap; }
 
 /* Row actions stay out of the way until the row is engaged with — on touch,
    where there is no hover, they are always visible. */

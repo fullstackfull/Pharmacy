@@ -97,6 +97,19 @@ $admin->save();
 echo "admin id=" . $admin->id . PHP_EOL;
 '
 
+echo "==> Restoring bundled demo images"
+# installation/backup/public.zip holds the images the install ships with (icons,
+# categories, banners). The merchant's own product photos live on their server and
+# are not in the dump, so those stay as placeholders in staging.
+php -r '
+$zip = new ZipArchive();
+if ($zip->open("installation/backup/public.zip") === true) {
+    @mkdir("storage/app/public", 0775, true);
+    $zip->extractTo("storage/app/public");
+    $zip->close();
+    echo "extracted " . $zip->numFiles . " files\n";
+}'
+
 echo "==> Building Kohl assets"
 npm run production
 

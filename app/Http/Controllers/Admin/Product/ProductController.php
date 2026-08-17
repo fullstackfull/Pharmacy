@@ -55,6 +55,9 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends BaseController
 {
+    /** Cap on one batch, so a crafted payload cannot walk the whole catalogue. */
+    private const BULK_LIMIT = 200;
+
     use ProductTrait;
     use VatTaxManagement;
 
@@ -547,6 +550,66 @@ class ProductController extends BaseController
             'data' => $data,
             'message' => $success ? translate("status_updated_successfully") : translate("status_updated_failed") . ' ' . translate("Product_must_be_approved"),
         ], 200);
+    }
+
+    /**
+     * Publish, unpublish or feature many products at once.
+     *
+     * Delegates to updateStatus() / updateFeaturedStatus() per product so the
+     * approval rule lives in one place: a vendor product that is pending or denied
+     * cannot be published, and that check must not be duplicated here where it
+     * would quietly fall out of sync.
+     *
+     * "feature" toggles per product because updateFeaturedStatus() is itself a
+     * toggle; the two explicit publish actions are absolute, which is what an
+     * operator selecting thirty rows actually means.
+     */
+    public function bulkUpdateStatus(Request $request): JsonResponse
+    {
+        $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
+        $action = (string) $request->input('action', '');
+
+        if (empty($ids)) {
+            return response()->json(['status' => 0, 'message' => translate('select_at_least_one_product')], 422);
+        }
+        if (!in_array($action, ['publish', 'unpublish', 'feature'], true)) {
+            return response()->json(['status' => 0, 'message' => translate('unsupported_action')], 422);
+        }
+        if (count($ids) > self::BULK_LIMIT) {
+            return response()->json([
+                'status' => 0,
+                'message' => translate('select_no_more_than') . ' ' . self::BULK_LIMIT . ' ' . translate('products'),
+            ], 422);
+        }
+
+        $updated = 0;
+        $skipped = [];
+
+        foreach ($ids as $id) {
+            if ($action === 'feature') {
+                $this->updateFeaturedStatus(new Request(['id' => $id]));
+                $updated++;
+                continue;
+            }
+
+            $result = $this->updateStatus(new Request(['id' => $id, 'status' => $action === 'publish' ? 1 : 0]));
+            $payload = $result->getData(true);
+
+            if (!empty($payload['status'])) {
+                $updated++;
+            } else {
+                $skipped[] = ['id' => $id, 'reason' => $payload['message'] ?? translate('could_not_be_updated')];
+            }
+        }
+
+        return response()->json([
+            'status' => $updated > 0 ? 1 : 0,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $updated > 0
+                ? $updated . ' ' . translate('products_updated')
+                : translate('no_products_could_be_updated'),
+        ]);
     }
 
     public function deleteImage(Request $request, ProductService $service): RedirectResponse
