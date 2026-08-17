@@ -407,6 +407,40 @@
                 <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-shop" aria-label="Pin"></button></div>
             </a>
         </div>
+
+        <div class="v2-ctx-group">
+            <div class="v2-ctx-group-head"><span>{{ translate('marketplace') }}</span></div>
+            @if (Route::has('vendor.business-settings.seller-center.index'))
+                <a class="v2-nav-item {{ Request::is('vendor/business-settings/seller-center*') ? 'v2-is-active' : '' }}" data-item="v-seller-center" href="{{ route('vendor.business-settings.seller-center.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('seller_center') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-seller-center" aria-label="Pin"></button></div>
+                </a>
+            @endif
+            @if (Route::has('vendor.business-settings.staff.index'))
+                <a class="v2-nav-item {{ Request::is('vendor/business-settings/staff*') ? 'v2-is-active' : '' }}" data-item="v-staff-roles" href="{{ route('vendor.business-settings.staff.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('staff_and_roles') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-staff-roles" aria-label="Pin"></button></div>
+                </a>
+            @endif
+            @if (Route::has('vendor.business-settings.payouts.index'))
+                <a class="v2-nav-item {{ Request::is('vendor/business-settings/payouts*') ? 'v2-is-active' : '' }}" data-item="v-payouts" href="{{ route('vendor.business-settings.payouts.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('payouts') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-payouts" aria-label="Pin"></button></div>
+                </a>
+            @endif
+            @if (Route::has('vendor.business-settings.seller-verification.index'))
+                <a class="v2-nav-item {{ Request::is('vendor/business-settings/seller-verification*') ? 'v2-is-active' : '' }}" data-item="v-verification" href="{{ route('vendor.business-settings.seller-verification.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('verification') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-verification" aria-label="Pin"></button></div>
+                </a>
+            @endif
+            @if (Route::has('vendor.business-settings.seller-scorecard.index'))
+                <a class="v2-nav-item {{ Request::is('vendor/business-settings/seller-scorecard*') ? 'v2-is-active' : '' }}" data-item="v-performance" href="{{ route('vendor.business-settings.seller-scorecard.index') }}">
+                    <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('performance') }}</span></span>
+                    <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="v-performance" aria-label="Pin"></button></div>
+                </a>
+            @endif
+        </div>
     </div>
 
     {{-- ================= PEOPLE (Delivery Man + Support) — merged section
