@@ -8,7 +8,6 @@
 @section('title', translate('feature_Deal'))
 
 @section('content')
-    @php($direction = Session::get('direction'))
     <div class="content container-fluid">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h2 class="h1 mb-0 text-capitalize d-flex align-items-center gap-2">
@@ -22,129 +21,114 @@
 
         <div class="row mt-20">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="px-3 py-4 d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                        <h3 class="mb-0 text-capitalize d-flex gap-2">
-                            {{ translate('feature_deal_table') }}
-                            <span
-                                class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $flashDeals->total() }}</span>
-                        </h3>
-                        <div class="d-flex flex-wrap gap-3 align-items-center">
-                            <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                                <form action="{{ url()->current() }}" method="GET">
-                                    <div class="input-group">
-                                        <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control"
-                                               placeholder="{{ translate('search_by_title') }}" aria-label="Search orders"
-                                               value="{{ request('searchValue') }}" required>
-                                        <div class="input-group-append search-submit">
-                                            <button type="submit">
-                                                <i class="fi fi-rr-search"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div>
-                                <a class="btn btn-primary" href="{{ route('admin.deal.feature-add') }}">
-                                    + {{ translate('Create Featured Deal') }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table id="datatable"
-                               style="text-align: {{$direction === "rtl" ? 'right' : 'left' }};"
-                               class="table table-hover table-borderless align-middle">
-                            <thead class="text-capitalize">
+                <x-k.data-view :title="translate('feature_deal_table')" :count="$flashDeals->total()"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_title')">
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('title') }}</th>
+                            <th>{{ translate('duration') }}</th>
+                            <th>{{ translate('status') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($flashDeals as $deal)
+                            @php
+                                $dealStartsAt = strtotime($deal['start_date']);
+                                $isExpired = Carbon::parse($deal['end_date'])->endOfDay()->isPast();
+                            @endphp
                             <tr>
-                                <th>{{ translate('SL') }}</th>
-                                <th>{{ translate('title') }}</th>
-                                <th>{{ translate('Start_Date') }}</th>
-                                <th>{{ translate('End_Date') }}</th>
-                                <th>{{ translate('active') }} / {{ translate('expired') }}</th>
-                                <th class="text-center">{{ translate('status') }}</th>
-                                <th class="text-center">{{ translate('action') }}</th>
+                                <td>
+                                    <span class="k-truncate" style="display:block;max-inline-size:250px" title="{{ $deal['title'] }}">
+                                        {{ $deal['title'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="k-num">{{ date('d M, y', $dealStartsAt) }} – {{ date('d M, y', strtotime($deal['end_date'])) }}</span>
+                                    @if ($isExpired)
+                                        <x-k.badge tone="danger">{{ translate('expired') }}</x-k.badge>
+                                    @elseif ($dealStartsAt > strtotime('today'))
+                                        <x-k.badge tone="info">{{ translate('upcoming') }}</x-k.badge>
+                                    @else
+                                        <x-k.badge tone="warning">{{ translate('live') }}</x-k.badge>
+                                    @endif
+                                </td>
+                                <td>
+                                    <form action="{{route('admin.deal.feature-status') }}" method="post"
+                                          id="feature-status{{$deal['id'] }}-form" class="no-reload-form reload-true">
+                                        @csrf
+                                        <input type="hidden" name="id" value="{{$deal['id'] }}">
+                                        <label class="switcher mx-auto"
+                                               for="feature-status{{ $deal['id'] }}"
+                                               @if($isExpired)
+                                                   data-bs-toggle="tooltip"
+                                               data-bs-placement="top"
+                                               title="{{ translate('This_deal_has_expired_and_cannot_be_updated.') }}"
+                                            @endif
+                                        >
+                                            <input
+                                                class="switcher_input custom-modal-plugin"
+                                                type="checkbox" value="1" name="status"
+                                                id="feature-status{{$deal['id'] }}"
+                                                    {{ $isExpired ? 'disabled' : '' }}
+                                                {{ $deal['status'] == 1 ? 'checked':'' }}
+                                                data-modal-type="input-change-form"
+                                                data-modal-form="#feature-status{{$deal['id'] }}-form"
+                                                data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/feature-status-on.png') }}"
+                                                data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/feature-status-off.png') }}"
+                                                data-on-title = "{{ translate('Want_to_Turn_ON_Featured_Deal_Status').'?' }}"
+                                                data-off-title = "{{ translate('Want_to_Turn_OFF_Featured_Deal_Status').'?' }}"
+                                                data-on-message = "<p>{{ translate('if_enabled_this_featured_deal_will_be_available_on_the_website_and_customer_app') }}</p>"
+                                                data-off-message = "<p>{{ translate('if_disabled_this_featured_deal_will_be_hidden_from_the_website_and_customer_app') }}</p>"
+                                                data-on-button-text="{{ translate('turn_on') }}"
+                                                data-off-button-text="{{ translate('turn_off') }}">
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a class="k-btn k-btn--secondary k-btn--sm"
+                                           href="{{route('admin.deal.add-product',[$deal['id']]) }}">
+                                            <x-k.icon name="plus" :size="14" /> {{ translate('add_product') }}
+                                        </a>
+                                        <a title="{{ translate('edit') }}"
+                                           href="{{route('admin.deal.edit',[$deal['id']]) }}"
+                                           class="k-btn k-btn--ghost k-btn--sm k-btn--icon">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($flashDeals as $key => $deal)
-                                <tr>
-                                    <th>{{$key+1}}</th>
-                                    <td class="max-w-250 text-truncate">{{ $deal['title'] }}</td>
-                                    <td>{{date('d-M-y',strtotime($deal['start_date'])) }}</td>
-                                    <td>{{date('d-M-y',strtotime($deal['end_date'])) }}</td>
-                                    <td>
-                                        @if(Carbon::parse($deal['end_date'])->endOfDay()->isPast())
-                                            <span class="badge text-bg-danger badge-danger"> {{ translate('expired') }} </span>
-                                        @else
-                                            <span class="badge text-bg-success badge-success"> {{ translate('active') }} </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <?php
-                                             $isExpired = \Carbon\Carbon::parse($deal['end_date'])->endOfDay()->isPast();
-                                        ?>
-                                        <form action="{{route('admin.deal.feature-status') }}" method="post"
-                                              id="feature-status{{$deal['id'] }}-form" class="no-reload-form reload-true">
-                                            @csrf
-                                            <input type="hidden" name="id" value="{{$deal['id'] }}">
-                                            <label class="switcher mx-auto"
-                                                   for="feature-status{{ $deal['id'] }}"
-                                                   @if($isExpired)
-                                                       data-bs-toggle="tooltip"
-                                                   data-bs-placement="top"
-                                                   title="{{ translate('This_deal_has_expired_and_cannot_be_updated.') }}"
-                                                @endif
-                                            >
-                                                <input
-                                                    class="switcher_input custom-modal-plugin"
-                                                    type="checkbox" value="1" name="status"
-                                                    id="feature-status{{$deal['id'] }}"
-                                                        {{ $isExpired ? 'disabled' : '' }}
-                                                    {{ $deal['status'] == 1 ? 'checked':'' }}
-                                                    data-modal-type="input-change-form"
-                                                    data-modal-form="#feature-status{{$deal['id'] }}-form"
-                                                    data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/feature-status-on.png') }}"
-                                                    data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/feature-status-off.png') }}"
-                                                    data-on-title = "{{ translate('Want_to_Turn_ON_Featured_Deal_Status').'?' }}"
-                                                    data-off-title = "{{ translate('Want_to_Turn_OFF_Featured_Deal_Status').'?' }}"
-                                                    data-on-message = "<p>{{ translate('if_enabled_this_featured_deal_will_be_available_on_the_website_and_customer_app') }}</p>"
-                                                    data-off-message = "<p>{{ translate('if_disabled_this_featured_deal_will_be_hidden_from_the_website_and_customer_app') }}</p>"
-                                                    data-on-button-text="{{ translate('turn_on') }}"
-                                                    data-off-button-text="{{ translate('turn_off') }}">
-                                                <span class="switcher_control"></span>
-                                            </label>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-center gap-10">
-                                            <a class="h-30 d-flex gap-2 align-items-center btn btn-outline-info"
-                                               href="{{route('admin.deal.add-product',[$deal['id']]) }}">
-                                               <i class="fi fi-sr-plus fs-10"></i>
-                                                {{ translate('add_product') }}
-                                            </a>
-                                            <a title="{{ trans ('edit') }}"
-                                               href="{{route('admin.deal.edit',[$deal['id']]) }}"
-                                               class="btn btn-outline-primary icon-btn edit">
-                                                <i class="fi fi-sr-pencil"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {{$flashDeals->links() }}
-                        </div>
-                    </div>
+                        @endforeach
+                        </tbody>
+                    </table>
+
                     @if(count($flashDeals)==0)
-                        @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
+                        <x-k.empty icon="marketing" :title="translate('no_data_found')"
+                                   :text="request('searchValue') ? translate('no_deal_matches_your_search') : null">
+                            <x-slot:action>
+                                <x-k.button variant="primary" icon="plus" :href="route('admin.deal.feature-add')">
+                                    {{ translate('Create_Featured_Deal') }}
+                                </x-k.button>
+                            </x-slot:action>
+                        </x-k.empty>
                     @endif
-                </div>
+
+                    @if ($flashDeals->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $flashDeals->firstItem() }}–{{ $flashDeals->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $flashDeals->total() }}</span>
+                            </span>
+                            <div>{!! $flashDeals->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>
