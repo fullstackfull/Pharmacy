@@ -5,7 +5,7 @@
  * Records console errors and >=400 responses per screen so a screenshot cannot hide a broken page.
  */
 import { chromium } from '@playwright/test';
-import { BASE, SHOTS, VIEWPORTS, watch } from './_env.mjs';
+import { BASE, ADMIN, SHOTS, VIEWPORTS, watch } from './_env.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const ADMIN_SCREENS = [
@@ -49,10 +49,15 @@ async function shoot(ctx, label, path, size, dir) {
 for (const dir of dirs) {
     for (const size of sizes) {
         if (only !== 'store') {
-            const ctx = await browser.newContext({
-                viewport: { width: size.width, height: size.height },
-                storageState: `${SHOTS}/admin-state.json`,
-            });
+            const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+            const login = await ctx.newPage();
+            await login.goto(BASE + ADMIN.loginPath, { waitUntil: 'domcontentloaded' });
+            await login.fill('input[name="email"]', ADMIN.email);
+            await login.fill('input[name="password"]', ADMIN.password);
+            await login.click('button[type="submit"]');
+            await login.waitForTimeout(1500);
+            await login.close();
+
             for (const [label, path] of ADMIN_SCREENS) await shoot(ctx, `admin-${label}`, path, size, dir);
             await ctx.close();
         }

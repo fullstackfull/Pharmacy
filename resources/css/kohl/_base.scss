@@ -66,12 +66,14 @@
 .k-text-subtle { color: var(--k-text-subtle); }
 
 /* Digits that sit in a column must line up, or a table of money is unreadable. */
+/* Money and IDs read left-to-right even in an RTL layout. `unicode-bidi: isolate`
+   does that on its own; forcing display:inline-block as well silently turned any
+   block element carrying this class inline, which collapsed stacked amount/status
+   cells onto one line. */
 .k-num {
     font-variant-numeric: tabular-nums;
-    /* Money and IDs are read left-to-right even in an RTL layout. */
     direction: ltr;
     unicode-bidi: isolate;
-    display: inline-block;
 }
 
 .k-eyebrow {

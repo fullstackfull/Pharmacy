@@ -72,6 +72,12 @@ use App\Contracts\Repositories\OrderExpectedDeliveryHistoryRepositoryInterface;
 
 class OrderController extends BaseController
 {
+    /** Statuses a bulk action may set. Excludes the ones that need per-order input. */
+    private const BULK_STATUSES = ['confirmed', 'processing', 'out_for_delivery', 'delivered', 'canceled'];
+
+    /** Cap on one batch, so a crafted payload cannot walk the whole table. */
+    private const BULK_LIMIT = 100;
+
     use CustomerTrait;
     use PdfGenerator;
     use OrderEditManager;
@@ -744,6 +750,75 @@ class OrderController extends BaseController
         return response()->json([
             'status' => 1,
             'message' => translate('status_change_successfully'),
+        ]);
+    }
+
+    /**
+     * Apply one status change to many orders.
+     *
+     * Delegates to updateStatus() per order rather than reimplementing it. That
+     * method carries every guard (deleted customer, unconfirmed offline payment,
+     * outstanding due or return amount, missing digital files) and every side
+     * effect (stock, status history, customer/seller/deliveryman events, loyalty
+     * points, deliveryman wallet, vendor settlement). A second copy of that would
+     * drift, and the drift would be silent money and stock errors.
+     *
+     * Partial success is the normal outcome: an order that fails its guards is
+     * skipped and reported by number, so the operator learns which ones need
+     * attention instead of the whole batch failing.
+     */
+    public function bulkUpdateStatus(
+        Request                       $request,
+        DeliveryManTransactionService $deliveryManTransactionService,
+        DeliveryManWalletService      $deliveryManWalletService,
+        OrderStatusHistoryService     $orderStatusHistoryService,
+    ): JsonResponse
+    {
+        $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
+        $status = (string) $request->input('order_status', '');
+
+        if (empty($ids)) {
+            return response()->json(['status' => 0, 'message' => translate('select_at_least_one_order')], 422);
+        }
+        if (!in_array($status, self::BULK_STATUSES, true)) {
+            return response()->json(['status' => 0, 'message' => translate('unsupported_order_status')], 422);
+        }
+        if (count($ids) > self::BULK_LIMIT) {
+            return response()->json([
+                'status' => 0,
+                'message' => translate('select_no_more_than') . ' ' . self::BULK_LIMIT . ' ' . translate('orders'),
+            ], 422);
+        }
+
+        $updated = 0;
+        $skipped = [];
+
+        foreach ($ids as $id) {
+            $single = new Request(['id' => $id, 'order_status' => $status]);
+            $single->setUserResolver($request->getUserResolver());
+
+            $result = $this->updateStatus(
+                $single,
+                $deliveryManTransactionService,
+                $deliveryManWalletService,
+                $orderStatusHistoryService,
+            );
+            $payload = $result->getData(true);
+
+            if (($payload['status'] ?? 0) === 1) {
+                $updated++;
+            } else {
+                $skipped[] = ['id' => $id, 'reason' => $payload['message'] ?? translate('could_not_be_updated')];
+            }
+        }
+
+        return response()->json([
+            'status' => $updated > 0 ? 1 : 0,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $updated > 0
+                ? $updated . ' ' . translate('orders_updated')
+                : translate('no_orders_could_be_updated'),
         ]);
     }
 

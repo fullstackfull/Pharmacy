@@ -251,6 +251,15 @@
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: var(--k-size-3);
 }
+/* On a phone a 190px minimum collapses to one tile per row, so eight status tiles
+   push the list they summarise a full screen down. Two compact columns keep the
+   summary glanceable and the content reachable. */
+@media (max-width: 640px) {
+    .k-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--k-size-2); }
+    .k-stat { padding: var(--k-size-3); gap: var(--k-size-1); }
+    .k-stat__value { font-size: var(--k-text-xl); }
+    .k-stat__icon { inline-size: 22px; block-size: 22px; }
+}
 .k-stat {
     display: flex;
     flex-direction: column;
