@@ -29,7 +29,9 @@
     border-inline-start: 3px solid var(--bs-primary);
     border-radius: 6px;
     position: fixed;
-    right: 20px;
+    /* Logical, not physical: a hard `right` pinned this popup over the contextual
+       sidebar in RTL, where the sidebar lives on the right. */
+    inset-inline-end: 20px;
     top: 80px;
     z-index: 9999;
     background: var(--bs-white);
@@ -46,4 +48,10 @@
 
 .alert--container .alert:not(.active) {
     transform: translateX(calc(100% + 40px));
+}
+
+/* RTL: the enter/exit slide comes from the inline-end edge, which is the left in Arabic. */
+[dir="rtl"] .alert--message-2:not(.active),
+[dir="rtl"] .alert--message-3:not(.active) {
+    transform: translateX(calc(-100% - 40px));
 }
