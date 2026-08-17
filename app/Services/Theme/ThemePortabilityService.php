@@ -241,6 +241,33 @@ class ThemePortabilityService
                     ],
                 ],
             ],
+            // A professional cosmetics/beauty storefront: a full home composed for the Minimal Luxury
+            // renderer (refined neutrals, gold accent, generous spacing). One-click starting point.
+            'minimal_luxury' => [
+                'label'   => 'minimal_luxury_beauty',
+                'payload' => [
+                    'format_version' => self::FORMAT_VERSION,
+                    'theme'    => ['name' => 'Minimal Luxury', 'description' => 'An elegant, editorial storefront for beauty & cosmetics.'],
+                    'settings' => [
+                        'colors' => [
+                            'primary' => '#1c1917', 'secondary' => '#8a8079', 'accent' => '#b08d57',
+                            'background' => '#ffffff', 'surface' => '#f7f3ee', 'text' => '#1c1917',
+                            'muted_text' => '#8a8079', 'border' => '#e7e1d8',
+                        ],
+                        'typography' => ['base_font_size' => 16, 'line_height' => 1.7],
+                        'layout' => ['container_width' => 1240, 'page_spacing' => 32, 'border_radius' => 2, 'button_style' => 'square', 'card_style' => 'flat'],
+                    ],
+                    'sections' => [
+                        ['page' => 'home', 'type' => 'hero_banner',        'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 560, 'interval' => 6000]],
+                        ['page' => 'home', 'type' => 'category_grid',      'sort_order' => 2, 'is_visible' => true, 'settings' => ['title' => 'Shop by Category', 'limit' => 6, 'columns' => 6, 'padding_top' => 72, 'padding_bottom' => 40]],
+                        ['page' => 'home', 'type' => 'product_slider',     'sort_order' => 3, 'is_visible' => true, 'settings' => ['title' => 'New Arrivals', 'source' => 'new_arrival', 'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 40]],
+                        ['page' => 'home', 'type' => 'promotional_banner', 'sort_order' => 4, 'is_visible' => true, 'settings' => ['columns' => 2, 'padding_top' => 32, 'padding_bottom' => 32]],
+                        ['page' => 'home', 'type' => 'product_slider',     'sort_order' => 5, 'is_visible' => true, 'settings' => ['title' => 'Bestsellers', 'source' => 'best_selling', 'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 40]],
+                        ['page' => 'home', 'type' => 'brand_slider',       'sort_order' => 6, 'is_visible' => true, 'settings' => ['title' => 'Our Brands', 'padding_top' => 40, 'padding_bottom' => 40, 'background' => '#f7f3ee']],
+                        ['page' => 'home', 'type' => 'newsletter',         'sort_order' => 7, 'is_visible' => true, 'settings' => ['title' => 'Join the List', 'subtitle' => 'Be first to know about new arrivals and exclusive offers.', 'padding_top' => 0, 'padding_bottom' => 0]],
+                    ],
+                ],
+            ],
         ];
     }
 

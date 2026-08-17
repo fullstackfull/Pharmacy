@@ -49,7 +49,7 @@
                         </div>
 
                         <h6>{{ translate('import_a_theme_file') }}</h6>
-                        <form action="{{ route('admin.theme.import') }}" method="post" enctype="multipart/form-data" class="mb-3">
+                        <form action="{{ route('admin.theme.import') }}" method="post" enctype="multipart/form-data" class="mb-2">
                             @csrf
                             <div class="form-group">
                                 <input type="file" name="theme_file" class="form-control" accept="application/json,.json" required>
@@ -57,6 +57,36 @@
                             </div>
                             <button type="submit" class="btn btn-sm btn-secondary">{{ translate('import') }}</button>
                         </form>
+
+                        {{-- Format help: this system uses its own JSON theme file (not a WordPress-style
+                             zip). Source it three ways: a preset above, the Export button on any version,
+                             or hand-authored JSON to the shape below. --}}
+                        <details class="mb-3">
+                            <summary class="small text-primary" style="cursor:pointer">{{ translate('what_file_format_is_expected') }}?</summary>
+                            <div class="mt-2 small text-muted">
+                                <p class="mb-1">{{ translate('a_json_file_in_this_shape_(not_a_zip)') }}:</p>
+<pre class="p-2 rounded" style="background:#0f172a;color:#e2e8f0;font-size:.72rem;overflow:auto;direction:ltr;text-align:left">{
+  "format_version": 1,
+  "theme": { "name": "My theme", "description": "..." },
+  "settings": {
+    "colors":     { "primary": "#1c1917", "accent": "#b08d57" },
+    "typography": { "base_font_size": 16, "line_height": 1.7 },
+    "layout":     { "container_width": 1240, "border_radius": 2 }
+  },
+  "sections": [
+    { "page": "home", "type": "hero_banner",   "sort_order": 1, "is_visible": true,
+      "settings": { "height": 560 }, "blocks": [] },
+    { "page": "home", "type": "product_slider", "sort_order": 2, "is_visible": true,
+      "settings": { "title": "New Arrivals", "source": "new_arrival", "limit": 8 } }
+  ]
+}</pre>
+                                <ul class="mb-0 ps-3">
+                                    <li>{{ translate('start_from_a_preset_above_-_the_fastest_way') }}.</li>
+                                    <li>{{ translate('or_click_export_on_any_theme_version_to_get_a_real_file_you_can_re-import') }}.</li>
+                                    <li>{{ translate('section_types') }}: hero_banner, category_grid, product_slider, promotional_banner, brand_slider, newsletter, custom_html, spacer.</li>
+                                </ul>
+                            </div>
+                        </details>
 
                         <p class="text-muted mb-0 small">
                             {{ translate('a_new_theme_starts_with_an_empty_draft_version_publishing_a_draft_archives_the_previous_published_version_so_you_can_always_roll_back') }}
