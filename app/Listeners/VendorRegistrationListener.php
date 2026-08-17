@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\VendorRegistrationEvent;
 use App\Traits\EmailTemplateTrait;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Listeners\Concerns\QueuedMailDelivery;
 
 /**
  * Approving, rejecting or suspending a vendor emails them.
@@ -15,7 +16,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
  */
 class VendorRegistrationListener implements ShouldQueue
 {
-    use EmailTemplateTrait;
+    use EmailTemplateTrait, QueuedMailDelivery;
     /**
      * Create the event listener.
      */

@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\CustomerStatusUpdateEvent;
 use App\Traits\EmailTemplateTrait;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Listeners\Concerns\QueuedMailDelivery;
 
 /**
  * Blocking or unblocking a customer emails them.
@@ -21,7 +22,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
  */
 class CustomerStatusUpdateListener implements ShouldQueue
 {
-    use EmailTemplateTrait;
+    use EmailTemplateTrait, QueuedMailDelivery;
     public function __construct()
     {
         //

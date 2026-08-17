@@ -3038,4 +3038,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"add_new_vendor" => "Add new vendor",
 	"or_download_the_example_theme_above_edit_it_and_import_it_back" => "Or download the example theme above edit it and import it back",
 	"nothing_here_yet_add_the_first_item" => "Nothing here yet add the first item",
+	"or_click_export_on_any_theme_version_to_get_a_real_file_you_can_re-import" => "Or click export on any theme version to get a real file you can re-import",
+	"back_to_section" => "Back to section",
 ];
