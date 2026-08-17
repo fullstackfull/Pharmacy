@@ -235,4 +235,8 @@ return [
 	"updating_orders" => "Updating orders",
 	"change_the_status_of" => "Change the status of",
 	"mark_as" => "Mark as",
+	"could_not_update_the_products" => "Could not update the products",
+	"updating_products" => "Updating products",
+	"apply_this_to" => "Apply this to",
+	"toggle_featured" => "Toggle featured",
 ];
