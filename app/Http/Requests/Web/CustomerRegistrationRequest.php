@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Web;
 
-use App\Traits\RecaptchaTrait;
 use App\Traits\CalculatorTrait;
 use App\Traits\ResponseHandler;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
@@ -14,7 +13,6 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 class CustomerRegistrationRequest extends FormRequest
 {
-    use RecaptchaTrait;
     use CalculatorTrait, ResponseHandler;
 
     protected $stopOnFirstFailure = true;

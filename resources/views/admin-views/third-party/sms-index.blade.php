@@ -3,7 +3,6 @@
 @section('title', translate('SMS_configuration'))
 
 @push('css_or_js')
-    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.css') }}">
 @endpush
 
 @section('content')
@@ -276,41 +275,6 @@
 
                                         @if($firebaseOtpVerification && $firebaseOtpVerification['status'])
                                             <div class="generate-firebase-auth-recaptcha" id="firebase-auth-recaptcha-{{ rand(111, 999) }}"></div>
-                                        @elseif(isset($recaptcha) && $recaptcha['status'] == 1)
-                                            <div class="dynamic-default-and-recaptcha-section">
-                                                <input type="hidden" name="g-recaptcha-response" class="render-grecaptcha-response" data-action="login"
-                                                       data-input="#login-default-captcha-section"
-                                                       data-default-captcha="#login-default-captcha-section"
-                                                >
-
-                                                <div class="default-captcha-container d-none" id="login-default-captcha-section"
-                                                     data-placeholder="{{ translate('enter_captcha_value') }}"
-                                                     data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                                     data-session="{{ 'smsTestRecaptchaSessionKey' }}"
-                                                >
-                                                </div>
-                                            </div>
-                                        @else
-                                            <div class="row mt-2 g-2">
-                                                <div class="col-8">
-                                                    <input type="text" class="form-control form-control-lg form-control-focus-none"
-                                                           id="admin-sms-recaptcha-input"
-                                                           name="default_captcha_value" value="" required
-                                                           placeholder="{{ translate('enter_captcha_value') }}">
-                                                </div>
-                                                <div class="col-4 input-icons bg-white rounded">
-                                                    <a class="get-login-recaptcha-verify cursor-pointer get-recaptcha-session-auto-fill user-select-none"
-                                                       data-link="{{ route('g-recaptcha-session-store') }}"
-                                                       data-session="{{ 'adminSMSRecaptchaSessionKey' }}"
-                                                       data-input="#admin-sms-recaptcha-input"
-                                                    >
-                                                        <img
-                                                            src="{{ route('g-recaptcha-session-store').'?sessionKey=adminSMSRecaptchaSessionKey' }}"
-                                                            class="input-field w-90 h-40 p-0 rounded" id="default_sms_recaptcha_id" alt="">
-                                                        <i class="fi fi-rr-refresh"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -330,19 +294,10 @@
     @include("layouts.admin.partials.offcanvas._3rd-party-sms-setup")
 
     <span id="payment-gateway-published-status" data-status="{{ $paymentGatewayPublishedStatus == 1 }}"></span>
-    <span id="route-g-recaptcha-session-store" data-route="{{ route('get-session-recaptcha-code') }}"
-          data-mode="{{ env('APP_MODE') }}"
     ></span>
 
-    <span id="message-please-check-recaptcha" data-text="{{ translate('please_check_the_recaptcha') }}"></span>
-    <span id="message-copied_success" data-text="{{ translate('copied_successfully') }}"></span>
-    <span id="route-get-session-recaptcha-code" data-route="{{ route('get-session-recaptcha-code') }}"
-          data-mode="{{ env('APP_MODE') }}"></span>
 @endsection
 
 @push('script')
     <script src="{{ dynamicAsset(path: 'public/assets/backend/admin/js/third-party/sms-setup.js') }}"></script>
-    @php($recaptcha = getWebConfig(name: 'recaptcha'))
-    <span id="get-google-recaptcha-key" data-value="{{ isset($recaptcha['status']) && $recaptcha['status'] == 1 ? $recaptcha['site_key'] ?? '' : '' }}"></span>
-    <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.js') }}"></script>
 @endpush

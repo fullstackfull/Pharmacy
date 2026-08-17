@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Vendor\Auth;
 
 use App\Enums\SessionKey;
-use App\Traits\RecaptchaTrait;
 use App\Services\VendorService;
 use App\Services\RecaptchaService;
 use Illuminate\Contracts\View\View;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Session;
 use App\Http\Requests\Vendor\LoginRequest;
 use App\Repositories\VendorWalletRepository;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
@@ -18,8 +16,6 @@ use App\Contracts\Repositories\VendorRepositoryInterface;
 
 class LoginController extends Controller
 {
-    use RecaptchaTrait;
-
     public function __construct(
         private readonly VendorRepositoryInterface $vendorRepo,
         private readonly VendorService             $vendorService,
@@ -32,10 +28,7 @@ class LoginController extends Controller
 
     public function getLoginView(): View
     {
-        $recaptchaBuilder = $this->generateDefaultReCaptcha(4);
-        $recaptcha = getWebConfig(name: 'recaptcha');
-        Session::put(SessionKey::VENDOR_RECAPTCHA_KEY, $recaptchaBuilder->getPhrase());
-        return view('vendor-views.auth.login', compact('recaptchaBuilder', 'recaptcha'));
+        return view('vendor-views.auth.login');
     }
 
     public function login(LoginRequest $request): RedirectResponse

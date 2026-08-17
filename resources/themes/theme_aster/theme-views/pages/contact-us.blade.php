@@ -88,26 +88,6 @@
                                     <textarea name="message" id="user_message" class="form-control" rows="6" required
                                         placeholder="{{ translate('type_your_message_here') . '...' }}"> {{ old('message') }} </textarea>
                                 </div>
-                                @if (isset($recaptcha) && $recaptcha['status'] == 1)
-                                    <div class="dynamic-default-and-recaptcha-section">
-                                        <input type="hidden" name="g-recaptcha-response" class="render-grecaptcha-response"
-                                            data-action="contact" data-action="contact"
-                                            data-input="#login-default-captcha-section"
-                                            data-default-captcha="#login-default-captcha-section">
-
-                                        <div class="default-captcha-container d-none" id="login-default-captcha-section"
-                                            data-placeholder="{{ translate('enter_captcha_value') }}"
-                                            data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                            data-session="{{ 'default_captcha_value_contact' }}">
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="default-captcha-container"
-                                        data-placeholder="{{ translate('enter_captcha_value') }}"
-                                        data-base-url="{{ route('g-recaptcha-session-store') }}"
-                                        data-session="{{ 'default_captcha_value_contact' }}">
-                                    </div>
-                                @endif
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" id="contact-form-btn"
                                         class="btn btn-primary rounded px-5">{{ translate('submit') }}</button>

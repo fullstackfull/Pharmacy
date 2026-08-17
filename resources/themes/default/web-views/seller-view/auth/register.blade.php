@@ -1,7 +1,6 @@
 @extends('layouts.front-end.app')
 
 @section('title', translate('vendor_Apply'))
-@php($recaptcha = getWebConfig(name: 'recaptcha'))
 @push('css_or_js')
     <link href="{{ theme_asset(path: 'public/assets/back-end/css/select2.min.css') }}" rel="stylesheet" />
     <link href="{{ theme_asset(path: 'public/assets/back-end/css/croppie.css') }}" rel="stylesheet">

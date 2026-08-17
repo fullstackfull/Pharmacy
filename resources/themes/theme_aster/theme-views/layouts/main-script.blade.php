@@ -2,9 +2,6 @@
     use Illuminate\Support\Facades\Cookie;
 @endphp
 
-@php($recaptcha = getWebConfig(name: 'recaptcha'))
-<span id="get-google-recaptcha-key"
-data-value="{{ isset($recaptcha) && $recaptcha['status'] == 1 ? $recaptcha['site_key'] : '' }}"></span>
 
 <script src="{{ theme_asset('assets/js/jquery-3.6.0.min.js') }}"></script>
 <script src="{{ theme_asset('assets/js/bootstrap.bundle.min.js') }}"></script>
@@ -43,10 +40,6 @@ data-value="{{ isset($recaptcha) && $recaptcha['status'] == 1 ? $recaptcha['site
 <script src="{{ dynamicAsset(path: 'public/assets/backend/file-validation/form-advance-validation.js') }}"></script>
 
 
-@if (isset($recaptcha) && $recaptcha['status'] == 1)
-    <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
-@endif
-<script src="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.js') }}"></script>
 
 <script>
     let placeholderImageUrl = "{{ dynamicAsset(path: 'public/assets/new/back-end/img/svg/image-upload.svg') }}";

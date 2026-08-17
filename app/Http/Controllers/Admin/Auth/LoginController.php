@@ -7,11 +7,9 @@ use App\Enums\UserRole;
 use App\Enums\SessionKey;
 use Illuminate\Http\Request;
 use App\Services\AdminService;
-use App\Traits\RecaptchaTrait;
 use App\Services\RecaptchaService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\BaseController;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,8 +17,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class LoginController extends BaseController
 {
-    use RecaptchaTrait;
-
     public function __construct(private readonly Admin $admin, private readonly AdminService $adminService)
     {
         $this->middleware('guest:admin', ['except' => ['logout']]);
@@ -37,23 +33,7 @@ class LoginController extends BaseController
         $userType = array_search($type, $loginTypes);
         abort_if(!$userType, 404);
 
-        $recaptchaBuilder = $this->generateDefaultReCaptcha(4);
-        Session::put(SessionKey::ADMIN_RECAPTCHA_KEY, $recaptchaBuilder->getPhrase());
-
-        $recaptcha = getWebConfig(name: 'recaptcha');
-        return view('admin-views.auth.login', compact('recaptchaBuilder', 'recaptcha'))->with(['role' => $userType]);
-    }
-
-    public function generateReCaptcha()
-    {
-        $recaptchaBuilder = $this->generateDefaultReCaptcha(4);
-        if (Session::has(SessionKey::ADMIN_RECAPTCHA_KEY)) {
-            Session::forget(SessionKey::ADMIN_RECAPTCHA_KEY);
-        }
-        Session::put(SessionKey::ADMIN_RECAPTCHA_KEY, $recaptchaBuilder->getPhrase());
-        header("Cache-Control: no-cache, must-revalidate");
-        header("Content-Type:image/jpeg");
-        $recaptchaBuilder->output();
+        return view('admin-views.auth.login')->with(['role' => $userType]);
     }
 
     public function login(Request $request): RedirectResponse

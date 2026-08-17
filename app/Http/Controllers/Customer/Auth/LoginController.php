@@ -9,11 +9,8 @@ use App\Utils\CartManager;
 use Brian2694\Toastr\Facades\Toastr;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
-use Gregwar\Captcha\CaptchaBuilder;
-use Gregwar\Captcha\PhraseBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
 
 class LoginController extends Controller
 {
@@ -24,28 +21,6 @@ class LoginController extends Controller
         $this->middleware('guest:customer', ['except' => ['logout']]);
     }
 
-    public function captcha(Request $request, $tmp)
-    {
-        $phrase = new PhraseBuilder;
-        $code = $phrase->build(4);
-        $builder = new CaptchaBuilder($code, $phrase);
-        $builder->setBackgroundColor(220, 210, 230);
-        $builder->setMaxAngle(25);
-        $builder->setMaxBehindLines(0);
-        $builder->setMaxFrontLines(0);
-        $builder->build($width = 100, $height = 40, $font = null);
-        $phrase = $builder->getPhrase();
-
-        if (Session::has($request['captcha_session_id'])) {
-            Session::forget($request['captcha_session_id']);
-        }
-        Session::put($request['captcha_session_id'], $phrase);
-        header("Cache-Control: no-cache, must-revalidate");
-        header("Content-Type:image/jpeg");
-        $builder->output();
-    }
-
-
     public function submit(Request $request)
     {
         $request->validate([
@@ -53,7 +28,6 @@ class LoginController extends Controller
             'password' => 'required'
         ]);
 
-        $recaptcha = getWebConfig(name: 'recaptcha');
         $user = User::where(['phone' => $request->user_id])->orWhere(['email' => $request->user_id])->first();
         $remember = (bool)$request['remember'];
 

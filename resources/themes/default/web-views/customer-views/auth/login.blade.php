@@ -209,7 +209,6 @@
 @endsection
 
 @push('script')
-    @php($recaptcha = getWebConfig(name: 'recaptcha'))
     @if ($web_config['firebase_otp_verification_status'])
         <script>
             $('.or-sign-in-with').css('width', $('.or-sign-in-with-row').height())

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Request;
 use App\Traits\ActivationClass;
-use App\Traits\RecaptchaTrait;
 use App\Utils\Helpers;
 use App\Models\BusinessSetting;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
@@ -17,7 +16,6 @@ use Illuminate\Support\Facades\Session;
 
 class SharedController extends Controller
 {
-    use RecaptchaTrait;
     use ActivationClass;
 
     public function changeLanguage(Request $request): JsonResponse
@@ -37,14 +35,6 @@ class SharedController extends Controller
         return response()->json(['message' => translate('language_change_successfully') . '.']);
     }
 
-    public function getSessionRecaptchaCode(Request $request): JsonResponse
-    {
-        if (env('APP_MODE') == 'dev' && session()->has($request['sessionKey'])) {
-            $code = session($request['sessionKey']);
-        }
-        return response()->json(['code' => $code ?? '']);
-    }
-
     public function storeRecaptchaResponse(Request $request): JsonResponse
     {
         $response = $request->get('g_recaptcha_response', null);
@@ -52,20 +42,6 @@ class SharedController extends Controller
             session()->put('g-recaptcha-response', $response);
         }
         return response()->json(['recaptcha' => $response]);
-    }
-
-    public function storeRecaptchaSession(Request $request): void
-    {
-        $recaptchaBuilder = $this->generateDefaultReCaptcha(4);
-        if (session()->has($request['sessionKey'])) {
-            Session::forget($request['sessionKey']);
-        }
-        Session::put($request['sessionKey'], $recaptchaBuilder->getPhrase());
-        header("Cache-Control: no-cache, must-revalidate");
-        header("Content-Type:image/jpeg");
-        header("Pragma:no-cache");
-        header("Expires:Sat, 26 Jul 1997 05:00:00 GMT");
-        $recaptchaBuilder->output();
     }
 
     public function getActivationCheckView(Request $request): View|RedirectResponse

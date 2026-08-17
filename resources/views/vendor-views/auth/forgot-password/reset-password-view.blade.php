@@ -140,12 +140,6 @@
       data-number="{{translate('at_least_one_number').'(0...9)'.'.'}}" data-symbol="{{translate('at_least_one_symbol').'(!...%)'.'.'}}"></span>
 
 
-<span id="message-please-check-recaptcha" data-text="{{ translate('please_check_the_recaptcha') }}"></span>
-<span id="message-copied_success" data-text="{{ translate('copied_successfully') }}"></span>
-<span id="route-get-session-recaptcha-code"
-      data-route="{{ route('get-session-recaptcha-code') }}"
-      data-mode="{{ env('APP_MODE') }}"
-></span>
 
 <span id="message-copied_success" data-text="{{ translate('copied_successfully') }}"></span>
 <script src="{{dynamicAsset(path: 'public/assets/back-end/js/vendor.min.js')}}"></script>

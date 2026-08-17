@@ -46,7 +46,6 @@
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/back-end/vendor/icon-set/style.css') }}">
     <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/owl.carousel.min.css') }}">
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/front-end/plugin/swiper/swiper-bundle.min.css') }}"/>
-    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.css') }}">
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/libs/intl-tel-input/css/intlTelInput.css') }}">
 
     @stack('css_or_js')
@@ -158,8 +157,6 @@
 
 <span id="message-otp-sent-again" data-text="{{ translate('OTP_has_been_sent_again.') }}"></span>
 <span id="message-wait-for-new-code" data-text="{{ translate('please_wait_for_new_code.') }}"></span>
-<span id="message-please-check-recaptcha" data-text="{{ translate('please_check_the_recaptcha.') }}"></span>
-<span id="message-please-retype-password" data-text="{{ translate('please_ReType_Password') }}"></span>
 <span id="message-password-not-match" data-text="{{ translate('password_do_not_match') }}"></span>
 <span id="message-password-match" data-text="{{ translate('password_match') }}"></span>
 <span id="message-password-need-longest" data-text="{{ translate('password_Must_Be_6_Character') }}"></span>
@@ -203,10 +200,6 @@
 <span id="route-product-restock-request" data-url="{{ route('cart.product-restock-request') }}"></span>
 <div id="route-vendor-list" data-url="{{ route('vendors') }}"></div>
 
-<span id="route-get-session-recaptcha-code"
-      data-route="{{ route('get-session-recaptcha-code') }}"
-      data-mode="{{ env('APP_MODE') }}"
-></span>
 <span id="password-error-message" data-max-character="{{translate('at_least_8_characters').'.'}}" data-uppercase-character="{{translate('at_least_one_uppercase_letter_').'(A...Z)'.'.'}}" data-lowercase-character="{{translate('at_least_one_lowercase_letter_').'(a...z)'.'.'}}"
       data-number="{{translate('at_least_one_number').'(0...9)'.'.'}}" data-symbol="{{translate('at_least_one_symbol').'(!...%)'.'.'}}"></span>
 <span class="system-default-country-code" data-value="{{ getWebConfig(name: 'country_code') ?? 'us' }}"></span>
@@ -254,10 +247,6 @@
     >
 </span>
 
-@php($recaptcha = getWebConfig(name: 'recaptcha'))
-<span id="get-google-recaptcha-key"
-      data-value="{{ isset($recaptcha) && $recaptcha['status'] == 1 ? $recaptcha['site_key'] : '' }}"></span>
-
 <script src="{{ theme_asset(path: 'public/assets/front-end/vendor/jquery/dist/jquery-2.2.4.min.js') }}"></script>
 <script src="{{ theme_asset(path: 'public/assets/front-end/vendor/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ dynamicAsset(path: 'public/assets/backend/libs/jquery-validate/jquery.validate.min.js') }}"></script>
@@ -293,9 +282,6 @@
 
 @include('layouts.front-end.partials._firebase-script')
 
-@if (isset($recaptcha) && $recaptcha['status'] == 1)
-    <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
-@endif
 
 @if(isset($isMobile) && $isMobile)
     <script>
@@ -349,7 +335,6 @@
     </script>
 @endif
 
-<script src="{{ dynamicAsset(path: 'public/assets/backend/libs/google-recaptcha/google-recaptcha-init.js') }}"></script>
 
 <script>
     "use strict";

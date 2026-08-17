@@ -29,7 +29,6 @@ class SMSModuleController extends BaseController
 
     public function index(?Request $request, ?string $type = null): View|Collection|LengthAwarePaginator|null|callable|RedirectResponse
     {
-        $recaptcha = getWebConfig(name: 'recaptcha');
         $firebaseOtpVerification = getWebConfig(name: 'firebase_otp_verification');
         $companyPhone = getWebConfig(name: 'company_phone');
         $paymentPublishedStatus = config('get_payment_publish_status') ?? 0;
@@ -44,7 +43,7 @@ class SMSModuleController extends BaseController
         })->values()->all();
 
         $paymentUrl = $this->settingService->getVacationData(type: 'sms_setup');
-        return view('admin-views.third-party.sms-index', compact('recaptcha', 'smsGateways', 'paymentGatewayPublishedStatus', 'paymentUrl', 'firebaseOtpVerification', 'companyPhone'));
+        return view('admin-views.third-party.sms-index', compact('smsGateways', 'paymentGatewayPublishedStatus', 'paymentUrl', 'firebaseOtpVerification', 'companyPhone'));
     }
 
     public function update(SMSModuleUpdateRequest $request, SettingService $settingService): RedirectResponse

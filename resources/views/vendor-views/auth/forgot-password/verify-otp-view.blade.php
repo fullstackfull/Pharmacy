@@ -96,12 +96,6 @@
     </div>
 </main>
 
-<span id="message-please-check-recaptcha" data-text="{{ translate('please_check_the_recaptcha') }}"></span>
-<span id="message-copied_success" data-text="{{ translate('copied_successfully') }}"></span>
-<span id="route-get-session-recaptcha-code"
-      data-route="{{ route('get-session-recaptcha-code') }}"
-      data-mode="{{ env('APP_MODE') }}"
-></span>
 
 <script src="{{dynamicAsset(path: 'public/assets/back-end/js/vendor.min.js')}}"></script>
 <script src="{{dynamicAsset(path: 'public/assets/back-end/js/theme.min.js')}}"></script>

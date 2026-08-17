@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 /**
  * Admin configuration for the optional Delivery Syria courier integration.
  *
- * Mirrors the reCAPTCHA/third-party convention: a status toggle plus credential inputs stored in a
+ * Mirrors the third-party convention: a status toggle plus credential inputs stored in a
  * business_settings row, read/written through DeliverySyriaConfigService (which encrypts the secrets).
  * "Verify & Sync" is the connect action — it proves the Secret against the courier and caches the
  * governorate price list. The secrets are never echoed back to the browser; a blank secret field on

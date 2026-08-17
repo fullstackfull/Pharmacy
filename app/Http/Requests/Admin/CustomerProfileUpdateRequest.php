@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use App\Traits\CalculatorTrait;
-use App\Traits\RecaptchaTrait;
 use App\Traits\ResponseHandler;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,7 +10,6 @@ use Illuminate\Validation\Validator;
 
 class CustomerProfileUpdateRequest extends FormRequest
 {
-    use RecaptchaTrait;
     use CalculatorTrait, ResponseHandler;
 
     protected $stopOnFirstFailure = true;
