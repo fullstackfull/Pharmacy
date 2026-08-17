@@ -181,6 +181,76 @@ function selectedIds(view) {
 }
 
 
+
+/* ---------------------------------------------------------------- save bar */
+
+/**
+ * Snapshot a form's current values.
+ *
+ * Compared as a string rather than field by field: a settings form has dozens of
+ * inputs, and the only question the bar asks is "does this differ from what was
+ * loaded". File inputs are excluded — their value cannot be restored on discard,
+ * so treating a chosen file as dirty would offer an undo that does not work.
+ */
+function snapshotForm(form) {
+    const parts = [];
+    form.querySelectorAll('input, select, textarea').forEach(field => {
+        if (field.type === 'file' || field.disabled || !field.name) return;
+        parts.push(field.name + '=' + (field.type === 'checkbox' || field.type === 'radio' ? field.checked : field.value));
+    });
+    return parts.join('&');
+}
+
+function initSaveBars() {
+    document.querySelectorAll('form[data-k-save-bar]').forEach(form => {
+        if (form.dataset.kSaveBarReady === '1') return;
+        const bar = form.querySelector('[data-k-savebar]');
+        if (!bar) return;
+
+        form.dataset.kSaveBarReady = '1';
+        let baseline = snapshotForm(form);
+
+        const refresh = () => {
+            const dirty = snapshotForm(form) !== baseline;
+            bar.classList.toggle('is-dirty', dirty);
+            form.dataset.kDirty = dirty ? '1' : '0';
+        };
+
+        form.addEventListener('input', refresh);
+        form.addEventListener('change', refresh);
+
+        bar.querySelector('[data-k-savebar-save]')?.addEventListener('click', () => {
+            // Clear the dirty flag first: submitting is not abandoning, and the
+            // unload guard must not challenge the navigation it just caused.
+            form.dataset.kDirty = '0';
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();       // runs validation and submit handlers
+            } else {
+                form.submit();
+            }
+        });
+
+        bar.querySelector('[data-k-savebar-discard]')?.addEventListener('click', () => {
+            form.reset();
+            baseline = snapshotForm(form);
+            refresh();
+        });
+
+        form.addEventListener('submit', () => { form.dataset.kDirty = '0'; });
+    });
+}
+
+// Leaving a page with unsaved settings is the loss this bar exists to prevent, so
+// it is also guarded at the browser level.
+window.addEventListener('beforeunload', event => {
+    if (!document.querySelector('form[data-k-dirty="1"]')) return;
+    event.preventDefault();
+    event.returnValue = '';
+});
+
+document.addEventListener('DOMContentLoaded', initSaveBars);
+if (document.readyState !== 'loading') initSaveBars();
+
 /* ------------------------------------------------------ delegated bindings */
 
 document.addEventListener('click', event => {
@@ -237,4 +307,5 @@ window.Kohl = Object.assign(window.Kohl || {}, {
     openDrawer,
     closeDrawer,
     selectedIds,
+    initSaveBars,
 });

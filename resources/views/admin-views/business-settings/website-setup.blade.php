@@ -11,7 +11,7 @@
         </div>
         @include('admin-views.business-settings.business-setup-inline-menu')
 
-        <form action="{{ route('admin.business-settings.website-setup') }}" method="POST" enctype="multipart/form-data" id="website-setup-form-element" class="form-advance-validation form-advance-inputs-validation form-advance-file-validation non-ajax-form-validate" novalidate="novalidate">
+        <form data-k-save-bar action="{{ route('admin.business-settings.website-setup') }}" method="POST" enctype="multipart/form-data" id="website-setup-form-element" class="form-advance-validation form-advance-inputs-validation form-advance-file-validation non-ajax-form-validate" novalidate="novalidate">
             @csrf
             <div class="d-flex flex-column gap-sm-20 gap-3 mb-3 sm-sm-4">
                 <div class="bg-info bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center">
@@ -425,6 +425,7 @@
                     </button>
                 </div>
             </div>
+            <x-k.save-bar />
         </form>
     </div>
     @include("layouts.admin.partials.offcanvas._website-setup")

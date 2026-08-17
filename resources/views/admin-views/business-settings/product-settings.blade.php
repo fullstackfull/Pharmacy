@@ -11,7 +11,7 @@
         </div>
         @include('admin-views.business-settings.business-setup-inline-menu')
 
-        <form action="{{ route('admin.business-settings.product-settings.index') }}" method="post" enctype="multipart/form-data">
+        <form data-k-save-bar action="{{ route('admin.business-settings.product-settings.index') }}" method="post" enctype="multipart/form-data">
             @csrf
 
             <div class="card mb-3">
@@ -218,6 +218,7 @@
                     </button>
                 </div>
             </div>
+            <x-k.save-bar />
         </form>
     </div>
     @include("layouts.admin.partials.offcanvas._product-settings")

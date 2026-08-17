@@ -3049,4 +3049,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"settings_pages_across" => "Settings pages across",
 	"start_from_a_preset_above_-_the_fastest_way" => "Start from a preset above - the fastest way",
 	"add_item" => "Add item",
+	"save_changes" => "Save changes",
+	"discard" => "Discard",
+	"you_have_unsaved_changes" => "You have unsaved changes",
+	"a_json_file_in_this_shape_(not_a_zip)" => "A json file in this shape (not a zip)",
+	"could_not_save_try_again" => "Could not save try again",
 ];

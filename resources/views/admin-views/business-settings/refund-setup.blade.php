@@ -12,7 +12,7 @@
 
         @include('admin-views.business-settings.business-setup-inline-menu')
 
-        <form action="{{ route('admin.business-settings.refund-setup') }}" method="post" enctype="multipart/form-data">
+        <form data-k-save-bar action="{{ route('admin.business-settings.refund-setup') }}" method="post" enctype="multipart/form-data">
             @csrf
 
             <div class="card">
@@ -107,6 +107,7 @@
                     </div>
                 </div>
             </div>
+            <x-k.save-bar />
         </form>
     </div>
     @include("layouts.admin.partials.offcanvas._refund-setup")

@@ -251,4 +251,7 @@ return [
 	"try_a_different_word_or_browse_the_groups_above" => "Try a different word or browse the groups above",
 	"nothing_matches_that" => "Nothing matches that",
 	"search_settings" => "Search settings",
+	"save_changes" => "Save changes",
+	"discard" => "Discard",
+	"you_have_unsaved_changes" => "You have unsaved changes",
 ];
