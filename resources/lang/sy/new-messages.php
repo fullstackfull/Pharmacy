@@ -224,4 +224,11 @@ return [
 	"orders_will_appear_here_as_soon_as_a_customer_checks_out" => "Orders will appear here as soon as a customer checks out",
 	"no_orders_yet" => "No orders yet",
 	"empty_state" => "Empty state",
+	"loading_states" => "Loading states",
+	"selected" => "Selected",
+	"select_order" => "Select order",
+	"cancel_orders" => "Cancel orders",
+	"100" => "100",
+	"store_banner_renders_whatever_you_publish_in_promotion_banners_so_a_banner_added_there_appears_in_the_theme" => "Store banner renders whatever you publish in promotion banners so a banner added there appears in the theme",
+	"no_images_uploaded_yet" => "No images uploaded yet",
 ];

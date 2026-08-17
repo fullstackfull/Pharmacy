@@ -77,6 +77,16 @@
 @include('layouts.admin.partials._alert-message')
 @include('layouts.admin.partials.v2._setup-popover')
 
+{{-- The command palette's search endpoint. admin-v2.js reads this global and its
+     comment always claimed _body.blade.php injected it — nothing ever did, so the
+     palette silently fell back to filtering sidebar labels and never returned a
+     product, order or customer. Points at the v2 endpoint, which filters results
+     by the signed-in employee's module_access. --}}
+<script>window.__v2AdvanceSearchUrl = @json(route('admin.v2.advanced-search'));</script>
+
+{{-- Kohl toast region: one queue for the whole panel, on every admin page. --}}
+<x-k.toasts />
+
 {{-- Server-side pin shortcuts: load the current admin's saved pin list
      so the v2 JS can render the pin section on first paint without an
      extra round-trip. The route is registered in routes/admin/routes.php

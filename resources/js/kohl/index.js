@@ -180,6 +180,7 @@ function selectedIds(view) {
     return [...view.querySelectorAll('[data-k-row-select]:checked')].map(box => box.value);
 }
 
+
 /* ------------------------------------------------------ delegated bindings */
 
 document.addEventListener('click', event => {
@@ -224,6 +225,7 @@ document.addEventListener('keydown', event => {
         closeDrawer();
     }
 });
+
 
 applyStoredTheme();
 

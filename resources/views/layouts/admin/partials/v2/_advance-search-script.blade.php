@@ -80,16 +80,12 @@
                     $('#advanceSearchModal').modal('show');
                 });
 
-                // ⌘K / Ctrl+K shortcut + Esc to close.
-                const platform = navigator.platform || '';
-                const isMac = platform.toLowerCase().includes('mac');
+                // Esc closes the modal. ⌘K is NOT bound here: it belongs to the
+                // command palette in admin-v2.js. Both used to answer the same
+                // keystroke, so the palette opened and the modal immediately stole
+                // its focus — the palette looked broken and could not be typed into.
+                // The modal keeps its own entry point, the header search button above.
                 $(document).on('keydown', function (event) {
-                    if ((event.ctrlKey && !isMac) || (event.metaKey && isMac)) {
-                        if (event.key === 'k' || event.key === 'K') {
-                            event.preventDefault();
-                            $('#advanceSearchModal').modal('show');
-                        }
-                    }
                     if (event.key === 'Escape' && $('#advanceSearchModal').hasClass('show')) {
                         $('#advanceSearchModal').modal('hide');
                     }
