@@ -42,15 +42,37 @@ class ThemeBuilderController extends BaseController
 
         $page = $request?->get('page', 'home') ?: 'home';
 
+        // Activate live preview for the version being edited so the builder's storefront iframe renders
+        // this exact draft (its sections + global settings). Session-scoped and admin-only, exactly like
+        // the explicit Preview button — nothing leaks to customers.
+        if ($version && $this->builder->isEditable($version)) {
+            session([StorefrontThemeRenderer::PREVIEW_SESSION_KEY => $version->id]);
+        }
+
         return view('admin-views.theme.builder', [
             'version'       => $version,
             'page'          => $page,
+            'previewUrl'    => $this->builderPreviewUrl($page),
             'structure'     => $version ? $this->builder->getPageStructure($version, $page) : [],
             'sectionTypes'  => $version ? $this->registry->forPage($page) : [],
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
         ]);
+    }
+
+    /**
+     * The storefront URL the builder iframe previews. Header/footer sections are global chrome, so the
+     * home page is the meaningful canvas for all three builder pages. Returns null if the storefront
+     * home route is unavailable, so the blade can fall back gracefully.
+     */
+    private function builderPreviewUrl(string $page): ?string
+    {
+        try {
+            return \Illuminate\Support\Facades\Route::has('home') ? route('home') : url('/');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function addSection(Request $request): JsonResponse

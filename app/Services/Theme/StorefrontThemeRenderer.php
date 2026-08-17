@@ -105,6 +105,15 @@ class StorefrontThemeRenderer
         }
 
         try {
+            // Draft preview: for an authenticated admin previewing a draft, resolve THAT version's
+            // settings (never cached) so the visual builder's live preview shows draft colours/typography
+            // together with its draft sections. Guests and normal requests are unaffected.
+            $previewVersionId = $this->activePreviewVersionId();
+            if ($previewVersionId !== null) {
+                $version = ThemeVersion::find($previewVersionId);
+                return $version ? $manager->resolveSettings($version) : null;
+            }
+
             // Cached like sectionsFor(): this runs in the storefront <head> on EVERY request, so an
             // uncached publishedVersion() lookup would hit the DB per page even with nothing published.
             // Wrapped in an array so the common "no published theme" (null) result is cached too —
