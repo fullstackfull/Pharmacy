@@ -48,6 +48,14 @@
 
     <title>@yield('title')</title>
 
+    {{-- Active published theme's design tokens (Phase 1 theme system -> storefront). Emitted only when
+         a theme is published; a later :root declaration wins, overriding aster's legacy colours. Parity
+         with the default theme per the auction-ui rule (shared logic/tokens, not copied layout). --}}
+    @php($__themeSettings = app(\App\Services\Theme\StorefrontThemeRenderer::class)->publishedGlobalSettings(app(\App\Services\Theme\ThemeManager::class)))
+    @if($__themeSettings)
+        @include('partials.theme-global-tokens', ['themeSettings' => $__themeSettings])
+    @endif
+
     @include(VIEW_FILE_NAMES['robots_meta_content_partials'])
 
     @stack('css_or_js')

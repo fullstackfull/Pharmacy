@@ -5,6 +5,9 @@
 
 @push('css_or_js')
     @include(VIEW_FILE_NAMES['product_seo_meta_content_partials'], ['metaContentData' => $product?->seoInfo, 'productDetails' => $product])
+    {{-- SEO parity with the default theme: canonical + hreflang + Product JSON-LD (auction-ui rule:
+         reuse the shared supplement partial, adapt nothing about aster's own layout). --}}
+    @include('seo.product-supplement', ['productDetails' => $product])
 @endpush
 
 @section('content')
