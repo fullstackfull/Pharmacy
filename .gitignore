@@ -18,3 +18,5 @@
 *.crt
 *.p12
 *.pfx
+# PHPUnit run cache — a local artifact, regenerated on every test run
+.phpunit.result.cache
