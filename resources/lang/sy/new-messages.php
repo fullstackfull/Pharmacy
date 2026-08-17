@@ -246,4 +246,9 @@ return [
 	"updating_vendors" => "Updating vendors",
 	"each_vendor_is_emailed_and_suspending_ends_their_session" => "Each vendor is emailed and suspending ends their session",
 	"suspend" => "Suspend",
+	"All_Settings" => "All Settings",
+	"matching_settings" => "Matching settings",
+	"try_a_different_word_or_browse_the_groups_above" => "Try a different word or browse the groups above",
+	"nothing_matches_that" => "Nothing matches that",
+	"search_settings" => "Search settings",
 ];

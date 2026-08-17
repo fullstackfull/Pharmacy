@@ -65,3 +65,18 @@ export async function setDirection(page, dir) {
     }, { base: BASE, code, token });
     return status;
 }
+
+/**
+ * Does the page show a Laravel error screen?
+ *
+ * Searching the body text for "Exception" matches the debug bar's own Exceptions
+ * tab on a perfectly healthy page, which reads as a failure that is not there.
+ * Look for the error page's actual structure instead.
+ */
+export async function hasServerError(page) {
+    return page.evaluate(() => {
+        if (document.querySelector('.exception, #ignition, .Whoops, [class*="whoops"]')) return true;
+        const title = (document.title || '').toLowerCase();
+        return /server error|whoops|not found|forbidden/.test(title);
+    });
+}

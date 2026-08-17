@@ -157,6 +157,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         });
     });
 
+    // One searchable index over every settings page. The 71 templates under
+    // business-settings alone span four route prefixes with no shared entry point.
+    Route::get('settings', function (\App\Services\Admin\SettingsIndexService $settings) {
+        $groups = $settings->groups();
+        return view('admin-views.settings.index', ['groups' => $groups, 'total' => $settings->count($groups)]);
+    })->name('settings.index');
+
     // Kohl design-system gallery. Every primitive on one page, so a change to the
     // system is reviewable in the real admin shell — in light/dark and LTR/RTL —
     // rather than discovered later on a production screen.

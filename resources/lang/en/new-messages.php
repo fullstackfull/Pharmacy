@@ -3040,4 +3040,13 @@ ____________________________________________________on_search_engines_and_see_th
 	"nothing_here_yet_add_the_first_item" => "Nothing here yet add the first item",
 	"or_click_export_on_any_theme_version_to_get_a_real_file_you_can_re-import" => "Or click export on any theme version to get a real file you can re-import",
 	"back_to_section" => "Back to section",
+	"matching_settings" => "Matching settings",
+	"All_Settings" => "All Settings",
+	"try_a_different_word_or_browse_the_groups_above" => "Try a different word or browse the groups above",
+	"nothing_matches_that" => "Nothing matches that",
+	"search_settings" => "Search settings",
+	"areas" => "Areas",
+	"settings_pages_across" => "Settings pages across",
+	"start_from_a_preset_above_-_the_fastest_way" => "Start from a preset above - the fastest way",
+	"add_item" => "Add item",
 ];
