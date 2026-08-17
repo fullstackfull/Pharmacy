@@ -26,6 +26,7 @@ class VendorPayoutRequest extends Model
         'reference', 'seller_id', 'seller_is', 'amount', 'currency', 'status',
         'method', 'method_details', 'reserve_entry_id', 'payout_entry_id',
         'reviewed_by', 'reviewed_at', 'review_note', 'paid_at', 'payment_reference',
+        'payout_currency', 'payout_amount', 'exchange_rate',
     ];
 
     protected $casts = [
@@ -34,6 +35,8 @@ class VendorPayoutRequest extends Model
         'method_details' => 'array',
         'reviewed_at' => 'datetime',
         'paid_at' => 'datetime',
+        'payout_amount' => 'float',
+        'exchange_rate' => 'float',
     ];
 
     public function isOpen(): bool

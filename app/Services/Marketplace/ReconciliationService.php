@@ -5,6 +5,7 @@ namespace App\Services\Marketplace;
 use App\Models\OrderItemCommission;
 use App\Models\VendorLedgerEntry;
 use App\Models\VendorSettlement;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -36,6 +37,50 @@ class ReconciliationService
             $this->commissionSnapshotVsLedger(),
             $this->settlementIntegrity(),
             $this->pendingEarningsCanMature(),
+            $this->legacyWithdrawsBridged(),
+        ];
+    }
+
+    /**
+     * Consolidation monitor: every APPROVED legacy withdraw (money that left through seller_wallets)
+     * should be mirrored into the vendor ledger as a `legacy_withdraw` debit, so the ledger is the
+     * single record of all payouts and its withdrawable() cannot be double-drawn. New approvals are
+     * bridged automatically; a non-zero count here is the historical backlog from before the bridge —
+     * legacy payouts that predate consolidation and are not yet reflected in the ledger.
+     */
+    public function legacyWithdrawsBridged(): array
+    {
+        $discrepancies = [];
+        $checked = 0;
+
+        if (Schema::hasTable('withdraw_requests') && Schema::hasTable('vendor_ledger_entries')) {
+            $checked = 1;
+            $unbridged = DB::table('withdraw_requests')
+                ->where('approved', 1)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('vendor_ledger_entries')
+                        ->whereColumn('vendor_ledger_entries.reference_id', 'withdraw_requests.id')
+                        ->where('vendor_ledger_entries.reference_type', 'legacy_withdraw');
+                })
+                ->count();
+
+            if ($unbridged > 0) {
+                $discrepancies[] = [
+                    'ref' => 'approved legacy withdrawals not mirrored in the ledger',
+                    'expected' => 0,
+                    'actual' => $unbridged,
+                    'delta' => $unbridged,
+                ];
+            }
+        }
+
+        return [
+            'key' => 'legacy_withdraws_bridged',
+            'label' => 'Legacy withdrawals are mirrored into the ledger',
+            'scope' => 'global count',
+            'checked' => $checked,
+            'discrepancies' => $discrepancies,
         ];
     }
 

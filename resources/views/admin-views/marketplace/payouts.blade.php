@@ -61,7 +61,15 @@
                                             @endif
                                             <span class="d-block fs-12 text-muted">#{{ $payout->seller_id }}</span>
                                         </td>
-                                        <td class="fw-semibold">{{ \App\Utils\Helpers::set_symbol($payout->amount) }}</td>
+                                        <td class="fw-semibold">
+                                            {{ \App\Utils\Helpers::set_symbol($payout->amount) }}
+                                            @if ($payout->payout_currency && $payout->payout_amount)
+                                                <span class="d-block fs-12 text-muted">
+                                                    → {{ number_format($payout->payout_amount, 2) }} {{ $payout->payout_currency }}
+                                                    <span class="text-nowrap">@ {{ rtrim(rtrim(number_format($payout->exchange_rate, 6), '0'), '.') }}</span>
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td>{{ translate(str_replace('_', ' ', $payout->method)) }}</td>
                                         <td><span class="badge badge-soft-{{ $statusColours[$payout->status] ?? 'secondary' }} text-capitalize">{{ translate($payout->status) }}</span></td>
                                         <td class="fs-12">{{ $payout->created_at?->format('d M Y, h:i A') }}</td>

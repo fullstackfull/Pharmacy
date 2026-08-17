@@ -79,6 +79,9 @@ class PayoutServiceTest extends TestCase
             $t->string('seller_is', 20)->default('seller');
             $t->decimal('amount', 24, 4);
             $t->string('currency', 10)->nullable();
+            $t->string('payout_currency', 10)->nullable();
+            $t->decimal('payout_amount', 24, 4)->nullable();
+            $t->decimal('exchange_rate', 20, 8)->nullable();
             $t->string('status', 20)->default('requested');
             $t->string('method', 40)->nullable();
             $t->json('method_details')->nullable();
@@ -274,6 +277,24 @@ class PayoutServiceTest extends TestCase
         \App\Models\ApprovalRequest::where('subject_id', $request->id)
             ->update(['status' => \App\Models\ApprovalRequest::STATUS_APPROVED]);
         $this->assertTrue($this->payouts->markPaid($request->fresh(), paymentReference: 'BANK-OK'));
+    }
+
+    public function test_a_legacy_withdraw_bridged_into_the_ledger_lowers_withdrawable_and_is_idempotent(): void
+    {
+        $this->giveAvailable(5, 400);
+        $this->assertSame(400.0, $this->ledger->withdrawable(5));
+
+        // The bridge the admin legacy-withdraw approval writes: a paid payout debit referencing the
+        // legacy withdraw request. It must reduce ledger withdrawable so the same money cannot also be
+        // drawn through a ledger payout — and re-recording the same request must not double-count.
+        $record = fn () => $this->ledger->record(5, VendorLedgerEntry::TYPE_PAYOUT, debit: 300,
+            status: VendorLedgerEntry::STATUS_PAID, referenceType: 'legacy_withdraw', referenceId: 77);
+
+        $record();
+        $this->assertSame(100.0, $this->ledger->withdrawable(5), 'legacy payout must lower ledger withdrawable');
+
+        $record(); // same reference again — idempotent, no second debit
+        $this->assertSame(100.0, $this->ledger->withdrawable(5), 're-recording the same legacy withdraw must not double-count');
     }
 
     // ---- the cooling period ----
