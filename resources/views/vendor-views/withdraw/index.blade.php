@@ -47,10 +47,17 @@
                                 </button>
                             </div>
                         @else
-                            <div data-toggle="offcanvas" data-target=".withdraw-request-offcanvas">
-                                <button type="button" class="btn btn--primary">
-                                    {{ translate('Withdraw') }}
-                                </button>
+                            <div class="d-flex gap-2">
+                                @if (Route::has('vendor.business-settings.withdraw.export-withdraw-list'))
+                                    <a href="{{ route('vendor.business-settings.withdraw.export-withdraw-list') }}" class="btn btn-outline--primary">
+                                        <i class="tio-download-to"></i> {{ translate('export') }}
+                                    </a>
+                                @endif
+                                <div data-toggle="offcanvas" data-target=".withdraw-request-offcanvas">
+                                    <button type="button" class="btn btn--primary">
+                                        {{ translate('Withdraw') }}
+                                    </button>
+                                </div>
                             </div>
                         @endif
                     </div>
