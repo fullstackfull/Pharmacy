@@ -16,11 +16,16 @@
         .tb-section-item.drop-target { border-color: #0f766e; border-style: dashed; }
         .tb-section-item__label { flex: 1; font-size: .875rem; }
         .tb-hidden-badge { font-size: .7rem; }
-        .tb-preview-frame { width: 100%; border: 1px solid rgba(0,0,0,.08); border-radius: .5rem; background: #fff; min-height: 480px; transition: max-width .2s; margin: 0 auto; }
-        .tb-preview-frame[data-device="tablet"] { max-width: 768px; }
-        .tb-preview-frame[data-device="mobile"] { max-width: 390px; }
-        .tb-preview-block { padding: 1rem; border-bottom: 1px dashed rgba(0,0,0,.12); font-size: .85rem; }
-        .tb-preview-block[data-hidden="1"] { opacity: .4; }
+        .tb-preview-stage { position: relative; margin: 0 auto; transition: max-width .25s ease; }
+        .tb-preview-stage[data-device="desktop"] { max-width: 100%; }
+        .tb-preview-stage[data-device="tablet"] { max-width: 768px; }
+        .tb-preview-stage[data-device="mobile"] { max-width: 390px; }
+        .tb-preview-frame { width: 100%; height: 720px; border: 1px solid rgba(0,0,0,.10); border-radius: .5rem; background: #fff; display: block; }
+        .tb-preview-stage[data-device="mobile"] .tb-preview-frame,
+        .tb-preview-stage[data-device="tablet"] .tb-preview-frame { height: 680px; }
+        .tb-preview-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: .5rem;
+            background: rgba(255,255,255,.75); border-radius: .5rem; font-size: .85rem; color: #555; z-index: 2; transition: opacity .2s; }
+        .tb-preview-loader.is-hidden { opacity: 0; pointer-events: none; }
         .tb-field { margin-bottom: .75rem; }
         .tb-field label { font-size: .8rem; font-weight: 600; display: block; margin-bottom: .25rem; }
         .tb-dirty-bar { position: sticky; bottom: 0; z-index: 5; }
@@ -123,28 +128,33 @@
                     </div>
                 </div>
 
-                {{-- CENTER: preview --}}
+                {{-- CENTER: live storefront preview --}}
                 <div class="tb-panel">
-                    <div class="tb-panel__head d-flex justify-content-between align-items-center">
-                        <span>{{ translate('preview') }}</span>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="{{ translate('device_preview') }}">
-                            <button type="button" class="btn btn-outline-secondary active" data-device="desktop">{{ translate('desktop') }}</button>
-                            <button type="button" class="btn btn-outline-secondary" data-device="tablet">{{ translate('tablet') }}</button>
-                            <button type="button" class="btn btn-outline-secondary" data-device="mobile">{{ translate('mobile') }}</button>
+                    <div class="tb-panel__head d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <span>{{ translate('live_preview') }}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="{{ translate('device_preview') }}">
+                                <button type="button" class="btn btn-outline-secondary active" data-device="desktop" title="{{ translate('desktop') }}"><i class="fi fi-rr-computer"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" data-device="tablet" title="{{ translate('tablet') }}"><i class="fi fi-rr-tablet"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" data-device="mobile" title="{{ translate('mobile') }}"><i class="fi fi-rr-mobile-button"></i></button>
+                            </div>
+                            <button type="button" id="tb-refresh" class="btn btn-sm btn-outline-secondary" title="{{ translate('refresh') }}"><i class="fi fi-rr-refresh"></i></button>
+                            @if(!empty($previewUrl))
+                                <a href="{{ $previewUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary" title="{{ translate('open_in_new_tab') }}"><i class="fi fi-rr-arrow-up-right-from-square"></i></a>
+                            @endif
                         </div>
                     </div>
                     <div class="tb-panel__body">
-                        <div class="tb-preview-frame" id="tb-preview" data-device="desktop">
-                            @foreach($structure as $section)
-                                <div class="tb-preview-block" data-id="{{ $section['id'] }}" data-hidden="{{ $section['is_visible'] ? 0 : 1 }}">
-                                    <strong>{{ translate($section['label']) }}</strong>
-                                    @if(!empty($section['settings']['title']))
-                                        <div class="text-muted">{{ $section['settings']['title'] }}</div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                        <p class="text-muted small mt-2 mb-0">{{ translate('this_is_a_structural_preview_publish_to_see_it_live_on_the_storefront') }}</p>
+                        @if(!empty($previewUrl))
+                            <div class="tb-preview-stage" data-device="desktop">
+                                <div class="tb-preview-loader" id="tb-preview-loader"><span class="spinner-border spinner-border-sm"></span> {{ translate('loading_preview') }}…</div>
+                                <iframe id="tb-preview-iframe" class="tb-preview-frame" src="{{ $previewUrl }}"
+                                        title="{{ translate('storefront_preview') }}" loading="lazy"></iframe>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">{{ translate('this_is_your_live_draft_edits_appear_here_after_saving_publish_to_go_live') }}</p>
+                        @else
+                            <div class="alert alert-info mb-0">{{ translate('storefront_preview_is_unavailable_here') }}</div>
+                        @endif
                     </div>
                 </div>
 
@@ -231,6 +241,7 @@
                         if (res.ok) {
                             dirty = false;
                             setAutosaveStatus('{{ translate('draft_saved') }}', 'text-success');
+                            refreshPreview();
                         } else {
                             // leave `dirty` set so the unsaved-changes warning still fires
                             setAutosaveStatus('{{ translate('autosave_failed_use_save_draft') }}', 'text-danger');
@@ -389,6 +400,45 @@
                 if (item) selectSection(item);
             });
 
+            // ---- live storefront preview (works in read-only mode too) ----
+            var previewFrame = document.getElementById('tb-preview-iframe');
+            var previewLoader = document.getElementById('tb-preview-loader');
+            var previewStage = document.querySelector('.tb-preview-stage');
+
+            function showPreviewLoader() { if (previewLoader) previewLoader.classList.remove('is-hidden'); }
+            function hidePreviewLoader() { if (previewLoader) previewLoader.classList.add('is-hidden'); }
+
+            // Reload the iframe to reflect the freshly-saved draft. Reassigning src (with a cache-buster)
+            // re-requests the storefront home, which renders this draft because the builder activated the
+            // preview session for this version.
+            var refreshTimer = null;
+            function refreshPreview() {
+                if (!previewFrame) return;
+                clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(function () {
+                    showPreviewLoader();
+                    var base = previewFrame.src.split('#')[0].replace(/([?&])tb=\d+/, '');
+                    previewFrame.src = base + (base.indexOf('?') === -1 ? '?' : '&') + 'tb=' + Date.now();
+                }, 150);
+            }
+
+            if (previewFrame) {
+                previewFrame.addEventListener('load', hidePreviewLoader);
+                setTimeout(hidePreviewLoader, 4000); // safety net if load never fires
+            }
+
+            var refreshBtn = document.getElementById('tb-refresh');
+            if (refreshBtn) refreshBtn.addEventListener('click', refreshPreview);
+
+            // Device toggle resizes the real preview stage.
+            document.querySelectorAll('button[data-device]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('button[data-device]').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    if (previewStage) previewStage.dataset.device = btn.dataset.device;
+                });
+            });
+
             if (!editable) return; // read-only: selection/preview only
 
             // ---- drag & drop reordering (native HTML5 — no extra dependency) ----
@@ -423,7 +473,8 @@
                 if (from < to) { target.after(dragged); } else { target.before(dragged); }
 
                 var order = Array.prototype.map.call(structure.querySelectorAll('.tb-section-item'), function (i) { return i.dataset.id; });
-                post(root.dataset.urlReorder, {version_id: versionId, page: page, order: order}).then(notify);
+                post(root.dataset.urlReorder, {version_id: versionId, page: page, order: order}).then(notify)
+                    .then(function (res) { if (res.ok) refreshPreview(); });
             });
 
             // ---- actions ----
@@ -437,7 +488,7 @@
                 if (!selectedId) return;
                 post(root.dataset.urlUpdate, {section_id: selectedId, settings: collectSettings()})
                     .then(notify).then(function (res) {
-                        if (res.ok) { dirty = false; if (window.toastMagic) toastMagic.success('{{ translate('draft_saved') }}'); }
+                        if (res.ok) { dirty = false; if (window.toastMagic) toastMagic.success('{{ translate('draft_saved') }}'); refreshPreview(); }
                     });
             });
 
@@ -460,16 +511,6 @@
                 if (!confirm('{{ translate('are_you_sure') }}?')) return;
                 post(root.dataset.urlDelete, {section_id: selectedId})
                     .then(notify).then(function (res) { if (res.ok) location.reload(); });
-            });
-
-            // ---- device preview ----
-            document.querySelectorAll('[data-device]').forEach(function (btn) {
-                if (btn.tagName !== 'BUTTON') return;
-                btn.addEventListener('click', function () {
-                    document.querySelectorAll('button[data-device]').forEach(function (b) { b.classList.remove('active'); });
-                    btn.classList.add('active');
-                    document.getElementById('tb-preview').dataset.device = btn.dataset.device;
-                });
             });
 
             // ---- unsaved-changes warning ----
