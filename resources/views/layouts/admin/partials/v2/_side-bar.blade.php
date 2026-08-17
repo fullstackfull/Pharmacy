@@ -618,6 +618,182 @@
                 </a>
             </div>
 
+            <div class="v2-ctx-group">
+                <div class="v2-ctx-group-head"><span>{{ translate('marketplace') }}</span></div>
+
+                @if (Route::has('admin.marketplace.settlements.index'))
+                    <div class="v2-nav-item v2-has-children {{ (Request::is('admin/marketplace/settlements*') || Request::is('admin/marketplace/ledger*') || Request::is('admin/marketplace/commission-rules*') || Request::is('admin/marketplace/reconciliation*') || Request::is('admin/marketplace/payment-routing*') || Request::is('admin/marketplace/exchange-rates*')) ? 'v2-is-active' : '' }}" data-item="marketplace-finance">
+                        <a class="v2-nav-btn" href="{{ route('admin.marketplace.settlements.index') }}">
+                            <span class="v2-nav-label">{{ translate('marketplace_finance') }}</span>
+                        </a>
+                        <div class="v2-nav-right">
+                            <button class="v2-pin-btn" type="button" data-pin="marketplace-finance" aria-label="Pin"></button>
+                            <span class="v2-nav-chev">
+                                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 5 5 5-5 5"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="v2-nav-children v2-is-collapsed" data-children-for="marketplace-finance">
+                        <a class="v2-nav-child {{ (Request::is('admin/marketplace/settlements*') || Request::is('admin/marketplace/ledger*')) ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.settlements.index') }}">
+                            <span class="v2-nav-child-dot" data-tone="primary"></span>
+                            <span class="v2-nav-child-label">{{ translate('vendor_settlements') }}</span>
+                        </a>
+                        @if (Route::has('admin.marketplace.commission-rules.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/commission-rules*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.commission-rules.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('commission_rules') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.reconciliation'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/reconciliation*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.reconciliation') }}">
+                                <span class="v2-nav-child-dot" data-tone="success"></span>
+                                <span class="v2-nav-child-label">{{ translate('financial_reconciliation') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.payment-routing.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/payment-routing*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.payment-routing.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('payment_orchestration') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.exchange-rates.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/exchange-rates*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.exchange-rates.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('exchange_rates') }}</span>
+                            </a>
+                        @endif
+                    </div>
+                @endif
+
+                @if (Route::has('admin.marketplace.approvals.index'))
+                    <div class="v2-nav-item v2-has-children {{ (Request::is('admin/marketplace/approvals*') || Request::is('admin/marketplace/seller-verification*') || Request::is('admin/marketplace/seller-scorecard*') || Request::is('admin/marketplace/sla*') || Request::is('admin/marketplace/product-moderation*') || Request::is('admin/marketplace/category-governance*')) ? 'v2-is-active' : '' }}" data-item="marketplace-sellers">
+                        <a class="v2-nav-btn" href="{{ route('admin.marketplace.approvals.index') }}">
+                            <span class="v2-nav-label">{{ translate('seller_governance') }}</span>
+                        </a>
+                        <div class="v2-nav-right">
+                            <button class="v2-pin-btn" type="button" data-pin="marketplace-sellers" aria-label="Pin"></button>
+                            <span class="v2-nav-chev">
+                                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 5 5 5-5 5"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="v2-nav-children v2-is-collapsed" data-children-for="marketplace-sellers">
+                        <a class="v2-nav-child {{ Request::is('admin/marketplace/approvals*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.approvals.index') }}">
+                            <span class="v2-nav-child-dot" data-tone="primary"></span>
+                            <span class="v2-nav-child-label">{{ translate('approvals') }}</span>
+                        </a>
+                        @if (Route::has('admin.marketplace.seller-verification.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/seller-verification*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.seller-verification.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_verification') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.seller-scorecard.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/seller-scorecard*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.seller-scorecard.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_scorecard') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.sla.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/sla*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.sla.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_sla') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.product-moderation.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/product-moderation*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.product-moderation.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('product_moderation') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.category-governance.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/category-governance*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.category-governance.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('category_governance') }}</span>
+                            </a>
+                        @endif
+                    </div>
+                @endif
+
+                @if (Route::has('admin.marketplace.suppliers.index'))
+                    <div class="v2-nav-item v2-has-children {{ (Request::is('admin/marketplace/suppliers*') || Request::is('admin/marketplace/purchase-orders*') || Request::is('admin/marketplace/inventory-adjustments*') || Request::is('admin/marketplace/batches*') || Request::is('admin/marketplace/warehouses*') || Request::is('admin/marketplace/returns*') || Request::is('admin/marketplace/fulfillments*') || Request::is('admin/marketplace/shipping-zones*')) ? 'v2-is-active' : '' }}" data-item="marketplace-supply">
+                        <a class="v2-nav-btn" href="{{ route('admin.marketplace.suppliers.index') }}">
+                            <span class="v2-nav-label">{{ translate('supply_chain') }}</span>
+                        </a>
+                        <div class="v2-nav-right">
+                            <button class="v2-pin-btn" type="button" data-pin="marketplace-supply" aria-label="Pin"></button>
+                            <span class="v2-nav-chev">
+                                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 5 5 5-5 5"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="v2-nav-children v2-is-collapsed" data-children-for="marketplace-supply">
+                        <a class="v2-nav-child {{ Request::is('admin/marketplace/suppliers*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.suppliers.index') }}">
+                            <span class="v2-nav-child-dot" data-tone="primary"></span>
+                            <span class="v2-nav-child-label">{{ translate('suppliers') }}</span>
+                        </a>
+                        @if (Route::has('admin.marketplace.purchase-orders.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/purchase-orders*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.purchase-orders.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('purchase_orders') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.inventory-adjustments.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/inventory-adjustments*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.inventory-adjustments.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('inventory_adjustments') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.batches.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/batches*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.batches.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('batches_and_expiry') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.warehouses.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/warehouses*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.warehouses.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('warehouses') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.returns.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/returns*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.returns.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('returns') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.fulfillments.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/fulfillments*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.fulfillments.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('fulfilment') }}</span>
+                            </a>
+                        @endif
+                        @if (Route::has('admin.marketplace.shipping-zones.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/shipping-zones*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.shipping-zones.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('shipping_zones') }}</span>
+                            </a>
+                        @endif
+                    </div>
+                @endif
+
+                @if (Route::has('admin.marketplace.customer-groups.index'))
+                    <a class="v2-nav-item {{ Request::is('admin/marketplace/customer-groups*') ? 'v2-is-active' : '' }}" data-item="customer-groups-b2b" href="{{ route('admin.marketplace.customer-groups.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('customer_groups') }} (B2B)</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="customer-groups-b2b" aria-label="Pin"></button></div>
+                    </a>
+                @endif
+                @if (Route::has('admin.marketplace.audit-log'))
+                    <a class="v2-nav-item {{ Request::is('admin/marketplace/audit-log*') ? 'v2-is-active' : '' }}" data-item="marketplace-audit-log" href="{{ route('admin.marketplace.audit-log') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('audit_log') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="marketplace-audit-log" aria-label="Pin"></button></div>
+                    </a>
+                @endif
+            </div>
+
             @if ($v2Tax && count($v2TaxReportRoutes))
                 <div class="v2-ctx-group">
                     <div class="v2-ctx-group-head"><span>{{ translate('tax') }}</span></div>
@@ -729,7 +905,7 @@
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('social_Media_Links') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="social-media-links" aria-label="Pin"></button></div>
                     </a>
-                    <a class="v2-nav-item {{ (Request::is('admin/seo-settings/web-master-tool') || Request::is('admin/seo-settings/robot-txt') || Request::is('admin/seo-settings/sitemap') || Request::is('admin/seo-settings/robots-meta-content*') || Request::is('admin/seo-settings/error-logs/index')) ? 'v2-is-active' : '' }}" data-item="seo" href="{{ route('admin.seo-settings.web-master-tool') }}">
+                    <a class="v2-nav-item {{ (Request::is('admin/seo-settings/web-master-tool') || Request::is('admin/seo-settings/robot-txt') || Request::is('admin/seo-settings/sitemap') || Request::is('admin/seo-settings/robots-meta-content*') || Request::is('admin/seo-settings/error-logs/index') || Request::is('admin/seo-settings/redirects*') || Request::is('admin/seo-settings/translations*') || Request::is('admin/seo-settings/templates*')) ? 'v2-is-active' : '' }}" data-item="seo" href="{{ route('admin.seo-settings.web-master-tool') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('SEO_Settings') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="seo" aria-label="Pin"></button></div>
                     </a>
@@ -782,6 +958,16 @@
                     <a class="v2-nav-item {{ (Request::is('admin/third-party/mail') || Request::is('admin/third-party/sms-module') || Request::is('admin/third-party/recaptcha') || Request::is('admin/third-party/social-login/view') || Request::is('admin/third-party/social-media-chat/view') || Request::is('admin/third-party/storage-connection-settings/index') || Request::is('admin/third-party/map-api')) ? 'v2-is-active' : '' }}" data-item="other-config" href="{{ route('admin.third-party.social-login.view') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Other_Configuration') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="other-config" aria-label="Pin"></button></div>
+                    </a>
+                </div>
+            @endif
+
+            @if (Helpers::module_permission_check('themes_and_addons') && Route::has('admin.theme.index'))
+                <div class="v2-ctx-group">
+                    <div class="v2-ctx-group-head"><span>{{ translate('appearance') }}</span></div>
+                    <a class="v2-nav-item {{ (Request::is('admin/theme') || Request::is('admin/theme/*')) ? 'v2-is-active' : '' }}" data-item="theme-management" href="{{ route('admin.theme.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Theme_Management') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="theme-management" aria-label="Pin"></button></div>
                     </a>
                 </div>
             @endif
