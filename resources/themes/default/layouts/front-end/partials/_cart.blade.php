@@ -3,13 +3,16 @@
 
 <div class="navbar-tool dropdown me-2 {{Session::get('direction') === "rtl" ? 'mr-md-3' : 'ml-md-3'}}">
     @if($web_config['guest_checkout_status'] || auth('customer')->check())
-        <a class="navbar-tool-icon-box bg-secondary dropdown-toggle" href="{{route('shop-cart') }}">
+        {{-- The links keep their shop-cart href: without JS they still reach the
+             cart page; with it, the click opens the drawer instead. --}}
+        <a class="navbar-tool-icon-box bg-secondary dropdown-toggle action-open-cart-drawer" href="{{route('shop-cart') }}"
+           aria-haspopup="dialog">
             <span class="navbar-tool-label">
                 {{ $cart->count() }}
             </span>
             <i class="navbar-tool-icon czi-cart"></i>
         </a>
-        <a class="navbar-tool-text ms-2"
+        <a class="navbar-tool-text ms-2 action-open-cart-drawer" aria-haspopup="dialog"
            href="{{route('shop-cart') }}"><small>{{ translate('my_cart') }}</small>
             <span class="cart-total-price font-bold fs-14">
                 {{ webCurrencyConverter(amount: \App\Utils\CartManager::getCartListTotalAppliedDiscount($cart)) }}
@@ -31,7 +34,11 @@
         </a>
     @endif
 
-    <div class="dropdown-menu dropdown-menu-{{ session('direction') === "rtl" ? 'left' : 'right' }} __w-20rem cart-dropdown py-0 rounded-10">
+    {{-- Rendered as a slide-in drawer (see store.scss). The guest branch above
+         deliberately keeps its login link un-hijacked: with guest checkout off,
+         the cart icon still funnels to sign-in, and this panel stays closed. --}}
+    <div class="dropdown-menu dropdown-menu-{{ session('direction') === "rtl" ? 'left' : 'right' }} __w-20rem cart-dropdown k-cart-drawer py-0 rounded-10"
+         role="dialog" aria-modal="true" aria-label="{{ translate('shopping_cart') }}">
         <div class="widget-cart-top rounded-left-right-10">
             <h6 class="m-0 fw-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -233,19 +240,53 @@
             @endif
         </div>
     </div>
+
+    <div class="k-cart-drawer-backdrop"></div>
 </div>
 
 @push('script')
     <script>
-         $(document).ready(function() {
-            $('#cart_dropdown_close').on('click', function(e) {
-                e.preventDefault();
-                $('.cart-dropdown').fadeOut(200).addClass('dismissed');
+        "use strict";
+        (function () {
+            // updateNavCart() replaces this whole partial's DOM after every cart
+            // mutation, so state lives on <body> and every handler is delegated —
+            // nothing here may hold a reference to an element inside #cart_items.
+            var OPEN_CLASS = 'k-cart-open';
+            var lastTrigger = null;
+
+            function openCartDrawer(trigger) {
+                if (trigger) lastTrigger = trigger;
+                document.body.classList.add(OPEN_CLASS);
+                var close = document.getElementById('cart_dropdown_close');
+                if (close) close.focus();
+            }
+
+            function closeCartDrawer() {
+                if (!document.body.classList.contains(OPEN_CLASS)) return;
+                document.body.classList.remove(OPEN_CLASS);
+                if (lastTrigger && document.contains(lastTrigger)) lastTrigger.focus();
+                lastTrigger = null;
+            }
+
+            // addToCart() in custom.js opens the drawer once the refreshed cart
+            // has been injected, so the customer sees the item they just added.
+            window.openCartDrawer = openCartDrawer;
+
+            $(document).on('click', '.action-open-cart-drawer', function (event) {
+                event.preventDefault();
+                openCartDrawer(this);
             });
 
-            $('#cart_items').on('mouseenter', function() {
-                $('.cart-dropdown').removeClass('dismissed').removeAttr('style');
+            $(document).on('click', '#cart_dropdown_close, .k-cart-drawer-backdrop', function (event) {
+                event.preventDefault();
+                closeCartDrawer();
             });
-        });
+
+            $(document).on('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeCartDrawer();
+                }
+            });
+        })();
     </script>
 @endpush

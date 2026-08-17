@@ -25,12 +25,48 @@ export const VIEWPORTS = [
 /** Collects console errors and failed requests so a "looks fine" screenshot cannot hide a broken page. */
 export function watch(page) {
     const problems = [];
-    page.on('console', m => { if (m.type() === 'error') problems.push('CONSOLE ' + m.text().slice(0, 200)); });
+    page.on('console', m => {
+        if (m.type() !== 'error') return;
+        // Duplicates the requestfailed/response listeners below, which carry the
+        // URL and so can tell sandbox noise from an app failure. Skip the echo.
+        if (m.text().startsWith('Failed to load resource')) return;
+        problems.push('CONSOLE ' + m.text().slice(0, 200));
+    });
     page.on('pageerror', e => problems.push('JS ' + String(e).slice(0, 200)));
+    page.on('requestfailed', r => {
+        // The sandbox blocks external origins (Google Fonts et al.) — expected
+        // here, fine in production. Same-origin failures are real problems,
+        // except ERR_ABORTED: that is the browser cancelling in-flight loads
+        // because the check itself navigated away.
+        if (!r.url().startsWith(BASE)) return;
+        const reason = r.failure()?.errorText || '';
+        if (reason === 'net::ERR_ABORTED') return;
+        problems.push('REQFAIL ' + reason + ' ' + r.url().replace(BASE, '').slice(0, 120));
+    });
     page.on('response', r => {
         if (r.status() >= 400) problems.push(`HTTP ${r.status()} ${r.url().replace(BASE, '').slice(0, 120)}`);
     });
     return problems;
+}
+
+/** The store's promotional popup (#popup-modal) opens over the page and eats
+ *  clicks; real shoppers close it, so click-driven checks must too. It shows
+ *  itself on document.ready, so a single early hide() races it — keep asking
+ *  until it is genuinely gone. */
+export async function dismissPromoPopup(page) {
+    await page.waitForTimeout(700);
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const gone = await page.evaluate(() => {
+            const modal = document.getElementById('popup-modal');
+            if (!modal || !modal.classList.contains('show')) return true;
+            if (window.jQuery) window.jQuery(modal).modal('hide');
+            return false;
+        }).catch(() => true);
+        if (gone) break;
+        await page.waitForTimeout(400);
+    }
+    await page.waitForFunction(() => !document.querySelector('.modal-backdrop.show'), null, { timeout: 3000 })
+        .catch(() => {});
 }
 
 export async function loginAdmin(page) {
@@ -56,7 +92,12 @@ export async function setDirection(page, dir) {
     // csrf meta unread and turns the POST into a 419 — so try up to three times.
     for (let attempt = 1; attempt <= 3; attempt++) {
         await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' }).catch(() => {});
-        const token = await page.getAttribute('meta[name="csrf-token"]', 'content').catch(() => null);
+        // The storefront emits <meta name="_token">; the admin emits "csrf-token".
+        // Reading only the admin's name is what silently 419'd every RTL run.
+        const token = await page.evaluate(() => {
+            const meta = document.querySelector('meta[name="_token"], meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : null;
+        }).catch(() => null);
         if (!token) continue;
         const status = await page.evaluate(async ({ base, code, token }) => {
             const body = new URLSearchParams({ language_code: code });
