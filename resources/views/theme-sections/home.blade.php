@@ -122,7 +122,7 @@
                         @break
 
                     @case('category_grid')
-                        @php $cats = \App\Models\Category::where('position', 0)->where('status', 1)->take((int) ($s['limit'] ?? 12))->get(['id','name','slug','icon']); $cols = max(2,(int)($s['columns'] ?? 6)); @endphp
+                        @php $cats = \App\Models\Category::where('position', 0)->take((int) ($s['limit'] ?? 12))->get(); $cols = max(2,(int)($s['columns'] ?? 6)); @endphp
                         <div class="ml-sec-head">
                             <span class="ml-eyebrow">{{ $s['eyebrow'] ?? translate('shop_by_category') }}</span>
                             @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
@@ -175,7 +175,7 @@
                         @break
 
                     @case('brand_slider')
-                        @php $brands = \App\Models\Brand::where('status',1)->take((int)($s['limit'] ?? 12))->get(['id','name','image']); @endphp
+                        @php $brands = \App\Models\Brand::where('status',1)->take((int)($s['limit'] ?? 12))->get(); @endphp
                         <div class="ml-sec-head">@if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif<div class="ml-rule"></div></div>
                         <div class="row g-4 align-items-center justify-content-center">
                             @foreach ($brands as $brand)

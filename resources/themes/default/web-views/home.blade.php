@@ -25,8 +25,16 @@
 @section('content')
 
 {{-- Visual Theme Builder home sections (Phase 1). Renders only when a published theme defines home
-     sections; otherwise outputs nothing and the default home below is shown unchanged. --}}
-@include('theme-sections.home')
+     sections; otherwise outputs nothing and the default home below is shown unchanged.
+     Guarded: a problem inside a section must NEVER take the storefront (or the builder iframe) down —
+     it is logged and the rest of the home renders normally. --}}
+@php
+    try {
+        echo view('theme-sections.home')->render();
+    } catch (\Throwable $themeSectionsError) {
+        report($themeSectionsError);
+    }
+@endphp
 
 @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
 <div class="auction__badge dropdown">
