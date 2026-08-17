@@ -3054,4 +3054,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"you_have_unsaved_changes" => "You have unsaved changes",
 	"a_json_file_in_this_shape_(not_a_zip)" => "A json file in this shape (not a zip)",
 	"could_not_save_try_again" => "Could not save try again",
+	"what_file_format_is_expected" => "What file format is expected",
+	"saved" => "Saved",
 ];
