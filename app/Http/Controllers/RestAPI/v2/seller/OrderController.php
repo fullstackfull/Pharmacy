@@ -117,7 +117,10 @@ class OrderController extends Controller
 
         $deliveryman_charge = $request->deliveryman_charge;
 
-        $order = Order::find($request->order_id);
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request->order_id);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('Order_not_found')], 404);
+        }
         $db_expected_date = $order->expected_delivery_date;
 
         $order->deliveryman_charge = $deliveryman_charge;
@@ -168,7 +171,7 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)]);
         }
 
-        $order_details = OrderDetail::find($request->order_id);
+        $order_details = OrderDetail::where('seller_id', $seller['id'])->find($request->order_id);
         if ($order_details) {
             $order_details->digital_file_after_sell = ImageManager::update('product/digital-product/', $order_details->digital_file_after_sell, $request->digital_file_after_sell->getClientOriginalExtension(), $request->file('digital_file_after_sell'), 'file');
             $order_details->save();
@@ -190,7 +193,10 @@ class OrderController extends Controller
             ], 401);
         }
 
-        $order = Order::find($request->id);
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request->id);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('Order_not_found')], 404);
+        }
         if (empty($order->customer)) {
             return response()->json(['success' => 0, 'message' => translate("Customer account has been deleted. you can't update status!")], 202);
         }
@@ -294,7 +300,10 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)]);
         }
 
-        $order = Order::find($request->order_id);
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request->order_id);
+        if (!$order) {
+            return response()->json(['success' => 0, 'message' => translate('Order_not_found')], 404);
+        }
         $order->delivery_type = 'third_party_delivery';
         $order->delivery_service_name = $request->delivery_service_name;
         $order->third_party_delivery_tracking_id = $request->third_party_delivery_tracking_id;
@@ -327,7 +336,7 @@ class OrderController extends Controller
             return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
         }
 
-        $order = Order::find($request['order_id']);
+        $order = Order::where(['seller_id' => $seller['id'], 'seller_is' => 'seller'])->find($request['order_id']);
         if (isset($order)) {
             if ($order->is_guest == '0' && empty($order->customer)) {
                 return response()->json(['success' => 0, 'message' => translate("Customer account has been deleted. you can't update status!")], 202);

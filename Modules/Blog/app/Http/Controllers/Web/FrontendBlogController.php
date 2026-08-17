@@ -96,7 +96,9 @@ class FrontendBlogController extends Controller
         }
 
         $draftData = json_decode($blogData['draft_data'] ?? '', true);
-        if (\request('source') == 'draft' && !empty($draftData)) {
+        // Draft preview is admin-only: without this guard any visitor could read unpublished/draft
+        // posts by appending ?source=draft to a known slug.
+        if (\request('source') == 'draft' && !empty($draftData) && auth('admin')->check()) {
             $translatedData = $this->blogTranslation->where(['translation_id' => $blogData['id'], 'locale' => getDefaultLanguage(), 'is_draft' => 1])->get();
             $draftCategory = $this->blogCategory->where('id', ($draftData['category_id'] ?? 0))->first();
             $blogData->title = $translatedData?->firstWhere('key', 'title')?->value ?? $draftData['title'] ?? '';

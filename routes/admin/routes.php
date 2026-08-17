@@ -105,9 +105,6 @@ use App\Http\Controllers\Admin\Settings\VendorRegistrationSettingController;
 use App\Http\Controllers\Admin\Notification\PushNotificationSettingsController;
 
 
-Route::get('search', function () {
-    return view('layouts.admin.partials._advance-search-result');
-});
 Route::controller(SharedController::class)->group(function () {
     Route::post('change-language', 'changeLanguage')->name('change-language');
     Route::post('g-recaptcha-response-store', 'storeRecaptchaResponse')->name('g-recaptcha-response-store');
