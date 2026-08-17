@@ -3030,4 +3030,12 @@ ____________________________________________________on_search_engines_and_see_th
 	"Account_Blocked" => "Account Blocked",
 	"section_types" => "Section types",
 	"library" => "Library",
+	"could_not_update_the_vendors" => "Could not update the vendors",
+	"vendors_updated" => "Vendors updated",
+	"updating_vendors" => "Updating vendors",
+	"each_vendor_is_emailed_and_suspending_ends_their_session" => "Each vendor is emailed and suspending ends their session",
+	"suspend" => "Suspend",
+	"add_new_vendor" => "Add new vendor",
+	"or_download_the_example_theme_above_edit_it_and_import_it_back" => "Or download the example theme above edit it and import it back",
+	"nothing_here_yet_add_the_first_item" => "Nothing here yet add the first item",
 ];

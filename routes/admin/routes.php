@@ -417,6 +417,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::POST('add', 'add');
             Route::get('order-list-export/{vendor_id}', 'exportOrderList')->name('order-list-export');
             Route::post('status', 'updateStatus')->name('updateStatus');
+            // Bulk approve / suspend / reject. Delegates per vendor so each transition
+            // still picks its own email template and suspension still rotates the token.
+            Route::post('bulk-status', 'bulkUpdateStatus')->name('bulk-status');
             Route::get('export', 'exportList')->name('export');
 
             Route::post('sales-commission-update/{id}', 'updateSalesCommission')->name('sales-commission-update');

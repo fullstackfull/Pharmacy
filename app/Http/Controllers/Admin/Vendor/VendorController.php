@@ -53,6 +53,12 @@ use App\Contracts\Repositories\StockClearanceProductRepositoryInterface;
 
 class VendorController extends BaseController
 {
+    /** Statuses a bulk action may set. */
+    private const BULK_STATUSES = ['approved', 'suspended', 'rejected'];
+
+    /** Each id emails that vendor, so the cap stays low. */
+    private const BULK_LIMIT = 50;
+
     use PaginatorTrait;
     use CommonTrait;
     use PushNotificationTrait;
@@ -144,6 +150,59 @@ class VendorController extends BaseController
         } catch (Exception $e) {
         }
         return response()->json(['message' => translate('vendor_added_successfully')]);
+    }
+
+    /**
+     * Approve, suspend or reject many vendors at once.
+     *
+     * Delegates to updateStatus() per vendor. That method picks a different email
+     * template for each transition — a pending vendor being approved gets
+     * "registration approved", an active one being suspended gets "account
+     * suspended" — and suspending also rotates the vendor's auth token so their
+     * session dies. None of that may be duplicated here.
+     *
+     * Its RedirectResponse is discarded: this endpoint answers with JSON, and the
+     * per-vendor toasts it flashes are replaced by one aggregate result.
+     */
+    public function bulkUpdateStatus(Request $request): JsonResponse
+    {
+        $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
+        $status = (string) $request->input('status', '');
+
+        if (empty($ids)) {
+            return response()->json(['status' => 0, 'message' => translate('select_at_least_one_vendor')], 422);
+        }
+        if (!in_array($status, self::BULK_STATUSES, true)) {
+            return response()->json(['status' => 0, 'message' => translate('unsupported_status')], 422);
+        }
+        if (count($ids) > self::BULK_LIMIT) {
+            return response()->json([
+                'status' => 0,
+                'message' => translate('select_no_more_than') . ' ' . self::BULK_LIMIT . ' ' . translate('vendors'),
+            ], 422);
+        }
+
+        $updated = 0;
+        $skipped = [];
+
+        foreach ($ids as $id) {
+            try {
+                $this->updateStatus(new Request(['id' => $id, 'status' => $status]));
+                $updated++;
+            } catch (\Throwable $exception) {
+                report($exception);
+                $skipped[] = ['id' => $id, 'reason' => translate('could_not_be_updated')];
+            }
+        }
+
+        return response()->json([
+            'status' => $updated > 0 ? 1 : 0,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $updated > 0
+                ? $updated . ' ' . translate('vendors_updated')
+                : translate('no_vendors_could_be_updated'),
+        ]);
     }
 
     public function updateStatus(Request $request): RedirectResponse

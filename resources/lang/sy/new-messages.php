@@ -242,4 +242,8 @@ return [
 	"could_not_update_the_customers" => "Could not update the customers",
 	"updating_customers" => "Updating customers",
 	"each_customer_is_emailed_about_the_change" => "Each customer is emailed about the change",
+	"could_not_update_the_vendors" => "Could not update the vendors",
+	"updating_vendors" => "Updating vendors",
+	"each_vendor_is_emailed_and_suspending_ends_their_session" => "Each vendor is emailed and suspending ends their session",
+	"suspend" => "Suspend",
 ];
