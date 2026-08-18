@@ -16,7 +16,7 @@
             </x-slot:actions>
         </x-k.page-header>
 
-        <div class="k-grid k-grid--stats" style="margin-block-end:16px">
+        <div class="k-stats" style="margin-block-end:16px">
             <x-k.stat :label="translate('visitors')" :value="number_format($data['totals']['visitors'])" icon="customers" />
             <x-k.stat :label="translate('page_views')" :value="number_format($data['totals']['web_hits'])" icon="eye" />
             <x-k.stat :label="translate('api_requests')" :value="number_format($data['totals']['api_hits'])" icon="external" />

@@ -24,7 +24,7 @@
             <span class="k-badge" data-svc="failed">{{ translate('failed_jobs_24h') }} <span class="k-num" data-v="failed_24h">–</span></span>
         </div>
 
-        <div class="k-grid k-grid--stats" style="margin-block-end:16px">
+        <div class="k-stats" style="margin-block-end:16px">
             <x-k.stat :label="translate('requests_per_minute')" value="–" icon="trend-up" data-stat="requests_per_min" />
             <x-k.stat :label="translate('active_visitors')" value="–" icon="customers" data-stat="active_visitors" />
             <x-k.stat :label="translate('visitors_today')" value="–" icon="customers" data-stat="visitors_today" />
@@ -32,7 +32,7 @@
             <x-k.stat :label="translate('errors_last_hour')" value="–" icon="alert" data-stat="errors_hour" />
         </div>
 
-        <div class="k-grid k-grid--stats" style="margin-block-end:16px">
+        <div class="k-stats" style="margin-block-end:16px">
             <x-k.stat :label="translate('orders_today')" value="–" icon="orders" data-stat="orders_today" />
             <x-k.stat :label="translate('revenue_today')" value="–" icon="reports" data-stat="revenue_today" />
             <x-k.stat :label="translate('pending_orders')" value="–" icon="clock" data-stat="pending_orders" />

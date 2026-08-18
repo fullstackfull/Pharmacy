@@ -3098,4 +3098,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"release" => "Release",
 	"Developer_Portal" => "Developer Portal",
 	"copy_full_url" => "Copy full url",
+	"offline" => "Offline",
+	"bearer_badge_means_the_call_needs_an_authorization_token" => "Bearer badge means the call needs an authorization token",
+	"collecting" => "Collecting",
+	"filter_endpoints" => "Filter endpoints",
 ];
