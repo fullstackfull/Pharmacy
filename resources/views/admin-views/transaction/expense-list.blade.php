@@ -135,120 +135,97 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
-                    <h4 class="mb-0">
-                        {{ translate('total_Transactions') }}
-                        <span class="badge badge-info text-bg-info">{{ $expenseTransactionsTable->total() }}</span>
-                    </h4>
+        <x-k.data-view :title="translate('total_Transactions')" :count="$expenseTransactionsTable->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_by_Order_ID_or_Transaction_ID')">
 
-                    <div class="d-flex flex-wrap gap-3">
-                        <form action="" method="GET" class="mb-0">
-                            <div class="form-group">
-                                <div class="input-group">
-                                    <input type="hidden" name="date_type" value="{{ $date_type }}">
-                                    <input type="hidden" name="from" value="{{ $from }}">
-                                    <input type="hidden" name="to" value="{{ $to }}">
-                                    <input id="datatableSearch_" type="search" name="search" class="form-control"
-                                           value="{{ $search }}"
-                                           placeholder="{{ translate('search_by_Order_ID_or_Transaction_ID') }}">
-                                    <div class="input-group-append search-submit">
-                                        <button type="submit">
-                                            <i class="fi fi-rr-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.transaction.expense-transaction-summary-pdf', ['search'=>request('search'),'date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('download_PDF') }}
+                </a>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.transaction.expense-transaction-export-excel', ['search'=>request('search'), 'date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('SL') }}</th>
+                    <th>{{ translate('XID') }}</th>
+                    <th>{{ translate('transaction_Date') }}</th>
+                    <th>{{ translate('order_ID') }}</th>
+                    <th class="k-table__num">{{ translate('expense_Amount') }}</th>
+                    <th>{{ translate('expense_Type') }}</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($expenseTransactionsTable as $key => $transaction)
+                    <tr>
+                        <td><span class="k-num">{{ $expenseTransactionsTable->firstItem()+$key }}</span></td>
+                        <td><span class="k-num">{{ $transaction->orderTransaction->transaction_id }}</span></td>
+                        <td><span class="k-num">{{ date_format($transaction->updated_at, 'd F Y h:i:s a') }}</span></td>
+                        <td>
+                            <a class="title-color"
+                               href="{{ route('admin.orders.details', ['id' => $transaction->id]) }}">
+                                {{ $transaction->id }}
+                            </a>
+                        </td>
+                        <td class="k-table__num">
+                            <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: ($transaction?->refer_and_earn_discount ?? 0) + (($transaction['seller_is'] == 'admin' || $transaction->coupon_discount_bearer == 'inhouse') ? $transaction->discount_amount:0) + ($transaction->free_delivery_bearer == 'admin' ? $transaction->extra_discount : 0)), currencyCode: getCurrencyCode()) }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                @if ($transaction->coupon_discount_bearer == 'inhouse' || ($transaction->coupon_discount_bearer == 'seller' && $transaction->seller_is == 'admin'))
+                                    @if (isset($transaction->coupon->coupon_type))
+                                        @if ($transaction->coupon->coupon_type == 'free_delivery')
+                                            <div>{{ translate('Free_Delivery_Promotion') }}</div>
+                                        @else
+                                            <div>{{ ucwords(str_replace('_', ' ', ($transaction->coupon->coupon_type))) }}</div>
+                                        @endif
+                                    @elseif(!is_null($transaction->coupon_code) && $transaction?->coupon_code != 0)
+                                        <div>{{ translate('Coupon_Discount') }}</div>
+                                    @endif
+                                @endif
+                                @if ($transaction->free_delivery_bearer == 'admin')
+                                    <div>{{ ucwords(str_replace('_', ' ', $transaction->extra_discount_type)) }}</div>
+                                @endif
+                                @if($transaction?->refer_and_earn_discount > 0)
+                                    <div>{{ translate('Referral_Discount') }}</div>
+                                @endif
                             </div>
-                        </form>
-                        <a href="{{ route('admin.transaction.expense-transaction-summary-pdf', ['search'=>request('search'),'date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to')]) }}"
-                           class="btn btn-outline-primary text-nowrap">
-                            <i class="fi fi-rr-document"></i>
-                            <span class="fs-12">{{ translate('download_PDF') }}</span>
-                        </a>
+                        </td>
+                        <td>
+                            <div class="k-table__actions">
+                                <a href="{{ route('admin.transaction.pdf-order-wise-expense-transaction', ['id'=>$transaction->id]) }}"
+                                   class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('download_PDF') }}">
+                                    <x-k.icon name="download" :size="15" />
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                        <a type="button" class="btn btn-outline-primary"
-                           href="{{ route('admin.transaction.expense-transaction-export-excel', ['search'=>request('search'), 'date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to')]) }}">
-                            <i class="fi fi-sr-inbox-in"></i>
-                            <span class="fs-12">{{ translate('export') }}</span>
-                        </a>
-                    </div>
-                </div>
+            @if(count($expenseTransactionsTable) == 0)
+                <x-k.empty icon="reports" :title="translate('no_data_found')" />
+            @endif
 
-                <div class="table-responsive">
-                    <table id="datatable"
-                           class="table __table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{ translate('SL') }}</th>
-                            <th>{{ translate('XID') }}</th>
-                            <th>{{ translate('transaction_Date') }}</th>
-                            <th>{{ translate('order_ID') }}</th>
-                            <th>{{ translate('expense_Amount') }}</th>
-                            <th>{{ translate('expense_Type') }}</th>
-                            <th class="text-center">{{ translate('action') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($expenseTransactionsTable as $key => $transaction)
-                            <tr>
-                                <td>{{ $expenseTransactionsTable->firstItem()+$key }}</td>
-                                <td>{{ $transaction->orderTransaction->transaction_id }}</td>
-                                <td>{{ date_format($transaction->updated_at, 'd F Y h:i:s a') }}</td>
-                                <td>
-                                    <a class="title-color"
-                                       href="{{ route('admin.orders.details', ['id' => $transaction->id]) }}">
-                                        {{ $transaction->id }}
-                                    </a>
-                                </td>
-                                <td>
-                                    {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: ($transaction?->refer_and_earn_discount ?? 0) + (($transaction['seller_is'] == 'admin' || $transaction->coupon_discount_bearer == 'inhouse') ? $transaction->discount_amount:0) + ($transaction->free_delivery_bearer == 'admin' ? $transaction->extra_discount : 0)), currencyCode: getCurrencyCode()) }}
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-column gap-1">
-                                        @if ($transaction->coupon_discount_bearer == 'inhouse' || ($transaction->coupon_discount_bearer == 'seller' && $transaction->seller_is == 'admin'))
-                                            @if (isset($transaction->coupon->coupon_type))
-                                                @if ($transaction->coupon->coupon_type == 'free_delivery')
-                                                    <div>{{ translate('Free_Delivery_Promotion') }}</div>
-                                                @else
-                                                    <div>{{ ucwords(str_replace('_', ' ', ($transaction->coupon->coupon_type))) }}</div>
-                                                @endif
-                                            @elseif(!is_null($transaction->coupon_code) && $transaction?->coupon_code != 0)
-                                                <div>{{ translate('Coupon_Discount') }}</div>
-                                            @endif
-                                        @endif
-                                        @if ($transaction->free_delivery_bearer == 'admin')
-                                            <div>{{ ucwords(str_replace('_', ' ', $transaction->extra_discount_type)) }}</div>
-                                        @endif
-                                        @if($transaction?->refer_and_earn_discount > 0)
-                                            <div>{{ translate('Referral_Discount') }}</div>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-center">
-                                        <a href="{{ route('admin.transaction.pdf-order-wise-expense-transaction', ['id'=>$transaction->id]) }}"
-                                           class="btn btn-outline-success icon-btn">
-                                            <i class="fi fi-rr-download"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {{ $expenseTransactionsTable->links() }}
-                    </div>
-                </div>
-                @if(count($expenseTransactionsTable) == 0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+            @if ($expenseTransactionsTable->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $expenseTransactionsTable->firstItem() }}–{{ $expenseTransactionsTable->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $expenseTransactionsTable->total() }}</span>
+                    </span>
+                    <div>{!! $expenseTransactionsTable->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection
 

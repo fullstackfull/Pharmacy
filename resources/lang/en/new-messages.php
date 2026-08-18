@@ -3130,4 +3130,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"delivery_man_Review" => "Delivery man Review",
 	"emergency_contact_added_successfully" => "Emergency contact added successfully",
 	"earning_history" => "Earning history",
+	"wallet_bonus" => "Wallet bonus",
 ];
