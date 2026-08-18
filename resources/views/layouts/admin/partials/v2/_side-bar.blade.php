@@ -571,6 +571,15 @@
                 <div class="v2-ctx-group-body"></div>
             </div>
 
+            @if (Helpers::module_permission_check('reports'))
+                <div class="v2-ctx-group">
+                    <a class="v2-nav-item {{ Request::is('admin/analytics*') ? 'v2-is-active' : '' }}" data-item="analytics" href="{{ route('admin.analytics.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Analytics') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="analytics" aria-label="Pin"></button></div>
+                    </a>
+                </div>
+            @endif
+
             <div class="v2-ctx-group">
                 <div class="v2-ctx-group-head"><span>{{ translate('finance') }}</span></div>
                 <a class="v2-nav-item {{ (Request::is('admin/report/admin-earning') || Request::is('admin/report/vendor-earning')) ? 'v2-is-active' : '' }}" data-item="earnings" href="{{ route('admin.report.admin-earning') }}">
@@ -855,6 +864,19 @@
                 <div class="v2-ctx-group-body"></div>
             </div>
 
+            @if (Helpers::module_permission_check('system_settings'))
+                <div class="v2-ctx-group">
+                    <a class="v2-nav-item {{ Request::is('admin/monitoring*') ? 'v2-is-active' : '' }}" data-item="monitoring" href="{{ route('admin.monitoring.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Monitoring') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="monitoring" aria-label="Pin"></button></div>
+                    </a>
+                    <a class="v2-nav-item {{ Request::is('admin/developer*') ? 'v2-is-active' : '' }}" data-item="developer" href="{{ route('admin.developer.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Developer_Portal') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="developer" aria-label="Pin"></button></div>
+                    </a>
+                </div>
+            @endif
+
             @if (Helpers::module_permission_check('business_settings'))
                 <div class="v2-ctx-group">
                 <a class="v2-nav-item {{ Request::is('admin/settings') ? 'v2-is-active' : '' }}" data-item="settings-index" href="{{ route('admin.settings.index') }}">
@@ -1086,6 +1108,11 @@
             </button>
         </div>
     @endif
+
+    {{-- The store's own release version (version.json), not the vendor platform's. --}}
+    <div class="v2-version-badge" title="{{ translate('release') }} {{ getAppVersion()['released_at'] ?? '' }}">
+        v{{ getAppVersion()['version'] }}
+    </div>
 
 </aside>
 

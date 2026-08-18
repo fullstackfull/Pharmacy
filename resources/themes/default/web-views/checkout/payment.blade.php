@@ -53,8 +53,9 @@
                                                 @if ($cashOnDeliveryBtnShow && $cash_on_delivery['status'])
                                                     <div id="cod-for-cart" class="w-100 h-100 cod-for-cart">
                                                         <div class="card cursor-pointer">
-                                                            <form action="{{ route('checkout-complete') }}" method="get"
+                                                            <form action="{{ route('checkout-complete') }}" method="post"
                                                                   class="needs-validation" id="cash_on_delivery_form">
+                                                                @csrf
                                                                 <label class="m-0 pt-2 pb-1">
                                                                     <input type="hidden" name="payment_method"
                                                                            value="cash_on_delivery" checked>
@@ -318,7 +319,7 @@
                     @php($couponAmount = session()->has('coupon_discount') ? session('coupon_discount') : 0)
                     @php($totalAmount = $amount)
                     @php($remain_balance = $customer_balance - $totalAmount)
-                    <form action="{{ route('checkout-complete-wallet') }}" method="get" class="needs-validation">
+                    <form action="{{ route('checkout-complete-wallet') }}" method="post" class="needs-validation">
                         @csrf
                         <div class="modal-body">
                             <div class="form-row">
@@ -352,8 +353,10 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary"
                                     data-dismiss="modal">{{ translate('close') }}</button>
+                            {{-- >= 0: a balance exactly equal to the total is payable, the server
+                                 accepts it, and > 0 wrongly disabled the button for that case. --}}
                             <button type="submit" class="btn btn--primary"
-                                {{ $remain_balance > 0 ? '' : 'disabled' }}>{{ translate('submit') }}</button>
+                                {{ $remain_balance >= 0 ? '' : 'disabled' }}>{{ translate('submit') }}</button>
                         </div>
                     </form>
                 </div>
