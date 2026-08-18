@@ -1912,13 +1912,9 @@ $(".add-to-cart-details-form").on("submit", function (event) {
     event.preventDefault();
 });
 
-$(".add-to-cart-details-form input").on("change", () => {
-    getVariantPrice(".add-to-cart-details-form");
-});
-
-$(".add-to-cart-sticky-form input").on("change", () => {
-    getVariantPrice(".add-to-cart-sticky-form");
-});
+// The debounced input/change bindings above are the only variant_price
+// triggers; a second, un-debounced pair used to fire here as well, sending
+// two requests for every option or quantity change.
 
 let checkFirstTimeVariant = true;
 function getVariantPrice(formSelector = ".add-to-cart-details-form") {
