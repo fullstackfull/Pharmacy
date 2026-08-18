@@ -44,6 +44,12 @@ ok('order report data-view + rows', (await page.locator('.k-view').count()) === 
     && (await page.locator('.k-view .k-table tbody tr').count()) >= 1);
 ok('order report chart survives', (await page.locator('#apex_line-chart, .center-chart-area').count()) >= 1);
 
+// Product (all-product) report.
+await page.goto(BASE + '/admin/report/all-product', { waitUntil: 'load' });
+ok('product report renders', !(await hasServerError(page)));
+ok('product report data-view + rows', (await page.locator('.k-view').count()) === 1
+    && (await page.locator('.k-view .k-table tbody tr').count()) >= 1);
+
 ok('no console/JS/HTTP problems', problems.length === 0);
 if (problems.length) console.log('  problems:', problems.slice(0, 6));
 await browser.close();

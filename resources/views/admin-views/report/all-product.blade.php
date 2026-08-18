@@ -157,111 +157,81 @@
 
         @include('layouts.admin.partials._apexcharts',['title'=>'product_Statistics','statisticsValue'=>$chart_data['total_product'],'label'=>array_keys($chart_data['total_product']),'statisticsTitle'=>'total_product','getCurrency'=>false])
 
-        <div class="card card-body mt-3">
-            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                <form action="" method="GET">
-                    <div class="form-group">
-                        <div class="input-group">
-                            <input type="hidden" name="seller_id" value="{{ $seller_id }}">
-                            <input type="hidden" name="date_type" value="{{ $date_type }}">
-                            <input type="hidden" name="from" value="{{ $from }}">
-                            <input type="hidden" name="to" value="{{ $to }}">
-                            <input id="datatableSearch_" type="search" name="search" class="form-control min-w-300" placeholder="{{translate('search_product_name')}}" value="{{ $search }}">
-                            <div class="input-group-append search-submit">
-                                <button type="submit">
-                                    <i class="fi fi-rr-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-                <div class="dropdown">
-                    <a type="button" class="btn btn-outline-primary" href="{{ route('admin.report.all-product-excel', ['seller_id' => request('seller_id'), 'search' => request('search'), 'date_type' => request('date_type'), 'from' => request('from'), 'to' => request('to')]) }}">
-                        <i class="fi fi-sr-inbox-in"></i>
-                        <span class="fs-12">{{ translate('export') }}</span>
-                    </a>
-                </div>
-            </div>
+        <div class="mt-3">
+        <x-k.data-view :title="translate('total_Products')" :count="$products->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_product_name')">
 
-            <div class="table-responsive" id="products-table">
-                <table
-                    class="table table-hover __table table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 {{Session::get('direction') === "rtl" ? 'text-right' : 'text-left'}}">
-                    <thead class="thead-light thead-50 text-capitalize">
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.report.all-product-excel', ['seller_id' => request('seller_id'), 'search' => request('search'), 'date_type' => request('date_type'), 'from' => request('from'), 'to' => request('to')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('product_Name') }}</th>
+                    <th class="k-table__num">{{ translate('product_Unit_Price') }}</th>
+                    <th class="k-table__num">{{ translate('total_Amount_Sold') }}</th>
+                    <th class="k-table__num">{{ translate('total_Quantity_Sold') }}</th>
+                    <th class="k-table__num">{{ translate('average_Product_Value') }}</th>
+                    <th class="k-table__num">{{ translate('current_Stock_Amount') }}</th>
+                    <th>{{ translate('average_Ratings') }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($products as $product)
+                    @php
+                        $soldAmount = $product->orderDetails[0]->total_sold_amount ?? 0;
+                        $soldQuantity = $product->orderDetails[0]->product_quantity ?? 0;
+                    @endphp
                     <tr>
-                        <th>{{translate('SL')}}</th>
-                        <th>
-                            {{translate('product_Name')}}
-                        </th>
-                        <th>
-                            {{translate('product_Unit_Price')}}
-                        </th>
-                        <th>
-                            {{translate('total_Amount_Sold')}}
-                        </th>
-                        <th>
-                            {{translate('total_Quantity_Sold')}}
-                        </th>
-                        <th>
-                            <span>{{translate('average_Product_Value')}} </span>
-                        </th>
-                        <th>
-                            {{translate('current_Stock_Amount')}}
-                        </th>
-                        <th>
-                            {{translate('average_Ratings')}}
-                        </th>
+                        <td>
+                            <a href="{{route('admin.products.view',['addedBy'=>($product['added_by'] =='seller'?'vendor' : 'in-house'),'id'=>$product['id']])}}"
+                               class="k-truncate" style="display:block;max-inline-size:260px" title="{{ $product['name'] }}">
+                                {{ $product['name'] }}
+                            </a>
+                        </td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product->unit_price), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $soldAmount), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ $soldQuantity }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $soldAmount / max(1, $soldQuantity)), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num">
+                            @if ($product->product_type == 'digital')
+                                <x-k.badge :tone="$product->status == 1 ? 'success' : 'danger'">
+                                    {{ $product->status == 1 ? translate('available') : translate('not_available') }}
+                                </x-k.badge>
+                            @else
+                                <span class="k-num">{{ $product->current_stock }}</span>
+                            @endif
+                        </td>
+                        <td>
+                            <span class="k-num">{{ count($product->rating) > 0 ? number_format($product->rating[0]->average, 2, '.', ' ') : 0 }}</span>
+                            <span class="k-text-subtle">({{ $product->reviews->count() }})</span>
+                        </td>
                     </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($products as $key=>$product)
-                        <tr>
-                            <td>{{ $products->firstItem()+$key }}</td>
-                            <td>
-                                <a href="{{route('admin.products.view',['addedBy'=>($product['added_by'] =='seller'?'vendor' : 'in-house'),'id'=>$product['id']])}}">
-                                    <span class="media-body text-dark hover-primary">
-                                        {{\Illuminate\Support\Str::limit($product['name'], 20)}}
-                                    </span>
-                                </a>
-                            </td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product->unit_price), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: isset($product->orderDetails[0]->total_sold_amount) ? $product->orderDetails[0]->total_sold_amount : 0), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ isset($product->orderDetails[0]->product_quantity) ? $product->orderDetails[0]->product_quantity : 0 }}</td>
-                            <td>
-                                {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: (
-                                        isset($product->orderDetails[0]->total_sold_amount) ? $product->orderDetails[0]->total_sold_amount : 0) /
-                                        (isset($product->orderDetails[0]->product_quantity) ? $product->orderDetails[0]->product_quantity : 1)
-                                    ), currencyCode: getCurrencyCode()) }}
-                            </td>
-                            <td>
-                                {{ $product->product_type == 'digital' ? ($product->status==1 ? translate('available') : translate('not_available')) : $product->current_stock }}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-1 lh-1">
-                                    <div class="rating d-flex align-items-center gap-1">
-                                        <i class="fi fi-sr-star text-warning-dark fs-12"></i>
-                                        <span class="fw-semibold">
-                                            {{count($product->rating)>0?number_format($product->rating[0]->average, 2, '.', ' '):0}}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        ({{$product->reviews->count()}})
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
+                @endforeach
+                </tbody>
+            </table>
 
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                    {!! $products->links() !!}
-                </div>
-            </div>
             @if(count($products)==0)
-                @include('layouts.admin.partials._empty-state',['text'=>'no_product_found'],['image'=>'default'])
+                <x-k.empty icon="catalog" :title="translate('no_product_found')"
+                           :text="$search ? translate('no_product_matches_your_search') : null" />
             @endif
+
+            @if ($products->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $products->firstItem() }}–{{ $products->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $products->total() }}</span>
+                    </span>
+                    <div>{!! $products->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
         </div>
     </div>
 @endsection
