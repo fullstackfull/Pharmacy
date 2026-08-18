@@ -3278,4 +3278,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"no_roles_yet" => "No roles yet",
 	"channel" => "Channel",
 	"try_payment_again" => "Try payment again",
+	"base_cost_per_kg" => "Base cost per kg",
+	"withdrawn" => "Withdrawn",
+	"sort" => "Sort",
+	"request_payout" => "Request payout",
+	"submit_for_review" => "Submit for review",
 ];
