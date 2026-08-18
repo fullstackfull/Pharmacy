@@ -3136,4 +3136,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"invaild_review" => "Invaild review",
 	"earning_status" => "Earning status",
 	"not_received" => "Not received",
+	"no_withdraw_method_found" => "No withdraw method found",
+	"Family_Size_Trolley_Case_Long_Lasting_and_8_Wheel_Waterproof_Travel_bag" => "Family Size Trolley Case Long Lasting and 8 Wheel Waterproof Travel bag",
 ];
