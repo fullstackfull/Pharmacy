@@ -59,51 +59,49 @@
             </div>
 
             <div class="col-lg-7">
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0">{{ translate('your_documents') }}</h5></div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>{{ translate('document') }}</th>
-                                        <th>{{ translate('submitted') }}</th>
-                                        <th>{{ translate('status') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                @php($map = ['pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger', 'expired' => 'secondary'])
-                                @forelse ($documents as $doc)
-                                    <tr>
-                                        <td>
-                                            {{ translate($doc->document_type) }}
-                                            @if ($doc->document_number)<div class="fs-10 text-muted">{{ $doc->document_number }}</div>@endif
-                                            @if ($doc->file_path && Route::has('vendor.business-settings.seller-verification.document'))
-                                                <a class="fs-10 d-inline-block mt-1" target="_blank"
-                                                   href="{{ route('vendor.business-settings.seller-verification.document', $doc->id) }}">
-                                                    {{ translate('view_file') }}
-                                                </a>
-                                            @endif
-                                        </td>
-                                        <td class="fs-12">{{ $doc->created_at?->toDateString() }}</td>
-                                        <td>
-                                            <span class="badge bg-{{ $map[$doc->status] ?? 'secondary' }} text-dark">{{ translate($doc->status) }}</span>
-                                            @if ($doc->status === 'rejected' && $doc->rejection_reason)
-                                                <div class="fs-10 text-danger">{{ $doc->rejection_reason }}</div>
-                                            @endif
-                                            @if ($doc->status === 'approved' && $doc->expires_at)
-                                                <div class="fs-10 text-muted">{{ translate('expires') }}: {{ $doc->expires_at->toDateString() }}</div>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="3" class="text-center text-muted py-4">{{ translate('you_have_not_submitted_any_documents_yet') }}</td></tr>
-                                @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                <x-k.card :title="translate('your_documents')" :padded="false">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ translate('document') }}</th>
+                                    <th>{{ translate('submitted') }}</th>
+                                    <th>{{ translate('status') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @php($docTones = ['pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger', 'expired' => 'neutral'])
+                            @foreach ($documents as $doc)
+                                <tr>
+                                    <td>
+                                        {{ translate($doc->document_type) }}
+                                        @if ($doc->document_number)<div class="k-text-subtle k-num">{{ $doc->document_number }}</div>@endif
+                                        @if ($doc->file_path && Route::has('vendor.business-settings.seller-verification.document'))
+                                            <a class="d-inline-block mt-1" target="_blank"
+                                               href="{{ route('vendor.business-settings.seller-verification.document', $doc->id) }}">
+                                                {{ translate('view_file') }}
+                                            </a>
+                                        @endif
+                                    </td>
+                                    <td><span class="k-num">{{ $doc->created_at?->toDateString() }}</span></td>
+                                    <td>
+                                        <x-k.badge :tone="$docTones[$doc->status] ?? 'neutral'">{{ translate($doc->status) }}</x-k.badge>
+                                        @if ($doc->status === 'rejected' && $doc->rejection_reason)
+                                            <div class="text-danger">{{ $doc->rejection_reason }}</div>
+                                        @endif
+                                        @if ($doc->status === 'approved' && $doc->expires_at)
+                                            <div class="k-text-subtle">{{ translate('expires') }}: <span class="k-num">{{ $doc->expires_at->toDateString() }}</span></div>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
                     </div>
-                </div>
+                    @if ($documents->isEmpty())
+                        <x-k.empty icon="info" :title="translate('you_have_not_submitted_any_documents_yet')" />
+                    @endif
+                </x-k.card>
             </div>
         </div>
     </div>
