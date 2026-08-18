@@ -196,39 +196,43 @@
                     $(this).easyZoom();
                 });
 
-                let thumbsSwiper = new Swiper("#quickviewSliderThumb2-" + productId, {
-                    spaceBetween: 10,
-                    slidesPerView: 'auto',
-                    watchSlidesProgress: true,
-                    navigation: {
-                        nextEl: "#swiper-quickview-button-next-" + productId,
-                        prevEl: "#swiper-quickview-button-prev-" + productId,
-                    },
-                });
+                if (document.querySelector("#quickviewSlider2-" + productId) && document.querySelector("#quickviewSliderThumb2-" + productId)) {
+                    let thumbsSwiper = new Swiper("#quickviewSliderThumb2-" + productId, {
+                        spaceBetween: 10,
+                        slidesPerView: 'auto',
+                        watchSlidesProgress: true,
+                        navigation: {
+                            nextEl: "#swiper-quickview-button-next-" + productId,
+                            prevEl: "#swiper-quickview-button-prev-" + productId,
+                        },
+                    });
 
-                new Swiper("#quickviewSlider2-" + productId, {
-                    slidesPerView: 1,
-                    spaceBetween: 5,
-                    loop: false,
-                    thumbs: { swiper: thumbsSwiper },
-                });
+                    new Swiper("#quickviewSlider2-" + productId, {
+                        slidesPerView: 1,
+                        spaceBetween: 5,
+                        loop: false,
+                        thumbs: { swiper: thumbsSwiper },
+                    });
+                }
 
-                let offcanvasThumbsSwiper = new Swiper("#offcanvasQuickviewSliderThumb2-" + productId, {
-                    spaceBetween: 10,
-                    slidesPerView: 'auto',
-                    watchSlidesProgress: true,
-                    navigation: {
-                        nextEl: "#offcanvas-swiper-button-next-" + productId,
-                        prevEl: "#offcanvas-swiper-button-prev-" + productId,
-                    },
-                });
+                if (document.querySelector("#offcanvasQuickviewSlider2-" + productId) && document.querySelector("#offcanvasQuickviewSliderThumb2-" + productId)) {
+                    let offcanvasThumbsSwiper = new Swiper("#offcanvasQuickviewSliderThumb2-" + productId, {
+                        spaceBetween: 10,
+                        slidesPerView: 'auto',
+                        watchSlidesProgress: true,
+                        navigation: {
+                            nextEl: "#offcanvas-swiper-button-next-" + productId,
+                            prevEl: "#offcanvas-swiper-button-prev-" + productId,
+                        },
+                    });
 
-                new Swiper("#offcanvasQuickviewSlider2-" + productId, {
-                    slidesPerView: 1,
-                    spaceBetween: 5,
-                    loop: false,
-                    thumbs: { swiper: offcanvasThumbsSwiper },
-                });
+                    new Swiper("#offcanvasQuickviewSlider2-" + productId, {
+                        slidesPerView: 1,
+                        spaceBetween: 5,
+                        loop: false,
+                        thumbs: { swiper: offcanvasThumbsSwiper },
+                    });
+                }
             });
         });
 

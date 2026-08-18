@@ -73,10 +73,10 @@
                             <span class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $dealProducts->total() }}</span>
                         </h3>
                     </div>
-                    <div class="table-responsive">
+                    <div class="k-table-wrap">
                         <table
-                            class="table table-hover table-borderless table-thead-bordered align-middle">
-                            <thead class="text-capitalize">
+                            class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('Product Name') }}</th>

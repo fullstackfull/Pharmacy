@@ -24,10 +24,10 @@
             </div>
         </div>
         <div class="card-body">
-            <div class="table-responsive datatable-custom">
+            <div class="k-table-wrap">
                 <table
-                    class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+                    class="k-table">
+                    <thead>
                     <tr>
                         <th>{{ translate('sl') }}</th>
                         <th>
@@ -117,10 +117,10 @@
             </form>
         @endif
         <div class="card-body p-0">
-            <div class="table-responsive datatable-custom">
+            <div class="k-table-wrap">
                 <table
-                    class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+                    class="k-table">
+                    <thead>
                     <tr>
                         <th>{{ translate('sl') }}</th>
                         <th>
