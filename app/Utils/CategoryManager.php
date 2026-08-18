@@ -10,22 +10,10 @@ use App\Models\FlashDeal;
 use App\Models\FlashDealProduct;
 use App\Models\Product;
 use App\Models\PublishingHouse;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class CategoryManager
 {
-    public static function parents(): Collection|array
-    {
-        return Category::with(['childes.childes'])->where('position', 0)->orderBy('priority', 'desc')->get();
-    }
-
-    public static function child($parent_id)
-    {
-        return Category::where(['parent_id' => $parent_id])->get();
-    }
-
     public static function products($category_id, $request = null, $dataLimit = null)
     {
         $user = Helpers::getCustomerInformation($request);
@@ -150,8 +138,17 @@ class CategoryManager
 
     public static function getCategoriesWithCountingAndPriorityWiseSorting($dataLimit = null, $dataForm = null)
     {
-        $segment = str_replace('-', '_', Str::slug(request()->segment(1)));
-        $cacheKey = 'cache_main_categories_list_' . (getDefaultLanguage() ?? 'en') . '_' . (request('offer_type') ?? 'default'). '_' . ($dataForm ?? 'default').(request('data_from', 'default')). $segment;
+        // The payload depends on language, offer_type, dataForm and data_from —
+        // nothing else. The old key also appended the first URL segment, minting
+        // 20+ identical heavy entries (one per section of the site, per language),
+        // and glued the last two parts with no delimiter so distinct inputs could
+        // collide.
+        $cacheKey = 'cache_main_categories_list_' . implode('_', [
+            getDefaultLanguage() ?? 'en',
+            request('offer_type') ?? 'default',
+            $dataForm ?? 'default',
+            request('data_from', 'default'),
+        ]);
         $cacheKeys = Cache::get(CACHE_CONTAINER_FOR_LANGUAGE_WISE_CACHE_KEYS, []);
 
         if (!in_array($cacheKey, $cacheKeys)) {
@@ -159,17 +156,17 @@ class CategoryManager
             Cache::put(CACHE_CONTAINER_FOR_LANGUAGE_WISE_CACHE_KEYS, $cacheKeys, CACHE_FOR_3_HOURS);
         }
 
-        $featuredDealProducts = [];
-        if (request('offer_type') == 'featured_deal') {
-            $featuredDealID = FlashDeal::where(['deal_type' => 'feature_deal', 'status' => 1])->whereDate('start_date', '<=', date('Y-m-d'))
-                ->whereDate('end_date', '>=', date('Y-m-d'))->pluck('id')->first();
-            $featuredDealProductIDs = $featuredDealID ? FlashDealProduct::where('flash_deal_id', $featuredDealID)->pluck('product_id')->toArray() : [];
-            $featuredDealProducts = Product::whereIn('id', $featuredDealProductIDs)->get();
-        }
+        $categories = Cache::remember($cacheKey, CACHE_FOR_3_HOURS, function () use ($dataForm) {
+                // Inside the cache on purpose: these used to run on every call —
+                // even on cache hits — and hydrated full products only to read ids.
+                $featuredDealProductIDs = [];
+                if (request('offer_type') == 'featured_deal') {
+                    $featuredDealID = FlashDeal::where(['deal_type' => 'feature_deal', 'status' => 1])->whereDate('start_date', '<=', date('Y-m-d'))
+                        ->whereDate('end_date', '>=', date('Y-m-d'))->pluck('id')->first();
+                    $featuredDealProductIDs = $featuredDealID ? FlashDealProduct::where('flash_deal_id', $featuredDealID)->pluck('product_id')->toArray() : [];
+                }
 
-
-        $categories = Cache::remember($cacheKey, CACHE_FOR_3_HOURS, function () use ($dataForm, $featuredDealProducts) {
-                return Category::with(['product' => function ($query) {
+                $categories = Category::with(['product' => function ($query) {
                     return $query->active()->withCount(['orderDetails'])->with(['clearanceSale' => function ($query) {
                         return $query->active();
                     }]);
@@ -182,7 +179,7 @@ class CategoryManager
                         return $query->active();
                     });
                 })
-                ->withCount(['product' => function ($query) use ($dataForm, $featuredDealProducts) {
+                ->withCount(['product' => function ($query) use ($dataForm, $featuredDealProductIDs) {
                     return $query->active()->when(request('offer_type') == 'clearance_sale', function ($query) {
                         return $query->whereHas('clearanceSale', function ($query) {
                             return $query->active();
@@ -194,16 +191,16 @@ class CategoryManager
                     ->when(request('data_from') == 'publishing_house', function ($query) {
                         return $query->where(['product_type' => 'digital']);
                     })
-                    ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProducts) {
-                        return $query->whereIn('id', $featuredDealProducts?->pluck('id')?->toArray() ?? [0]);
+                    ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProductIDs) {
+                        return $query->whereIn('id', $featuredDealProductIDs ?: [0]);
                     })
                     ->when($dataForm == 'flash-deals', function ($query) {
                         return $query->whereHas('flashDealProducts.flashDeal');
                     });
                 }])
-                ->with(['childes' => function ($query) use ($dataForm, $featuredDealProducts) {
-                    return $query->with(['childes' => function ($query) use ($dataForm, $featuredDealProducts) {
-                        return $query->withCount(['subSubCategoryProduct' => function ($query) use ($featuredDealProducts) {
+                ->with(['childes' => function ($query) use ($dataForm, $featuredDealProductIDs) {
+                    return $query->with(['childes' => function ($query) use ($dataForm, $featuredDealProductIDs) {
+                        return $query->withCount(['subSubCategoryProduct' => function ($query) use ($featuredDealProductIDs) {
                             return $query->active()->when(request('offer_type') == 'clearance_sale', function ($query) {
                                 return $query->whereHas('clearanceSale', function ($query) {
                                     return $query->active();
@@ -215,11 +212,11 @@ class CategoryManager
                             ->when(request('data_from') == 'publishing_house', function ($query) {
                                 return $query->where(['product_type' => 'digital']);
                             })
-                            ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProducts) {
-                                return $query->whereIn('id', $featuredDealProducts?->pluck('id')?->toArray() ?? [0]);
+                            ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProductIDs) {
+                                return $query->whereIn('id', $featuredDealProductIDs ?: [0]);
                             });
                         }])->where('position', 2);
-                    }])->withCount(['subCategoryProduct' => function ($query) use ($dataForm, $featuredDealProducts) {
+                    }])->withCount(['subCategoryProduct' => function ($query) use ($dataForm, $featuredDealProductIDs) {
                         return $query->active()->when(request('offer_type') == 'clearance_sale', function ($query) {
                             return $query->whereHas('clearanceSale', function ($query) {
                                 return $query->active();
@@ -231,15 +228,26 @@ class CategoryManager
                         ->when(request('data_from') == 'publishing_house', function ($query) {
                             return $query->where(['product_type' => 'digital']);
                         })
-                        ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProducts) {
-                            return $query->whereIn('id', $featuredDealProducts?->pluck('id')?->toArray() ?? [0]);
+                        ->when(request('offer_type') == 'featured_deal', function ($query) use ($featuredDealProductIDs) {
+                            return $query->whereIn('id', $featuredDealProductIDs ?: [0]);
                         })
                         ->when($dataForm == 'flash-deals', function ($query) {
                             return $query->whereHas('flashDealProducts.flashDeal');
                         });
                     }])
                     ->where('position', 1);
-                }, 'childes.childes'])->where('position', 0)->get();
+                }])->where('position', 0)->get();
+
+                // The eager-loaded products exist for exactly one consumer: the
+                // most_order sort's sum of order_details_count. Store that sum and
+                // drop the products — the cached tree used to serialize EVERY
+                // active product of every root category on every page view.
+                $categories->each(function ($category) {
+                    $category->order_count = (int) ($category->product?->sum('order_details_count') ?? 0);
+                    unset($category->product);
+                });
+
+                return $categories;
         });
 
         $categoriesProcessed = self::getPriorityWiseCategorySortQuery(query: $categories);
@@ -255,7 +263,11 @@ class CategoryManager
         if ($categoryProductSortBy && ($categoryProductSortBy['custom_sorting_status'] == 1)) {
             if ($categoryProductSortBy['sort_by'] == 'most_order') {
                 return $query->map(function ($category) {
-                    $category->order_count = $category?->product?->sum('order_details_count') ?? 0;
+                    // Cached trees carry the sum precomputed (products dropped);
+                    // ad-hoc queries that still eager-load products keep working.
+                    if (!isset($category->order_count)) {
+                        $category->order_count = $category?->product?->sum('order_details_count') ?? 0;
+                    }
                     return $category;
                 })->sortByDesc('order_count');
             } elseif ($categoryProductSortBy['sort_by'] == 'latest_created') {
