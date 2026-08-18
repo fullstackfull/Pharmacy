@@ -49,97 +49,68 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header border-0">
-                <div class="d-flex flex-wrap w-100 gap-3 align-items-center justify-content-between">
-                    <h4>
-                        {{translate('total_Products')}}
-                        <span class="badge badge-soft-dark radius-50 fs-12">{{ $products->total() }}</span>
-                    </h4>
+        <x-k.data-view :title="translate('total_Products')" :count="$products->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_Product_Name')">
 
-                    <div class="d-flex flex-wrap gap-3 align-items-center">
-                        <form action="" method="GET">
-                            <div class="input-group input-group-merge input-group-custom">
-                                <div class="input-group-prepend">
-                                    <div class="input-group-text">
-                                        <i class="tio-search"></i>
-                                    </div>
-                                </div>
-                                <input type="hidden" value="{{ $category_id }}" name="category_id">
-                                <input id="datatableSearch_" type="search" name="search" class="form-control"
-                                       placeholder="{{translate('search_Product_Name')}}" aria-label="Search orders"
-                                       value="{{ $search }}">
-                                <button type="submit" class="btn btn--primary">{{translate('search')}}</button>
-                            </div>
-                        </form>
-                        <div class="dropdown">
-                            <a type="button" class="btn btn-outline--primary text-nowrap" href="{{ route('vendor.report.product-stock-export', ['category_id' => request('category_id'), 'sort' => request('sort'), 'search' => request('search')]) }}">
-                                <img width="14" src="{{dynamicAsset(path: 'public/assets/back-end/img/excel.png')}}" class="excel" alt="">
-                                <span class="ps-2">{{ translate('export') }}</span>
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('vendor.report.product-stock-export', ['category_id' => request('category_id'), 'sort' => request('sort'), 'search' => request('search')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('product_Name')}}</th>
+                    <th>{{translate('last_Updated_Stock')}}</th>
+                    <th class="k-table__num">{{translate('current_Stock')}}</th>
+                    <th>{{translate('status')}}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($products as $key=>$data)
+                    <tr>
+                        <td><span class="k-num">{{$products->firstItem()+$key}}</span></td>
+                        <td>
+                            <a href="{{route('vendor.products.view',[$data['id']])}}"
+                               class="title-color k-truncate" style="display:block;max-inline-size:280px"
+                               title="{{ $data['name'] }}">
+                                {{ $data['name'] }}
                             </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" id="products-table">
-                    <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 {{Session::get('direction') === "rtl" ? 'text-right' : 'text-left'}}">
-                        <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{translate('SL')}}</th>
-                            <th>
-                                {{translate('product_Name')}}
-                            </th>
-                            <th>
-                                {{translate('last_Updated_Stock')}}
-                            </th>
-                            <th class="text-center">
-                                {{translate('current_Stock')}}
-                            </th>
-                            <th class="text-center">
-                                {{translate('status')}}
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($products as $key=>$data)
-                            <tr>
-                                <td>{{$products->firstItem()+$key}}</td>
-                                <td>
-                                    <div class="p-name">
-                                        <a href="{{route('vendor.products.view',[$data['id']])}}"
-                                           class="media align-items-center gap-2 title-color text-nowrap text-truncate w-100 d--block">
-                                            {{ $data['name'] }}
-                                        </a>
-                                    </div>
-                                </td>
-                                <td>{{ date('d M Y', $data['updated_at'] ? strtotime($data['updated_at']) : null) }}</td>
-                                <td class="text-center">{{$data['current_stock']}}</td>
-                                <td>
-                                    <div class="text-center">
-                                        @if($data['current_stock'] >= $stockLimit)
-                                            <span class="badge __badge badge-soft-success">{{translate('In-Stock')}}</span>
-                                        @elseif($data['current_stock']  == 0)
-                                            <span class="badge __badge badge-soft-warning">{{translate('out_of_Stock')}}</span>
-                                        @elseif($data['current_stock'] < $stockLimit)
-                                            <span class="badge __badge badge-soft--primary">{{translate('soon_Stock_Out')}}</span>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                        {!! $products->links() !!}
-                    </div>
-                </div>
-                @if(count($products)==0)
-                    @include('layouts.vendor.partials._empty-state',['text'=>'no_product_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+                        </td>
+                        <td><span class="k-num">{{ date('d M Y', $data['updated_at'] ? strtotime($data['updated_at']) : null) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{$data['current_stock']}}</span></td>
+                        <td>
+                            @if($data['current_stock'] >= $stockLimit)
+                                <x-k.badge tone="success">{{translate('In-Stock')}}</x-k.badge>
+                            @elseif($data['current_stock']  == 0)
+                                <x-k.badge tone="danger">{{translate('out_of_Stock')}}</x-k.badge>
+                            @elseif($data['current_stock'] < $stockLimit)
+                                <x-k.badge tone="warning">{{translate('soon_Stock_Out')}}</x-k.badge>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+
+            @if(count($products)==0)
+                <x-k.empty icon="catalog" :title="translate('no_product_found')" />
+            @endif
+
+            @if ($products->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $products->firstItem() }}–{{ $products->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $products->total() }}</span>
+                    </span>
+                    <div>{!! $products->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection
