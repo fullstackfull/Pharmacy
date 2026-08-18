@@ -44,6 +44,7 @@ class OrderService
             'order_type' => 'POS',
             'shipping_address_data' => $shippingAddress,
             'shipping_responsibility' => $shippingResponsibility,
+            'verification_code' => $isDelivery ? rand(100000, 999999) : null,
             'checked' => 1,
             'total_tax_amount' => $totalTaxAmount,
             'tax_type' => $taxConfig['SystemTaxVatType'],
