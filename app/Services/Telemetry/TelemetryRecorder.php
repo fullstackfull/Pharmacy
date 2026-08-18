@@ -1,0 +1,203 @@
+<?php
+
+namespace App\Services\Telemetry;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Writes one telemetry row per request, after the response has gone out.
+ *
+ * Everything here is deliberately defensive: telemetry runs on every web and
+ * API request of a live store, so it must cost one or two inserts at most and
+ * must never surface an error to the shopper — record() swallows everything.
+ *
+ * Web visitors are identified by a first-party cookie (k_vid) so visits,
+ * sources and sessions can be counted; API traffic (the customer and vendor
+ * apps) is identified by the authenticated token user. Product and shop
+ * resolution is NOT done here — the raw path/route is stored and the nightly
+ * rollup does the joining, keeping the request path free of extra queries.
+ */
+class TelemetryRecorder
+{
+    public const VISITOR_COOKIE = 'k_vid';
+
+    public function record(Request $request, Response $response, float $startedAt): void
+    {
+        try {
+            if (!config('telemetry.enabled')) {
+                return;
+            }
+
+            $path = trim($request->path(), '/');
+            foreach (config('telemetry.ignore_prefixes', []) as $prefix) {
+                if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                    return;
+                }
+            }
+
+            $channel = $this->channelOf($path);
+            [$userType, $userId] = $this->identify($request, $channel);
+            $now = Carbon::now();
+
+            $sessionId = null;
+            $visitorId = null;
+            if ($channel === 'web') {
+                $visitorId = $request->cookie(self::VISITOR_COOKIE) ?: ($request->attributes->get('telemetry_new_visitor_id') ?: null);
+                if ($visitorId && $this->isHtmlNavigation($request, $response)) {
+                    $sessionId = $this->touchSession($request, $visitorId, $userType, $userId, $now);
+                }
+            } else {
+                $visitorId = $userId ? "api:{$userType}:{$userId}" : 'api:guest:' . $this->hashIp($request);
+            }
+
+            DB::table('telemetry_requests')->insert([
+                'session_id' => $sessionId,
+                'visitor_id' => $visitorId ? Str::limit($visitorId, 60, '') : null,
+                'channel' => $channel,
+                'method' => Str::limit($request->method(), 8, ''),
+                'route_name' => Str::limit(optional($request->route())->getName() ?? '', 120, '') ?: null,
+                'path' => Str::limit($path === '' ? '/' : $path, 191, ''),
+                'status' => $response->getStatusCode(),
+                'duration_ms' => max(0, (int) round((microtime(true) - $startedAt) * 1000)),
+                'user_type' => $userType,
+                'user_id' => $userId,
+                'referrer_domain' => $this->referrerDomain($request),
+                'created_at' => $now,
+            ]);
+        } catch (\Throwable $e) {
+            // Telemetry never breaks a request.
+        }
+    }
+
+    /** New web visitors get their cookie queued here, during the request. */
+    public function ensureVisitorCookie(Request $request): void
+    {
+        try {
+            if (!config('telemetry.enabled') || $this->channelOf(trim($request->path(), '/')) !== 'web') {
+                return;
+            }
+            if (!$request->cookie(self::VISITOR_COOKIE)) {
+                $visitorId = Str::random(32);
+                $request->attributes->set('telemetry_new_visitor_id', $visitorId);
+                cookie()->queue(cookie(self::VISITOR_COOKIE, $visitorId, 60 * 24 * 365, null, null, null, false));
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
+
+    private function channelOf(string $path): string
+    {
+        return str_starts_with($path, 'api/') ? 'api' : 'web';
+    }
+
+    /** @return array{0: ?string, 1: ?int} */
+    private function identify(Request $request, string $channel): array
+    {
+        if (auth('admin')->check()) {
+            return ['admin', auth('admin')->id()];
+        }
+        if (auth('seller')->check()) {
+            return ['vendor', auth('seller')->id()];
+        }
+        if (auth('customer')->check()) {
+            return ['customer', auth('customer')->id()];
+        }
+        if ($channel === 'api' && ($user = $request->user('api'))) {
+            return ['customer', $user->id];
+        }
+        return ['guest', null];
+    }
+
+    /**
+     * Sessions only advance on real page navigations — ajax polling and asset
+     * fetches must not inflate pageview counts.
+     */
+    private function isHtmlNavigation(Request $request, Response $response): bool
+    {
+        return $request->isMethod('GET')
+            && !$request->ajax()
+            && str_contains((string) $response->headers->get('Content-Type'), 'text/html');
+    }
+
+    private function touchSession(Request $request, string $visitorId, ?string $userType, ?int $userId, Carbon $now): ?int
+    {
+        $gap = (int) config('telemetry.session_gap_minutes', 30);
+        $current = DB::table('visit_sessions')
+            ->where('visitor_id', $visitorId)
+            ->where('last_activity_at', '>=', $now->copy()->subMinutes($gap))
+            ->orderByDesc('id')
+            ->first(['id']);
+
+        if ($current) {
+            DB::table('visit_sessions')->where('id', $current->id)->update([
+                'last_activity_at' => $now,
+                'pageviews' => DB::raw('pageviews + 1'),
+                'user_type' => $userType,
+                'user_id' => $userId,
+            ]);
+            return $current->id;
+        }
+
+        return (int) DB::table('visit_sessions')->insertGetId([
+            'visitor_id' => $visitorId,
+            'channel' => 'web',
+            'user_type' => $userType,
+            'user_id' => $userId,
+            'entry_path' => Str::limit(trim($request->path(), '/') ?: '/', 191, ''),
+            'referrer_domain' => $this->referrerDomain($request),
+            'utm_source' => Str::limit((string) $request->query('utm_source'), 96, '') ?: null,
+            'utm_medium' => Str::limit((string) $request->query('utm_medium'), 96, '') ?: null,
+            'utm_campaign' => Str::limit((string) $request->query('utm_campaign'), 96, '') ?: null,
+            'device' => $this->device($request),
+            'ip_hash' => $this->hashIp($request),
+            'pageviews' => 1,
+            'started_at' => $now,
+            'last_activity_at' => $now,
+        ]);
+    }
+
+    private function referrerDomain(Request $request): ?string
+    {
+        $referrer = (string) $request->headers->get('referer');
+        if ($referrer === '') {
+            return null;
+        }
+        $host = parse_url($referrer, PHP_URL_HOST);
+        if (!$host) {
+            return null;
+        }
+        // Internal navigation is not a traffic source.
+        if (strcasecmp($host, (string) $request->getHost()) === 0) {
+            return null;
+        }
+        return Str::limit(strtolower($host), 191, '');
+    }
+
+    private function device(Request $request): string
+    {
+        $agent = strtolower((string) $request->userAgent());
+        if ($agent === '') {
+            return 'unknown';
+        }
+        if (preg_match('/bot|crawl|spider|slurp|curl|wget|httpclient|python-requests/', $agent)) {
+            return 'bot';
+        }
+        if (str_contains($agent, 'ipad') || (str_contains($agent, 'android') && !str_contains($agent, 'mobile'))) {
+            return 'tablet';
+        }
+        if (preg_match('/mobile|iphone|android/', $agent)) {
+            return 'mobile';
+        }
+        return 'desktop';
+    }
+
+    private function hashIp(Request $request): string
+    {
+        return substr(hash('sha256', $request->ip() . '|' . config('app.key')), 0, 40);
+    }
+}

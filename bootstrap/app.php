@@ -60,10 +60,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\Localization::class,
             \App\Http\Middleware\DetectMobile::class,
             \App\Http\Middleware\ApplySeoRedirects::class,
+            \App\Http\Middleware\RecordHttpTelemetry::class,
         ]);
         $middleware->group('api', [
             'throttle:3000,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\RecordHttpTelemetry::class,
         ]);
         /*
         |--------------------------------------------------------------------------
@@ -134,6 +136,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ['value' => now()->toDateTimeString()]
             );
         })->everyFiveMinutes()->name('scheduler-heartbeat')->withoutOverlapping();
+
+        // Compress raw request telemetry into daily rollups for Analytics; the
+        // nightly run also prunes raw rows past the retention window.
+        $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();
+        $schedule->command('telemetry:rollup --prune')->dailyAt('01:30')->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // You can customize exception handling here if needed
