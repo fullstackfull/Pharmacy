@@ -1,6 +1,22 @@
 <?php
 
 use App\Models\Currency;
+use Illuminate\Support\Facades\Cache;
+
+if (!function_exists('getActiveCurrencies')) {
+    /**
+     * The active currency list shown in the storefront header on every page.
+     * Cached because the header otherwise queried it per page view; the cache
+     * is forgotten by CurrencyRepository on every add/update/delete, so the
+     * one-hour TTL is only a backstop.
+     */
+    function getActiveCurrencies(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('active_currency_list', 3600, function () {
+            return Currency::where('status', 1)->get();
+        });
+    }
+}
 
 if (!function_exists('loadCurrency')) {
     /**

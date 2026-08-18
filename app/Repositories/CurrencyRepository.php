@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Contracts\Repositories\CurrencyRepositoryInterface;
 use App\Models\Currency;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -18,7 +19,9 @@ class CurrencyRepository implements CurrencyRepositoryInterface
 
     public function add(array $data): string|object
     {
-        return $this->currency->create($data);
+        $currency = $this->currency->create($data);
+        Cache::forget('active_currency_list');
+        return $currency;
     }
 
     public function getFirstWhere(array $params, array $relations = []): ?Model
@@ -61,18 +64,22 @@ class CurrencyRepository implements CurrencyRepositoryInterface
 
     public function update(string $id, array $data): bool
     {
-        return $this->currency->where('id', $id)->update($data);
+        $updated = $this->currency->where('id', $id)->update($data);
+        Cache::forget('active_currency_list');
+        return $updated;
     }
 
     public function updateWhere(array $params, array $data): bool
     {
         $this->currency->where($params)->update($data);
+        Cache::forget('active_currency_list');
         return true;
     }
 
     public function delete(array $params): bool
     {
         $this->currency->where($params)->delete();
+        Cache::forget('active_currency_list');
         return true;
     }
 }

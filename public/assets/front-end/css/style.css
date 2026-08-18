@@ -262,10 +262,14 @@ a {
 
 .__close-announcement {
     position: absolute;
-    right: 9px;
+    inset-inline-end: 9px;
     top: 5px;
     color: #cd0000;
     cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    line-height: 1;
 }
 
 #new-arrivals-product .owl-stage-outer,
@@ -7509,13 +7513,14 @@ span.badge-accent:hover {
     /*}*/
     .search-form-mobile:not(.active) {
         transform: translateY(-100%);
+        visibility: hidden;
     }
 }
 @media screen and (max-width: 767px) {
     #navbarCollapse {
         position: fixed;
         top: 0;
-        right: 0;
+        inset-inline-end: 0;
         width: 100%;
         height: 100vh;
         background-color: #fff !important;
@@ -8247,7 +8252,7 @@ span.badge-accent:hover {
     inset-inline-start: var(--cm-w);
     background-color: #f8fafc;
     padding: 1.25rem;
-    padding-left: 0;
+    padding-inline-start: 0;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -8258,12 +8263,15 @@ span.badge-accent:hover {
     opacity: 0;
     visibility: hidden;
     transform: translate(0.5rem, 0.5rem);
-    transform-origin: left;
+    transform-origin: var(--k-origin-start, left);
     height: 100%;
     overflow-y: auto;
 }
 
-.category-menu-wrap .category-menu > li.has-sub-item:hover .mega_menu {
+/* :focus-within opens the panel for keyboard users; hover alone locked
+   subcategories away from anyone without a mouse. */
+.category-menu-wrap .category-menu > li.has-sub-item:hover .mega_menu,
+.category-menu-wrap .category-menu > li.has-sub-item:focus-within .mega_menu {
     opacity: 1;
     visibility: visible;
     transform: translate(0rem, 0rem);
@@ -8283,7 +8291,7 @@ span.badge-accent:hover {
 }
 
 .category-menu-wrap .mega_menu_inner:not(:nth-child(4n)) {
-    border-right: 1px solid #e2e8f0;
+    border-inline-end: 1px solid #e2e8f0;
 }
 
 .category-menu-wrap .mega_menu h6 {

@@ -4,16 +4,18 @@
     <div class="text-center position-relative px-4 py-1 d--none" id="announcement"
          style="background-color: {{ $announcement['color'] }};color:{{$announcement['text_color']}}">
         <span>{{ $announcement['announcement'] }} </span>
-        <span class="__close-announcement web-announcement-slideUp">X</span>
+        <button type="button" class="__close-announcement web-announcement-slideUp"
+                aria-label="{{ translate('close') }}">&times;</button>
     </div>
 @endif
+{{-- The "rtl" class is the live direction hook for header CSS — not dead code. --}}
 <header class="rtl __inline-10">
     <div class="topbar py-1 bg-light">
         <div class="container">
             <div class="d-flex align-items-center gap-1 justify-content-between w-100">
                 <div>
                     <div class="topbar-text dropdown d-md-none ms-auto">
-                        <a class="topbar-link fs-14 d-flex gap-2 fs-14 align-items-center lh-1 direction-ltr" href="tel: {{ $web_config['phone'] }}">
+                        <a class="topbar-link fs-14 d-flex gap-2 fs-14 align-items-center lh-1 direction-ltr" href="tel:{{ $web_config['phone'] }}">
                             <i class="fi fi-rr-phone-call text-primary"></i> {{ $web_config['phone'] }}
                         </a>
                     </div>
@@ -24,7 +26,7 @@
                     </div>
                 </div>
 
-                <div class="d-flex lign-items-center gap-lg-4 gap-sm-3 gap-2">
+                <div class="d-flex align-items-center gap-lg-4 gap-sm-3 gap-2">
                     @php($currency_model = getWebConfig(name: 'currency_model'))
                     @if($currency_model=='multi_currency')
                         <div class="topbar-text dropdown disable-autohide mr-4">
@@ -32,8 +34,10 @@
                                 <span>{{session('currency_code')}} {{session('currency_symbol')}}</span>
                             </a>
                             <ul class="text-align-direction dropdown-menu dropdown-menu-{{Session::get('direction') === "rtl" ? 'right' : 'left'}} min-width-160px">
-                                @foreach (\App\Models\Currency::where('status', 1)->get() as $key => $currency)
-                                    <li class="dropdown-item cursor-pointer get-currency-change-function"
+                                {{-- getActiveCurrencies() is cached; the raw query used to run on
+                                     every page view. CurrencyRepository busts it on any change. --}}
+                                @foreach (getActiveCurrencies() as $currency)
+                                    <li class="dropdown-item cursor-pointer get-currency-change-function" role="button" tabindex="0"
                                         data-code="{{$currency['code']}}">
                                         {{ $currency->name }}
                                     </li>
@@ -123,9 +127,14 @@
                                 </span>
                             </button>
 
-                            <span class="close-search-form-mobile fs-14 font-semibold text-muted d-md-none text-nowrap" type="submit">
+                            {{-- A real button, and shown on the whole range that can OPEN the
+                                 overlay (the opener is d-lg-none): tablets could open it but the
+                                 d-md-none span gave them no way to close it, and a span with
+                                 type="submit" was never focusable anyway. --}}
+                            <button class="close-search-form-mobile fs-14 font-semibold text-muted d-lg-none text-nowrap border-0 bg-transparent"
+                                    type="button">
                                 {{ translate('cancel') }}
-                            </span>
+                            </button>
                         </div>
 
                         <input name="data_from" value="search" hidden>
@@ -152,7 +161,8 @@
                         </a>
                     </div>
                     <div class="navbar-tool dropdown d-none d-md-block {{Session::get('direction') === "rtl" ? 'mr-md-3' : 'ml-md-3'}}">
-                        <a class="navbar-tool-icon-box bg-secondary dropdown-toggle" href="{{route('wishlists')}}">
+                        <a class="navbar-tool-icon-box bg-secondary" href="{{route('wishlists')}}"
+                           aria-label="{{ translate('wishlist') }}">
                             <span class="navbar-tool-label">
                                 <span class="countWishlist">
                                     {{session()->has('wish_list')?count(session('wish_list')):0}}
@@ -163,13 +173,13 @@
                     </div>
                     @if(auth('customer')->check())
                         <div class="dropdown">
-                            <a class="navbar-tool ml-3" type="button" data-toggle="dropdown" aria-haspopup="true"
-                               aria-expanded="false">
+                            {{-- href makes the toggle keyboard-focusable; without it the profile
+                                 menu could only ever be opened with a mouse. --}}
+                            <a class="navbar-tool ml-3" href="#" id="profileDropdownButton" role="button"
+                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <div class="navbar-tool-icon-box bg-secondary">
-                                    <div class="navbar-tool-icon-box bg-secondary">
-                                        <img class="img-profile rounded-circle __inline-14" alt=""
-                                             src="{{ getStorageImages(path: auth('customer')->user()->image_full_url, type: 'avatar') }}">
-                                    </div>
+                                    <img class="img-profile rounded-circle __inline-14" alt=""
+                                         src="{{ getStorageImages(path: auth('customer')->user()->image_full_url, type: 'avatar') }}">
                                 </div>
                                 <div class="navbar-tool-text">
                                     <small>
@@ -179,7 +189,7 @@
                                 </div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-{{Session::get('direction') === "rtl" ? 'left' : 'right'}}"
-                                 aria-labelledby="dropdownMenuButton">
+                                 aria-labelledby="profileDropdownButton">
                                 <a class="dropdown-item"
                                    href="{{route('account-oder')}}"> {{ translate('my_Order')}} </a>
                                 <a class="dropdown-item"
@@ -192,21 +202,19 @@
                     @else
                         <div class="dropdown">
                             <a class="navbar-tool {{Session::get('direction') === "rtl" ? 'mr-md-3' : 'ml-md-3'}}"
-                               type="button" data-toggle="dropdown" aria-haspopup="true" href="#" rel="nofollow"
-                               aria-expanded="false">
+                               id="authDropdownButton" role="button" data-toggle="dropdown" aria-haspopup="true"
+                               href="#" rel="nofollow" aria-expanded="false"
+                               aria-label="{{ translate('sign_in') }}">
                                 <div class="navbar-tool-icon-box bg-secondary">
-                                    <div class="navbar-tool-icon-box bg-secondary">
-                                        <svg width="16" height="17" viewBox="0 0 16 17" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M4.25 4.41675C4.25 6.48425 5.9325 8.16675 8 8.16675C10.0675 8.16675 11.75 6.48425 11.75 4.41675C11.75 2.34925 10.0675 0.666748 8 0.666748C5.9325 0.666748 4.25 2.34925 4.25 4.41675ZM14.6667 16.5001H15.5V15.6667C15.5 12.4509 12.8825 9.83341 9.66667 9.83341H6.33333C3.11667 9.83341 0.5 12.4509 0.5 15.6667V16.5001H14.6667Z"
-                                                  fill="{{ $web_config['primary_color'] ?? '#1B7FED'}}"/>
-                                        </svg>
-
-                                    </div>
+                                    <svg width="16" height="17" viewBox="0 0 16 17" fill="none"
+                                         xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4.25 4.41675C4.25 6.48425 5.9325 8.16675 8 8.16675C10.0675 8.16675 11.75 6.48425 11.75 4.41675C11.75 2.34925 10.0675 0.666748 8 0.666748C5.9325 0.666748 4.25 2.34925 4.25 4.41675ZM14.6667 16.5001H15.5V15.6667C15.5 12.4509 12.8825 9.83341 9.66667 9.83341H6.33333C3.11667 9.83341 0.5 12.4509 0.5 15.6667V16.5001H14.6667Z"
+                                              fill="{{ $web_config['primary_color'] ?? '#1B7FED'}}"/>
+                                    </svg>
                                 </div>
                             </a>
                             <div class="text-align-direction dropdown-menu __auth-dropdown dropdown-menu-{{Session::get('direction') === "rtl" ? 'left' : 'right'}}"
-                                 aria-labelledby="dropdownMenuButton">
+                                 aria-labelledby="authDropdownButton">
                                 <a class="dropdown-item" href="{{route('customer.auth.login')}}">
                                     <i class="fa fa-sign-in mr-2"></i> {{ translate('sign_in')}}
                                 </a>
@@ -368,64 +376,66 @@
                             </li>
                         @endif
 
-                        @if(
-                            count(getFeaturedDealsProductList()) > 0 &&
-                            !(($web_config['flash_deals'] || count($web_config['flash_deals_products']) > 0) || $web_config['discount_product'] > 0 || $web_config['clearance_sale_product_count'] > 0))
+                        <?php
+                            // One offer type alone links directly; two or more collapse into the
+                            // Offers dropdown. The old checks re-ran getFeaturedDealsProductList()
+                            // seven times per render, and two exclusion clauses used
+                            // ($web_config['flash_deals'] || ...) where every positive check uses
+                            // (... && ...) - so an empty flash-deal record wrongly demoted a solo
+                            // featured or clearance link into the dropdown.
+                            // (A raw PHP block, not a Blade php block: this file opens with the
+                            // inline parenthesized form on line 1, and Blade pairs that opener
+                            // with any later block terminator - even inside a comment - and
+                            // swallows everything between as raw PHP.)
+                            $hasFeaturedDeals = count(getFeaturedDealsProductList()) > 0;
+                            $hasFlashDeals = $web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0;
+                            $hasDiscounts = $web_config['discount_product'] > 0;
+                            $hasClearanceSale = $web_config['clearance_sale_product_count'] > 0;
+                            $offerTypeCount = (int) $hasFeaturedDeals + (int) $hasFlashDeals + (int) $hasDiscounts + (int) $hasClearanceSale;
+                        ?>
+                        @if($offerTypeCount === 1)
                             <li class="nav-item dropdown">
-                                <a class="nav-link fw-semibold text-capitalize"
-                                   href="{{ route('featured-deal-products') }}">
-                                    {{ translate('featured_Deal')}}
-                                </a>
+                                @if($hasFeaturedDeals)
+                                    <a class="nav-link fw-semibold text-capitalize"
+                                       href="{{ route('featured-deal-products') }}">
+                                        {{ translate('featured_Deal')}}
+                                    </a>
+                                @elseif($hasFlashDeals)
+                                    <a class="nav-link fw-semibold text-capitalize"
+                                       href="{{ route('flash-deals', ['id' => $web_config['flash_deals']['id'] ?? 0]) }}">
+                                        {{ translate('flash_deal')}}
+                                    </a>
+                                @elseif($hasDiscounts)
+                                    <a class="nav-link fw-semibold text-capitalize"
+                                       href="{{ route('discounted-products') }}">
+                                        {{ translate('discounted_products')}}
+                                    </a>
+                                @else
+                                    <a class="nav-link fw-semibold text-capitalize"
+                                       href="{{ route('clearance-sale-products') }}">
+                                        {{ translate('clearance_Sale')}}
+                                    </a>
+                                @endif
                             </li>
-                        @elseif(
-                            ($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0) &&
-                            !(count(getFeaturedDealsProductList()) > 0 || $web_config['discount_product'] > 0 || $web_config['clearance_sale_product_count'] > 0)
-                            )
-                            <li class="nav-item dropdown">
-                                <a class="nav-link fw-semibold text-capitalize"
-                                   href="{{ route('flash-deals', ['id' => $web_config['flash_deals']['id'] ?? 0]) }}">
-                                    {{ translate('flash_deal')}}
-                                </a>
-                            </li>
-                        @elseif(
-                            ($web_config['discount_product'] > 0) &&
-                            !(count(getFeaturedDealsProductList()) > 0 || ($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0) || $web_config['clearance_sale_product_count'] > 0)
-                            )
-                            <li class="nav-item dropdown">
-                                <a class="nav-link fw-semibold text-capitalize"
-                                   href="{{ route('discounted-products') }}">
-                                    {{ translate('discounted_products')}}
-                                </a>
-                            </li>
-                        @elseif(
-                            ($web_config['clearance_sale_product_count'] > 0) &&
-                            !(count(getFeaturedDealsProductList()) > 0 || ($web_config['flash_deals'] || count($web_config['flash_deals_products']) > 0) || $web_config['discount_product'] > 0)
-                            )
-                            <li class="nav-item dropdown">
-                                <a class="nav-link fw-semibold text-capitalize"
-                                   href="{{ route('clearance-sale-products') }}">
-                                    {{ translate('clearance_Sale')}}
-                                </a>
-                            </li>
-                        @elseif(count(getFeaturedDealsProductList()) > 0 || ($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0) || $web_config['discount_product'] > 0 || $web_config['clearance_sale_product_count'] > 0)
+                        @elseif($offerTypeCount > 1)
                             <li class="nav-item">
                                 <div class="dropdown">
                                     <button class="btn dropdown-toggle text-white text-max-md-dark text-capitalize ps-2 pe-0 fw-semibold"
-                                            type="button" id="dropdownMenuButton"
+                                            type="button" id="offersDropdownButton"
                                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         {{ translate('offers')}}
                                     </button>
                                     <div class="dropdown-menu __dropdown-menu-3 __min-w-165px text-align-direction"
-                                         aria-labelledby="dropdownMenuButton">
-                                        @if(count(getFeaturedDealsProductList()) > 0)
+                                         aria-labelledby="offersDropdownButton">
+                                        @if($hasFeaturedDeals)
                                             <a class="dropdown-item text-nowrap text-capitalize"
                                                href="{{ route('featured-deal-products') }}">
                                                 {{ translate('featured_Deal')}}
                                             </a>
                                         @endif
 
-                                        @if($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0)
-                                            @if(count(getFeaturedDealsProductList()) > 0)
+                                        @if($hasFlashDeals)
+                                            @if($hasFeaturedDeals)
                                                 <div class="dropdown-divider"></div>
                                             @endif
                                             <a class="dropdown-item text-nowrap text-capitalize" href="{{ route('flash-deals',['id' => $web_config['flash_deals']['id'] ?? 0]) }}">
@@ -433,7 +443,7 @@
                                             </a>
                                         @endif
 
-                                        @if($web_config['discount_product'] > 0)
+                                        @if($hasDiscounts)
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-nowrap text-capitalize"
                                                href="{{ route('discounted-products') }}">
@@ -441,7 +451,7 @@
                                             </a>
                                         @endif
 
-                                        @if($web_config['clearance_sale_product_count'] > 0)
+                                        @if($hasClearanceSale)
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-nowrap"
                                                href="{{ route('clearance-sale-products') }}">
@@ -535,12 +545,12 @@
                                 <li class="nav-item">
                                     <div class="dropdown">
                                         <button class="btn dropdown-toggle text-white text-max-md-dark text-capitalize ps-2 pe-0 fw-semibold"
-                                                type="button" id="dropdownMenuButton"
+                                                type="button" id="vendorZoneDropdownButton"
                                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             {{ translate('vendor_zone')}}
                                         </button>
                                         <div class="dropdown-menu __dropdown-menu-3 __min-w-165px text-align-direction"
-                                             aria-labelledby="dropdownMenuButton">
+                                             aria-labelledby="vendorZoneDropdownButton">
                                             <a class="dropdown-item text-nowrap text-capitalize" href="{{route('vendor.auth.registration.index')}}">
                                                 {{ translate('become_a_vendor')}}
                                             </a>
@@ -555,10 +565,10 @@
                         @endif
                     </ul>
 
-                     @if((getWebConfig(name: 'auction_feature_status') && !(Request::is('auction*'))))
+                     @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status') && !(Request::is('auction*')))
                         <div class="mb-2 mt-3 d-md-none d-block">
                             <a href="{{ route('auction.index') }}" class="border btn badge rounded min-h-38 fs-14 text-primary fw-semibold bg-white py-1 px-3 d-inline-flex align-items-center justify-content-center gap-2">
-                                <img width="14" src="{{ dynamicAsset(path: 'public/assets/front-end/auction/images/icons/sale-icon1.png') }}" alt="img">
+                                <img width="14" src="{{ dynamicAsset(path: 'public/assets/front-end/auction/images/icons/sale-icon1.png') }}" alt="{{ translate('Auctions') }}">
                                 <span class="d-block">
                                 {{ translate('Auctions') }}
                             </span>
@@ -577,9 +587,11 @@
                 </div>
 
                 @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
-                <div class="d-xl-block d-none">
+                {{-- d-md-block, not d-xl-block: between 768 and 1199px neither this block nor
+     the drawer copy (d-md-none) rendered, so tablets had no auction entry at all. --}}
+                <div class="d-md-block d-none">
                     <a href="{{ route('auction.index') }}" class="btn badge rounded min-h-38 fs-14 text-primary fw-semibold bg-white py-2 px-3 d-flex align-items-center justify-content-center gap-2">
-                        <img width="14" src="{{ dynamicAsset(path: 'public/assets/front-end/auction/images/icons/sale-icon1.png') }}" alt="img">
+                        <img width="14" src="{{ dynamicAsset(path: 'public/assets/front-end/auction/images/icons/sale-icon1.png') }}" alt="{{ translate('Auctions') }}">
                         <span class="d-sm-block d-none">
                             {{ translate('Auctions') }}
                         </span>

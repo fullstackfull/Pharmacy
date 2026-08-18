@@ -206,9 +206,16 @@ $(window).on("scroll", function () {
 
 $(".close-search-form-mobile").on("click", function () {
     $(".search-form-mobile").removeClass("active");
+    // Otherwise the suggestion card lingers over the page with stale results.
+    $(".search-card").hide();
 });
 $(".open-search-form-mobile").on("click", function () {
     $(".search-form-mobile").addClass("active");
+    // The overlay is visibility:hidden until its slide transition ends, and a
+    // hidden input refuses focus - wait the transition out.
+    setTimeout(function () {
+        $(".search-form-mobile .search-bar-input").trigger("focus");
+    }, 350);
 });
 
 $(".get-view-by-onclick").on("click", function () {
