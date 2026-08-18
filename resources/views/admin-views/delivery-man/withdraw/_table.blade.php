@@ -1,55 +1,53 @@
-<div class="table-responsive">
-    <table id="datatable"
-           class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-        <thead class="thead-light thead-50 text-capitalize">
+<div class="k-table-wrap">
+    <table class="k-table">
+        <thead>
         <tr>
             <th>{{translate('SL')}}</th>
-            <th>{{translate('amount')}}</th>
+            <th class="k-table__num">{{translate('amount')}}</th>
             <th>{{translate('name') }}</th>
             <th>{{translate('request_time')}}</th>
-            <th class="text-center">{{translate('status')}}</th>
-            <th class="text-center">{{translate('action')}}</th>
+            <th>{{translate('status')}}</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
             @foreach($withdrawRequests as $key=>$withdraw)
             <tr>
-                <td>{{$withdrawRequests->firstItem()+$key}}</td>
-                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $withdraw['amount']), currencyCode: getCurrencyCode())}}</td>
-
+                <td><span class="k-num">{{$withdrawRequests->firstItem()+$key}}</span></td>
+                <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $withdraw['amount']), currencyCode: getCurrencyCode())}}</span></td>
                 <td>
                     @if ($withdraw->deliveryMan)
-                        <span class="title-color hover-c1 text-wrap d-block max-w-400">
+                        <span class="title-color text-wrap d-block max-w-400">
                             {{ $withdraw->deliveryMan->f_name . ' ' . $withdraw->deliveryMan->l_name }}
                         </span>
                     @else
-                        <span>{{translate('not_found')}}</span>
+                        <span class="k-text-subtle">{{translate('not_found')}}</span>
                     @endif
                 </td>
-                <td>{{ date_format( $withdraw->created_at, 'd-M-Y, h:i:s A') }}</td>
-                <td class="text-center">
+                <td><span class="k-num">{{ date_format( $withdraw->created_at, 'd-M-Y, h:i:s A') }}</span></td>
+                <td>
                     @if($withdraw->approved==0)
-                        <label class="badge badge-info text-bg-info">{{translate('pending')}}</label>
+                        <x-k.badge tone="info">{{translate('pending')}}</x-k.badge>
                     @elseif($withdraw->approved==1)
-                        <label class="badge badge-success text-bg-success">{{translate('approved')}}</label>
+                        <x-k.badge tone="success">{{translate('approved')}}</x-k.badge>
                     @else
-                        <label class="badge badge-danger text-bg-danger">{{translate('denied')}}</label>
+                        <x-k.badge tone="danger">{{translate('denied')}}</x-k.badge>
                     @endif
                 </td>
                 <td>
-                    <div class="d-flex justify-content-center">
+                    <div class="k-table__actions">
                         @if (isset($withdraw->deliveryMan))
-                            <button
+                            <button type="button"
                                 data-bs-toggle="offcanvas" data-bs-target="#offcanvasWithdraw"
-                                class="btn btn-outline-info icon-btn withdraw-info-show"
+                                class="k-btn k-btn--ghost k-btn--sm k-btn--icon withdraw-info-show"
                                 data-action="{{route('admin.delivery-man.withdraw-view',[$withdraw['id']])}}"
                                 title="{{translate('view')}}">
-                                <i class="fi fi-rr-eye"></i>
+                                <x-k.icon name="eye" :size="15" />
                             </button>
                         @else
-                            <a class="btn btn-outline-info icon-btn disabled" href="#">
-                                <i class="fi fi-rr-eye"></i>
-                            </a>
+                            <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon" style="opacity:.4;pointer-events:none">
+                                <x-k.icon name="eye" :size="15" />
+                            </span>
                         @endif
                     </div>
                 </td>
@@ -60,5 +58,5 @@
 </div>
 
 @if(count($withdrawRequests)==0)
-    @include('layouts.admin.partials._empty-state',['text'=>'no_withdraw_request_found'],['image'=>'default'])
+    <x-k.empty icon="reports" :title="translate('no_withdraw_request_found')" />
 @endif

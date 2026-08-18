@@ -60,66 +60,63 @@
                             </div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table id="datatable" class="table table-hover table-borderless align-middle">
-                            <thead class="text-capitalize">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{translate('SL')}}</th>
-                                <th class="text-center">{{translate('name')}}</th>
-                                <th class="text-center">{{translate('phone')}}</th>
-                                <th class="text-center">{{translate('status')}}</th>
-                                <th class="text-center">{{translate('action')}}</th>
+                                <th>{{translate('name')}}</th>
+                                <th>{{translate('phone')}}</th>
+                                <th>{{translate('status')}}</th>
+                                <th></th>
                             </tr>
                             </thead>
-
                             <tbody>
                             @foreach($contacts as $contact)
                             <tr>
-                                <th scope="row">{{ $loop->iteration }}</th>
-                                <td class="text-center text-capitalize">{{ $contact['name'] }}</td>
-                                <td class="text-center">
-                                    <a class="text-dark text-hover-primary" href="tel:{{ $contact['phone'] }}">
+                                <td><span class="k-num">{{ $loop->iteration }}</span></td>
+                                <td class="text-capitalize">{{ $contact['name'] }}</td>
+                                <td>
+                                    <a class="text-dark text-hover-primary k-num" href="tel:{{ $contact['phone'] }}">
                                         {{ $contact['phone'] }}
                                     </a>
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center">
-                                        <form action="{{ route('admin.delivery-man.emergency-contact.ajax-status-change') }}" method="post" id="emergency-contact-status{{$contact->id}}-form" class="no-reload-form">
-                                            @csrf
-                                            <input name="id" value="{{$contact['id']}}" hidden>
-                                            <label class="switcher mx-auto" for="emergency-contact-status{{$contact->id}}">
-                                                <input
-                                                    class="switcher_input custom-modal-plugin"
-                                                    type="checkbox" value="1" name="status"
-                                                    id="emergency-contact-status{{$contact->id}}"
-                                                    {{ $contact['status'] == 1 ? 'checked' : '' }}
-                                                    data-modal-type="input-change-form"
-                                                    data-modal-form="#emergency-contact-status{{$contact->id}}-form"
-                                                    data-on-image="{{ dynamicAsset(path: 'public/assets/backend/media/toggle-modal-icons/turn-on.svg') }}"
-                                                    data-off-image="{{ dynamicAsset(path: 'public/assets/backend/media/toggle-modal-icons/turn-off.svg') }}"
-                                                    data-on-title = "{{translate('turn_on_the_status').'?'}}"
-                                                    data-off-title = "{{translate('turn_off_the_status').'?'}}"
-                                                    data-on-message="<p>{{translate('are_you_sure,_do_you_want_to_turn_on_this_emergency_contact_status_from_your_system.')}}</p>"
-                                                    data-off-message="<p>{{translate('are_you_sure,_do_you_want_to_turn_off_this_emergency_contact_status_from_your_system.')}}</p>"
-                                                    data-on-button-text="{{ translate('yes') }}"
-                                                    data-off-button-text="{{ translate('no') }}">
-                                                <span class="switcher_control"></span>
-                                            </label>
-                                        </form>
-                                    </div>
+                                    <form action="{{ route('admin.delivery-man.emergency-contact.ajax-status-change') }}" method="post" id="emergency-contact-status{{$contact->id}}-form" class="no-reload-form">
+                                        @csrf
+                                        <input name="id" value="{{$contact['id']}}" hidden>
+                                        <label class="switcher mx-auto" for="emergency-contact-status{{$contact->id}}">
+                                            <input
+                                                class="switcher_input custom-modal-plugin"
+                                                type="checkbox" value="1" name="status"
+                                                id="emergency-contact-status{{$contact->id}}"
+                                                {{ $contact['status'] == 1 ? 'checked' : '' }}
+                                                data-modal-type="input-change-form"
+                                                data-modal-form="#emergency-contact-status{{$contact->id}}-form"
+                                                data-on-image="{{ dynamicAsset(path: 'public/assets/backend/media/toggle-modal-icons/turn-on.svg') }}"
+                                                data-off-image="{{ dynamicAsset(path: 'public/assets/backend/media/toggle-modal-icons/turn-off.svg') }}"
+                                                data-on-title = "{{translate('turn_on_the_status').'?'}}"
+                                                data-off-title = "{{translate('turn_off_the_status').'?'}}"
+                                                data-on-message="<p>{{translate('are_you_sure,_do_you_want_to_turn_on_this_emergency_contact_status_from_your_system.')}}</p>"
+                                                data-off-message="<p>{{translate('are_you_sure,_do_you_want_to_turn_off_this_emergency_contact_status_from_your_system.')}}</p>"
+                                                data-on-button-text="{{ translate('yes') }}"
+                                                data-off-button-text="{{ translate('no') }}">
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </form>
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center align-items-center gap-2">
-                                        <button  class="btn btn-outline-primary icon-btn emergency-contact-update-view"
+                                    <div class="k-table__actions">
+                                        <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon emergency-contact-update-view"
                                             title="{{translate('edit')}}"
                                             data-action="{{route('admin.delivery-man.emergency-contact.update',['id'=>$contact->id])}}">
-                                            <i class="fi fi-rr-pencil"></i>
+                                            <x-k.icon name="edit" :size="15" />
                                         </button>
-                                        <a class="btn btn-outline-danger icon-btn delete delete-data" href="javascript:"
-                                           data-id="delete-contact-{{$contact->id}}"
-                                           title="{{ translate('delete')}}">
-                                            <i class="fi fi-rr-trash"></i>
-                                        </a>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete delete-data" role="button"
+                                              data-id="delete-contact-{{$contact->id}}"
+                                              title="{{ translate('delete')}}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
                                     </div>
                                     <form action="{{route('admin.delivery-man.emergency-contact.destroy')}}"
                                           method="post" id="delete-contact-{{$contact->id}}">
@@ -132,14 +129,19 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                            {{ $contacts->links() }}
-                        </div>
-                    </div>
                     @if(count($contacts)==0)
-                        @include('layouts.admin.partials._empty-state',['text'=>'no_contact_found'],['image'=>'default'])
+                        <x-k.empty icon="customers" :title="translate('no_contact_found')" />
                     @endif
+                    <div class="k-pager">
+                        <span class="k-pager__info">
+                            @if ($contacts->total() > 0)
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $contacts->firstItem() }}–{{ $contacts->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $contacts->total() }}</span>
+                            @endif
+                        </span>
+                        <div>{!! $contacts->appends(request()->except('page'))->links() !!}</div>
+                    </div>
                 </div>
             </div>
         </div>

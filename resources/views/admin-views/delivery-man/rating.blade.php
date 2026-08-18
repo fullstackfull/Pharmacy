@@ -171,10 +171,10 @@
             </div>
         </div>
 
-        <div class="card mt-3">
-            <div class="table-responsive datatable-custom">
-                <table class="table table-hover table-borderless align-middle w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+        <div class="k-card mt-3">
+            <div class="k-table-wrap">
+                <table class="k-table">
+                    <thead>
                         <tr>
                             <th>{{ translate('SL') }}</th>
                             <th>{{ translate('order_ID') }}</th>
@@ -183,44 +183,32 @@
                             <th>{{ translate('date') }}</th>
                         </tr>
                     </thead>
-
                     <tbody>
                         @foreach ($reviews as $key => $review)
                             <tr>
-                                <td>
-                                    {{ $reviews->firstItem() + $key }}
-                                </td>
+                                <td><span class="k-num">{{ $reviews->firstItem() + $key }}</span></td>
                                 <td>
                                     <a class="text-dark text-hover-primary"
                                         href="{{ $review->order_id ? route('admin.orders.details', ['id' => $review->order_id]) : '' }}">{{ $review->order_id }}</a>
                                 </td>
                                 <td>
-                                    <a class="d-flex align-items-center gap-3"
-                                        href="{{ route('admin.customer.view', [$review['customer_id']]) }}">
-                                        <div class="avatar avatar-circle">
-                                            <img class="avatar-img"
-                                                src="{{ getStorageImages(path: $review?->customer->image_full_url, type: 'backend-basic') }}"
-                                                alt="{{ 'image_description' }}">
-                                        </div>
-                                        <div>
-                                            <span
-                                                class="d-block h4 text-hover-primary mb-0">{{ $review?->customer['f_name'] . ' ' . $review?->customer['l_name'] }}
+                                    <a class="k-row" href="{{ route('admin.customer.view', [$review['customer_id']]) }}">
+                                        <img alt="" width="36" height="36"
+                                             style="border-radius:50%;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)"
+                                             src="{{ getStorageImages(path: $review?->customer->image_full_url, type: 'backend-basic') }}">
+                                        <span style="min-inline-size:0">
+                                            <span class="d-block text-dark text-hover-primary">{{ $review?->customer['f_name'] . ' ' . $review?->customer['l_name'] }}
                                                 <i class="fi fi-sr-badge-check text-primary fs-12"
                                                     data-bs-toggle="tooltip" data-bs-placement="top"
                                                     data-bs-title="{{ translate('Verified_Customer') }}"></i></span>
-                                            <span
-                                                class="d-block fs-14 text-body">{{ $review?->customer->email ?? '' }}</span>
-                                        </div>
+                                            <span class="k-text-subtle">{{ $review?->customer->email ?? '' }}</span>
+                                        </span>
                                     </a>
                                 </td>
                                 <td>
                                     <div class="text-wrap">
-                                        <div class="d-flex mb-2">
-                                            <label class="badge text-bg-info badge-info">
-                                                <span>{{ $review->rating }} <i class="fi fi-sr-star fs-10"></i> </span>
-                                            </label>
-                                        </div>
-                                        <div class="content p-0 min-w-180 max-w-250">
+                                        <x-k.badge tone="info"><span class="k-num">{{ $review->rating }}</span> <i class="fi fi-sr-star fs-10"></i></x-k.badge>
+                                        <div class="content p-0 min-w-180 max-w-250 mt-1">
                                             @if (strlen($review['comment']) > 200)
                                                 {{ substr($review['comment'], 0, 200) }}
                                                 <span id="show-more-{{ $review->id }}" data-id="{{ $review->id }}"
@@ -239,11 +227,10 @@
                                                 {{ $review['comment'] }}
                                             @endif
                                         </div>
-
                                     </div>
                                 </td>
                                 <td>
-                                    {{ date('d M Y H:i:s', strtotime($review['updated_at'])) }}
+                                    <span class="k-num">{{ date('d M Y H:i:s', strtotime($review['updated_at'])) }}</span>
                                 </td>
                             </tr>
                         @endforeach
@@ -251,18 +238,20 @@
                 </table>
             </div>
 
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-lg-end">
-                    {{ $reviews->links() }}
-                </div>
-            </div>
             @if (count($reviews) == 0)
-                @include(
-                    'layouts.admin.partials._empty-state',
-                    ['text' => 'no_review_found'],
-                    ['image' => 'default']
-                )
+                <x-k.empty icon="sparkles" :title="translate('no_review_found')" />
             @endif
+
+            <div class="k-pager">
+                <span class="k-pager__info">
+                    @if ($reviews->total() > 0)
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $reviews->firstItem() }}–{{ $reviews->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $reviews->total() }}</span>
+                    @endif
+                </span>
+                <div>{!! $reviews->appends(request()->except('page'))->links() !!}</div>
+            </div>
         </div>
     </div>
 @endsection

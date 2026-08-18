@@ -3132,4 +3132,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"earning_history" => "Earning history",
 	"wallet_bonus" => "Wallet bonus",
 	"Select_a_date_range_to_view_loyalty_point_transactions" => "Select a date range to view loyalty point transactions",
+	"contact_name_field_is_required" => "Contact name field is required",
+	"invaild_review" => "Invaild review",
+	"earning_status" => "Earning status",
+	"not_received" => "Not received",
 ];
