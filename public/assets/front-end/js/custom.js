@@ -1062,11 +1062,13 @@ $(".minimum-order-amount-message").on("click", function () {
 function productQuickViewFunctionalityInitialize() {
     cartQuantityInitialize();
 
-    getVariantPrice(".add-to-cart-details-form");
+    getVariantPrice("#quick-view .add-to-cart-details-form");
 
-    $(".add-to-cart-details-form input").on("change", function () {
-        getVariantPrice(".add-to-cart-details-form");
-    });
+    $("#quick-view .add-to-cart-details-form input")
+        .off("change.quickview")
+        .on("change.quickview", function () {
+            getVariantPrice("#quick-view .add-to-cart-details-form");
+        });
 
     $(document).ready(function () {
         $('[data-toggle="tooltip"]').tooltip();
@@ -1582,7 +1584,10 @@ function updateNavCart(afterUpdate) {
 }
 
 function cartQuantityInitialize() {
-    $(".btn-number").click(function (e) {
+    // off/on with a namespace: this runs again on every quick-view open, and
+    // the plain .click() bindings used to stack — N opens meant a single tap
+    // moved the quantity N+1 times.
+    $(".btn-number").off("click.kqty").on("click.kqty", function (e) {
         e.preventDefault();
         let fieldName = $(this).attr("data-field");
         let type = $(this).attr("data-type");
@@ -1646,11 +1651,11 @@ function cartQuantityInitialize() {
         }
     });
 
-    $(".input-number").focusin(function () {
+    $(".input-number").off("focusin.kqty").on("focusin.kqty", function () {
         $(this).data("oldValue", $(this).val());
     });
 
-    $(".input-number").change(function () {
+    $(".input-number").off("change.kqty").on("change.kqty", function () {
         let productType = $(this).data("producttype");
         let minValue = parseInt($(this).attr("min"));
         let maxValue = parseInt($(this).attr("max"));
