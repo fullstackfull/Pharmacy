@@ -13,135 +13,108 @@
             </h2>
         </div>
 
-        <div class="mt-20">
-            <div class="card">
-                <div class="px-3 py-4 d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                    <div class="min-w-300 min-w-100-mobile">
-                        <form action="{{ url()->current() }}" method="GET">
-                            <div class="input-group">
-                                <input type="hidden" name="restock_date" value="{{ request('restock_date') }}">
-                                <input type="hidden" name="category_id" value="{{ request('category_id') }}">
-                                <input type="hidden" name="sub_category_id" value="{{ request('sub_category_id') }}">
-                                <input type="hidden" name="brand_id" value="{{ request('brand_id') }}">
-                                <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                    placeholder="{{ translate('search_by_Product_Name') }}" aria-label="Search orders"
-                                    value="{{ request('searchValue') }}">
-                                <div class="input-group-append search-submit">
-                                    <button type="submit">
-                                        <i class="fi fi-rr-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="d-flex flex-wrap gap-3 align-items-center justify-content-sm-end flex-grow-1">
-                        <div class="dropdown">
-                            <a type="button" class="btn btn-outline-primary"
-                                href="{{ route('admin.products.restock-export', ['restock_date' => request('restock_date'), 'brand_id' => request('brand_id'), 'category_id' => request('category_id'), 'sub_category_id' => request('sub_category_id'), 'searchValue' => request('searchValue')]) }}">
-                                <i class="fi fi-sr-inbox-in"></i>
-                                <span class="fs-12">{{ translate('export') }}</span>
-                            </a>
-                        </div>
-                        <div class="position-relative">
-                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="offcanvas"
-                                    data-bs-target="#offcanvasRestockFilter">
-                                <i class="fi fi-sr-settings-sliders d-flex"></i> {{ translate('Filter') }}
-                            </button>
-                            @if(!empty(request('filter_sort_by')) || !empty(request('filter_product_types')) || !empty(request('product_status')) || !empty(request('filter_shop_ids')) || !empty(request('filter_brand_ids')) || !empty(request('filter_category_ids')))
-                                <div
-                                    class="position-absolute top-n1 inset-inline-end-n1 btn-circle bg-danger border border-white border-2"
-                                    style="--size: 12px;"></div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        <div class="row mt-20">
+            <div class="col-md-12">
+                <x-k.data-view :title="translate('Request_Restock_List')" :count="$totalRestockProducts"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_Product_Name')">
 
-                <div class="table-responsive">
-                    <table id="datatable" class="table table-hover table-borderless table-thead-bordered align-middle">
-                        <thead class="text-capitalize">
-                            <tr>
-                                <th>{{ translate('SL') }}</th>
-                                <th>{{ translate('product_name') }}</th>
-                                <th class="text-center">{{ translate('selling_price') }}</th>
-                                <th class="text-center">{{ translate('last_request_date') }}</th>
-                                <th class="text-center">{{ translate('number_of_request') }}</th>
-                                <th class="text-center">{{ translate('action') }}</th>
-                            </tr>
+                    <x-slot:actions>
+                        <a class="k-btn k-btn--secondary"
+                           href="{{ route('admin.products.restock-export', ['restock_date' => request('restock_date'), 'brand_id' => request('brand_id'), 'category_id' => request('category_id'), 'sub_category_id' => request('sub_category_id'), 'searchValue' => request('searchValue')]) }}">
+                            <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                        </a>
+                        @php($restockFilterActive = !empty(request('restock_date')) || !empty(request('category_id')) || !empty(request('sub_category_id')) || !empty(request('brand_id')))
+                        <button type="button" class="k-btn {{ $restockFilterActive ? 'k-btn--primary' : 'k-btn--secondary' }}"
+                                data-bs-toggle="offcanvas" data-bs-target="#offcanvasRestockFilter">
+                            <x-k.icon name="filter" :size="15" /> {{ translate('Filter') }}
+                        </button>
+                    </x-slot:actions>
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('SL') }}</th>
+                            <th>{{ translate('product_name') }}</th>
+                            <th class="k-table__num">{{ translate('selling_price') }}</th>
+                            <th>{{ translate('last_request_date') }}</th>
+                            <th class="k-table__num">{{ translate('number_of_request') }}</th>
+                            <th></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach ($restockProducts as $key => $restockProduct)
-                                <tr>
-                                    <th scope="row"> {{ $restockProducts->firstItem() + $key }}</th>
-                                    <td>
-                                        <a href="{{ route('admin.products.view', ['addedBy' => $restockProduct->product['added_by'] == 'seller' ? 'vendor' : 'in-house', 'id' => $restockProduct->product['id'] ?? 0]) }}"
-                                            class="media align-items-center gap-2">
-                                            <img src="{{ getStorageImages(path: $restockProduct?->product?->thumbnail_full_url, type: 'backend-product') }}"
-                                                class="avatar border object-fit-cover flex-shrink-0" alt="">
-                                            <span class="media-body text-dark text-primary-hover">
+                        @foreach ($restockProducts as $key => $restockProduct)
+                            <tr>
+                                <td><span class="k-num">{{ $restockProducts->firstItem() + $key }}</span></td>
+                                <td>
+                                    <a href="{{ route('admin.products.view', ['addedBy' => $restockProduct->product['added_by'] == 'seller' ? 'vendor' : 'in-house', 'id' => $restockProduct->product['id'] ?? 0]) }}" class="k-row">
+                                        <img src="{{ getStorageImages(path: $restockProduct?->product?->thumbnail_full_url, type: 'backend-product') }}"
+                                             alt="" width="40" height="40"
+                                             style="border-radius:8px;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                        <span style="min-inline-size:0">
+                                            <span class="k-truncate text-dark" style="display:block;max-inline-size:200px" title="{{ $restockProduct->product['name'] ?? '' }}">
                                                 {{ Str::limit($restockProduct->product['name'] ?? '', 20) }}
-                                                <p class="small fw-bold m-0">
-                                                    @if ($restockProduct['variant'])
-                                                        {{ translate('Variant:') . ' ' . $restockProduct['variant'] }}
-                                                    @endif
-                                                </p>
                                             </span>
+                                            @if ($restockProduct['variant'])
+                                                <span class="k-text-subtle">{{ translate('Variant:') }} {{ $restockProduct['variant'] }}</span>
+                                            @endif
+                                        </span>
+                                    </a>
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $restockProduct->product['unit_price'] ?? 0), currencyCode: getCurrencyCode()) }}</span>
+                                </td>
+                                <td>
+                                    <span class="k-num">{{ $restockProduct->updated_at->format('d F Y, h:i A') }}</span>
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ $restockProduct?->restockProductCustomers?->count() ?? 0 }}</span>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}"
+                                           href="{{ route('admin.products.view', ['addedBy' => $restockProduct->product['added_by'] == 'seller' ? 'vendor' : 'in-house', 'id' => $restockProduct->product['id'] ?? 0]) }}">
+                                            <x-k.icon name="eye" :size="15" />
                                         </a>
-                                    </td>
-                                    <td class="text-center">
-                                        {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $restockProduct->product['unit_price'] ?? 0), currencyCode: getCurrencyCode()) }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ $restockProduct->updated_at->format('d F Y, h:i A') }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ $restockProduct?->restockProductCustomers?->count() ?? 0 }}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <a class="btn btn-outline-info icon-btn" title="View"
-                                                href="{{ route('admin.products.view', ['addedBy' => $restockProduct->product['added_by'] == 'seller' ? 'vendor' : 'in-house', 'id' => $restockProduct->product['id'] ?? 0]) }}">
-                                                <img src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/icons/restock_view.svg') }}"
-                                                    alt="">
-                                            </a>
-                                            <a class="btn btn-outline-primary icon-btn action-update-product-quantity"
-                                                title="{{ translate('edit') }}"
-                                                id="{{ $restockProduct->product['id'] }}"
-                                                data-url="{{ route('admin.products.get-variations', ['id' => $restockProduct->product['id'], 'restock_id' => $restockProduct->id]) }}"
-                                                data-bs-target="#update-stock">
-                                                <img src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/icons/restock_update.svg') }}"
-                                                    alt="">
-                                            </a>
-                                            <span class="btn btn-outline-danger icon-btn delete-data"
-                                                title="{{ translate('delete') }}"
-                                                data-id="product-{{ $restockProduct->id }}">
-                                                <img src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/icons/restock_delete.svg') }}"
-                                                    alt="">
-                                            </span>
-                                        </div>
-                                        <form action="{{ route('admin.products.restock-delete', [$restockProduct->id]) }}"
-                                            method="post" id="product-{{ $restockProduct->id }}">
-                                            @csrf @method('delete')
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon action-update-product-quantity"
+                                           title="{{ translate('edit') }}"
+                                           id="{{ $restockProduct->product['id'] }}"
+                                           data-url="{{ route('admin.products.get-variations', ['id' => $restockProduct->product['id'], 'restock_id' => $restockProduct->id]) }}"
+                                           data-bs-target="#update-stock">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data" role="button"
+                                              title="{{ translate('delete') }}"
+                                              data-id="product-{{ $restockProduct->id }}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
+                                    </div>
+                                    <form action="{{ route('admin.products.restock-delete', [$restockProduct->id]) }}"
+                                          method="post" id="product-{{ $restockProduct->id }}">
+                                        @csrf @method('delete')
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
                         </tbody>
                     </table>
-                </div>
 
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {{ $restockProducts->links() }}
-                    </div>
-                </div>
+                    @if (count($restockProducts) == 0)
+                        <x-k.empty icon="catalog" :title="translate('no_product_found')"
+                                   :text="request('searchValue') ? translate('no_product_matches_your_search') : null" />
+                    @endif
 
-                @if (count($restockProducts) == 0)
-                    @include(
-                        'layouts.admin.partials._empty-state',
-                        ['text' => 'no_product_found'],
-                        ['image' => 'default']
-                    )
-                @endif
+                    @if ($restockProducts->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $restockProducts->firstItem() }}–{{ $restockProducts->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $restockProducts->total() }}</span>
+                            </span>
+                            <div>{!! $restockProducts->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>
@@ -149,7 +122,7 @@
     <div class="modal fade update-stock-modal restock-stock-update" id="update-stock" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form action="{{ route('admin.products.update-quantity') }}" method="post" class="odal-body p-20">
+                <form action="{{ route('admin.products.update-quantity') }}" method="post" class="modal-body p-20">
                     @csrf
                     <div class="rest-part-content"></div>
                     <div class="d-flex justify-content-end gap-10 flex-wrap align-items-center">
