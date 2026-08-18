@@ -12,7 +12,7 @@
                 <p class="mb-0 fs-12">{{ translate('policy_thresholds_over_the_scorecard_metrics_with_a_breach_ledger') }}.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-{{ $openCount > 0 ? 'danger' : 'success' }} text-dark fs-14 px-3 py-2">{{ $openCount }} {{ translate('open_breaches') }}</span>
+                <span class="k-badge k-badge--{{ $openCount > 0 ? 'danger' : 'success' }} fs-14 px-3 py-2">{{ $openCount }} {{ translate('open_breaches') }}</span>
                 <form action="{{ route('admin.marketplace.sla.evaluate') }}" method="post">
                     @csrf <button class="btn btn-primary btn-sm">{{ translate('evaluate_all_sellers') }}</button>
                 </form>
@@ -66,7 +66,7 @@
                                 <td>{{ translate($b->metric) }}</td>
                                 <td class="text-end">{{ $isRate ? $pct($b->threshold) : number_format((float) $b->threshold, 1) }}</td>
                                 <td class="text-end fw-bold {{ $b->status === 'open' ? 'text-danger' : '' }}">{{ $isRate ? $pct($b->actual_value) : number_format((float) $b->actual_value, 2) }}</td>
-                                <td><span class="badge bg-{{ $b->status === 'open' ? 'danger' : 'secondary' }} text-dark">{{ translate($b->status) }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $b->status === 'open' ? 'danger' : 'secondary' }}">{{ translate($b->status) }}</span></td>
                                 <td class="fs-12">{{ $b->created_at?->toDateString() }}@if($b->status === 'cleared' && $b->cleared_at)<div class="fs-10 text-muted">{{ translate('cleared') }}: {{ $b->cleared_at->toDateString() }}</div>@endif</td>
                             </tr>
                         @empty

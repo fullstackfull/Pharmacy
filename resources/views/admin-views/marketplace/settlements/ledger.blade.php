@@ -65,7 +65,7 @@
                                     <td>{{ $entry->id }}</td>
                                     <td class="fs-12">{{ $entry->created_at?->format('d M Y H:i') }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
                                             {{ translate($entry->entry_type) }}
                                         </span>
                                     </td>
@@ -77,7 +77,7 @@
                                     <td class="text-end text-danger">{{ $entry->debit > 0 ? setCurrencySymbol($entry->debit) : '—' }}</td>
                                     <td class="text-end fw-medium">{{ setCurrencySymbol($entry->balance_after) }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $statusColours[$entry->status] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $statusColours[$entry->status] ?? 'secondary' }}">
                                             {{ translate($entry->status) }}
                                         </span>
                                     </td>

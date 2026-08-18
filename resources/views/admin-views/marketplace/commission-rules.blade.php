@@ -106,7 +106,7 @@
                                             </td>
                                             <td>{{ $rule->priority }}</td>
                                             <td>
-                                                <span class="badge {{ $rule->is_active ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                                                <span class="k-badge {{ $rule->is_active ? 'k-badge--success' : '' }}">
                                                     {{ $rule->is_active ? translate('active') : translate('inactive') }}
                                                 </span>
                                             </td>

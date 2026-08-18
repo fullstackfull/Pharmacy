@@ -78,10 +78,10 @@
                                         <td>#{{ $b->product_id }}</td>
                                         <td>{{ $b->batch_number ?: '—' }}</td>
                                         <td class="fs-12">{{ $b->expiry_date?->toDateString() ?: '—' }}
-                                            @if($expired && $b->status === 'active')<span class="badge bg-danger text-dark fs-10">{{ translate('expired') }}</span>@endif
+                                            @if($expired && $b->status === 'active')<span class="k-badge k-badge--danger fs-10">{{ translate('expired') }}</span>@endif
                                         </td>
                                         <td class="text-end">{{ $b->quantity }}</td>
-                                        <td><span class="badge bg-{{ $b->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($b->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $b->status === 'active' ? 'success' : 'secondary' }}">{{ translate($b->status) }}</span></td>
                                         <td class="text-end">
                                             @if ($b->status === 'active' && $b->quantity > 0)
                                                 <form action="{{ route('admin.marketplace.batches.write-off', $b->id) }}" method="post" onsubmit="return confirm('{{ translate('write_off_this_batch_from_sellable_stock') }}?')">

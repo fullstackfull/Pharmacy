@@ -34,7 +34,7 @@
                             <a href="{{ route('admin.marketplace.customer-groups.index', ['group_id' => $g->id]) }}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{ ($selected && $selected->id === $g->id) ? 'active' : '' }}">
                                 <span>{{ $g->name }} <span class="fs-10">({{ $g->type }})</span></span>
-                                <span class="badge bg-light text-dark">{{ rtrim(rtrim(number_format((float)$g->default_discount_percent,2),'0'),'.') }}%</span>
+                                <span class="k-badge">{{ rtrim(rtrim(number_format((float)$g->default_discount_percent,2),'0'),'.') }}%</span>
                             </a>
                         @empty
                             <div class="list-group-item text-muted text-center py-3">{{ translate('no_groups_yet') }}</div>

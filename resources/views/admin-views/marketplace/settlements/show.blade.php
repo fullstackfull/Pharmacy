@@ -25,7 +25,7 @@
                     {{ optional($settlement->period_end)->format('d M Y') }}
                 </p>
             </div>
-            <span class="badge bg-{{ $statusColours[$settlement->status] ?? 'secondary' }} fs-14">
+            <span class="k-badge k-badge--{{ $statusColours[$settlement->status] ?? 'secondary' }} fs-14">
                 {{ translate($settlement->status) }}
             </span>
         </div>
@@ -112,7 +112,7 @@
                                 <tr>
                                     <td>{{ $entry->id }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
                                             {{ translate($entry->entry_type) }}
                                         </span>
                                     </td>

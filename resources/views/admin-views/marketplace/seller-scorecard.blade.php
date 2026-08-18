@@ -40,7 +40,7 @@
                             @php($c = $cards[$seller->id] ?? null)
                             <tr>
                                 <td>{{ trim(($seller->f_name ?? '') . ' ' . ($seller->l_name ?? '')) ?: ('#' . $seller->id) }}</td>
-                                <td><span class="badge bg-{{ $tierMap[$c['tier']] ?? 'secondary' }} text-dark">{{ translate($c['tier'] ?? 'new') }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $tierMap[$c['tier']] ?? 'secondary' }}">{{ translate($c['tier'] ?? 'new') }}</span></td>
                                 <td class="text-end">{{ $c['orders_total'] ?? 0 }}</td>
                                 <td class="text-end">{{ $pct($c['fulfillment_rate'] ?? 0) }}</td>
                                 <td class="text-end">{{ $pct($c['cancellation_rate'] ?? 0) }}</td>

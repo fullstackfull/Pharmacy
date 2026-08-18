@@ -24,16 +24,16 @@
                         <span class="fw-medium">{{ $category->name }}</span>
                         <span class="d-flex gap-1 flex-wrap">
                             @if ($gov?->return_window_days !== null && $gov?->return_window_days !== null)
-                                <span class="badge bg-info">{{ translate('return') }}: {{ $gov->return_window_days }}{{ translate('d') }}</span>
+                                <span class="k-badge k-badge--info">{{ translate('return') }}: {{ $gov->return_window_days }}{{ translate('d') }}</span>
                             @endif
                             @if ($gov?->requires_moderation)
-                                <span class="badge bg-warning text-dark">{{ translate('moderated') }}</span>
+                                <span class="k-badge k-badge--warning">{{ translate('moderated') }}</span>
                             @endif
                             @if ($gov?->tax_class)
-                                <span class="badge bg-secondary">{{ $gov->tax_class }}</span>
+                                <span class="k-badge">{{ $gov->tax_class }}</span>
                             @endif
                             @if ($gov?->shipping_restricted)
-                                <span class="badge bg-danger">{{ translate('shipping_restricted') }}</span>
+                                <span class="k-badge k-badge--danger">{{ translate('shipping_restricted') }}</span>
                             @endif
                         </span>
                     </div>

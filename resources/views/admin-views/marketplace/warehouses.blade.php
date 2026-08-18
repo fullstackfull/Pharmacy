@@ -39,9 +39,9 @@
                                 <tbody>
                                 @forelse ($warehouses as $w)
                                     <tr>
-                                        <td>{{ $w->name }} @if($w->is_default)<span class="badge bg-info text-dark fs-10">{{ translate('default') }}</span>@endif</td>
+                                        <td>{{ $w->name }} @if($w->is_default)<span class="k-badge k-badge--info fs-10">{{ translate('default') }}</span>@endif</td>
                                         <td>{{ $w->code ?: '—' }}</td>
-                                        <td><span class="badge bg-{{ $w->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($w->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $w->status === 'active' ? 'success' : 'secondary' }}">{{ translate($w->status) }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="3" class="text-center text-muted py-3">{{ translate('no_warehouses_yet') }}</td></tr>

@@ -86,7 +86,7 @@
                                     <tr>
                                         <td class="fs-12">{{ $m->created_at?->format('Y-m-d H:i') }}</td>
                                         <td>#{{ $m->product_id }}</td>
-                                        <td><span class="badge bg-{{ $typeMap[$m->type] ?? 'secondary' }} text-dark">{{ translate($m->type) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $typeMap[$m->type] ?? 'secondary' }}">{{ translate($m->type) }}</span></td>
                                         <td class="text-end {{ $m->qty_change < 0 ? 'text-danger' : 'text-success' }}">{{ $m->qty_change > 0 ? '+' : '' }}{{ $m->qty_change }}</td>
                                         <td class="text-end">{{ $m->balance_after ?? '—' }}</td>
                                         <td class="fs-12">{{ $m->reason ? translate($m->reason) : '—' }}@if($m->note)<div class="fs-10 text-muted">{{ $m->note }}</div>@endif</td>

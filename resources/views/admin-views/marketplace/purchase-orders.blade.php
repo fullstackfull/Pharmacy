@@ -41,7 +41,7 @@
                             <tr>
                                 <td><a href="{{ route('admin.marketplace.purchase-orders.show', $o->id) }}">{{ $o->reference }}</a></td>
                                 <td>{{ $o->supplier->name ?? '—' }}</td>
-                                <td><span class="badge bg-{{ $statusMap[$o->status] ?? 'secondary' }} text-dark">{{ translate($o->status) }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $statusMap[$o->status] ?? 'secondary' }}">{{ translate($o->status) }}</span></td>
                                 <td class="text-end">{{ number_format((float) $o->total, 2) }}</td>
                                 <td class="fs-12">{{ $o->expected_at?->toDateString() ?: '—' }}</td>
                                 <td class="text-end"><a href="{{ route('admin.marketplace.purchase-orders.show', $o->id) }}" class="btn btn-sm btn-outline-primary">{{ translate('open') }}</a></td>

@@ -18,7 +18,7 @@
                 <form action="{{ route('admin.marketplace.shipping-zones.toggle') }}" method="post" class="d-flex align-items-center gap-2">
                     @csrf
                     <input type="hidden" name="status" value="{{ $zoneShippingEnabled ? 0 : 1 }}">
-                    <span class="badge {{ $zoneShippingEnabled ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                    <span class="k-badge {{ $zoneShippingEnabled ? 'k-badge--success' : '' }}">
                         {{ $zoneShippingEnabled ? translate('enabled') : translate('disabled') }}
                     </span>
                     <button class="btn btn-sm {{ $zoneShippingEnabled ? 'btn-outline-danger' : 'btn-primary' }}">
@@ -105,7 +105,7 @@
                                         <td class="text-end">{{ number_format((float) $z->base_cost, 2) }}</td>
                                         <td class="text-end">{{ number_format((float) $z->per_kg_cost, 2) }}</td>
                                         <td class="text-end">{{ $z->free_over !== null ? number_format((float) $z->free_over, 2) : '—' }}</td>
-                                        <td><span class="badge bg-{{ $z->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($z->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $z->status === 'active' ? 'success' : 'secondary' }}">{{ translate($z->status) }}</span></td>
                                         <td class="text-end">
                                             <form action="{{ route('admin.marketplace.shipping-zones.destroy', $z->id) }}" method="post" onsubmit="return confirm('{{ translate('are_you_sure') }}')">
                                                 @csrf @method('DELETE')

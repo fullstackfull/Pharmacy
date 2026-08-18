@@ -62,7 +62,7 @@
                                 <tr>
                                     <td>
                                         <strong>{{ $r->name }}</strong>
-                                        @if($r->status !== 'active')<span class="badge bg-secondary text-dark">{{ translate($r->status) }}</span>@endif
+                                        @if($r->status !== 'active')<span class="k-badge">{{ translate($r->status) }}</span>@endif
                                         <div class="fs-10 text-muted">{{ count($r->permissions ?? []) }} {{ translate('permissions') }}</div>
                                     </td>
                                     <td class="text-end">
@@ -112,7 +112,7 @@
                                 <tr>
                                     <td>{{ $s->name }}<div class="fs-10 text-muted">{{ $s->email }}</div></td>
                                     <td>{{ $s->role?->name ?: translate('no_role') }}</td>
-                                    <td><span class="badge bg-{{ $s->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($s->status) }}</span></td>
+                                    <td><span class="k-badge k-badge--{{ $s->status === 'active' ? 'success' : 'secondary' }}">{{ translate($s->status) }}</span></td>
                                     <td class="text-end">
                                         <form action="{{ route('vendor.business-settings.staff.destroy', $s->id) }}" method="post" onsubmit="return confirm('{{ translate('are_you_sure') }}')">
                                             @csrf @method('DELETE') <button class="btn btn-sm btn-outline-danger">{{ translate('remove') }}</button>

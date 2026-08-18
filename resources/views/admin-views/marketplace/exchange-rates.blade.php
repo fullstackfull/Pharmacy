@@ -56,7 +56,7 @@
                                         <td>{{ $h->code ?: ($currencyNames[$h->currency_id] ?? ('#' . $h->currency_id)) }}</td>
                                         <td class="text-end text-muted">{{ $h->old_rate !== null ? rtrim(rtrim(number_format((float) $h->old_rate, 6), '0'), '.') : '—' }}</td>
                                         <td class="text-end fw-bold">{{ rtrim(rtrim(number_format((float) $h->new_rate, 6), '0'), '.') }}</td>
-                                        <td><span class="badge bg-light text-dark">{{ translate($h->source) }}</span></td>
+                                        <td><span class="k-badge">{{ translate($h->source) }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="5" class="text-center text-muted py-4">{{ translate('no_rate_changes_recorded_yet') }}</td></tr>

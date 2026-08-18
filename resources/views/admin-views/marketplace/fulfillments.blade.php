@@ -60,7 +60,7 @@
                                     @if($f->tracking_number)<div class="fs-10 text-muted">{{ $f->carrier }} {{ $f->tracking_number }}</div>@endif
                                 </td>
                                 <td>#{{ $f->order_id }}@if($f->warehouse_id)<div class="fs-10 text-muted">{{ translate('warehouse') }} #{{ $f->warehouse_id }}</div>@endif</td>
-                                <td><span class="badge bg-{{ $statusMap[$f->status] ?? 'secondary' }} text-dark">{{ translate($f->status) }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $statusMap[$f->status] ?? 'secondary' }}">{{ translate($f->status) }}</span></td>
                                 <td>
                                     @if ($f->isOpen() && $next)
                                         @if ($next === 'shipped')
