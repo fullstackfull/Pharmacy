@@ -15,113 +15,76 @@
             </h2>
         </div>
         @include('vendor-views.delivery-man.pages-inline-menu')
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="px-3 py-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-4 col-lg-6 mb-2 mb-md-0">
-
-                            <h4 class="d-flex align-items-center text-capitalize gap-10 mb-0">
-                                {{ translate('order_list') }}
-                                <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{  $orders->total() }}</span>
-                            </h4>
-                        </div>
-                        <div class="col-md-8 col-lg-6">
-                            <div class="d-flex align-items-center justify-content-md-end flex-wrap flex-sm-nowrap gap-2">
-                                <form action="" method="GET">
-                                    <div class="input-group input-group-merge input-group-custom">
-                                        <div class="input-group-prepend">
-                                            <div class="input-group-text">
-                                                <i class="tio-search"></i>
-                                            </div>
-                                        </div>
-                                        <input id="datatableSearch_" type="search" name="search" class="form-control" placeholder="{{ translate('search_by_order_no') }}" aria-label="Search orders" value="{{ $searchValue?? '' }}">
-                                        <button type="submit" class="btn btn--primary">
-                                            {{ translate('search') }}
-                                        </button>
-                                    </div>
-                                </form>
+        <x-k.data-view :title="translate('order_list')" :count="$orders->total()"
+                       searchName="search" :searchValue="$searchValue ?? ''"
+                       :searchPlaceholder="translate('search_by_order_no')">
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('SL') }}</th>
+                    <th>{{ translate('order_no') }}</th>
+                    <th>{{ translate('current_status') }}</th>
+                    <th>{{ translate('history') }}</th>
+                </tr>
+                </thead>
+                <tbody id="set-rows">
+                @foreach($orders as $key=>$order)
+                    <tr>
+                        <td><span class="k-num">{{ $orders->firstItem()+$key }}</span></td>
+                        <td>
+                            <a class="title-color hover-c1" href="{{route('vendor.orders.details',$order['id'])}}">{{$order['id']}}</a>
+                        </td>
+                        <td>
+                            @switch($order['order_status'])
+                                @case('pending')
+                                    <x-k.badge tone="info">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('processing')
+                                    <x-k.badge tone="warning">{{ translate('packaging') }}</x-k.badge>
+                                    @break
+                                @case('out_for_delivery')
+                                    <x-k.badge tone="warning">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('confirmed')
+                                @case('delivered')
+                                    <x-k.badge tone="success">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('failed')
+                                    <x-k.badge tone="danger">{{ translate('Failed_To_Deliver') }}</x-k.badge>
+                                    @break
+                                @default
+                                    <x-k.badge tone="danger">{{ translate($order['order_status']) }}</x-k.badge>
+                            @endswitch
+                        </td>
+                        <td>
+                            <div class="k-table__actions">
+                                <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon order-status-history"
+                                        aria-label="{{ translate('order_status_history') }}" title="{{ translate('order_status_history') }}"
+                                        data-id="{{ $order->id }}" data-toggle="modal" data-target="#exampleModalLong">
+                                    <x-k.icon name="clock" :size="15" />
+                                </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                <div class="row g-2">
-                    <div class="col-sm-12 mb-3">
-                        <div class="card">
-                            <div class="table-responsive datatable-custom">
-                                <table class="table table-hover table-borderless table-thead-bordered table-align-middle card-table text-start">
-                                    <thead class="thead-light thead-50 text-capitalize table-nowrap">
-                                    <tr>
-                                        <th>{{ translate('SL') }}</th>
-                                        <th>{{ translate('order_no') }}</th>
-                                        <th class="text-center">{{ translate('current_status') }}</th>
-                                        <th class="text-center">{{ translate('history') }}</th>
-                                    </tr>
-                                    </thead>
+            @if(count($orders)==0)
+                <x-k.empty icon="orders" :title="translate('no_order_found')" />
+            @endif
 
-                                    <tbody id="set-rows">
-                                    @foreach($orders as $key=>$order)
-                                        <tr>
-                                            <td>{{ $orders->firstItem()+$key }}</td>
-                                            <td>
-                                                <div class="media align-items-center gap-10 flex-wrap">
-                                                    <div class="media-body">
-                                                        <a  class="title-color hover-c1" href="{{route('vendor.orders.details',$order['id'])}}">{{$order['id']}}</a>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="text-center text-capitalize">
-                                                @if($order['order_status']=='pending')
-                                                    <span class="badge badge-soft-info fs-12">
-                                                    {{$order['order_status']}}
-                                            </span>
-
-                                                @elseif($order['order_status']=='processing' || $order['order_status']=='out_for_delivery')
-                                                    <span class="badge badge-soft-warning fs-12">
-                                                {{str_replace('_',' ',$order['order_status'] == 'processing' ? 'packaging':$order['order_status'])}}
-                                            </span>
-                                                @elseif($order['order_status']=='confirmed')
-                                                    <span class="badge badge-soft-success fs-12">
-                                                {{$order['order_status']}}
-                                            </span>
-                                                @elseif($order['order_status']=='failed')
-                                                    <span class="badge badge-danger fs-12">
-                                                {{translate('Failed_To_Deliver')}}
-                                            </span>
-                                                @elseif($order['order_status']=='delivered')
-                                                    <span class="badge badge-soft-success fs-12">
-                                                {{$order['order_status']}}
-                                            </span>
-                                                @else
-                                                    <span class="badge badge-soft-danger fs-12">
-                                                {{$order['order_status']}}
-                                            </span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="media align-items-center gap-10 flex-wrap justify-content-center">
-                                                    <button class="btn btn-info order-status-history" aria-label="{{ translate('order_status_history') }}" data-id="{{ $order->id }}" data-toggle="modal" data-target="#exampleModalLong"><i class="tio-history"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="table-responsive mt-4">
-                                <div class="px-4 d-flex justify-content-lg-end">
-                                    {{ $orders->links() }}
-                                </div>
-                            </div>
-                            @if(count($orders)==0)
-                                @include('layouts.vendor.partials._empty-state',['text'=>'no_order_found'],['image'=>'default'])
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+            @if ($orders->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                    </span>
+                    <div>{!! $orders->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
         <div class="modal fade" id="exampleModalLong" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content load-with-ajax">

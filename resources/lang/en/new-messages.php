@@ -3127,4 +3127,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"inventory_quantity_(low_to_high)" => "Inventory quantity (low to high)",
 	"my_payout_requests" => "My payout requests",
 	"your_documents" => "Your documents",
+	"delivery_man_Review" => "Delivery man Review",
+	"emergency_contact_added_successfully" => "Emergency contact added successfully",
+	"earning_history" => "Earning history",
 ];

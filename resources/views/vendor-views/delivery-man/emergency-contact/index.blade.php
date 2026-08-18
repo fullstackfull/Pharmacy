@@ -50,90 +50,84 @@
                         </div>
                     </div>
                 </form>
-                <div class="card mt-3">
-                    <div class="p-3">
-                        <div class="row gy-1 align-items-center justify-content-between">
-                            <div class="col-auto">
-                                <h5>
-                                    {{translate('contact_information_Table')}}
-                                    <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{ $contacts->count() }}</span>
-                                </h5>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table id="datatable" class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-start">
-                            <thead class="thead-light thead-50 text-capitalize">
-                            <tr>
-                                <th>{{translate('SL')}}</th>
-                                <th class="text-center">{{translate('name')}}</th>
-                                <th class="text-center">{{translate('phone')}}</th>
-                                <th class="text-center">{{translate('status')}}</th>
-                                <th class="text-center">{{translate('action')}}</th>
-                            </tr>
-                            </thead>
-
-                            <tbody>
-                            @foreach($contacts as $contact)
+                <div class="mt-3">
+                    <x-k.card :title="translate('contact_information_Table')" :padded="false">
+                        <x-slot:actions>
+                            <span class="k-tab__count k-num">{{ $contacts->count() }}</span>
+                        </x-slot:actions>
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                 <tr>
-                                    <th scope="row">{{ $contacts->firstItem() + $loop->index }}</th>
-                                    <td class="text-center text-capitalize">{{ $contact['name'] }}</td>
-                                    <td class="text-center">
-                                        <a class="title-color hover-c1" href="tel:{{ $contact['phone'] }}">
-                                            {{ $contact['phone'] }}
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <form action="{{route('vendor.delivery-man.emergency-contact.index')}}" method="post" id="contact_status{{$contact['id']}}-form" class="contact_status_form">
-                                            @csrf @method('patch')
-                                            <input hidden name="id" value="{{$contact['id']}}">
-                                            <label class="switcher mx-auto">
-                                                <input type="checkbox" class="switcher_input toggle-switch-message" id="contact_status{{$contact['id']}}" name="status" value="1" {{ $contact->status == 1 ? 'checked':'' }}
-                                                    data-modal-id = "toggle-status-modal"
-                                                    data-toggle-id = "contact_status{{$contact['id']}}"
-                                                    data-on-image = ""
-                                                    data-off-image = ""
-                                                    data-on-title = "{{translate('are_you_sure').'?'}}"
-                                                    data-off-title = "{{translate('are_you_sure').'?'}}"
-                                                    data-on-message = "<p>{{translate('want_to_change_status')}}</p>"
-                                                    data-off-message = "<p>{{translate('want_to_change_status')}}</p>"
-                                                >
-                                                <span class="switcher_control"></span>
-                                            </label>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-center align-items-center gap-2">
-                                            <button  class="btn btn-outline--primary btn-sm emergency-contact-update-view"
-                                                     title="{{translate('edit')}}"
-                                                     data-action="{{ route('vendor.delivery-man.emergency-contact.update',['id'=>$contact->id]) }}">
-                                                <i class="tio-edit"></i>
-                                            </button>
-                                            <a class="btn btn-outline-danger btn-sm delete delete-data" href="javascript:"
-                                               data-id="delete-contact-{{$contact->id}}"
-                                               title="{{ translate('delete')}}">
-                                                <i class="tio-delete"></i>
-                                            </a>
-                                        </div>
-                                        <form action="{{route('vendor.delivery-man.emergency-contact.index')}}"
-                                              method="post" id="delete-contact-{{$contact->id}}">
-                                            @csrf @method('delete')
-                                            <input type="hidden" name="id" value="{{ $contact->id }}">
-                                        </form>
-                                    </td>
+                                    <th>{{translate('SL')}}</th>
+                                    <th>{{translate('name')}}</th>
+                                    <th>{{translate('phone')}}</th>
+                                    <th>{{translate('status')}}</th>
+                                    <th></th>
                                 </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    @if(count($contacts)==0)
-                        @include('layouts.vendor.partials._empty-state', ['text'=>'no_contact_found', 'image'=>'default', 'width' => 120])
-                    @endif
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                            {{ $contacts->links() }}
+                                </thead>
+                                <tbody>
+                                @foreach($contacts as $contact)
+                                    <tr>
+                                        <td><span class="k-num">{{ $contacts->firstItem() + $loop->index }}</span></td>
+                                        <td class="text-capitalize">{{ $contact['name'] }}</td>
+                                        <td>
+                                            <a class="title-color hover-c1 k-num" href="tel:{{ $contact['phone'] }}">
+                                                {{ $contact['phone'] }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <form action="{{route('vendor.delivery-man.emergency-contact.index')}}" method="post" id="contact_status{{$contact['id']}}-form" class="contact_status_form">
+                                                @csrf @method('patch')
+                                                <input hidden name="id" value="{{$contact['id']}}">
+                                                <label class="switcher mx-auto">
+                                                    <input type="checkbox" class="switcher_input toggle-switch-message" id="contact_status{{$contact['id']}}" name="status" value="1" {{ $contact->status == 1 ? 'checked':'' }}
+                                                        data-modal-id = "toggle-status-modal"
+                                                        data-toggle-id = "contact_status{{$contact['id']}}"
+                                                        data-on-image = ""
+                                                        data-off-image = ""
+                                                        data-on-title = "{{translate('are_you_sure').'?'}}"
+                                                        data-off-title = "{{translate('are_you_sure').'?'}}"
+                                                        data-on-message = "<p>{{translate('want_to_change_status')}}</p>"
+                                                        data-off-message = "<p>{{translate('want_to_change_status')}}</p>"
+                                                    >
+                                                    <span class="switcher_control"></span>
+                                                </label>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <div class="k-table__actions">
+                                                <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon emergency-contact-update-view"
+                                                        title="{{translate('edit')}}"
+                                                        data-action="{{ route('vendor.delivery-man.emergency-contact.update',['id'=>$contact->id]) }}">
+                                                    <x-k.icon name="edit" :size="15" />
+                                                </button>
+                                                <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete delete-data" role="button"
+                                                      data-id="delete-contact-{{$contact->id}}"
+                                                      title="{{ translate('delete')}}">
+                                                    <x-k.icon name="trash" :size="15" />
+                                                </span>
+                                            </div>
+                                            <form action="{{route('vendor.delivery-man.emergency-contact.index')}}"
+                                                  method="post" id="delete-contact-{{$contact->id}}">
+                                                @csrf @method('delete')
+                                                <input type="hidden" name="id" value="{{ $contact->id }}">
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
+                        @if(count($contacts)==0)
+                            <x-k.empty icon="customers" :title="translate('no_contact_found')" />
+                        @endif
+                        @if ($contacts->total() > 0)
+                            <x-slot:footer>
+                                {!! $contacts->appends(request()->except('page'))->links() !!}
+                            </x-slot:footer>
+                        @endif
+                    </x-k.card>
                 </div>
             </div>
         </div>
