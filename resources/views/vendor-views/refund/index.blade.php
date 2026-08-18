@@ -9,192 +9,151 @@
             <img width="20" src="{{dynamicAsset(path: 'public/assets/back-end/img/refund-request-list.png')}}" alt="">
             {{translate('refund_request_list')}}
         </h2>
-        <div class="card">
-            <div class="p-3">
-                <div class="row g-2 justify-content-between align-items-center">
-                    <div class="col-12 col-md-4">
-                        <div class=" d-flex align-items-center gap-1">
-                            <h4 class="mb-0 fs-16">{{ translate('Pending Refund Requests List') }}</h4>
-                            <span class="badge badge-soft-dark radius-50 px-2 py-1">{{ $refundList->total() }}</span>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-8">
-                        <div class="d-flex gap-3 flex-sm-nowrap align-items-stretch flex-wrap justify-content-md-end">
-                            <form action="{{ url()->current() }}" method="GET">
-                                <div class="input-group input-group-merge input-group-custom">
-                                    <div class="input-group-prepend">
-                                        <div class="input-group-text">
-                                            <i class="tio-search"></i>
-                                        </div>
-                                    </div>
-                                    <input id="datatableSearch_" type="search" name="search" class="form-control"
-                                        placeholder="{{translate('search_by_order_id_or_refund_id')}}"
-                                        aria-label="Search orders" value="{{ request('search') }}">
-                                    <button type="submit" class="btn btn--primary">{{translate('search')}}</button>
-                                </div>
-                            </form>
-                            <div class="dropdown">
-                                <a type="button" class="btn h-45 px-4 btn-outline--primary text-nowrap h-100"
-                                   href="{{route('vendor.refund.export',['status'=> request('status'),'search'=>request('search'), 'from_date' => request('from_date'), 'to_date' => request('to_date')])}}">
-                                    <i class="fi fi-sr-inbox-in"></i>
-                                    <span class="ps-1">{{ translate('export') }}</span>
-                                </a>
-                            </div>
 
-                            <div class="position-relative">
-                                @if(!empty(request('from_date')) || !empty(request('to_date')))
-                                    <div class="position-absolute inset-inline-end-0 top-0 mt-n1 me-n1 btn-circle bg-danger border border-white border-2 z-2" style="--size: 12px;"></div>
-                                @endif
-                                    <button type="button"  @if(!empty(request('from_date')) || !empty(request('to_date'))) class="btn btn--primary px-4 h-100" @else class="btn btn-outline--primary px-4 h-100" @endif
-                                            class="btn btn-outline--primary h-45 px-4 position-relative"
-                                            data-toggle="offcanvas"
-                                            data-target="#PendingRefundRequestFilter">
-                                        <i class="fi fi-sr-settings-sliders"></i> {{ translate('Filter') }}
-                                    </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="table-responsive datatable-custom">
-                <table
-                    class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table text-start">
-                    <thead class="thead-light thead-50 text-capitalize">
+        @php($refundStatus = request('status'))
+        <x-k.data-view :title="translate('refund_requests')" :count="$refundList->total()"
+                       searchName="search" :searchValue="$searchValue"
+                       :searchPlaceholder="translate('search_by_order_id_or_refund_id')">
+
+            <x-slot:tabs>
+                @foreach(['pending', 'approved', 'refunded', 'rejected'] as $statusTab)
+                    <a class="k-tab" href="{{ route('vendor.refund.index', [$statusTab, 'search' => request('search')]) }}"
+                       aria-selected="{{ $refundStatus === $statusTab ? 'true' : 'false' }}">{{ translate($statusTab) }}</a>
+                @endforeach
+            </x-slot:tabs>
+
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{route('vendor.refund.export',['status'=> request('status'),'search'=>request('search'), 'from_date' => request('from_date'), 'to_date' => request('to_date')])}}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+                @php($refundFilterActive = !empty(request('from_date')) || !empty(request('to_date')))
+                <button type="button" class="k-btn {{ $refundFilterActive ? 'k-btn--primary' : 'k-btn--secondary' }}"
+                        data-toggle="offcanvas" data-target="#PendingRefundRequestFilter">
+                    <x-k.icon name="filter" :size="15" /> {{ translate('Filter') }}
+                </button>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('refund_id')}}</th>
+                    <th>{{translate('order_ID')}}</th>
+                    <th>{{translate('product_Info')}}</th>
+                    <th>{{translate('customer_Info')}}</th>
+                    <th class="k-table__num">{{ translate('total_amount') }}</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($refundList as $key=>$refund)
+                    @php($isProductUnavailable = $refund->product === null)
+                    @php($productDetails = $refund?->orderDetails?->product_details ? json_decode($refund->orderDetails->product_details, true) : null)
                     <tr>
-                        <th>{{translate('SL')}}</th>
-                        <th class="text-center">{{translate('refund_id')}}</th>
-                        <th>{{translate('order_ID')}} </th>
-                        <th>{{translate('product_Info')}}</th>
-                        <th>{{translate('customer_Info')}}</th>
-                        <th class="text-end">{{ translate('total_amount') }}</th>
-                        <th class="text-center">{{translate('action')}}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($refundList as $key=>$refund)
-                        @php
-                            $isProductUnavailable = $refund->product === null;
-                            $productDetails = $refund?->orderDetails?->product_details
-                                ? json_decode($refund->orderDetails->product_details, true)
-                                : null;
-                        @endphp
-                        <tr>
-                            <td> {{$refundList->firstItem()+$key}}</td>
-                            <td class="text-center">
-
-                                <a class="title-color hover-c1"
-                                   href="{{route('vendor.refund.details',['id'=>$refund['id']])}}">
-                                    {{$refund['id']}}
-                                </a>
-                            </td>
-                            <td>
-                                <a class="title-color hover-c1"
-                                   href="{{route('vendor.orders.details',[$refund->order_id])}}">
-                                    {{$refund->order_id}}
-                                </a>
-                            </td>
-                            <td>
-                                <div class="d-flex refund-title flex-wrap gap-2 {{ $isProductUnavailable ? 'pe-none opacity-50 cus-disabled' : '' }}"
-                                     data-toggle="tooltip" data-placement="top"
-                                     title="{{ $isProductUnavailable ? translate('Product_has_been_deleted') : '' }}">
-                                    @if (!$isProductUnavailable)
-                                        <a href="{{ route('vendor.products.view', [$refund->product->id]) }}">
-                                            <img src="{{ getStorageImages(path: $refund->product->thumbnail_full_url, type: 'backend-product') }}"
-                                                 class="avatar border" alt="{{ $refund->product->name }}">
-                                        </a>
-                                        <div class="d-flex flex-column gap-1">
-                                            <a href="{{ route('vendor.products.view', [$refund->product->id]) }}"
-                                               class="title-color font-weight-bold hover-c1 line--limit-1 max-w-280 min-w-100">
-                                                {{ Str::limit($refund->product->name, 35) }}
-                                            </a>
-                                            <span class="fs-12">{{ translate('qty') }} : {{ $refund?->orderDetails?->qty ?? 0 }}</span>
-                                        </div>
-                                    @else
-                                        <img src="{{ getStorageImages(path: '', type: 'backend-product') }}"
-                                             class="avatar border">
-                                        <div class="d-flex flex-column gap-1">
-                                            <span
-                                               class="title-color font-weight-bold hover-c1 line--limit-1 max-w-280 min-w-100">
-                                                {{ Str::limit($productDetails['name'] ?? translate('product_name_not_found'), 35) }}
-                                            </span>
-                                            <span class="fs-12">{{ translate('qty') }} : {{ $refund?->orderDetails?->qty ?? 0 }}</span>
-                                        </div>
-                                    @endif
-                                </div>
-                            </td>
-                            <td>
-                                @if ($refund->customer !=null)
-                                    <div class="d-flex flex-column gap-1">
-                                    <span class="title-color font-weight-bold" style="text-decoration: none;">
-                                        {{$refund->customer->f_name.' '.$refund->customer->l_name}}
+                        <td><span class="k-num">{{$refundList->firstItem()+$key}}</span></td>
+                        <td>
+                            <a class="title-color hover-c1"
+                               href="{{route('vendor.refund.details',['id'=>$refund['id']])}}">
+                                {{$refund['id']}}
+                            </a>
+                        </td>
+                        <td>
+                            <a class="title-color hover-c1"
+                               href="{{route('vendor.orders.details',[$refund->order_id])}}">
+                                {{$refund->order_id}}
+                            </a>
+                        </td>
+                        <td>
+                            @if (!$isProductUnavailable)
+                                <a href="{{ route('vendor.products.view', [$refund->product->id]) }}" class="k-row">
+                                    <img src="{{ getStorageImages(path: $refund->product->thumbnail_full_url, type: 'backend-product') }}"
+                                         alt="" width="40" height="40"
+                                         style="border-radius:8px;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                    <span style="min-inline-size:0">
+                                        <span class="k-truncate" style="display:block;max-inline-size:220px" title="{{ $refund->product->name }}">
+                                            {{ Str::limit($refund->product->name, 35) }}
+                                        </span>
+                                        <span class="k-text-subtle">{{ translate('qty') }} : <span class="k-num">{{ $refund?->orderDetails?->qty ?? 0 }}</span></span>
                                     </span>
-                                        @if($refund->customer->phone)
-                                            <span class="title-color fs-12">
-                                                {{$refund->customer?->phone}}
-                                            </span>
-                                                @else
-                                            <span class="title-color fs-12">
-                                                {{$refund->customer?->email}}
-                                            </span>
-                                        @endif
-                                    </div>
-                                @else
-                                    <a href="javascript:" class="title-color hover-c1">
-                                        {{translate('customer_not_found')}}
-                                    </a>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column gap-1 text-end">
-                                    <div>
-                                        {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $refund->amount), currencyCode: getCurrencyCode()) }}
-                                    </div>
+                                </a>
+                            @else
+                                <div class="k-row" style="opacity:.5" data-toggle="tooltip"
+                                     title="{{ translate('Product_has_been_deleted') }}">
+                                    <img src="{{ getStorageImages(path: '', type: 'backend-product') }}"
+                                         alt="" width="40" height="40"
+                                         style="border-radius:8px;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                    <span style="min-inline-size:0">
+                                        <span class="k-truncate" style="display:block;max-inline-size:220px">
+                                            {{ Str::limit($productDetails['name'] ?? translate('product_name_not_found'), 35) }}
+                                        </span>
+                                        <span class="k-text-subtle">{{ translate('qty') }} : <span class="k-num">{{ $refund?->orderDetails?->qty ?? 0 }}</span></span>
+                                    </span>
                                 </div>
-                            </td>
-                            <td>
-                                <div class="d-flex justify-content-center gap-2">
-                                    <a class="btn btn-outline--primary icon-btn"
-                                       href="{{route('vendor.refund.details',['id'=>$refund['id']])}}">
-                                       <span data-toggle="tooltip" data-placement="top" title="View">
-                                           <i class="fi fi-sr-eye d-flex"></i>
-                                       </span>
-                                    </a>
-                                    @if($refund['status'] != 'refunded')
-                                        @if($refund['status'] != 'rejected')
-                                            <button class="btn btn-outline-danger icon-btn"
-                                                    data-toggle="modal"
-                                                    data-target="#rejectModal-{{$refund['id']}}">
-                                                <span data-toggle="tooltip" data-placement="top" title="Reject">
-                                                    <i class="fi fi-rr-cross fs-12 d-flex"></i>
-                                                </span>
-                                            </button>
-                                        @endif
-                                        @if($refund['status'] != 'approved')
-                                            <button class="btn btn-outline-success icon-btn"
-                                                    data-toggle="modal"
-                                                    data-target="#approveModal-{{$refund['id']}}">
-                                                <span data-toggle="tooltip" data-placement="top" title="Approve">
-                                                    <i class="fi fi-sr-check d-flex"></i>
-                                                </span>
-                                            </button>
-                                        @endif
+                            @endif
+                        </td>
+                        <td>
+                            @if ($refund->customer !=null)
+                                <strong class="title-color">
+                                    {{$refund->customer->f_name.' '.$refund->customer->l_name}}
+                                </strong>
+                                <div class="k-text-subtle">
+                                    {{ $refund->customer->phone ?: $refund->customer->email }}
+                                </div>
+                            @else
+                                <span class="k-text-subtle">{{translate('customer_not_found')}}</span>
+                            @endif
+                        </td>
+                        <td class="k-table__num">
+                            <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $refund->amount), currencyCode: getCurrencyCode()) }}</span>
+                        </td>
+                        <td>
+                            <div class="k-table__actions">
+                                <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}"
+                                   href="{{route('vendor.refund.details',['id'=>$refund['id']])}}">
+                                    <x-k.icon name="eye" :size="15" />
+                                </a>
+                                @if($refund['status'] != 'refunded')
+                                    @if($refund['status'] != 'rejected')
+                                        <button class="k-btn k-btn--ghost k-btn--sm k-btn--icon" type="button"
+                                                title="{{ translate('reject') }}"
+                                                data-toggle="modal"
+                                                data-target="#rejectModal-{{$refund['id']}}">
+                                            <x-k.icon name="close" :size="15" />
+                                        </button>
                                     @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-lg-end">
-                    {!! $refundList->links() !!}
-                </div>
-            </div>
+                                    @if($refund['status'] != 'approved')
+                                        <button class="k-btn k-btn--ghost k-btn--sm k-btn--icon" type="button"
+                                                title="{{ translate('approve') }}"
+                                                data-toggle="modal"
+                                                data-target="#approveModal-{{$refund['id']}}">
+                                            <x-k.icon name="check" :size="15" />
+                                        </button>
+                                    @endif
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+
             @if(count($refundList)==0)
-                @include('layouts.vendor.partials._empty-state',['text'=>'no_refund_request_found'],['image'=>'default'])
+                <x-k.empty icon="refresh" :title="translate('no_refund_request_found')"
+                           :text="request('search') ? translate('no_refund_request_matches_your_search') : null" />
             @endif
-        </div>
+
+            @if ($refundList->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $refundList->firstItem() }}–{{ $refundList->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $refundList->total() }}</span>
+                    </span>
+                    <div>{!! $refundList->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
     @include('vendor-views.refund.partials._filter-offcanvas')
 
