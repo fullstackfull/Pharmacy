@@ -516,7 +516,7 @@ class OrderController extends BaseController
                 'countryRestrictStatus','totalDelivered', 'zipRestrictStatus', 'countries', 'zipCodes', 'orderCount', 'previousOrder', 'nextOrder', 'allProductsList', 'isOrderEditable', 'orderProductsSession', 'editOrderSummary', 'orderEditPaymentHistory'));
         } else {
             $orderCount = $this->orderRepo->getListWhereCount(filters: ['customer_id' => $order['customer_id'], 'order_type' => 'POS']);
-            return view('vendor-views.pos.order.order-details', compact('order', 'orderCount','totalDelivered', 'previousOrder', 'nextOrder', 'isOrderEditable', 'editOrderSummary'));
+            return view('vendor-views.pos.order.order-details', compact('order', 'orderCount','totalDelivered', 'previousOrder', 'nextOrder', 'isOrderEditable', 'editOrderSummary', 'deliveryMen', 'physicalProduct'));
         }
     }
 

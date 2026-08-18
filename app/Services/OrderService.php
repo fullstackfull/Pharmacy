@@ -12,20 +12,38 @@ class OrderService
     {
     }
 
-    public function getPOSOrderData(int|string $orderId, array $cart, float $amount, float $totalTaxAmount, float $paidAmount, string $paymentType, string $addedBy, int $userId): array
+    public function getPOSOrderData(int|string $orderId, array $cart, float $amount, float $totalTaxAmount, float $paidAmount, string $paymentType, string $addedBy, int $userId, string $fulfillment = 'instant'): array
     {
         $taxConfig = self::getTaxSystemType();
+
+        // A delivery-fulfillment POS sale enters the standard order lifecycle:
+        // it starts pending and staff walk it to delivered like a web order.
+        // Cash for such an order is collected on delivery, so it is stored as
+        // cash_on_delivery/unpaid — updateStatus() then settles payment, the
+        // deliveryman's cash-in-hand and wallets exactly as for web COD orders.
+        $isDelivery = $fulfillment === 'delivery';
+        $isCashOnDelivery = $isDelivery && $paymentType === 'cash';
+        $shippingAddress = null;
+        $shippingResponsibility = null;
+        if ($isDelivery) {
+            $shippingAddress = $userId != 0
+                ? \App\Models\ShippingAddress::where(['customer_id' => $userId])->orderByDesc('id')->first()
+                : null;
+            $shippingResponsibility = getWebConfig(name: 'shipping_method');
+        }
 
         return [
             'id' => $orderId,
             'customer_id' => $userId,
             'customer_type' => 'customer',
-            'payment_status' => 'paid',
-            'order_status' => 'delivered',
+            'payment_status' => $isCashOnDelivery ? 'unpaid' : 'paid',
+            'order_status' => $isDelivery ? 'pending' : 'delivered',
             'seller_id' => $addedBy == 'seller' ? auth('seller')->id() : auth('admin')->id(),
             'seller_is' => $addedBy,
-            'payment_method' => $paymentType,
+            'payment_method' => $isCashOnDelivery ? 'cash_on_delivery' : $paymentType,
             'order_type' => 'POS',
+            'shipping_address_data' => $shippingAddress,
+            'shipping_responsibility' => $shippingResponsibility,
             'checked' => 1,
             'total_tax_amount' => $totalTaxAmount,
             'tax_type' => $taxConfig['SystemTaxVatType'],

@@ -355,6 +355,11 @@ function basicFunctionalityForCartSummary() {
         }
     });
     function checkedPaidAmount() {
+        // Cash for a delivery-fulfillment order is collected on delivery,
+        // so the tendered amount is not required at checkout.
+        if ($('input[name="fulfillment"]:checked').val() === "delivery") {
+            return true;
+        }
         let paidAmount = $(".pos-paid-amount-element");
         if ($('.paid-by-cash').prop('checked') && paidAmount.val() === '') {
             toastMagic.error($("#message-enter-valid-amount").data("text"));
@@ -1243,3 +1248,10 @@ function initSliderWithZoom() {
         },
     });
 }
+
+
+$(document).on("change", 'input[name="fulfillment"], input[name="type"]', function () {
+    let isDelivery = $('input[name="fulfillment"]:checked').val() === "delivery";
+    $(".fulfillment-delivery-note").toggleClass("d-none", !isDelivery);
+    $(".cash-change-amount").toggleClass("d-none", isDelivery && $(".paid-by-cash").prop("checked"));
+});
