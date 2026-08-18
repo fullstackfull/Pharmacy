@@ -127,9 +127,9 @@
                         </form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead class="thead-light">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                     <tr>
                                         <th>{{ translate('theme') }}</th>
                                         <th class="text-center">{{ translate('versions') }}</th>

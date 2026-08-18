@@ -116,9 +116,9 @@
                     <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
                         <h3 class="mb-0">{{ translate('Recently_Added_10_Items') }}</h3>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-borderless align-middle">
-                            <thead class="text-capitalize">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th class="text-center">{{ translate('Icon') }}</th>

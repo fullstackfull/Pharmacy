@@ -148,9 +148,9 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table">
-                    <thead class="thead-light thead-50 text-capitalize">
+            <div class="k-table-wrap">
+                <table class="k-table">
+                    <thead>
                         <tr>
                             <th>{{translate('SL')}}</th>
                             <th>{{translate('transaction_ID')}}</th>

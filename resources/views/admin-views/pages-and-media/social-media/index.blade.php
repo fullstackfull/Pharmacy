@@ -67,9 +67,9 @@
         <div class="card">
             <div class="card-body d-flex flex-column gap-20">
                 <h3 class="mb-0 text-capitalize">{{ translate('social_media_link_list') }}</h3>
-                <div class="table-responsive">
-                    <table class="table table-hover table-borderless {{ count($socialMediaLinks) == 0 ? 'd-none' : '' }}" id="dataTable">
-                        <thead class="text-capitalize">
+                <div class="k-table-wrap">
+                    <table class="k-table" id="dataTable">
+                        <thead>
                             <tr>
                                 <th>{{ translate('sl') }}</th>
                                 <th>{{ translate('name') }}</th>
