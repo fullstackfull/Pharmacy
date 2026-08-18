@@ -32,9 +32,9 @@
                 </div>
             </div>
             <div class="card-body px-0">
-                <div class="table-responsive">
-                    <table class="table table-borderless table-thead-bordered table-nowrap table-align-middle card-table dataTable no-footer table-hover d-lg-table">
-                        <thead class="thead-light">
+                <div class="k-table-wrap">
+                    <table class="k-table">
+                        <thead>
                         <tr>
                             <th class="w-95px">
                                 <div class="d-flex align-items-center gap-2">

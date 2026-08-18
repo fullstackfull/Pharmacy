@@ -33,8 +33,8 @@
         <div class="card">
             <div class="card-body p-0">
                 <div class="table-responsive" style="overflow-x:auto">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="thead-light">
+                    <table class="k-table">
+                        <thead>
                             <tr>
                                 <th>{{ translate('product') }}</th>
                                 <th>{{ translate('issues') }}</th>

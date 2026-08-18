@@ -50,9 +50,9 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover table-borderless align-middle text-dark">
-                                <thead class="text-capitalize">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                 <tr>
                                     <th>{{ translate('SL') }}</th>
                                     <th>{{ translate('category_name') }}</th>
@@ -70,7 +70,7 @@
                                 <tbody>
                                 @foreach($categories as $key => $category)
                                     <tr>
-                                        <td>{{ $categories->firstItem() + $key }}</td>
+                                        <td><span class="k-num">{{ $categories->firstItem() + $key }}</span></td>
                                         <td class="d-flex justify-content-start align-items-center gap-2">
                                             <div
                                                 class="avatar-50 d-flex align-items-center rounded overflow-hidden">
@@ -95,7 +95,7 @@
                                             </td>
                                         @endif
                                         <td class="text-center">
-                                            {{ $category['priority'] }}
+                                            <span class="k-num">{{ $category['priority'] }}</span>
                                         </td>
 
                                         <td class="text-center">
@@ -156,18 +156,18 @@
                                         @endif
 
                                         <td>
-                                            <div class="d-flex justify-content-center gap-3">
-                                                <a class="btn btn-outline-info icon-btn edit" title="{{ translate('Edit') }}"
+                                            <div class="k-table__actions">
+                                                <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon edit" title="{{ translate('Edit') }}"
                                                    data-bs-toggle="offcanvas" href="#categoryEditOffcanvas-{{ $category['id'] }}">
-                                                    <i class="fi fi-sr-pencil"></i>
+                                                    <x-k.icon name="edit" :size="15" />
                                                 </a>
-                                                <a class="btn btn-outline-danger icon-btn delete-category"
-                                                   title="{{ translate('delete') }}"
-                                                   data-product-count="{{count($category?->product)}}"
-                                                   data-text="{{translate('there_were_').count($category?->product).translate('_products_under_this_category').'.'.translate('please_update_their_category_from_the_below_list_before_deleting_this_one').'.'}}"
-                                                   id="{{ $category['id'] }}">
-                                                    <i class="fi fi-rr-trash"></i>
-                                                </a>
+                                                <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-category" role="button"
+                                                      title="{{ translate('delete') }}"
+                                                      data-product-count="{{count($category?->product)}}"
+                                                      data-text="{{translate('there_were_').count($category?->product).translate('_products_under_this_category').'.'.translate('please_update_their_category_from_the_below_list_before_deleting_this_one').'.'}}"
+                                                      id="{{ $category['id'] }}">
+                                                    <x-k.icon name="trash" :size="15" />
+                                                </span>
                                             </div>
                                         </td>
                                     </tr>
@@ -176,14 +176,19 @@
                             </table>
                         </div>
 
-                        <div class="table-responsive mt-4">
-                            <div class="d-flex justify-content-lg-end">
-                                {{ $categories->links() }}
-                            </div>
-                        </div>
                         @if(count($categories) == 0)
-                            @include('layouts.admin.partials._empty-state',['text'=>'no_category_found'],['image'=>'default'])
+                            <x-k.empty icon="catalog" :title="translate('no_category_found')" />
                         @endif
+                        <div class="k-pager">
+                            <span class="k-pager__info">
+                                @if ($categories->total() > 0)
+                                    {{ translate('showing') }}
+                                    <span class="k-num">{{ $categories->firstItem() }}–{{ $categories->lastItem() }}</span>
+                                    {{ translate('of') }} <span class="k-num">{{ $categories->total() }}</span>
+                                @endif
+                            </span>
+                            <div>{!! $categories->appends(request()->except('page'))->links() !!}</div>
+                        </div>
                     </div>
                 </div>
             </div>
