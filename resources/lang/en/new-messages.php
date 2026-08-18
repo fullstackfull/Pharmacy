@@ -3095,4 +3095,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"customer_and_vendor_apps" => "Customer and vendor apps",
 	"endpoint_group" => "Endpoint group",
 	"errors" => "Errors",
+	"release" => "Release",
+	"Developer_Portal" => "Developer Portal",
+	"copy_full_url" => "Copy full url",
 ];

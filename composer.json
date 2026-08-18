@@ -72,6 +72,7 @@
             "app/Library/Constant.php",
             "app/Library/Responses.php",
             "app/Utils/BackEndHelper.php",
+            "app/Utils/version.php",
             "app/Utils/BrandManager.php",
             "app/Utils/CategoryManager.php",
             "app/Utils/CartManager.php",

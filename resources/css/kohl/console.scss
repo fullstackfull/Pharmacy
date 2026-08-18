@@ -32,3 +32,50 @@
     --k-card-radius: var(--k-radius-md);
     --k-card-border: 1px solid var(--k-border);
 }
+
+/* Release version pinned to the sidebar foot. */
+.v2-version-badge {
+    padding: 8px 16px 12px;
+    font-size: 11px;
+    color: var(--k-text-muted);
+    font-variant-numeric: tabular-nums;
+    user-select: all;
+}
+
+/* Developer portal */
+.k-dev-snippet {
+    background: var(--k-surface-sunk);
+    border: 1px solid var(--k-border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+    color: var(--k-text);
+}
+
+.k-dev-copy {
+    position: absolute;
+    inset-block-start: 6px;
+    inset-inline-end: 6px;
+}
+
+.k-dev-group {
+    border-block-end: 1px solid var(--k-border);
+    padding-block: 6px;
+}
+
+.k-dev-group > summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-block: 6px;
+    list-style: none;
+}
+
+.k-dev-group > summary::-webkit-details-marker { display: none; }
+
+.k-dev-group[open] > summary { color: var(--k-accent); }

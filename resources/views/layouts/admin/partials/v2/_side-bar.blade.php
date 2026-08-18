@@ -870,6 +870,10 @@
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Monitoring') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="monitoring" aria-label="Pin"></button></div>
                     </a>
+                    <a class="v2-nav-item {{ Request::is('admin/developer*') ? 'v2-is-active' : '' }}" data-item="developer" href="{{ route('admin.developer.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Developer_Portal') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="developer" aria-label="Pin"></button></div>
+                    </a>
                 </div>
             @endif
 
@@ -1104,6 +1108,11 @@
             </button>
         </div>
     @endif
+
+    {{-- The store's own release version (version.json), not the vendor platform's. --}}
+    <div class="v2-version-badge" title="{{ translate('release') }} {{ getAppVersion()['released_at'] ?? '' }}">
+        v{{ getAppVersion()['version'] }}
+    </div>
 
 </aside>
 

@@ -169,6 +169,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     // rather than discovered later on a production screen.
     Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
 
+    // Developer portal: the live API surface for the app teams, generated
+    // from the route table so it can never go stale.
+    Route::get('developer', [\App\Http\Controllers\Admin\Telemetry\DeveloperPortalController::class, 'index'])
+        ->name('developer.index')->middleware('module:system_settings');
+
     // Analytics: visits, sources, products, vendors and API load, read from
     // the telemetry rollups.
     Route::get('analytics', [\App\Http\Controllers\Admin\Telemetry\AnalyticsController::class, 'index'])
