@@ -1,6 +1,3 @@
-@php
-    use Illuminate\Support\Str;
-@endphp
 @extends('layouts.admin.app')
 @section('title', translate('add_new_notification'))
 @push('css_or_js')
@@ -91,122 +88,108 @@
             </div>
 
             <div class="col-sm-12 col-lg-12 mb-3 mb-lg-2">
-                <div class="card">
-                    <div class="card-body d-flex flex-column gap-20">
-                        <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                            <h3 class="mb-0">
-                                {{ translate('push_notification_table')}}
-                                <span class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $notifications->total() }}</span>
-                            </h3>
-                            <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                                <form action="{{ url()->current() }}" method="get">
-                                    <div class="input-group">
-                                        <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control"
-                                               placeholder="{{translate('search_by_title')}}"
-                                               aria-label="Search orders" value="{{ $searchValue }}" required>
-                                        <div class="input-group-append search-submit">
-                                            <button type="submit">
-                                                <i class="fi fi-rr-search"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                <x-k.data-view :title="translate('push_notification_table')" :count="$notifications->total()"
+                               searchName="searchValue" :searchValue="$searchValue"
+                               :searchPlaceholder="translate('search_by_title')">
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('title') }}</th>
+                            <th>{{ translate('description') }}</th>
+                            <th>{{ translate('image') }}</th>
+                            <th class="k-table__num">{{ translate('notification_count') }}</th>
+                            <th>{{ translate('status') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($notifications as $notification)
+                            <tr>
+                                <td>
+                                    <span class="k-truncate" style="display:block;max-inline-size:200px" title="{{ $notification['title'] }}">
+                                        {{ $notification['title'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="k-truncate" style="display:block;max-inline-size:280px" title="{{ $notification['description'] }}">
+                                        {{ $notification['description'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <img width="48" height="48" loading="lazy" alt=""
+                                         style="border-radius:6px;object-fit:cover;border:1px solid var(--k-border)"
+                                         src="{{ getStorageImages(path: $notification->image_full_url, type: 'backend-basic') }}">
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num" id="count-{{$notification->id}}">{{ $notification['notification_count'] }}</span>
+                                </td>
+                                <td>
+                                <form action="{{route('admin.notification.update-status')}}" method="post"
+                                    id="notification-status{{$notification['id']}}-form"
+                                    class="no-reload-form">
+                                    @csrf
+                                    <input type="hidden" name="id" value="{{$notification['id']}}">
+                                    <label class="switcher mx-auto" for="notification-status{{$notification['id']}}">
+                                        <input
+                                            class="switcher_input custom-modal-plugin"
+                                            type="checkbox" value="1" name="status"
+                                            id="notification-status{{$notification['id']}}"
+                                            {{ $notification['status'] == 1 ? 'checked':'' }}
+                                            data-modal-type="input-change-form"
+                                            data-modal-form="#notification-status{{$notification['id']}}-form"
+                                            data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/notification-on.png') }}"
+                                            data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/notification-off.png') }}"
+                                            data-on-title = "{{translate('Want_to_Turn_ON_Notification_Status').'?'}}"
+                                            data-off-title = "{{translate('Want_to_Turn_OFF_Notification_Status').'?'}}"
+                                            data-on-message = "<p>{{translate('if_enabled_customers_will_receive_notifications_on_their_devices')}}</p>"
+                                            data-off-message = "<p>{{translate('if_disabled_customers_will_not_receive_notifications_on_their_devices')}}</p>"
+                                            data-on-button-text="{{ translate('turn_on') }}"
+                                            data-off-button-text="{{ translate('turn_off') }}">
+                                        <span class="switcher_control"></span>
+                                    </label>
                                 </form>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-borderless align-middle">
-                                <thead class="text-capitalize">
-                                    <tr>
-                                        <th>{{translate('SL')}} </th>
-                                        <th>{{translate('title')}} </th>
-                                        <th>{{translate('description')}} </th>
-                                        <th>{{translate('image')}} </th>
-                                        <th>{{translate('notification_count')}} </th>
-                                        <th>{{translate('status')}} </th>
-                                        <th>{{translate('resend')}} </th>
-                                        <th class="text-center">{{translate('action')}} </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($notifications as $key=>$notification)
-                                        <tr>
-                                            <td>{{$notifications->firstItem()+ $key}}</td>
-                                            <td>
-                                                <span class="d-block">
-                                                    {{Str::limit($notification['title'],30)}}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {{Str::limit($notification['description'],40)}}
-                                            </td>
-                                            <td>
-                                                <img class="min-w-75" width="75" height="75"
-                                                    src="{{ getStorageImages(path: $notification->image_full_url, type: 'backend-basic') }}" alt="">
-                                            </td>
-                                            <td id="count-{{$notification->id}}">{{ $notification['notification_count'] }}</td>
-                                            <td>
-                                                <form action="{{route('admin.notification.update-status')}}" method="post"
-                                                    id="notification-status{{$notification['id']}}-form"
-                                                    class="no-reload-form">
-                                                    @csrf
-                                                    <input type="hidden" name="id" value="{{$notification['id']}}">
-                                                    <label class="switcher mx-auto" for="notification-status{{$notification['id']}}">
-                                                        <input
-                                                            class="switcher_input custom-modal-plugin"
-                                                            type="checkbox" value="1" name="status"
-                                                            id="notification-status{{$notification['id']}}"
-                                                            {{ $notification['status'] == 1 ? 'checked':'' }}
-                                                            data-modal-type="input-change-form"
-                                                            data-modal-form="#notification-status{{$notification['id']}}-form"
-                                                            data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/notification-on.png') }}"
-                                                            data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/notification-off.png') }}"
-                                                            data-on-title = "{{translate('Want_to_Turn_ON_Notification_Status').'?'}}"
-                                                            data-off-title = "{{translate('Want_to_Turn_OFF_Notification_Status').'?'}}"
-                                                            data-on-message = "<p>{{translate('if_enabled_customers_will_receive_notifications_on_their_devices')}}</p>"
-                                                            data-off-message = "<p>{{translate('if_disabled_customers_will_not_receive_notifications_on_their_devices')}}</p>"
-                                                            data-on-button-text="{{ translate('turn_on') }}"
-                                                            data-off-button-text="{{ translate('turn_off') }}">
-                                                        <span class="switcher_control"></span>
-                                                    </label>
-                                                </form>
-                                            </td>
-                                            <td>
-                                                <a href="javascript:" class="btn btn-outline-success icon-btn resend-notification"
-                                                data-id="{{ $notification->id }}">
-                                                    <i class="fi fi-rr-refresh"></i>
-                                                </a>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="d-flex justify-content-center gap-3">
-                                                    <a class="btn btn-outline-primary icon-btn edit"
-                                                    title="{{translate('edit')}}"
-                                                    href="{{route('admin.notification.update',[$notification['id']])}}">
-                                                        <i class="fi fi-sr-pencil"></i>
-                                                    </a>
-                                                    <a class="btn btn-outline-danger icon-btn delete-data-without-form"
-                                                    title="{{translate('delete')}}"
-                                                    data-action="{{route('admin.notification.delete')}}"
-                                                    data-id="{{$notification['id']}}')">
-                                                        <i class="fi fi-rr-trash"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                            <table class="mt-4">
-                                <tfoot>
-                                {!! $notifications->links() !!}
-                                </tfoot>
-                            </table>
-                        </div>
-                        @if(count($notifications) <= 0)
-                            @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
-                        @endif
-                    </div>
-                </div>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a href="javascript:" class="k-btn k-btn--ghost k-btn--sm k-btn--icon resend-notification"
+                                           title="{{ translate('resend') }}" data-id="{{ $notification->id }}">
+                                            <x-k.icon name="refresh" :size="15" />
+                                        </a>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                           title="{{translate('edit')}}"
+                                           href="{{route('admin.notification.update',[$notification['id']])}}">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data-without-form"
+                                           title="{{translate('delete')}}"
+                                           data-action="{{route('admin.notification.delete')}}"
+                                           data-id="{{$notification['id']}}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+
+                    @if(count($notifications) <= 0)
+                        <x-k.empty icon="marketing" :title="translate('no_data_found')"
+                                   :text="request('searchValue') ? translate('no_notification_matches_your_search') : null" />
+                    @endif
+
+                    @if ($notifications->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $notifications->firstItem() }}–{{ $notifications->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $notifications->total() }}</span>
+                            </span>
+                            <div>{!! $notifications->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>
