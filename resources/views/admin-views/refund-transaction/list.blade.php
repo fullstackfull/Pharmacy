@@ -13,139 +13,120 @@
 
         @include('admin-views.report.transaction-report-inline-menu')
 
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h3 class="mb-0 me-auto">
-                        {{ translate('total_transaction')}}
-                        <span class="badge badge-info text-bg-info">{{$refundTransactions->total()}}</span>
-                    </h3>
+        <x-k.data-view :title="translate('total_transaction')" :count="$refundTransactions->total()"
+                       searchName="searchValue" :searchValue="$searchValue"
+                       :searchPlaceholder="translate('search_by_orders_id_or_refund_id')">
 
-                    <div class="d-flex flex-wrap gap-3 align-items-center">
-                        <form action="{{ url()->current() }}" method="GET" class="mb-0">
-                            <div class="form-group">
-                                <div class="input-group">
-                                    <input id="datatableSearch_" type="search" name="searchValue" class="form-control min-w-300" value="{{ $searchValue }}" placeholder="{{ translate('search_by_orders_id_or_refund_id')}}">
-                                    <div class="input-group-append search-submit">
-                                        <button type="submit">
-                                            <i class="fi fi-rr-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                        <form action="#" id="form-data" method="GET">
-                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <div class="select-wrapper">
-                                    <select class="form-select" name="payment_method" id="payment_method">
-                                        <option value="all" {{ $paymentMethod=='all' ? 'selected': '' }}>{{translate('all')}}</option>
-                                        <option value="cash" {{ $paymentMethod=='cash' ? 'selected': '' }}>{{translate('cash')}}</option>
-                                        <option value="digitally_paid" {{ $paymentMethod=='digitally_paid' ? 'selected': '' }}>{{translate('digitally_paid')}}</option>
-                                        <option value="customer_wallet" {{ $paymentMethod=='customer_wallet' ? 'selected': '' }}>{{translate('customer_wallet')}}</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary" id="formUrlChange" data-action="{{ url()->current() }}">
-                                    {{translate('filter')}}
-                                </button>
-                                <a type="button" class="btn btn-outline-primary" href="{{ route('admin.report.transaction.refund-transaction-export', ['payment_method'=>$paymentMethod, 'searchValue'=>$searchValue]) }}">
-                                    <i class="fi fi-sr-inbox-in"></i>
-                                    <span class="fs-12">{{ translate('export') }}</span>
+            <x-slot:actions>
+                <form action="#" id="form-data" method="GET" class="k-row">
+                    <select class="k-input" style="inline-size:auto" name="payment_method" id="payment_method"
+                            aria-label="{{ translate('payment_method') }}">
+                        <option value="all" {{ $paymentMethod=='all' ? 'selected': '' }}>{{translate('all')}}</option>
+                        <option value="cash" {{ $paymentMethod=='cash' ? 'selected': '' }}>{{translate('cash')}}</option>
+                        <option value="digitally_paid" {{ $paymentMethod=='digitally_paid' ? 'selected': '' }}>{{translate('digitally_paid')}}</option>
+                        <option value="customer_wallet" {{ $paymentMethod=='customer_wallet' ? 'selected': '' }}>{{translate('customer_wallet')}}</option>
+                    </select>
+                    <button type="submit" class="k-btn k-btn--secondary" id="formUrlChange" data-action="{{ url()->current() }}">
+                        {{translate('filter')}}
+                    </button>
+                </form>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.report.transaction.refund-transaction-export', ['payment_method'=>$paymentMethod, 'searchValue'=>$searchValue]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('product')}}</th>
+                    <th>{{translate('refund_id')}}</th>
+                    <th>{{translate('order_id')}}</th>
+                    <th>{{translate('shop_name')}}</th>
+                    <th>{{translate('payment_method') }}</th>
+                    <th>{{translate('payment_status')}}</th>
+                    <th>{{translate('paid_by')}}</th>
+                    <th class="k-table__num">{{translate('amount')}}</th>
+                    <th>{{translate('transaction_type')}}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ($refundTransactions as $key => $refund_transaction)
+                    <tr class="text-capitalize">
+                        <td><span class="k-num">{{$refundTransactions->firstItem()+$key}}</span></td>
+                        <td>
+                            @if($refund_transaction?->orderDetails?->product)
+                                <a href="{{route('admin.products.view', ['addedBy'=>($refund_transaction?->orderDetails?->product->added_by =='seller'?'vendor' : 'in-house'),'id'=>$refund_transaction?->orderDetails?->product->id])}}"
+                                   class="k-row">
+                                    <img src="{{ getStorageImages(path: $refund_transaction?->orderDetails?->product->thumbnail_full_url,type: 'backend-product')}}"
+                                         alt="" width="40" height="40"
+                                         style="border-radius:8px;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                    <span class="k-truncate text-dark text-hover-primary" style="max-inline-size:180px">
+                                        {{ isset($refund_transaction?->orderDetails?->product->name) ? Str::limit($refund_transaction?->orderDetails?->product->name, 20) : '' }}
+                                    </span>
                                 </a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                            @else
+                                <span class="k-text-subtle">{{translate('not_found')}}</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if ($refund_transaction->refund_id)
+                                <a href="{{route('admin.refund-section.refund.details',['id'=>$refund_transaction['refund_id']])}}"
+                                   class="text-dark text-hover-primary">
+                                    {{$refund_transaction->refund_id}}
+                                </a>
+                            @else
+                                <span class="k-text-subtle">{{translate('not_found')}}</span>
+                            @endif
+                        </td>
+                        <td>
+                            <a href="{{route('admin.orders.details',['id'=>$refund_transaction->order_id])}}"
+                               class="text-dark text-hover-primary">
+                                {{$refund_transaction->order_id}}
+                            </a>
+                        </td>
+                        <td>
+                            @if($refund_transaction?->order?->seller_is == 'seller' && $refund_transaction?->order?->seller)
+                                <a href="{{ route('admin.vendors.view', ['id' => $refund_transaction->order->seller->id]) }}" target="_blank" class="text-dark text-decoration-none">{{ $refund_transaction->order->seller->shop->name }}</a>
+                            @else
+                                {{translate('inhouse')}}
+                            @endif
+                        </td>
+                        <td>
+                            {{translate(str_replace('_',' ',$refund_transaction->payment_method))}}
+                        </td>
+                        <td>
+                            {{translate(str_replace('_',' ',$refund_transaction->payment_status))}}
+                        </td>
+                        <td>
+                            {{translate($refund_transaction->paid_by)}}
+                        </td>
+                        <td class="k-table__num">
+                            <span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $refund_transaction->amount), currencyCode: getCurrencyCode())}}</span>
+                        </td>
+                        <td>
+                            {{ $refund_transaction->transaction_type == 'Refund' ? translate('refunded') : str_replace('_',' ',$refund_transaction->transaction_type)}}
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                <div class="table-responsive">
-                    <table id="datatable" class="text-start table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 __table-refund">
-                        <thead class="thead-light thead-50 text-capitalize">
-                            <tr>
-                                <th>{{translate('SL')}}</th>
-                                <th>{{translate('product')}}</th>
-                                <th>{{translate('refund_id')}}</th>
-                                <th>{{translate('order_id')}}</th>
-                                <th>{{translate('shop_name')}}</th>
-                                <th>{{translate('payment_method') }}</th>
-                                <th>{{translate('payment_status')}}</th>
-                                <th>{{translate('paid_by')}}</th>
-                                <th>{{translate('amount')}}</th>
-                                <th class="text-center">{{translate('transaction_type')}}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach ($refundTransactions as $key => $refund_transaction)
-                            <tr class="text-capitalize">
-                                <td>
-                                    {{$refundTransactions->firstItem()+$key}}
-                                </td>
-                                <td>
-                                    @if($refund_transaction?->orderDetails?->product)
-                                        <a href="{{route('admin.products.view', ['addedBy'=>($refund_transaction?->orderDetails?->product->added_by =='seller'?'vendor' : 'in-house'),'id'=>$refund_transaction?->orderDetails?->product->id])}}"
-                                        class="media align-items-center gap-2">
-                                            <img src="{{ getStorageImages(path: $refund_transaction?->orderDetails?->product->thumbnail_full_url,type: 'backend-product')}}"
-                                                class="avatar border" alt="">
-                                            <span class="media-body text-dark text-hover-primary">
-                                                {{ isset($refund_transaction?->orderDetails?->product->name) ? Str::limit($refund_transaction?->orderDetails?->product->name, 20) : '' }}
-                                            </span>
-                                        </a>
-                                    @else
-                                        <span>{{translate('not_found')}}</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    @if ($refund_transaction->refund_id)
-                                        <a href="{{route('admin.refund-section.refund.details',['id'=>$refund_transaction['refund_id']])}}"
-                                        class="text-dark text-hover-primary">
-                                            {{$refund_transaction->refund_id}}
-                                        </a>
-                                    @else
-                                        <span>{{translate('not_found')}}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <a href="{{route('admin.orders.details',['id'=>$refund_transaction->order_id])}}"
-                                    class="text-dark text-hover-primary">
-                                        {{$refund_transaction->order_id}}
-                                    </a>
-                                </td>
-                                <td>
-                                    @if($refund_transaction?->order?->seller_is == 'seller' && $refund_transaction?->order?->seller)
-                                        <a href="{{ route('admin.vendors.view', ['id' => $refund_transaction->order->seller->id]) }}" target="_blank" class="text-dark text-decoration-none">{{ $refund_transaction->order->seller->shop->name }}</a>
-                                    @else
-                                        {{translate('inhouse')}}
-                                    @endif
-                                </td>
+            @if(count($refundTransactions)==0)
+                <x-k.empty icon="refresh" :title="translate('no_data_found')" />
+            @endif
 
-                                <td>
-                                    {{translate(str_replace('_',' ',$refund_transaction->payment_method))}}
-                                </td>
-                                <td>
-                                    {{translate(str_replace('_',' ',$refund_transaction->payment_status))}}
-                                </td>
-                                <td>
-                                    {{translate($refund_transaction->paid_by)}}
-                                </td>
-                                <td>
-                                    {{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $refund_transaction->amount), currencyCode: getCurrencyCode())}}
-                                </td>
-                                <td class="text-center">
-                                    {{ $refund_transaction->transaction_type == 'Refund' ? translate('refunded') : str_replace('_',' ',$refund_transaction->transaction_type)}}
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                    @if(count($refundTransactions)==0)
-                        @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
-                    @endif
-                </div>
-
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {{$refundTransactions->links()}}
-                    </div>
-                </div>
-            </div>
-        </div>
+            @if ($refundTransactions->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $refundTransactions->firstItem() }}–{{ $refundTransactions->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $refundTransactions->total() }}</span>
+                    </span>
+                    <div>{!! $refundTransactions->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection

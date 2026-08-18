@@ -3131,4 +3131,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"emergency_contact_added_successfully" => "Emergency contact added successfully",
 	"earning_history" => "Earning history",
 	"wallet_bonus" => "Wallet bonus",
+	"Select_a_date_range_to_view_loyalty_point_transactions" => "Select a date range to view loyalty point transactions",
 ];
