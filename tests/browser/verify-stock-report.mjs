@@ -32,6 +32,11 @@ await page.waitForLoadState('load');
 ok('search keeps sort filter', page.url().includes('sort=ASC') && page.url().includes('search=serum'));
 ok('search narrows or empties honestly', !(await hasServerError(page)));
 
+// Wishlist report shares the same shell.
+await page.goto(BASE + '/admin/stock/product-in-wishlist', { waitUntil: 'load' });
+ok('wishlist report renders', !(await hasServerError(page)));
+ok('wishlist data-view present', (await page.locator('.k-view').count()) === 1);
+
 ok('no console/JS/HTTP problems', problems.length === 0);
 if (problems.length) console.log('  problems:', problems.slice(0, 6));
 await browser.close();
