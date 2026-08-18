@@ -11158,6 +11158,24 @@ input[type="checkbox"] {
 .checkout-steps-custom .step.completed p {
     color: #000;
 }
+.checkout-steps-custom .step.current .step-circle {
+    border-color: var(--web-primary);
+    background: #fff;
+}
+.checkout-steps-custom .step.current .step-circle::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--web-primary);
+}
+.checkout-steps-custom .step.current p {
+    color: #000;
+    font-weight: 600;
+}
+.checkout-steps-custom a.step-circle {
+    text-decoration: none;
+}
 
 
 .checkout-steps-custom .step:first-child::after {

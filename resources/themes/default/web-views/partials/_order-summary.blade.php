@@ -226,8 +226,12 @@
 <div class="bottom-sticky3 bg-white p-3 shadow-sm w-100 d-lg-none">
     <div class="d-flex justify-content-center align-items-center fs-14 mb-2">
         <div class="product-description-label fw-semibold text-capitalize">{{ translate('total_price') }} :</div>
+        {{-- The same figure the desktop aside shows. This bar used to recompute
+             the formula inline — after $coupon_dis had been reset to 0 and
+             without the referral discount — so phones showed a higher total
+             than the desktop for the same order. --}}
         &nbsp; <strong class="text-base">
-            {{ webCurrencyConverter(amount: $subTotal + ($totalTax['item_tax'] + $totalTax['shipping_cost_tax']) + $totalShippingCost - $coupon_dis - $totalDiscountOnProduct) }}
+            {{ webCurrencyConverter(amount: $totalAmount - $referralAmount) }}
         </strong>
     </div>
 
