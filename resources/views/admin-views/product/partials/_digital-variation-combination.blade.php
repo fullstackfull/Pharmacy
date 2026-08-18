@@ -1,7 +1,7 @@
 @if(count($generateCombination) > 0)
-    <div class="table-responsive mt-3">
-        <table class="table table-borderless align-middle">
-            <thead class="thead-light thead-50 text-capitalize">
+    <div class="k-table-wrap mt-3">
+        <table class="k-table">
+            <thead>
             <tr>
                 <th class="text-start">{{ translate('SL') }}</th>
                 <th class="text-start">{{ translate('Attribute_Variation') }}</th>
