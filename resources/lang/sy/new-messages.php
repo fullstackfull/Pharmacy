@@ -282,4 +282,8 @@ return [
 	"oldest" => "الأقدم",
 	"Product_Type_" => "نوع المنتج ",
 	"1" => "100",
+	"export_selected" => "Export selected",
+	"mark_as_shipped" => "Mark as shipped",
+	"remove_filter" => "Remove filter",
+	"last_30_days" => "Last 30 days",
 ];
