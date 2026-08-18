@@ -3110,4 +3110,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"staff_and_roles" => "Staff and roles",
 	"seller_center" => "Seller center",
 	"no_product_matches_your_search" => "No product matches your search",
+	"first_orders_no_previous_period" => "First orders no previous period",
+	"first_sales_no_previous_period" => "First sales no previous period",
+	"searchValue" => "SearchValue",
+	"customer_is_required" => "Customer is required",
+	"This_order_was_placed_with_the_inhouse_shipping_method_and_must_be_delivered_using_the_shipping_option_selected_by_the_customer_during_checkout." => "This order was placed with the inhouse shipping method and must be delivered using the shipping option selected by the customer during checkout.",
+	"Vendors_are_not_allowed_to_edit_orders_now." => "Vendors are not allowed to edit orders now.",
+	"discount_on_purchase_and_first_order_coupon_amount_will_be_shown_here" => "Discount on purchase and first order coupon amount will be shown here",
 ];
