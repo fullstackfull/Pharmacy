@@ -855,6 +855,15 @@
                 <div class="v2-ctx-group-body"></div>
             </div>
 
+            @if (Helpers::module_permission_check('system_settings'))
+                <div class="v2-ctx-group">
+                    <a class="v2-nav-item {{ Request::is('admin/monitoring*') ? 'v2-is-active' : '' }}" data-item="monitoring" href="{{ route('admin.monitoring.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Monitoring') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="monitoring" aria-label="Pin"></button></div>
+                    </a>
+                </div>
+            @endif
+
             @if (Helpers::module_permission_check('business_settings'))
                 <div class="v2-ctx-group">
                 <a class="v2-nav-item {{ Request::is('admin/settings') ? 'v2-is-active' : '' }}" data-item="settings-index" href="{{ route('admin.settings.index') }}">

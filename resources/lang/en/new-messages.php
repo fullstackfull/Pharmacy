@@ -3065,4 +3065,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"keep_it_handy_for_tracking." => "Keep it handy for tracking.",
 	"Your_Order_ID" => "Your Order ID",
 	"We_have_received_your_order_and_will_ship_it_shortly." => "We have received your order and will ship it shortly.",
+	"Monitoring" => "Monitoring",
 ];
