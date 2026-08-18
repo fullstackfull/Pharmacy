@@ -50,7 +50,7 @@
                 <div class="card">
                     <div class="table-responsive datatable-custom br-inherit">
                         <table
-                            class="table table-hover table-borderless align-middle">
+                            class="k-table">
                             <thead class="text-capitalize table-nowrap">
                             <tr>
                                 <th>{{translate('SL')}}</th>

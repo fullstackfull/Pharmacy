@@ -3140,4 +3140,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"Family_Size_Trolley_Case_Long_Lasting_and_8_Wheel_Waterproof_Travel_bag" => "Family Size Trolley Case Long Lasting and 8 Wheel Waterproof Travel bag",
 	"fix" => "Fix",
 	"SEO_Health" => "SEO Health",
+	".jpeg,.png,.jpg,.webp_Image_size_:Max_2MB_" => ".jpeg,.png,.jpg,.webp Image size :Max 2MB ",
+	".jpeg,.png,.jpg,.webp_Image_size_:Max_2MB" => ".jpeg,.png,.jpg,.webp Image size :Max 2MB",
 ];
