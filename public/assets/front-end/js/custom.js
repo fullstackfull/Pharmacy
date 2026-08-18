@@ -206,9 +206,16 @@ $(window).on("scroll", function () {
 
 $(".close-search-form-mobile").on("click", function () {
     $(".search-form-mobile").removeClass("active");
+    // Otherwise the suggestion card lingers over the page with stale results.
+    $(".search-card").hide();
 });
 $(".open-search-form-mobile").on("click", function () {
     $(".search-form-mobile").addClass("active");
+    // The overlay is visibility:hidden until its slide transition ends, and a
+    // hidden input refuses focus - wait the transition out.
+    setTimeout(function () {
+        $(".search-form-mobile .search-bar-input").trigger("focus");
+    }, 350);
 });
 
 $(".get-view-by-onclick").on("click", function () {
@@ -1096,11 +1103,17 @@ function addToCart(
             },
         });
 
-        let existCartItem = $('.product-exist-in-cart-list[name="key"]').val();
+        // The exist-key must come from the form being submitted: the page holds
+        // several add-to-cart forms (main, sticky, quick-view), and reading the
+        // document's first key routed updates at the wrong cart line.
+        let existCartItem = $(formSelector).find('.product-exist-in-cart-list[name="key"]').val() || "";
+        // Buy-now buttons pass data-auth as a STRING; "false" is truthy, which
+        // used to send buy_now=1 on the guest path and skip the update route.
         let redirectToCheckoutValue = redirect_to_checkout.toString();
+        let redirectToCheckout = redirectToCheckoutValue === "true";
 
         let formActionUrl = $("#route-cart-add").data("url");
-        if (existCartItem !== "" && !redirect_to_checkout) {
+        if (existCartItem !== "" && !redirectToCheckout) {
             formActionUrl = $("#route-cart-updateQuantity-guest").data("url");
         }
 
@@ -1110,7 +1123,7 @@ function addToCart(
                 .serializeArray()
                 .concat({
                     name: "buy_now",
-                    value: redirect_to_checkout ? 1 : 0,
+                    value: redirectToCheckout ? 1 : 0,
                 }),
             beforeSend: function () {
                 $("#loading").show();

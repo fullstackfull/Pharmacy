@@ -136,6 +136,24 @@ html[dir="rtl"] .k-cart-open .k-cart-drawer {
     }
 }
 
+/* Direction-aware transform origin for legacy rules that anchored to `left`
+   (used by the mega-menu panel's entrance). */
+:root {
+    --k-origin-start: left;
+}
+
+[dir="rtl"] {
+    --k-origin-start: right;
+}
+
+/* The tablet range renders both the absolute magnifier overlay and the cancel
+   button; without a stacking context of its own the cancel sits under the
+   overlay and cannot be clicked. */
+.k-store .close-search-form-mobile {
+    position: relative;
+    z-index: 5;
+}
+
 /* Header search typeahead: the arrow-key highlight, and a quiet busy state
    while a request is in flight (the old code flashed the full-page loader). */
 .k-store .search-result-product.is-active {

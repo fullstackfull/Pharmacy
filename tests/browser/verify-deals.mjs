@@ -39,6 +39,15 @@ ok('feature: 1 row with upcoming badge', (await page.locator('.k-table tbody tr'
 ok('feature: switcher + priority modal intact', (await page.locator('.switcher_input.custom-modal-plugin').count()) === 1
     && (await page.locator('#prioritySetModal').count()) === 1);
 
+// ---- Deal of the day ----
+await page.goto(BASE + '/admin/deal/day', { waitUntil: 'domcontentloaded' });
+ok('day: renders', !(await hasServerError(page)));
+ok('day: form + product picker intact', (await page.locator('form[action*="deal/day"]').count()) >= 1
+    && (await page.locator('.select-product-search').count()) === 1);
+ok('day: 1 row on data-view', (await page.locator('.k-view .k-table tbody tr').count()) === 1);
+ok('day: switcher + delete intact', (await page.locator('.switcher_input.custom-modal-plugin').count()) === 1
+    && (await page.locator('.delete-data-without-form').count()) === 1);
+
 ok('no console/JS/HTTP problems', problems.length === 0);
 if (problems.length) console.log('  problems:', problems.slice(0, 6));
 await browser.close();

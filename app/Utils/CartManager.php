@@ -484,14 +484,21 @@ class CartManager
         ];
 
         if ($string != null) {
-            $count = count(json_decode($product->variation));
-            for ($i = 0; $i < $count; $i++) {
-                if (json_decode($product->variation)[$i]->type == $string) {
-                    $price = json_decode($product->variation)[$i]->price;
-                    if (json_decode($product->variation)[$i]->qty < $request['quantity']) {
+            // A variant string that matches no variation used to fall through with
+            // $price unset and no stock check at all - a stale or crafted variant
+            // could 500 or insert a zero-price cart row. Unmatched now refuses.
+            $price = null;
+            foreach (json_decode($product->variation) ?? [] as $productVariation) {
+                if ($productVariation->type == $string) {
+                    if ($productVariation->qty < $request['quantity']) {
                         return ['status' => 0, 'message' => translate('out_of_stock!')];
                     }
+                    $price = $productVariation->price;
+                    break;
                 }
+            }
+            if ($price === null) {
+                return ['status' => 0, 'message' => translate('please_select_valid_product_options')];
             }
         } else {
             $price = $product->unit_price;

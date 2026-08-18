@@ -225,123 +225,115 @@
 
         <div class="row" id="banner-table">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-body d-flex flex-column gap-20">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-xl-4 mb-2 mb-md-0">
-                                <h3 class="mb-0">
-                                    {{ translate('banner_table') }}
-                                    <span
-                                        class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $banners->total() }}</span>
-                                </h3>
+                <x-k.data-view :title="translate('banner_table')" :count="$banners->total()"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_banner_type')">
+
+                    <x-slot:actions>
+                        {{-- The exact-type filter the page always had, now submitting itself —
+                             it shares the searchValue param with the text search, so either
+                             one narrows the same way the controller always expected. --}}
+                        <form action="{{ url()->current() }}" method="GET">
+                            <div class="select-wrapper">
+                                <select class="form-control" name="searchValue" onchange="this.form.submit()"
+                                        aria-label="{{ translate('banner_type') }}">
+                                    <option value="">{{ translate('all') }}</option>
+                                    @foreach($bannerTypes as $key => $banner)
+                                        <option
+                                            value="{{ $key }}" {{ request('searchValue') == $key ? 'selected':'' }}>{{ $banner }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="col-xl-8">
-                                <form action="{{ url()->current() }}" method="GET">
-                                    <div class="d-flex gap-2 justify-content-end align-items-center flex-wrap">
-                                        <div class="select-wrapper flex-grow-1 max-w-360">
-                                            <select class="form-control" name="searchValue" id="date_type">
-                                                <option value="">{{ translate('all') }}</option>
-                                                @foreach($bannerTypes as $key => $banner)
-                                                    <option
-                                                        value="{{ $key }}" {{ request('searchValue') == $key ? 'selected':'' }}>{{ $banner }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <button type="submit"
-                                                class="btn btn-primary px-4 text-nowrap min-w-120 flex-grow-1 flex-sm-grow-0">
-                                            {{ translate('filter') }}
-                                        </button>
-                                        <div id="banner-btn" class="flex-grow-1 flex-sm-grow-0">
-                                            <button type="button" id="main-banner-add"
-                                                class="btn btn-primary text-nowrap text-capitalize w-100">
-                                                <i class="fi fi-sr-plus"></i>
-                                                {{ translate('add_banner') }}
-                                            </button>
-                                        </div>
-                                    </div>
+                        </form>
+                        <div id="banner-btn">
+                            <button type="button" id="main-banner-add"
+                                class="k-btn k-btn--primary text-nowrap text-capitalize">
+                                <x-k.icon name="plus" :size="15" />
+                                {{ translate('add_banner') }}
+                            </button>
+                        </div>
+                    </x-slot:actions>
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('image') }}</th>
+                            <th>{{ translate('banner_type') }}</th>
+                            <th>{{ translate('resource_type') }}</th>
+                            <th>{{ translate('published') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($banners as $banner)
+                            <tr id="data-{{ $banner->id}}">
+                                <td>
+                                    <img class="ratio-4-2 object-fit-cover border rounded" width="80" alt=""
+                                         loading="lazy"
+                                         src="{{ getStorageImages(path: $banner->photo_full_url , type: 'backend-banner') }}">
+                                </td>
+                                <td>{{ translate(str_replace('_',' ',$banner->banner_type)) }}</td>
+                                <td>{{ translate(str_replace('_',' ',$banner->resource_type)) }}</td>
+                                <td>
+                                <form action="{{ route('admin.banner.status') }}" method="post"
+                                      id="banner-status{{ $banner['id'] }}-form" class="no-reload-form reload-true">
+                                    @csrf
+                                    <input type="hidden" name="id" value="{{ $banner['id'] }}">
+                                    <label class="switcher " for="banner-status{{ $banner['id'] }}">
+                                        <input
+                                            class="switcher_input custom-modal-plugin"
+                                            type="checkbox" value="1" name="status"
+                                            id="banner-status{{ $banner['id'] }}"
+                                            {{ $banner['published'] == 1 ? 'checked' : '' }}
+                                            data-modal-type="input-change-form"
+                                            data-modal-form="#banner-status{{ $banner['id'] }}-form"
+                                            data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/banner-status-on.png') }}"
+                                            data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/banner-status-off.png') }}"
+                                            data-on-title="{{ translate('Want_to_Turn_ON').' '.translate(str_replace('_',' ',$banner->banner_type)).' '.translate('status') }}"
+                                            data-off-title="{{ translate('Want_to_Turn_OFF').' '.translate(str_replace('_',' ',$banner->banner_type)).' '.translate('status') }}"
+                                            data-on-message="<p>{{ translate('if_enabled_this_banner_will_be_available_on_the_website_and_customer_app') }}</p>"
+                                            data-off-message="<p>{{ translate('if_disabled_this_banner_will_be_hidden_from_the_website_and_customer_app') }}</p>"
+                                            data-on-button-text="{{ translate('turn_on') }}"
+                                            data-off-button-text="{{ translate('turn_off') }}">
+                                        <span class="switcher_control"></span>
+                                    </label>
                                 </form>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table id="columnSearchDatatable"
-                                   class="table table-hover table-borderless table-thead-bordered align-middle">
-                                <thead class="text-capitalize">
-                                <tr>
-                                    <th class="pl-xl-5">{{ translate('SL') }}</th>
-                                    <th>{{ translate('image') }}</th>
-                                    <th>{{ translate('banner_type') }}</th>
-                                    <th>{{ translate('resource_type') }}</th>
-                                    <th>{{ translate('published') }}</th>
-                                    <th class="text-center">{{ translate('action') }}</th>
-                                </tr>
-                                </thead>
-                                @foreach($banners as $key=>$banner)
-                                    <tbody>
-                                    <tr id="data-{{ $banner->id}}">
-                                        <td class="pl-xl-5">{{ $banners->firstItem()+$key}}</td>
-                                        <td>
-                                            <img class="ratio-4-2 object-fit-cover border rounded" width="80" alt=""
-                                                 src="{{ getStorageImages(path: $banner->photo_full_url , type: 'backend-banner') }}">
                                         </td>
-                                        <td>{{ translate(str_replace('_',' ',$banner->banner_type)) }}</td>
-                                        <td>{{ translate(str_replace('_',' ',$banner->resource_type)) }}</td>
-                                        <td>
-                                            <form action="{{ route('admin.banner.status') }}" method="post"
-                                                  id="banner-status{{ $banner['id'] }}-form" class="no-reload-form reload-true">
-                                                @csrf
-                                                <input type="hidden" name="id" value="{{ $banner['id'] }}">
-                                                <label class="switcher " for="banner-status{{ $banner['id'] }}">
-                                                    <input
-                                                        class="switcher_input custom-modal-plugin"
-                                                        type="checkbox" value="1" name="status"
-                                                        id="banner-status{{ $banner['id'] }}"
-                                                        {{ $banner['published'] == 1 ? 'checked' : '' }}
-                                                        data-modal-type="input-change-form"
-                                                        data-modal-form="#banner-status{{ $banner['id'] }}-form"
-                                                        data-on-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/banner-status-on.png') }}"
-                                                        data-off-image="{{ dynamicAsset(path: 'public/assets/new/back-end/img/modal/banner-status-off.png') }}"
-                                                        data-on-title="{{ translate('Want_to_Turn_ON').' '.translate(str_replace('_',' ',$banner->banner_type)).' '.translate('status') }}"
-                                                        data-off-title="{{ translate('Want_to_Turn_OFF').' '.translate(str_replace('_',' ',$banner->banner_type)).' '.translate('status') }}"
-                                                        data-on-message="<p>{{ translate('if_enabled_this_banner_will_be_available_on_the_website_and_customer_app') }}</p>"
-                                                        data-off-message="<p>{{ translate('if_disabled_this_banner_will_be_hidden_from_the_website_and_customer_app') }}</p>"
-                                                        data-on-button-text="{{ translate('turn_on') }}"
-                                                        data-off-button-text="{{ translate('turn_off') }}">
-                                                    <span class="switcher_control"></span>
-                                                </label>
-                                            </form>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-10 justify-content-center">
-                                                <a class="btn btn-outline-primary icon-btn edit"
-                                                   title="{{ translate('edit') }}"
-                                                   href="{{ route('admin.banner.update',[$banner['id']]) }}">
-                                                    <i class="fi fi-sr-pencil"></i>
-                                                </a>
-                                                <a class="btn btn-outline-danger icon-btn banner-delete-button"
-                                                   title="{{ translate('delete') }}"
-                                                   id="{{ $banner['id'] }}">
-                                                    <i class="fi fi-rr-trash"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    </tbody>
-                                @endforeach
-                            </table>
-                        </div>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                           title="{{ translate('edit') }}"
+                                           href="{{ route('admin.banner.update',[$banner['id']]) }}">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon banner-delete-button"
+                                           title="{{ translate('delete') }}"
+                                           id="{{ $banner['id'] }}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
 
-                        <div class="table-responsive">
-                            <div class="px-4 d-flex justify-content-lg-end">
-                                {{ $banners->links() }}
-                            </div>
-                        </div>
+                    @if(count($banners)==0)
+                        <x-k.empty icon="image" :title="translate('no_banner_found')"
+                                   :text="request('searchValue') ? translate('no_banner_matches_your_filter') : null" />
+                    @endif
 
-                        @if(count($banners)==0)
-                            @include('layouts.admin.partials._empty-state',['text'=>'no_banner_found'],['image'=>'default'])
-                        @endif
-                    </div>
-                </div>
+                    @if ($banners->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $banners->firstItem() }}–{{ $banners->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $banners->total() }}</span>
+                            </span>
+                            <div>{!! $banners->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>
