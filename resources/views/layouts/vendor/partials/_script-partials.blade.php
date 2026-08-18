@@ -281,4 +281,6 @@
     });
 </script>
 
+<script src="{{ dynamicAsset(path: 'public/assets/kohl/js/kohl.js') }}"></script>
+
 @include('layouts.vendor.partials._firebase-script')

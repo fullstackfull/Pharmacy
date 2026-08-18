@@ -3105,4 +3105,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"review_cart" => "Review cart",
 	"Thank_You_For_Your_Purchase!" => "Thank You For Your Purchase!",
 	"inhouse_product_sale_Report" => "Inhouse product sale Report",
+	"performance" => "Performance",
+	"payouts" => "Payouts",
+	"staff_and_roles" => "Staff and roles",
+	"seller_center" => "Seller center",
+	"no_product_matches_your_search" => "No product matches your search",
 ];

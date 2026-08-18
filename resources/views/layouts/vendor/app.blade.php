@@ -20,11 +20,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/back-end/css/vendor-v2.css') }}">
+    {{-- Kohl console tokens + components, same layer the admin shell loads. --}}
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/kohl/css/console.css') }}">
 
     @stack('css_or_js')
 </head>
 
-<body class="footer-offset {{ env('APP_MODE')=='demo'?'demo':'' }} v2-active" id="{{ env('APP_MODE')=='demo'?'demo':'' }}">
+<body class="k k-console footer-offset {{ env('APP_MODE')=='demo'?'demo':'' }} v2-active" id="{{ env('APP_MODE')=='demo'?'demo':'' }}">
 
 @if(env('APP_MODE')=='demo')
     <!-- Google Tag Manager (noscript) -->
