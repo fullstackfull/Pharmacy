@@ -3260,4 +3260,8 @@ ____________________________________________________on_search_engines_and_see_th
 	"balance_after" => "Balance after",
 	"settlement" => "Settlement",
 	"add_staff_member" => "Add staff member",
+	"notice" => "Notice",
+	"the_delivery_man_has_this_amount_in_hand" => "The delivery man has this amount in hand",
+	"Loyalty_Point_Report" => "Loyalty Point Report",
+	"No_Clearance_Sale_available_now" => "No Clearance Sale available now",
 ];
