@@ -395,7 +395,7 @@ async function shippingAddressMap() {
 };
 
 $(document).on("keydown", "input", function (e) {
-    if (e.which == 13) e.preventDefault();
+    if (e.which == 13 && e.target.type !== "search") e.preventDefault();
 });
 
 /** billing address  map */
@@ -488,7 +488,7 @@ async function billingAddressMap() {
 };
 
 $(document).on("keydown", "input", function (e) {
-    if (e.which == 13) e.preventDefault();
+    if (e.which == 13 && e.target.type !== "search") e.preventDefault();
 });
 
 async function locationShowingMap() {
