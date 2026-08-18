@@ -41,8 +41,9 @@
                                     <ul class="option-select-btn d-grid flex-wrap gap-3">
                                         @if ($cashOnDeliveryBtnShow && $cash_on_delivery['status'])
                                             <li>
-                                                <form action="{{ route('checkout-complete') }}" method="get"
+                                                <form action="{{ route('checkout-complete') }}" method="post"
                                                       class="checkout-payment-form payment-method-form checkout-cash-on-payment">
+                                                    @csrf
                                                     <label class="w-100">
                                                         <input type="radio" hidden name="payment_method" checked
                                                                value="cash_on_delivery" data-form=".checkout-cash-on-payment">
@@ -214,7 +215,7 @@
                                                     @php($couponAmount = session()->has('coupon_discount') ? session('coupon_discount') : 0)
                                                     @php($totalAmount = $amount)
                                                     @php($remain_balance = $customer_balance - $totalAmount)
-                                                    <form action="{{ route('checkout-complete-wallet') }}" method="get"
+                                                    <form action="{{ route('checkout-complete-wallet') }}" method="post"
                                                           class="needs-validation checkout-wallet-payment-form">
                                                         @csrf
                                                         <div class="modal-body">

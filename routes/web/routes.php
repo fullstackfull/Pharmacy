@@ -140,7 +140,9 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
     Route::controller(WebController::class)->group(function () {
         Route::get('checkout-details', 'checkout_details')->name('checkout-details');
         Route::get('checkout-payment', 'checkout_payment')->name('checkout-payment');
-        Route::get('checkout-complete', 'getCashOnDeliveryCheckoutComplete')->name('checkout-complete');
+        // POST, not GET: these two place orders. As GETs they were CSRF-exposed
+        // and a link prefetch could create an order.
+        Route::post('checkout-complete', 'getCashOnDeliveryCheckoutComplete')->name('checkout-complete');
         Route::post('offline-payment-checkout-complete', 'getOfflinePaymentCheckoutComplete')->name('offline-payment-checkout-complete');
         Route::get('order-placed', 'order_placed')->name('order-placed');
         Route::get('order-placed-success', 'getOrderPlaceView')->name('order-placed-success');
@@ -150,7 +152,7 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
         Route::post('digital-product-download-otp-verify', 'getDigitalProductDownloadOtpVerify')->name('digital-product-download-otp-verify');
         Route::post('digital-product-download-otp-reset', 'getDigitalProductDownloadOtpReset')->name('digital-product-download-otp-reset');
         Route::get('pay-offline-method-list', 'pay_offline_method_list')->name('pay-offline-method-list')->middleware('guestCheck');
-        Route::get('checkout-complete-wallet', 'checkout_complete_wallet')->name('checkout-complete-wallet');
+        Route::post('checkout-complete-wallet', 'checkout_complete_wallet')->name('checkout-complete-wallet');
 
         Route::post('subscription', 'subscription')->name('subscription');
         Route::get('search-shop', 'search_shop')->name('search-shop');

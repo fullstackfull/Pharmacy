@@ -265,12 +265,14 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 const modalEl = document.getElementById('order_successfully');
+                if (!modalEl || typeof bootstrap === 'undefined') return;
                 const orderModal = new bootstrap.Modal(modalEl, {
                     backdrop: 'static',
                     keyboard: false
                 });
                 orderModal.show();
-                document.getElementById('modal-close-btn').addEventListener('click', function () {
+                const closeBtn = document.getElementById('modal-close-btn');
+                if (closeBtn) closeBtn.addEventListener('click', function () {
                     setTimeout(() => {
                         orderModal.hide();
                     }, 600);
@@ -280,7 +282,10 @@
     @endif
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // The filter select is not rendered on every state of this page;
+            // the unguarded listener used to throw and kill later inits.
             const filterSelect = document.getElementById('orderFilter');
+            if (!filterSelect) return;
             filterSelect.addEventListener('change', function () {
                 const url = this.value;
                 if (url) {

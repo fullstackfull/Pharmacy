@@ -3062,4 +3062,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"updating_coupons" => "Updating coupons",
 	"search_by_banner_type" => "Search by banner type",
 	"please_select_valid_product_options" => "Please select valid product options",
+	"keep_it_handy_for_tracking." => "Keep it handy for tracking.",
+	"Your_Order_ID" => "Your Order ID",
+	"We_have_received_your_order_and_will_ship_it_shortly." => "We have received your order and will ship it shortly.",
 ];
