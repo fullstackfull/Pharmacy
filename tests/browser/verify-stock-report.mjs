@@ -37,6 +37,13 @@ await page.goto(BASE + '/admin/stock/product-in-wishlist', { waitUntil: 'load' }
 ok('wishlist report renders', !(await hasServerError(page)));
 ok('wishlist data-view present', (await page.locator('.k-view').count()) === 1);
 
+// Order report: chart + filters above, data-view below.
+await page.goto(BASE + '/admin/report/order', { waitUntil: 'load' });
+ok('order report renders', !(await hasServerError(page)));
+ok('order report data-view + rows', (await page.locator('.k-view').count()) === 1
+    && (await page.locator('.k-view .k-table tbody tr').count()) >= 1);
+ok('order report chart survives', (await page.locator('#apex_line-chart, .center-chart-area').count()) >= 1);
+
 ok('no console/JS/HTTP problems', problems.length === 0);
 if (problems.length) console.log('  problems:', problems.slice(0, 6));
 await browser.close();
