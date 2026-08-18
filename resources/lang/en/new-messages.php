@@ -3283,4 +3283,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"sort" => "Sort",
 	"request_payout" => "Request payout",
 	"submit_for_review" => "Submit for review",
+	"Your_Order_IDs" => "Your Order IDs",
+	"manual" => "Manual",
+	"document_number" => "Document number",
+	"bank_transfer" => "Bank transfer",
+	"required" => "Required",
 ];
