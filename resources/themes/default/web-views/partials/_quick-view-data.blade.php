@@ -364,7 +364,7 @@
                         @else
                             <button class="btn btn-secondary product-buy-now-button"
                                     type="button"
-                                    data-form=".add-to-cart-details-form"
+                                    data-form="#quick-view .add-to-cart-details-form"
                                     data-auth="{{( getWebConfig(name: 'guest_checkout') == 1 || Auth::guard('customer')->check() ? 'true':'false')}}"
                                     data-route="{{ route('shop-cart') }}"
                             >
@@ -372,7 +372,7 @@
                             </button>
                             <button class="btn btn--primary string-limit product-add-to-cart-button"
                                     type="button"
-                                    data-form=".add-to-cart-details-form"
+                                    data-form="#quick-view .add-to-cart-details-form"
                                     data-update="{{ translate('update_cart') }}"
                                     data-add="{{ translate('add_to_cart') }}"
                             >

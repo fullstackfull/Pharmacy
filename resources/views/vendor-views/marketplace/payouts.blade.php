@@ -3,9 +3,9 @@
 @section('title', translate('payouts'))
 
 @php
-    $statusColours = [
-        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'primary',
-        'processing' => 'primary', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
+    $statusTones = [
+        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'accent',
+        'processing' => 'accent', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
     ];
 @endphp
 
@@ -20,29 +20,11 @@
         </div>
 
         {{-- The four buckets, with the one number that decides everything: withdrawable. --}}
-        <div class="row g-3 mb-3">
-            @foreach ([
-                ['pending', translate('pending_in_return_window'), 'warning'],
-                ['available', translate('available'), 'success'],
-                ['reserved', translate('reserved_for_payouts'), 'info'],
-            ] as [$key, $label, $colour])
-                <div class="col-6 col-lg-3">
-                    <div class="card h-100 border-{{ $colour }}">
-                        <div class="card-body">
-                            <p class="mb-1 fs-12 text-muted">{{ $label }}</p>
-                            <h4 class="mb-0">{{ setCurrencySymbol($balances[$key]) }}</h4>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-            <div class="col-6 col-lg-3">
-                <div class="card h-100 border-dark bg-dark text-white">
-                    <div class="card-body">
-                        <p class="mb-1 fs-12 opacity-75">{{ translate('withdrawable_now') }}</p>
-                        <h4 class="mb-0">{{ setCurrencySymbol($withdrawable) }}</h4>
-                    </div>
-                </div>
-            </div>
+        <div class="k-stats" style="margin-block-end:16px">
+            <x-k.stat :label="translate('pending_in_return_window')" :value="setCurrencySymbol($balances['pending'])" icon="clock" />
+            <x-k.stat :label="translate('available')" :value="setCurrencySymbol($balances['available'])" icon="check" />
+            <x-k.stat :label="translate('reserved_for_payouts')" :value="setCurrencySymbol($balances['reserved'])" icon="info" />
+            <x-k.stat :label="translate('withdrawable_now')" :value="setCurrencySymbol($withdrawable)" icon="sparkles" />
         </div>
 
         @if ($inCoolingPeriod)
@@ -91,60 +73,60 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header"><h5 class="mb-0">{{ translate('my_payout_requests') }}</h5></div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
+        <x-k.card :title="translate('my_payout_requests')" :padded="false">
+            <div class="k-table-wrap">
+                <table class="k-table">
+                    <thead>
+                        <tr>
+                            <th>{{ translate('reference') }}</th>
+                            <th>{{ translate('date') }}</th>
+                            <th class="k-table__num">{{ translate('amount') }}</th>
+                            <th>{{ translate('method') }}</th>
+                            <th>{{ translate('status') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($requests as $payout)
                             <tr>
-                                <th>{{ translate('reference') }}</th>
-                                <th>{{ translate('date') }}</th>
-                                <th class="text-end">{{ translate('amount') }}</th>
-                                <th>{{ translate('method') }}</th>
-                                <th>{{ translate('status') }}</th>
-                                <th class="text-end">{{ translate('action') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($requests as $payout)
-                                <tr>
-                                    <td class="fw-medium">{{ $payout->reference }}</td>
-                                    <td class="fs-12">{{ $payout->created_at?->format('d M Y H:i') }}</td>
-                                    <td class="text-end fw-semibold">
-                                        {{ setCurrencySymbol($payout->amount) }}
-                                        @if ($payout->payout_currency && $payout->payout_amount)
-                                            <span class="d-block fs-12 text-muted">→ {{ number_format($payout->payout_amount, 2) }} {{ $payout->payout_currency }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="fs-12">{{ translate($payout->method ?? 'bank_transfer') }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ $statusColours[$payout->status] ?? 'secondary' }}">
-                                            {{ translate($payout->status) }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
+                                <td><span class="k-num">{{ $payout->reference }}</span></td>
+                                <td><span class="k-num">{{ $payout->created_at?->format('d M Y H:i') }}</span></td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ setCurrencySymbol($payout->amount) }}</span>
+                                    @if ($payout->payout_currency && $payout->payout_amount)
+                                        <span class="d-block k-text-subtle k-num">→ {{ number_format($payout->payout_amount, 2) }} {{ $payout->payout_currency }}</span>
+                                    @endif
+                                </td>
+                                <td>{{ translate($payout->method ?? 'bank_transfer') }}</td>
+                                <td>
+                                    <x-k.badge :tone="$statusTones[$payout->status] ?? 'neutral'">
+                                        {{ translate($payout->status) }}
+                                    </x-k.badge>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
                                         @if ($payout->isOpen())
                                             <form action="{{ route('vendor.business-settings.payouts.cancel', $payout->id) }}" method="post"
                                                   onsubmit="return confirm('{{ translate('cancel_this_payout_request') }}?');">
                                                 @csrf
-                                                <button class="btn btn-sm btn-outline-danger">{{ translate('cancel') }}</button>
+                                                <button class="k-btn k-btn--secondary k-btn--sm">{{ translate('cancel') }}</button>
                                             </form>
                                         @else
-                                            <span class="text-muted">—</span>
+                                            <span class="k-text-subtle">—</span>
                                         @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">{{ translate('no_payout_requests_yet') }}</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                {!! $requests->links() !!}
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
+            @if ($requests->isEmpty())
+                <x-k.empty icon="reports" :title="translate('no_payout_requests_yet')" />
+            @endif
+            <x-slot:footer>
+                {!! $requests->links() !!}
+            </x-slot:footer>
+        </x-k.card>
     </div>
 @endsection

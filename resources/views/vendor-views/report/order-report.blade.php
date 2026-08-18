@@ -5,7 +5,7 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0 text-capitalize d-flex align-items-center gap-2">
-                <img width="20" src="{{asset('public/assets/back-end/img/order_report.png') }}" alt="">
+                <img width="20" src="{{ dynamicAsset(path: 'public/assets/back-end/img/order_report.png') }}" alt="">
                 {{ translate('order_Report') }}
             </h2>
         </div>
@@ -174,134 +174,95 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header border-0">
-                <div class="d-flex flex-wrap w-100 gap-3 align-items-center">
-                    <h4 class="mb-0 flex-grow-1">
-                        {{ translate('total_Orders') }}
-                        <span class="badge badge-soft-dark radius-50 fz-14">{{ $orders->total() }}</span>
-                        <span class="badge badge-soft-dark radius-50 fz-14"></span>
-                    </h4>
-                    <form action="" method="GET" class="mb-0">
-                        <div class="input-group input-group-merge input-group-custom">
-                            <div class="input-group-prepend">
-                                <div class="input-group-text">
-                                    <i class="tio-search"></i>
-                                </div>
-                            </div>
-                            <input type="hidden" value="{{ $date_type }}" name="date_type">
-                            <input type="hidden" value="{{ $from }}" name="from">
-                            <input type="hidden" value="{{ $to }}" name="to">
-                            <input id="datatableSearch_" type="search" value="{{ $search }}" name="search"
-                                   class="form-control" placeholder="{{ translate('search_by_order_id') }}"
-                                   aria-label="Search orders" required>
-                            <button type="submit" class="btn btn--primary">{{ translate('search') }}</button>
-                        </div>
-                    </form>
-                    <div class="dropdown">
-                        <button type="button" class="btn btn-outline--primary text-nowrap btn-block"
-                                data-toggle="dropdown">
-                            <i class="tio-download-to"></i>
-                            {{ translate('export') }}
-                            <i class="tio-chevron-down"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-right">
-                            <li>
-                                <a class="dropdown-item"
-                                   href="{{ route('vendor.report.order-report-excel', ['date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to'), 'search'=>request('search')]) }}">
-                                    <img width="14" src="{{dynamicAsset(path: 'public/assets/back-end/img/excel.png') }}" alt="">
-                                    {{ translate('excel') }}
-                                </a>
-                            </li>
+        <x-k.data-view :title="translate('total_Orders')" :count="$orders->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_by_order_id')">
 
-                            <li>
-                                <a class="dropdown-item"
-                                   href="{{ route('vendor.report.order-report-pdf', ['date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to'), 'search'=>request('search')]) }}">
-                                    <span class="text-warning"><i class="tio-file-text"></i></span>
-                                    {{ translate('Download_PDF') }}
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table id="datatable"
-                       class="table __table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('vendor.report.order-report-excel', ['date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to'), 'search'=>request('search')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('excel') }}
+                </a>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('vendor.report.order-report-pdf', ['date_type'=>request('date_type'), 'from'=>request('from'), 'to'=>request('to'), 'search'=>request('search')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('Download_PDF') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('SL') }}</th>
+                    <th>{{ translate('order_ID') }}</th>
+                    <th class="k-table__num">{{ translate('total_Amount') }}</th>
+                    <th class="k-table__num">{{ translate('product_Discount') }}</th>
+                    <th class="k-table__num">{{ translate('coupon_Discount') }}</th>
+                    <th class="k-table__num">{{ translate('referral_Discount') }}</th>
+                    <th class="k-table__num">{{ translate('shipping_Charge') }}</th>
+                    <th class="k-table__num">{{ translate('VAT/TAX') }}</th>
+                    <th class="k-table__num">{{ translate('commission') }}</th>
+                    <th class="k-table__num">{{ translate('deliveryman_incentive') }}</th>
+                    <th>{{ translate('status') }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($orders as $key=>$order)
                     <tr>
-                        <th>{{ translate('SL') }}</th>
-                        <th>{{ translate('order_ID') }}</th>
-                        <th>{{ translate('total_Amount') }}</th>
-                        <th>{{ translate('product_Discount') }}</th>
-                        <th>{{ translate('coupon_Discount') }}</th>
-                        <th>{{ translate('referral_Discount') }}</th>
-                        <th>{{ translate('shipping_Charge') }}</th>
-                        <th>{{ translate('VAT/TAX') }}</th>
-                        <th>{{ translate('commission') }}</th>
-                        <th>{{ translate('deliveryman_incentive') }}</th>
-                        <th class="text-center">{{ translate('status') }}</th>
+                        <td><span class="k-num">{{ $orders->firstItem()+$key }}</span></td>
+                        <td>
+                            <a class="title-color hover-c1"
+                               href="{{route('vendor.orders.details',[$order->id]) }}">{{$order->id}}</a>
+                        </td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->order_amount), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->details_sum_discount), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->discount_amount), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order?->refer_and_earn_discount ?? 0), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->shipping_cost - ($order->extra_discount_type == 'free_shipping_over_order_amount' ? $order->extra_discount : 0)), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_tax_amount ?? $order->details_sum_tax), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->admin_commission), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->deliveryman_charge), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td>
+                            @switch($order['order_status'])
+                                @case('pending')
+                                    <x-k.badge tone="info">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('processing')
+                                    <x-k.badge tone="warning">{{ translate('packaging') }}</x-k.badge>
+                                    @break
+                                @case('out_for_delivery')
+                                    <x-k.badge tone="warning">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('confirmed')
+                                @case('delivered')
+                                    <x-k.badge tone="success">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('failed')
+                                    <x-k.badge tone="danger">{{ translate('failed_to_deliver') }}</x-k.badge>
+                                    @break
+                                @default
+                                    <x-k.badge tone="danger">{{ translate($order['order_status']) }}</x-k.badge>
+                            @endswitch
+                        </td>
                     </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($orders as $key=>$order)
-                        <tr>
-                            <td>{{ $orders->firstItem()+$key }}</td>
-                            <td>
-                                <a class="title-color hover-c1"
-                                   href="{{route('vendor.orders.details',[$order->id]) }}">{{$order->id}}</a>
-                            </td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->order_amount), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->details_sum_discount), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->discount_amount), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order?->refer_and_earn_discount ?? 0), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->shipping_cost - ($order->extra_discount_type == 'free_shipping_over_order_amount' ? $order->extra_discount : 0)), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_tax_amount ?? $order->details_sum_tax), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->admin_commission), currencyCode: getCurrencyCode()) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->deliveryman_charge), currencyCode: getCurrencyCode()) }}</td>
-                            <td>
-                                <div class="d-flex justify-content-center">
-                                    @if($order['order_status']=='pending')
-                                        <span class="badge badge-soft-info fs-12">
-                                            {{ translate($order['order_status']) }}
-                                        </span>
-                                    @elseif($order['order_status']=='processing' || $order['order_status']=='out_for_delivery')
-                                        <span class="badge badge-soft-warning fs-12">
-                                            {{str_replace('_',' ',($order['order_status'] == 'processing') ? translate('packaging'):translate($order['order_status'])) }}
-                                        </span>
-                                    @elseif($order['order_status']=='confirmed')
-                                        <span class="badge badge-soft-success fs-12">
-                                            {{ translate($order['order_status']) }}
-                                        </span>
-                                    @elseif($order['order_status']=='failed')
-                                        <span class="badge badge-soft-danger fs-12">
-                                            {{ translate('failed_to_deliver') }}
-                                        </span>
-                                    @elseif($order['order_status']=='delivered')
-                                        <span class="badge badge-soft-success fs-12">
-                                            {{ translate($order['order_status']) }}
-                                        </span>
-                                    @else
-                                        <span class="badge badge-soft-danger fs-12">
-                                            {{ translate($order['order_status']) }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
+                @endforeach
+                </tbody>
+            </table>
+
             @if(count($orders)==0)
-                @include('layouts.vendor.partials._empty-state',['text'=>'no_order_found', 'image'=>'default', 'width' => 75])
+                <x-k.empty icon="orders" :title="translate('no_order_found')" />
             @endif
-        </div>
-        <div class="table-responsive mt-4">
-            <div class="px-4 d-flex justify-content-center justify-content-md-end">
-                {!! $orders->links() !!}
-            </div>
-        </div>
+
+            @if ($orders->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                    </span>
+                    <div>{!! $orders->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 
     <span id="currency_symbol" data-text="{{ getCurrencySymbol(currencyCode: getCurrencyCode()) }}"></span>

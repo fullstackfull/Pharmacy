@@ -1,52 +1,50 @@
-<div class="table-responsive">
-    <table id="datatable"
-           class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-start">
-        <thead class="thead-light thead-50 text-capitalize">
+<div class="k-table-wrap">
+    <table class="k-table">
+        <thead>
         <tr>
             <th>{{translate('SL')}}</th>
-            <th>{{translate('amount')}}</th>
+            <th class="k-table__num">{{translate('amount')}}</th>
             <th>{{translate('Name') }}</th>
             <th>{{translate('request_time')}}</th>
-            <th class="text-center">{{translate('status')}}</th>
-            <th class="text-center">{{translate('action')}}</th>
+            <th>{{translate('status')}}</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
         @foreach($withdrawRequests as $key=>$withdrawRequest)
             <tr>
-                <td>{{$withdrawRequests->firstItem()+$key}}</td>
-                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $withdrawRequest['amount']), currencyCode: getCurrencyCode(type: 'default'))}}</td>
-
+                <td><span class="k-num">{{$withdrawRequests->firstItem()+$key}}</span></td>
+                <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $withdrawRequest['amount']), currencyCode: getCurrencyCode(type: 'default'))}}</span></td>
                 <td>
                     @if (isset($withdrawRequest->deliveryMan))
-                        <span class="title-color hover-c1">{{ $withdrawRequest->deliveryMan->f_name . ' ' . $withdrawRequest->deliveryMan->l_name }}</span>
+                        <span class="title-color">{{ $withdrawRequest->deliveryMan->f_name . ' ' . $withdrawRequest->deliveryMan->l_name }}</span>
                     @else
-                        <span>{{translate('not_found')}}</span>
+                        <span class="k-text-subtle">{{translate('not_found')}}</span>
                     @endif
                 </td>
-                <td>{{ date_format( $withdrawRequest->created_at, 'd-M-Y, h:i:s A') }}</td>
-                <td class="text-center">
+                <td><span class="k-num">{{ date_format( $withdrawRequest->created_at, 'd-M-Y, h:i:s A') }}</span></td>
+                <td>
                     @if($withdrawRequest->approved==0)
-                        <label class="badge badge-soft-primary">{{translate('pending')}}</label>
+                        <x-k.badge tone="info">{{translate('pending')}}</x-k.badge>
                     @elseif($withdrawRequest->approved==1)
-                        <label class="badge badge-soft-success">{{translate('approved')}}</label>
+                        <x-k.badge tone="success">{{translate('approved')}}</x-k.badge>
                     @else
-                        <label class="badge badge-soft-danger">{{translate('denied')}}</label>
+                        <x-k.badge tone="danger">{{translate('denied')}}</x-k.badge>
                     @endif
                 </td>
                 <td>
-                    <div class="d-flex justify-content-center">
+                    <div class="k-table__actions">
                         @if (isset($withdrawRequest->deliveryMan))
-                            <button
-                               class="btn btn-outline-info btn-sm square-btn withdraw-info-show"
+                            <button type="button"
+                               class="k-btn k-btn--ghost k-btn--sm k-btn--icon withdraw-info-show"
                                data-action="{{route('vendor.delivery-man.withdraw.details',[$withdrawRequest['id']])}}"
                                title="{{translate('view')}}">
-                                <i class="tio-invisible"></i>
+                                <x-k.icon name="eye" :size="15" />
                             </button>
                         @else
-                            <a class="btn btn-outline-info btn-sm square-btn disabled" href="#">
-                                <i class="tio-invisible"></i>
-                            </a>
+                            <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon" style="opacity:.4;pointer-events:none">
+                                <x-k.icon name="eye" :size="15" />
+                            </span>
                         @endif
                     </div>
                 </td>
@@ -56,18 +54,15 @@
     </table>
 </div>
 @if(count($withdrawRequests) == 0)
-    {{-- Match the empty-state ICON used on /vendor/business-settings/withdraw/index
-         (resources/views/vendor-views/withdraw/_table.blade.php) while keeping
-         the original delivery-man-specific copy. --}}
-    <div class="py-5">
-        <div class="text-center">
-            <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/not_data.svg') }}" alt="">
-            <p class="text-muted mt-3">{{ translate('no_withdraw_request_found') }}</p>
-        </div>
-    </div>
+    <x-k.empty icon="reports" :title="translate('no_withdraw_request_found')" />
 @endif
-<div class="table-responsive mt-4">
-    <div class="px-4 d-flex justify-content-center justify-content-md-end">
-        {{$withdrawRequests->links()}}
-    </div>
+<div class="k-pager">
+    <span class="k-pager__info">
+        @if ($withdrawRequests->total() > 0)
+            {{ translate('showing') }}
+            <span class="k-num">{{ $withdrawRequests->firstItem() }}–{{ $withdrawRequests->lastItem() }}</span>
+            {{ translate('of') }} <span class="k-num">{{ $withdrawRequests->total() }}</span>
+        @endif
+    </span>
+    <div>{!! $withdrawRequests->appends(request()->except('page'))->links() !!}</div>
 </div>

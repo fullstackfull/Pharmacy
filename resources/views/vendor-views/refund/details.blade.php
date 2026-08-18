@@ -314,48 +314,34 @@
             <div class="card">
                 <div class="card-body ">
                     <h4 class="mb-20">{{translate('Refund Request Logs')}}</h4>
-                    <div class="table-responsive datatable-custom">
-                        <table
-                            class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table">
-                            <thead class="thead-light thead-50 text-capitalize">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{translate('SL')}}</th>
-                                <th class="text-center">{{translate('changed_by')}}</th>
+                                <th>{{translate('changed_by')}}</th>
                                 <th>{{translate('Date')}}</th>
-                                <th class="text-center">{{translate('status')}}</th>
+                                <th>{{translate('status')}}</th>
                                 <th>{{translate('approved_/_rejected_note')}}</th>
-
                             </tr>
                             </thead>
                             <tbody>
                             @foreach ($refund->refundStatus as $key=>$status)
                                 <tr>
-                                    <td>
-                                        {{$key+1}}
-                                    </td>
-                                    <td class="text-capitalize text-center">
+                                    <td><span class="k-num">{{$key+1}}</span></td>
+                                    <td class="text-capitalize">
                                         {{$status->change_by == 'seller' ? 'vendor' : $status->change_by}}
                                     </td>
-                                    <td>{{date('d M Y, h:s:A',strtotime($refund['created_at']))}}</td>
-
-
-                                    <td class="text-capitalize text-center">
+                                    <td><span class="k-num">{{date('d M Y, h:s:A',strtotime($refund['created_at']))}}</span></td>
+                                    <td class="text-capitalize">
                                         @if ($status['status'] == 'pending')
-                                        <span class="badge bg-info text-info bg-opacity-10">
-                                            {{ translate($status['status']) }}
-                                        </span>
+                                            <x-k.badge tone="info">{{ translate($status['status']) }}</x-k.badge>
                                         @elseif($status['status'] == 'approved')
-                                            <span class="badge bg-primary text-primary bg-opacity-10">
-                                                {{ translate($status['status']) }}
-                                            </span>
+                                            <x-k.badge tone="accent">{{ translate($status['status']) }}</x-k.badge>
                                         @elseif($status['status'] == 'refunded')
-                                            <span class="badge bg-success text-success bg-opacity-10">
-                                                {{ translate($status['status']) }}
-                                            </span>
+                                            <x-k.badge tone="success">{{ translate($status['status']) }}</x-k.badge>
                                         @elseif($status['status'] == 'rejected')
-                                            <span class="badge bg-danger text-danger bg-opacity-10">
-                                                {{ translate($status['status']) }}
-                                            </span>
+                                            <x-k.badge tone="danger">{{ translate($status['status']) }}</x-k.badge>
                                         @endif
                                     </td>
                                     <td class="text-break">
@@ -378,7 +364,7 @@
                             </tbody>
                         </table>
                         @if(count($refund->refundStatus)==0)
-                            @include('layouts.vendor.partials._empty-state',['text'=>'no_data_found'], ['image' => 'product-empty'])
+                            <x-k.empty icon="info" :title="translate('no_data_found')" />
                         @endif
                     </div>
                 </div>

@@ -53,47 +53,44 @@
 
         <div class="row">
             <div class="col-sm-12 mb-3">
-                <div class="card">
-                    <div class="table-responsive datatable-custom">
-                        <table class="table table-hover table-borderless table-thead-bordered table-align-middle card-table {{ Session::get('direction') === 'rtl' ? 'text-right' : 'text-left' }}">
-                            <thead class="thead-light thead-50 text-capitalize table-nowrap">
+                <x-k.card :title="translate('collected_cash')" :padded="false">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('name') }}</th>
-                                <th>{{ translate('amount') }}</th>
+                                <th class="k-table__num">{{ translate('amount') }}</th>
                                 <th>{{ translate('Transaction_Date') }}</th>
                             </tr>
                             </thead>
-
                             <tbody id="set-rows">
                             @foreach($transactions as $transaction)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td><span class="k-num">{{ $loop->iteration }}</span></td>
                                     <td>
                                         {{ $deliveryMan->f_name. ' ' .$deliveryMan->l_name  }}
                                     </td>
-                                    <td>
-                                        {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['credit']), currencyCode: getCurrencyCode()) }}
+                                    <td class="k-table__num">
+                                        <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['credit']), currencyCode: getCurrencyCode()) }}</span>
                                     </td>
                                     <td>
-                                        {{ date_format( $transaction['created_at'], 'd-M-Y, h:i:s A') }}
+                                        <span class="k-num">{{ date_format( $transaction['created_at'], 'd-M-Y, h:i:s A') }}</span>
                                     </td>
-
                                 </tr>
                             @endforeach
                             </tbody>
                         </table>
                     </div>
-
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {!! $transactions->links() !!}
-                        </div>
-                    </div>
                     @if(count($transactions)==0)
-                        @include('layouts.vendor.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
+                        <x-k.empty icon="reports" :title="translate('no_data_found')" />
                     @endif
-                </div>
+                    @if ($transactions->total() > 0)
+                        <x-slot:footer>
+                            {!! $transactions->appends(request()->except('page'))->links() !!}
+                        </x-slot:footer>
+                    @endif
+                </x-k.card>
             </div>
         </div>
     </div>

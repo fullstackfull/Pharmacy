@@ -46,6 +46,7 @@ return [
     'cart_list' => 'web-views.cart.cart-list',
     'order_shipping' => 'web-views.checkout.shipping',
     'payment_details' => 'web-views.checkout.payment',
+    'payment_failed' => 'web-views.checkout.payment-failed',
     'order_complete' => 'web-views.checkout.complete',
     'products_mobile_nav_partials' => 'layouts.front-end.partials._cart',
     'products_view_page' => 'web-views.products.view',

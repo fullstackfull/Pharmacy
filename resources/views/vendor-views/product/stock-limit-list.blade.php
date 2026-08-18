@@ -6,7 +6,7 @@
     <div class="content container-fluid">
         <div class="mb-3 d-flex flex-column gap-1">
             <h2 class="h1 text-capitalize d-flex gap-2 align-items-center">
-                <img src="{{ asset('public/assets/back-end/img/inhouse-product-list.png') }}" class="mb-1 me-1" alt="">
+                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/inhouse-product-list.png') }}" class="mb-1 me-1" alt="">
                 {{ translate('limited_Stocked_Products_List') }}
                 <span class="badge badge-soft-dark radius-50 fz-14 ms-1">
                     {{ $products->total() }}
@@ -18,179 +18,152 @@
         </div>
         <div class="row mt-30">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="px-3 py-4">
-                        <div class="row justify-content-between align-items-center gy-2">
-                            <div class="col-auto">
-                                <form action="{{ url()->current() }}" method="GET">
-                                    <div class="input-group input-group-custom input-group-merge">
-                                        <div class="input-group-prepend">
-                                            <div class="input-group-text">
-                                                <i class="tio-search"></i>
-                                            </div>
-                                        </div>
-                                        <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control"
-                                               placeholder="{{ translate('search_by_Product_Name') }}"
-                                               aria-label="Search orders"
-                                               value="{{ $searchValue }}" >
-                                        <button type="submit" class="btn btn--primary">
-                                            {{ translate('search') }}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                <x-k.data-view :title="translate('limited_Stocked_Products_List')" :count="$products->total()"
+                               searchName="searchValue" :searchValue="$searchValue"
+                               :searchPlaceholder="translate('search_by_Product_Name')">
 
-                            <div class="col-12 mt-1 col-md-6 col-lg-3">
-                                <select name="qty_order_sort" class="form-control action-select-onchange-get-view"
-                                        data-url-prefix="{{ route('vendor.products.stock-limit-list') }}/?sortOrderQty=">
-                                    <option value="default" {{ $sortOrderQty== "default"?'selected':''}}>
-                                        {{ translate('default') }}
-                                    </option>
-                                    <option value="quantity_asc" {{ $sortOrderQty== "quantity_asc"?'selected':''}}>
-                                        {{ translate('inventory_quantity_(low_to_high)') }}
-                                    </option>
-                                    <option value="quantity_desc" {{ $sortOrderQty== "quantity_desc"?'selected':''}}>
-                                        {{ translate('inventory_quantity_(high_to_low)') }}
-                                    </option>
-                                    <option value="order_asc" {{ $sortOrderQty== "order_asc"?'selected':''}}>
-                                        {{ translate('order_volume_(low_to_high)') }}
-                                    </option>
-                                    <option value="order_desc" {{ $sortOrderQty== "order_desc"?'selected':''}}>
-                                        {{ translate('order_volume_(high_to_low)') }}
-                                    </option>
-                                </select>
-                            </div>
+                    <x-slot:actions>
+                        <select name="qty_order_sort" class="k-input action-select-onchange-get-view" style="inline-size:auto"
+                                data-url-prefix="{{ route('vendor.products.stock-limit-list') }}/?sortOrderQty="
+                                aria-label="{{ translate('sort') }}">
+                            <option value="default" {{ $sortOrderQty== "default"?'selected':''}}>
+                                {{ translate('default') }}
+                            </option>
+                            <option value="quantity_asc" {{ $sortOrderQty== "quantity_asc"?'selected':''}}>
+                                {{ translate('inventory_quantity_(low_to_high)') }}
+                            </option>
+                            <option value="quantity_desc" {{ $sortOrderQty== "quantity_desc"?'selected':''}}>
+                                {{ translate('inventory_quantity_(high_to_low)') }}
+                            </option>
+                            <option value="order_asc" {{ $sortOrderQty== "order_asc"?'selected':''}}>
+                                {{ translate('order_volume_(low_to_high)') }}
+                            </option>
+                            <option value="order_desc" {{ $sortOrderQty== "order_desc"?'selected':''}}>
+                                {{ translate('order_volume_(high_to_low)') }}
+                            </option>
+                        </select>
+                    </x-slot:actions>
 
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table id="datatable"
-                               class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-start">
-                            <thead class="thead-light thead-50 text-capitalize">
-                                <tr>
-                                    <th>{{ translate('SL') }}</th>
-                                    <th>{{ translate('product_Name') }}</th>
-                                    <th>{{ translate('unit_price') }}</th>
-                                    <th>{{ translate('verify_status') }}</th>
-                                    <th class="text-center">{{ translate('quantity') }}</th>
-                                    <th class="text-center">{{ translate('orders') }}</th>
-                                    <th class="text-center">{{ translate('active_Status') }}</th>
-                                    <th class="text-center">{{ translate('action') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($products as $key => $product)
-                                <tr>
-                                    <th scope="row">{{ $products->firstItem()+$key}}</th>
-                                    <td>
-                                        <a href="{{route('vendor.products.view',[$product['id']]) }}"
-                                           class="media align-items-center gap-2">
-                                            <img src="{{ getStorageImages(path:$product->thumbnail_full_url,type: 'backend-product')}}"
-                                                data-onerror="{{ dynamicAsset(path: 'public/assets/back-end/img/brand-logo.png') }}"
-                                                class="avatar border object-fit-cover" alt="">
-                                            <span class="media-body title-color hover-c1">
-                                                {{ Str::limit($product['name'], 20) }}
-                                            </span>
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('SL') }}</th>
+                            <th>{{ translate('product_Name') }}</th>
+                            <th class="k-table__num">{{ translate('unit_price') }}</th>
+                            <th>{{ translate('verify_status') }}</th>
+                            <th class="k-table__num">{{ translate('quantity') }}</th>
+                            <th class="k-table__num">{{ translate('orders') }}</th>
+                            <th>{{ translate('active_Status') }}</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($products as $key => $product)
+                            <tr>
+                                <td><span class="k-num">{{ $products->firstItem()+$key}}</span></td>
+                                <td>
+                                    <a href="{{route('vendor.products.view',[$product['id']]) }}" class="k-row">
+                                        <img src="{{ getStorageImages(path:$product->thumbnail_full_url,type: 'backend-product')}}"
+                                             data-onerror="{{ dynamicAsset(path: 'public/assets/back-end/img/brand-logo.png') }}"
+                                             alt="" width="40" height="40"
+                                             style="border-radius:8px;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                        <span class="k-truncate title-color" style="max-inline-size:200px" title="{{ $product['name'] }}">
+                                            {{ Str::limit($product['name'], 20) }}
+                                        </span>
+                                    </a>
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product['unit_price']), currencyCode: getCurrencyCode()) }}</span>
+                                </td>
+                                <td>
+                                    @if($product->request_status == 0)
+                                        <x-k.badge tone="warning">{{ translate('new_Request') }}</x-k.badge>
+                                    @elseif($product->request_status == 1)
+                                        <x-k.badge tone="success">{{ translate('approved') }}</x-k.badge>
+                                    @elseif($product->request_status == 2)
+                                        <x-k.badge tone="danger">{{ translate('denied') }}</x-k.badge>
+                                    @endif
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ $product['current_stock']}}</span>
+                                    <button class="k-btn k-btn--ghost k-btn--sm k-btn--icon action-update-product-quantity"
+                                            id="{{ $product['id'] }}"
+                                            data-url="{{ route('vendor.products.get-variations').'?id='.$product['id'] }}"
+                                            type="button" data-target="#update-quantity"
+                                            title="{{ translate('update_quantity') }}">
+                                        <x-k.icon name="plus" :size="15" />
+                                    </button>
+                                </td>
+                                <td class="k-table__num">
+                                    <span class="k-num">{{ $product['order_details_count']}}</span>
+                                </td>
+                                <td>
+                                    <form action="{{route('vendor.products.status-update') }}" method="post"
+                                          id="product-status{{ $product['id']}}-form"
+                                          class="admin-product-status-form">
+                                        @csrf
+                                        <input type="hidden" name="id" value="{{ $product['id']}}">
+                                        <label class="switcher mx-auto">
+                                            <input type="checkbox" class="switcher_input toggle-switch-message"
+                                                   name="status"
+                                                   id="product-status{{ $product['id'] }}" value="1"
+                                                   {{ $product['status'] == 1 ? 'checked' : '' }}
+                                                   data-modal-id="toggle-status-modal"
+                                                   data-toggle-id="product-status{{ $product['id'] }}"
+                                                   data-on-image="product-status-on.png"
+                                                   data-off-image="product-status-off.png"
+                                                   data-on-title="{{ translate('Want_to_Turn_ON').' '.$product['name'].' '.translate('status') }}"
+                                                   data-off-title="{{ translate('Want_to_Turn_OFF').' '.$product['name'].' '.translate('status') }}"
+                                                   data-on-message="<p>{{ translate('if_enabled_this_product_will_be_available_on_the_website_and_customer_app') }}</p>"
+                                                   data-off-message="<p>{{ translate('if_disabled_this_product_will_be_hidden_from_the_website_and_customer_app') }}</p>">
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                           title="{{ translate('barcode') }}"
+                                           href="{{ route('vendor.products.barcode', [$product['id']]) }}">
+                                            <x-k.icon name="grip" :size="15" />
                                         </a>
-                                    </td>
-                                    <td>
-                                        {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product['unit_price']), currencyCode: getCurrencyCode()) }}
-                                    </td>
-                                    <td>
-                                        @if($product->request_status == 0)
-                                            <label class="badge badge-soft-warning">
-                                                {{ translate('new_Request') }}
-                                            </label>
-                                        @elseif($product->request_status == 1)
-                                            <label class="badge badge-soft-success">
-                                                {{ translate('approved') }}
-                                            </label>
-                                        @elseif($product->request_status == 2)
-                                            <label class="badge badge-soft-danger">
-                                                {{ translate('denied') }}
-                                            </label>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-center">
-                                            {{ $product['current_stock']}}
-                                            <button class="btn py-0 px-2 fz-18 action-update-product-quantity"
-                                                    id="{{ $product['id'] }}"
-                                                    data-url="{{ route('vendor.products.get-variations').'?id='.$product['id'] }}"
-                                                    type="button" data-target="#update-quantity"
-                                                    title="{{ translate('update_quantity') }}"
-                                            >
-                                                <i class="tio-add-circle c1"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        {{ $product['order_details_count']}}
-                                    </td>
-                                    <td class="text-center">
-                                        <form action="{{route('vendor.products.status-update') }}" method="post"
-                                              id="product-status{{ $product['id']}}-form"
-                                              class="admin-product-status-form">
-                                            @csrf
-                                            <input type="hidden" name="id" value="{{ $product['id']}}">
-                                            <label class="switcher mx-auto">
-                                                <input type="checkbox" class="switcher_input toggle-switch-message"
-                                                       name="status"
-                                                       id="product-status{{ $product['id'] }}" value="1"
-                                                       {{ $product['status'] == 1 ? 'checked' : '' }}
-                                                       data-modal-id="toggle-status-modal"
-                                                       data-toggle-id="product-status{{ $product['id'] }}"
-                                                       data-on-image="product-status-on.png"
-                                                       data-off-image="product-status-off.png"
-                                                       data-on-title="{{ translate('Want_to_Turn_ON').' '.$product['name'].' '.translate('status') }}"
-                                                       data-off-title="{{ translate('Want_to_Turn_OFF').' '.$product['name'].' '.translate('status') }}"
-                                                       data-on-message="<p>{{ translate('if_enabled_this_product_will_be_available_on_the_website_and_customer_app') }}</p>"
-                                                       data-off-message="<p>{{ translate('if_disabled_this_product_will_be_hidden_from_the_website_and_customer_app') }}</p>">
-                                                <span class="switcher_control"></span>
-                                            </label>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <a class="btn btn-outline-info btn-sm square-btn"
-                                               title="{{ translate('barcode') }}"
-                                               href="{{ route('vendor.products.barcode', [$product['id']]) }}">
-                                                <i class="tio-barcode"></i>
-                                            </a>
-                                            <a class="btn btn-outline--primary btn-sm square-btn"
-                                               title="{{ translate('edit') }}"
-                                               href="{{route('vendor.products.update',[$product['id']]) }}">
-                                                <i class="tio-edit"></i>
-                                            </a>
-                                            <span class="btn btn-outline-danger btn-sm square-btn delete-data"
-                                                  title="{{ translate('delete') }}"
-                                                  data-id="product-{{ $product['id']}}">
-                                                <i class="tio-delete"></i>
-                                            </span>
-                                        </div>
-                                        <form action="{{ route('vendor.products.delete', [$product['id']]) }}"
-                                              method="post" id="product-{{ $product['id']}}">
-                                            @csrf @method('delete')
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {{ $products->links() }}
-                        </div>
-                    </div>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                           title="{{ translate('edit') }}"
+                                           href="{{route('vendor.products.update',[$product['id']]) }}">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </a>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data" role="button"
+                                              title="{{ translate('delete') }}"
+                                              data-id="product-{{ $product['id']}}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
+                                    </div>
+                                    <form action="{{ route('vendor.products.delete', [$product['id']]) }}"
+                                          method="post" id="product-{{ $product['id']}}">
+                                        @csrf @method('delete')
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
 
                     @if(count($products)==0)
-                        @include('layouts.vendor.partials._empty-state',['text'=>'no_product_found'],['image'=>'default'])
+                        <x-k.empty icon="catalog" :title="translate('no_product_found')"
+                                   :text="$searchValue ? translate('no_product_matches_your_search') : null" />
                     @endif
-                </div>
+
+                    @if ($products->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $products->firstItem() }}–{{ $products->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $products->total() }}</span>
+                            </span>
+                            <div>{!! $products->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>

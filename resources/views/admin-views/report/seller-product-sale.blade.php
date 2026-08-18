@@ -155,122 +155,85 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h3 class="mb-0 me-auto">
-                        {{ translate('total_Vendor') }}
-                        <span class="badge badge-info text-bg-info">{{ $orders->total() }}</span>
-                    </h3>
+        <x-k.data-view :title="translate('total_Vendor')" :count="$orders->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_by_vendor_info')">
 
-                    <div class="d-flex flex-wrap gap-3">
-                        <form action="{{ url()->full() }}" method="GET" class="mb-0">
-                            <div class="input-group">
-                                <input type="hidden" name="seller_id" value="{{ $seller_id }}">
-                                <input type="hidden" name="date_type" value="{{ $date_type }}">
-                                <input type="hidden" name="from" value="{{ $from }}">
-                                <input type="hidden" name="to" value="{{ $to }}">
-                                <input id="datatableSearch_" type="search" value="{{ $search }}" name="search"
-                                       class="form-control" placeholder="{{translate('search_by_vendor_info')}}" aria-label="Search orders"
-                                      >
-                                <div class="input-group-append search-submit">
-                                    <button type="submit">
-                                        <i class="fi fi-rr-search"></i>
-                                    </button>
-                                </div>
+            <?php
+                // The refund map used to be rebuilt inside every row. (Raw PHP,
+                // not a Blade php block: line 137's inline parenthesized form
+                // would pair with the block terminator and swallow the template.)
+                $refundBySeller = [];
+                foreach ($refunds ?? [] as $refund) {
+                    $refundBySeller[$refund['payer_id']] = $refund['total_refund_amount'];
+                }
+            ?>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('vendor-Info') }}</th>
+                    <th class="k-table__num">{{ translate('total_Order') }}</th>
+                    <th class="k-table__num">{{ translate('commission') }}</th>
+                    <th class="k-table__num">{{ translate('refund_Rate') }}</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($orders as $order)
+                    <tr>
+                        <td>
+                            @if (isset($order->seller->shop))
+                                <a href="{{ route('admin.vendors.view', ['id' => $order->seller->id]) }}" style="display:block;min-inline-size:0">
+                                    <span class="k-truncate" style="display:block;max-inline-size:220px" title="{{ $order->seller->shop->name }}">
+                                        {{ $order->seller->shop->name }}
+                                    </span>
+                                    <span class="k-text-subtle text-capitalize">{{ $order->seller->f_name.' '.$order->seller->l_name }}</span>
+                                </a>
+                            @else
+                                {{ translate('not_found') }}
+                            @endif
+                        </td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_order_amount), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_admin_commission), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num">
+                            <span class="k-num">
+                                {{ isset($refundBySeller[$order->seller_id]) && $order->total_order_amount > 0
+                                    ? number_format(($refundBySeller[$order->seller_id] / $order->total_order_amount) * 100, 2) . '%'
+                                    : '0%' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="k-table__actions">
+                                @if($order->seller_id)
+                                    <a href="{{ route('admin.vendors.view', ['id'=>$order->seller_id]) }}"
+                                       class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}">
+                                        <x-k.icon name="eye" :size="15" />
+                                    </a>
+                                @endif
                             </div>
-                        </form>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                        <a type="button" class="btn btn-outline-primary" href="{{ route('admin.report.vendor-report-export', ['date_type'=>request('date_type'), 'seller_id'=>request('seller_id'),'from'=>request('from'), 'to'=>request('to'), 'search'=>request('search')]) }}">
-                            <i class="fi fi-sr-inbox-in"></i>
-                            <span class="fs-12">{{ translate('export') }}</span>
-                        </a>
-                    </div>
-                </div>
+            @if(count($orders) <= 0)
+                <x-k.empty icon="customers" :title="translate('no_order_found')"
+                           :text="$search ? translate('no_vendor_matches_your_search') : null" />
+            @endif
 
-                <div class="table-responsive">
-                    <table id="datatable"
-                           class="table __table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{translate('SL')}}</th>
-                            <th>{{ translate('vendor-Info') }}</th>
-                            <th>{{translate('total_Order')}}</th>
-                            <th>{{translate('commission')}}</th>
-                            <th class="text-center">{{translate('refund_Rate')}}</th>
-                            <th class="text-center">{{translate('action')}}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($orders as $key=>$order)
-                            <tr>
-                                <td>{{ $orders->firstItem()+$key }}</td>
-                                <td>
-                                    <div>
-                                        @if (isset($order->seller->shop))
-                                            <a class="title-color"
-                                               href="{{ route('admin.vendors.view', ['id' => $order->seller->id]) }}">
-                                                <h6 class="mb-1">
-                                                    {{ \Str::limit($order->seller->shop->name, 20)}}
-                                                </h6>
-                                                <span class="mb-1 text-capitalize">
-                                                   {{$order->seller->f_name.' '.$order->seller->l_name}}
-                                                </span>
-                                            </a>
-                                        @else
-                                            {{translate('not_found')}}
-                                        @endif
-
-                                    </div>
-                                </td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_order_amount), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->total_admin_commission), currencyCode: getCurrencyCode()) }}</td>
-                                <td class="text-center">
-                                        <?php
-                                        $arr = array();
-                                        if ($refunds) {
-                                            foreach ($refunds as $refund) {
-                                                $arr += array(
-                                                    $refund['payer_id'] => $refund['total_refund_amount']
-                                                );
-                                            }
-                                        }
-                                        if (array_key_exists($order->seller_id, $arr)) {
-                                            echo number_format(($arr[$order->seller_id] / $order->total_order_amount) * 100, 2) . '%';
-                                        } else {
-                                            echo '0%';
-                                        }
-                                        ?>
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-center">
-                                        @if($order->seller_id)
-                                            <a href="{{ route('admin.vendors.view', ['id'=>$order->seller_id]) }}"
-                                               class="btn btn-outline-primary square-btn btn-sm">
-                                                <i class="fi fi-rr-eye"></i>
-                                            </a>
-                                        @else
-                                            <span class="btn btn-outline-primary square-btn btn-sm disabled">
-                                                <i class="fi fi-rr-eye"></i>
-                                            </span>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {!! $orders->links() !!}
-                    </div>
-                </div>
-                @if(count($orders) <= 0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_order_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+            @if ($orders->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                    </span>
+                    <div>{!! $orders->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection
 

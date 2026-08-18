@@ -100,24 +100,6 @@
             </div>
         </div>
         <div class="card card-body mt-3">
-            <div class="row border-bottom pb-3 align-items-center mb-20">
-                <div class="col-sm-4 col-md-6 col-lg-8 mb-2 mb-sm-0"></div>
-                <div class="col-sm-8 col-md-6 col-lg-4">
-                    <form action="{{ url()->current() }}" method="GET">
-                        <div class="input-group input-group-merge input-group-custom">
-                            <div class="input-group-prepend">
-                                <div class="input-group-text">
-                                    <i class="tio-search"></i>
-                                </div>
-                            </div>
-                            <input id="datatableSearch_" type="search" name="search" class="form-control"
-                                   placeholder="{{ translate('search_by_Order_ID') }}"
-                                   aria-label="Search orders" value="{{ $searchValue}}" required>
-                            <button type="submit" class="btn btn--primary">{{ translate('search') }}</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
             <form action="{{ url()->current() }}" method="GET">
                 <div class="row gy-3 align-items-end">
                     <div class="col-md-3">
@@ -154,69 +136,65 @@
                 </div>
             </form>
         </div>
-        <div class="card mt-3">
-            <div class="table-responsive datatable-custom">
-                <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+        <x-k.data-view class="mt-3" :title="translate('reviews')" :count="$reviews->total()"
+                       searchName="search" :searchValue="$searchValue"
+                       :searchPlaceholder="translate('search_by_Order_ID')">
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('order_ID')}}</th>
+                    <th>{{translate('reviewer')}}</th>
+                    <th>{{translate('review')}}</th>
+                    <th>{{translate('date')}}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($reviews as $key=>$review)
                     <tr>
-                        <th>{{translate('SL')}}</th>
-                        <th>{{translate('order_ID')}}</th>
-                        <th>{{translate('reviewer')}}</th>
-                        <th>{{translate('review')}}</th>
-                        <th>{{translate('date')}}</th>
+                        <td><span class="k-num">{{$reviews->firstItem()+$key}}</span></td>
+                        <td>
+                            <a class="title-color hover-c1" href="{{$review->order_id ? route('vendor.orders.details',$review['order_id']) : ''}}">{{ $review['order_id'] }}</a>
+                        </td>
+                        <td>
+                            <div class="k-row">
+                                <img src="{{getStorageImages(path: $review->customer->image_full_url,type: 'backend-profile')}}"
+                                     alt="" width="36" height="36"
+                                     style="border-radius:50%;object-fit:cover;flex:0 0 auto;border:1px solid var(--k-border)">
+                                <span style="min-inline-size:0">
+                                    <span class="d-block title-color">{{$review->customer['f_name']." ".$review->customer['l_name']}}</span>
+                                    <span class="k-text-subtle">{{$review->customer->email??""}}</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                <x-k.badge tone="info"><span class="k-num">{{$review->rating}}</span> <i class="tio-star"></i></x-k.badge>
+                                <p class="mb-0 mt-1">{{$review['comment']}}</p>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="k-num">{{date('d M Y H:i:s',strtotime($review['updated_at']))}}</span>
+                        </td>
                     </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($reviews as $key=>$review)
-                        <tr>
-                            <td>
-                                {{$reviews->firstItem()+$key}}
-                            </td>
-                            <td>
-                                <a class="title-color hover-c1" href="{{$review->order_id ? route('vendor.orders.details',$review['order_id']) : ''}}">{{ $review['order_id'] }}</a>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar avatar-circle">
-                                        <img class="avatar-img" src="{{getStorageImages(path: $review->customer->image_full_url,type: 'backend-profile')}}"
-                                            alt="{{translate('image_description')}}">
-                                    </div>
-                                    <div class="{{Session::get('direction') === "rtl" ? 'me-3' : 'ml-3'}}">
-                                    <span class="d-block h5 text-hover-primary mb-0">{{$review->customer['f_name']." ".$review->customer['l_name']}} <i
-                                            class="tio-verified text-primary" data-toggle="tooltip" data-placement="top"
-                                            title="Verified Customer"></i></span>
-                                        <span
-                                            class="d-block font-size-sm text-body">{{$review->customer->email??""}}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="text-wrap">
-                                    <div class="d-flex mb-2">
-                                        <label class="badge badge-soft-info">
-                                            <span>{{$review->rating}} <i class="tio-star"></i> </span>
-                                        </label>
-                                    </div>
-                                    <p>{{$review['comment']}}</p>
-                                </div>
-                            </td>
-                            <td>
-                                {{date('d M Y H:i:s',strtotime($review['updated_at']))}}
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
+                @endforeach
+                </tbody>
+            </table>
 
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-lg-end">
-                    {{ $reviews->links() }}
-                </div>
-            </div>
             @if(count($reviews)==0)
-                @include('layouts.vendor.partials._empty-state',['text'=>'no_review_found'],['image'=>'default'])
+                <x-k.empty icon="sparkles" :title="translate('no_review_found')" />
             @endif
-        </div>
+
+            @if ($reviews->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $reviews->firstItem() }}–{{ $reviews->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $reviews->total() }}</span>
+                    </span>
+                    <div>{!! $reviews->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection

@@ -340,6 +340,21 @@ class SystemController extends Controller
     }
 
 
+    /**
+     * Unsaved checkout addresses are stored anonymously (customer_id 0) so they
+     * never appear in an address book — but each proceed used to insert a fresh
+     * row. An identical row is reused; null fields need whereNull, since a
+     * where() against null compiles to "= null" and matches nothing.
+     */
+    private function reuseOrCreateAnonymousAddress(array $fields): int
+    {
+        $query = ShippingAddress::query();
+        foreach ($fields as $column => $value) {
+            $value === null ? $query->whereNull($column) : $query->where($column, $value);
+        }
+        return (int) ($query->value('id') ?? ShippingAddress::insertGetId($fields));
+    }
+
     public function getChooseShippingAddressOther(Request $request): JsonResponse
     {
         $billingInputByCustomer = getWebConfig(name: 'billing_input_by_customer');
@@ -476,7 +491,10 @@ class SystemController extends Controller
             $getShipping->save();
 
         } elseif (isset($shipping['shipping_method_id']) && !isset($shipping['update_address']) && !isset($shipping['save_address'])) {
-            $addressId = ShippingAddress::insertGetId([
+            // Unsaved addresses are stored anonymously so they stay out of the
+            // address book — but every proceed used to mint a fresh row, growing
+            // the table forever. An identical anonymous row is reused instead.
+            $shippingFields = [
                 'customer_id' => auth('customer')->check() ? 0 : ((session()->has('guest_id') ? session('guest_id') : 0)),
                 'is_guest' => auth('customer')->check() ? 0 : (session()->has('guest_id') ? 1 : 0),
                 'contact_person_name' => $shipping['contact_person_name'],
@@ -490,7 +508,8 @@ class SystemController extends Controller
                 'latitude' => $shipping['latitude'] ?? '',
                 'longitude' => $shipping['longitude'] ?? '',
                 'is_billing' => 0,
-            ]);
+            ];
+            $addressId = $this->reuseOrCreateAnonymousAddress($shippingFields);
         }
         // Shipping End
 
@@ -546,7 +565,7 @@ class SystemController extends Controller
                 $getBilling->longitude = $billing['billing_longitude'] ?? '';
                 $getBilling->save();
             } elseif (!isset($billing['update_billing_address']) && !isset($billing['save_address_billing'])) {
-                $billingAddressId = ShippingAddress::insertGetId([
+                $billingFields = [
                     'customer_id' => auth('customer')->check() ? 0 : ((session()->has('guest_id') ? session('guest_id') : 0)),
                     'is_guest' => auth('customer')->check() ? 0 : (session()->has('guest_id') ? 1 : 0),
                     'contact_person_name' => $billing['billing_contact_person_name'],
@@ -560,7 +579,8 @@ class SystemController extends Controller
                     'latitude' => $billing['billing_latitude'] ?? '',
                     'longitude' => $billing['billing_longitude'] ?? '',
                     'is_billing' => 1,
-                ]);
+                ];
+                $billingAddressId = $this->reuseOrCreateAnonymousAddress($billingFields);
             }
         } elseif ($request['billing_addresss_same_shipping'] == 'false' && !isset($billing['billing_method_id']) && $physicalProduct != 'yes') {
             return response()->json([

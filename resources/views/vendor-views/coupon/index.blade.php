@@ -138,205 +138,149 @@
 
         <div class="row mt-20">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="px-3 py-4">
-                        <div class="d-flex flex-wrap  gap-3 align-items-center justify-content-between">
-                            <h5 class="mb-0 text-capitalize d-flex gap-2">
-                                {{ translate('coupon_list') }}
-                                <span class="badge badge-soft-dark radius-50 fs-12 ms-1">{{ $coupons->total() }}</span>
-                            </h5>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <form action="{{ url()->current() }}" method="GET">
-                                    <div class="input-group input-group-merge input-group-custom">
-                                        <div class="input-group-prepend">
-                                            <div class="input-group-text">
-                                                <i class="tio-search"></i>
-                                            </div>
-                                        </div>
-                                        <input
-                                            id="datatableSearch_"
-                                            type="{{ request('searchValue') ? 'text' : 'search' }}"
-                                            name="searchValue"
-                                            class="form-control p3-3"
-                                            placeholder="{{ translate('search_by_Title_or_Code_or_Discount_Type') }}"
-                                            value="{{ request('searchValue') }}"
-                                            aria-label="Search orders"
-                                            required
-                                        >
-                                        <a href="{{ route('vendor.coupon.index') }}"
-                                           class="remove-input-value-coupon-search position-absolute text-dark {{ request('searchValue') ? 'd-block' : 'd-none' }}">
-                                            <i class="tio-clear font-weight-bold"></i>
-                                        </a>
+                <x-k.data-view :title="translate('coupon_list')" :count="$coupons->total()"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_Title_or_Code_or_Discount_Type')">
 
-                                        <button type="submit" class="btn btn--primary">{{ translate('search') }}</button>
-                                    </div>
-                                </form>
-                                <div class="dropdown">
-                                    <a type="button" class="btn btn-outline--primary text-nowrap h-100"
-                                       href="{{ route('vendor.coupon.export',['searchValue'=>request('searchValue')]) }}">
-                                        <img width="14"
-                                             src="{{dynamicAsset(path: 'public/assets/back-end/img/excel.png') }}"
-                                             class="excel" alt="">
-                                        <span class="ps-2">{{ translate('export') }}</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <x-slot:actions>
+                        <a class="k-btn k-btn--secondary"
+                           href="{{ route('vendor.coupon.export',['searchValue'=>request('searchValue')]) }}">
+                            <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                        </a>
+                    </x-slot:actions>
 
-                    <div class="table-responsive">
-                        <table id="datatable"
-                               class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table {{ Session::get('direction') === 'rtl' ? 'text-right' : 'text-left' }}">
-                            <thead class="thead-light thead-50 text-capitalize">
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('SL') }}</th>
+                            <th>{{ translate('coupon') }}</th>
+                            <th>{{ translate('coupon_type') }}</th>
+                            <th>{{ translate('duration') }}</th>
+                            <th>{{ translate('Limit') }}</th>
+                            <th>{{ translate('discount_bearer') }}</th>
+                            <th>
+                                {{ translate('status') }}
+                                <span data-toggle="tooltip"
+                                      title="{{ translate('some_status_buttons_are_disabled_because_the_admin_added_coupons') }}, {{ translate('the_coupon_discount_bearer_is_admin') }}, {{ translate('or_some_coupons_are_for_all_vendors') }}">
+                                    <x-k.icon name="info" :size="13" />
+                                </span>
+                            </th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($coupons as $k=>$coupon)
+                            @php($vendorOwnsCoupon = $coupon->added_by=='seller' || ($coupon->added_by=='admin' && $coupon->coupon_bearer=='seller' && $coupon->seller_id==auth('seller')->id()))
                             <tr>
-                                <th>{{ translate('SL') }}</th>
-                                <th>{{ translate('coupon') }}</th>
-                                <th>{{ translate('coupon_type') }}</th>
-                                <th>{{ translate('duration') }}</th>
-                                <th>{{ translate('Limit') }}</th>
-                                <th class="text-center">{{ translate('discount_bearer') }}</th>
-                                <th>
-                                    {{ translate('status') }}
-                                    <i class="tio-info font-130 info-color"
-                                       data-toggle="tooltip"
-                                       title="{{ translate('some_status_buttons_are_disabled_because_the_admin_added_coupons') }}, {{ translate('the_coupon_discount_bearer_is_admin') }}, {{ translate('or_some_coupons_are_for_all_vendors') }}">
-
-                                    </i>
-                                </th>
-                                <th class="text-center">
-                                    {{ translate('action') }}
-                                    <i class="tio-info font-130 info-color"
-                                       data-toggle="tooltip"
-                                       title="{{ translate('some_actions_are_disabled_because_the_admin_added_coupons') }}, {{ translate('the_coupon_discount_bearer_is_admin') }}, {{ translate('or_some_coupons_are_for_all_vendors') }}">
-
-                                    </i>
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($coupons as $k=>$coupon)
-                                <tr>
-                                    <td>{{$coupons->firstItem() + $k}}</td>
-                                    <td>
-                                        <div>{{substr($coupon['title'],0,20) }}</div>
-                                        <strong>{{ translate('code') }}: {{$coupon['code']}}</strong>
-                                    </td>
-                                    <td class="text-capitalize">{{ translate(str_replace('_',' ',$coupon['coupon_type'])) }}</td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <span>{{date('d M, y',strtotime($coupon['start_date'])) }} - </span>
-                                            <span>{{date('d M, y',strtotime($coupon['expire_date'])) }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column gap-2">
-                                            <span>
-                                                {{translate('Same_User_Limit')}}:
-                                                <strong>{{ $coupon['limit'] }}</strong>
+                                <td><span class="k-num">{{$coupons->firstItem() + $k}}</span></td>
+                                <td>
+                                    <div class="k-truncate" style="max-inline-size:200px" title="{{ $coupon['title'] }}">{{substr($coupon['title'],0,20) }}</div>
+                                    <strong class="k-num">{{ translate('code') }}: {{$coupon['code']}}</strong>
+                                </td>
+                                <td class="text-capitalize">{{ translate(str_replace('_',' ',$coupon['coupon_type'])) }}</td>
+                                <td>
+                                    <span class="k-num">{{date('d M, y',strtotime($coupon['start_date'])) }}</span>
+                                    <span class="k-text-subtle">–</span>
+                                    <span class="k-num">{{date('d M, y',strtotime($coupon['expire_date'])) }}</span>
+                                </td>
+                                <td>
+                                    <div class="k-text-subtle">{{translate('Same_User_Limit')}}: <strong class="k-num">{{ $coupon['limit'] }}</strong></div>
+                                    <div class="k-text-subtle">{{translate('Total_Used')}}: <strong class="k-num">{{ $coupon['order_count'] }}</strong></div>
+                                </td>
+                                <td>{{ translate($coupon['coupon_bearer'] == 'inhouse' ? 'admin':$coupon['coupon_bearer']) }}</td>
+                                <td>
+                                    @if($vendorOwnsCoupon)
+                                        <form
+                                            action="{{ route('vendor.coupon.update-status',[$coupon['id'],$coupon->status?0:1]) }}"
+                                            method="get" id="coupon_status{{$coupon['id']}}-form"
+                                            class="coupon_status_form">
+                                            <label class="switcher">
+                                                <input type="checkbox" class="switcher_input toggle-switch-message"
+                                                       id="coupon_status{{$coupon['id']}}" name="status" value="1"
+                                                       {{ $coupon->status == 1 ? 'checked':'' }}
+                                                       data-modal-id="toggle-status-modal"
+                                                       data-toggle-id="coupon_status{{$coupon['id']}}"
+                                                       data-on-image="coupon-status-on.png"
+                                                       data-off-image="coupon-status-off.png"
+                                                       data-on-title="{{ translate('want_to_Turn_ON_Coupon_Status').'?'}}"
+                                                       data-off-title="{{ translate('want_to_Turn_OFF_Coupon_Status').'?'}}"
+                                                       data-on-message="<p>{{ translate('if_enabled_this_coupon_will_be_available_on_the_website_and_customer_app') }}</p>"
+                                                       data-off-message="<p>{{ translate('if_disabled_this_coupon_will_be_hidden_from_the_website_and_customer_app') }}</p>"
+                                                >
+                                                <span class="switcher_control"></span>
+                                            </label>
+                                        </form>
+                                    @else
+                                        <label class="switcher">
+                                            <input type="checkbox"
+                                                   class="switcher_input toggle-switch-input"
+                                                   {{$coupon->status?'checked':''}} disabled>
+                                            <span class="switcher_control opacity--40"></span>
+                                        </label>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon get-quick-view"
+                                                title="{{ translate('view') }}"
+                                                data-id="{{ $coupon['id'] }}">
+                                            <x-k.icon name="eye" :size="15" />
+                                        </button>
+                                        @if($vendorOwnsCoupon)
+                                            <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon edit"
+                                               href="{{ route('vendor.coupon.update',[$coupon['id']]) }}"
+                                               title="{{ translate('edit') }}">
+                                                <x-k.icon name="edit" :size="15" />
+                                            </a>
+                                            <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete delete-data" role="button"
+                                                  title="{{ translate('delete') }}"
+                                                  data-id="coupon-{{$coupon['id']}}">
+                                                <x-k.icon name="trash" :size="15" />
                                             </span>
-
-                                            <span>
-                                                {{translate('Total_Used')}}:
-                                                <strong>{{ $coupon['order_count'] }}</strong>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">{{ translate($coupon['coupon_bearer'] == 'inhouse' ? 'admin':$coupon['coupon_bearer']) }}</td>
-                                    <td>
-                                        @if($coupon->added_by=='seller' || ($coupon->added_by=='admin' && $coupon->coupon_bearer=='seller' && $coupon->seller_id==auth('seller')->id()))
-                                            <form
-                                                action="{{ route('vendor.coupon.update-status',[$coupon['id'],$coupon->status?0:1]) }}"
-                                                method="get" id="coupon_status{{$coupon['id']}}-form"
-                                                class="coupon_status_form">
-                                                <label class="switcher">
-                                                    <input type="checkbox" class="switcher_input toggle-switch-message"
-                                                           id="coupon_status{{$coupon['id']}}" name="status" value="1"
-                                                           {{ $coupon->status == 1 ? 'checked':'' }}
-                                                           data-modal-id="toggle-status-modal"
-                                                           data-toggle-id="coupon_status{{$coupon['id']}}"
-                                                           data-on-image="coupon-status-on.png"
-                                                           data-off-image="coupon-status-off.png"
-                                                           data-on-title="{{ translate('want_to_Turn_ON_Coupon_Status').'?'}}"
-                                                           data-off-title="{{ translate('want_to_Turn_OFF_Coupon_Status').'?'}}"
-                                                           data-on-message="<p>{{ translate('if_enabled_this_coupon_will_be_available_on_the_website_and_customer_app') }}</p>"
-                                                           data-off-message="<p>{{ translate('if_disabled_this_coupon_will_be_hidden_from_the_website_and_customer_app') }}</p>"
-                                                    >
-                                                    <span class="switcher_control"></span>
-                                                </label>
+                                            <form action="{{ route('vendor.coupon.delete',[$coupon['id']]) }}"
+                                                  method="post" id="coupon-{{$coupon['id']}}">
+                                                @csrf @method('delete')
                                             </form>
                                         @else
-                                            <label class="switcher">
-                                                <input type="checkbox"
-                                                       class="switcher_input toggle-switch-input"
-                                                       {{$coupon->status?'checked':''}} disabled>
-                                                <span class="switcher_control opacity--40"></span>
-                                            </label>
+                                            <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon" style="opacity:.4;pointer-events:none"
+                                                  title="{{ translate('some_actions_are_disabled_because_the_admin_added_coupons') }}">
+                                                <x-k.icon name="edit" :size="15" />
+                                            </span>
+                                            <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon" style="opacity:.4;pointer-events:none"
+                                                  title="{{ translate('some_actions_are_disabled_because_the_admin_added_coupons') }}">
+                                                <x-k.icon name="trash" :size="15" />
+                                            </span>
                                         @endif
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-10 justify-content-center">
-                                            <button class="btn btn-outline-info btn-sm square-btn get-quick-view"
-                                                    data-id="{{ $coupon['id'] }}">
-                                                <i class="tio-invisible"></i>
-                                            </button>
-                                            @if($coupon->added_by=='seller' || ($coupon->added_by=='admin' && $coupon->coupon_bearer=='seller' && $coupon->seller_id==auth('seller')->id()))
-                                                <a class="btn btn-outline--primary btn-sm edit"
-                                                   href="{{ route('vendor.coupon.update',[$coupon['id']]) }}"
-                                                   title="{{ translate('edit') }}">
-                                                    <i class="tio-edit"></i>
-                                                </a>
-                                                <a class="btn btn-outline-danger btn-sm delete delete-data"
-                                                   href="javascript:"
-                                                   data-id="coupon-{{$coupon['id']}}"
-                                                   title="{{ translate('delete') }}">
-                                                    <i class="tio-delete"></i>
-                                                </a>
-                                                <form action="{{ route('vendor.coupon.delete',[$coupon['id']]) }}"
-                                                      method="post" id="coupon-{{$coupon['id']}}">
-                                                    @csrf @method('delete')
-                                                </form>
-                                            @else
-                                                <button
-                                                    class="btn btn-outline-primary btn-sm edit disabled cursor-default"
-                                                    title="Tooltip on top">
-                                                    <i class="tio-edit"></i>
-                                                </button>
-                                                <button
-                                                    class="btn btn-outline-danger btn-sm delete disabled cursor-default"
-                                                    title="Tooltip on top">
-                                                    <i class="tio-delete"></i>
-                                                </button>
-                                                <span></span>
-                                            @endif
-                                        </div>
-
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                        <div class="modal fade" id="quick-view" tabindex="-1" role="dialog"
-                             aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered coupon-details" role="document">
-                                <div class="modal-content" id="quick-view-modal">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive mt-4">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {{$coupons->links() }}
-                        </div>
-                    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
 
                     @if(count($coupons)==0)
-                        @include('layouts.vendor.partials._empty-state', [
-                            'text' => 'no_coupon_found',
-                            'image' => 'default',
-                            'width' => 50
-                        ])
+                        <x-k.empty icon="marketing" :title="translate('no_coupon_found')"
+                                   :text="request('searchValue') ? translate('no_coupon_matches_your_search') : null" />
                     @endif
+
+                    @if ($coupons->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $coupons->firstItem() }}–{{ $coupons->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $coupons->total() }}</span>
+                            </span>
+                            <div>{!! $coupons->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
+
+                <div class="modal fade" id="quick-view" tabindex="-1" role="dialog"
+                     aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered coupon-details" role="document">
+                        <div class="modal-content" id="quick-view-modal">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
