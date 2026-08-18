@@ -56,7 +56,7 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('roles') }}</h5></div>
                     <div class="card-body p-0">
-                        <table class="table table-sm align-middle mb-0">
+                        <table class="k-table">
                             <tbody>
                             @forelse ($roles as $r)
                                 <tr>
@@ -105,7 +105,7 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('team') }}</h5></div>
                     <div class="card-body p-0">
-                        <table class="table table-sm align-middle mb-0">
+                        <table class="k-table">
                             <thead><tr><th>{{ translate('name') }}</th><th>{{ translate('role') }}</th><th>{{ translate('status') }}</th><th></th></tr></thead>
                             <tbody>
                             @forelse ($staff as $s)

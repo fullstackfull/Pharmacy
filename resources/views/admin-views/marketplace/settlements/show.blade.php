@@ -95,8 +95,8 @@
         <div class="card">
             <div class="card-header"><h5 class="mb-0">{{ translate('claimed_ledger_entries') }} ({{ $settlement->entry_count }})</h5></div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>#</th>

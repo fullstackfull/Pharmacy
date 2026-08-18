@@ -37,9 +37,9 @@
 
             <div class="card">
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="overflow-x:auto">
-                        <table class="table table-hover table-borderless align-middle mb-0">
-                            <thead class="thead-light">
+                    <div class="k-table-wrap" style="overflow-x:auto">
+                        <table class="k-table">
+                            <thead>
                                 <tr>
                                     <th>{{ translate('reference') }}</th>
                                     <th>{{ translate('seller') }}</th>

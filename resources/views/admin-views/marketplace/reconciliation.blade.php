@@ -27,8 +27,8 @@
                 </div>
                 @unless ($ok)
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('reference') }}</th>
                                     <th class="text-end">{{ translate('expected') }}</th>

@@ -33,8 +33,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('all_warehouses') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr><th>{{ translate('name') }}</th><th>{{ translate('code') }}</th><th>{{ translate('status') }}</th></tr></thead>
                                 <tbody>
                                 @forelse ($warehouses as $w)
@@ -66,7 +66,7 @@
                             <div class="mb-2 fs-12">
                                 <strong>{{ mb_substr($product->name, 0, 40) }}</strong> — {{ translate('current_stock') }}: <strong>{{ $product->current_stock }}</strong>
                             </div>
-                            <table class="table table-sm mb-3">
+                            <table class="k-table">
                                 <thead><tr><th>{{ translate('warehouse') }}</th><th class="text-end">{{ translate('quantity') }}</th></tr></thead>
                                 <tbody>
                                 @foreach ($warehouses as $w)

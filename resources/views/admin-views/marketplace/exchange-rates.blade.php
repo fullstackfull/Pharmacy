@@ -16,7 +16,7 @@
                     <div class="card-body">
                         <form action="{{ route('admin.marketplace.exchange-rates.bulk-update') }}" method="post">
                             @csrf
-                            <table class="table table-sm align-middle mb-2">
+                            <table class="k-table">
                                 <thead><tr><th>{{ translate('currency') }}</th><th style="width:160px">{{ translate('rate') }}</th></tr></thead>
                                 <tbody>
                                 @forelse ($currencies as $c)
@@ -42,8 +42,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('change_history') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('date') }}</th><th>{{ translate('currency') }}</th>
                                     <th class="text-end">{{ translate('from') }}</th><th class="text-end">{{ translate('to') }}</th>

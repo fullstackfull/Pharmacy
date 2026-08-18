@@ -79,8 +79,8 @@
 
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>{{ translate('reference') }}</th>

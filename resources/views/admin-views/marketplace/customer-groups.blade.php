@@ -111,7 +111,7 @@
                                         <div class="col-3"><input type="number" step="0.01" name="discount_percent" class="form-control form-control-sm" placeholder="{{ translate('discount') }}%"></div>
                                         <div class="col-2"><button class="btn btn-sm btn-primary w-100">＋</button></div>
                                     </form>
-                                    <table class="table table-sm mb-0">
+                                    <table class="k-table">
                                         <tbody>
                                         @forelse ($prices as $p)
                                             <tr>

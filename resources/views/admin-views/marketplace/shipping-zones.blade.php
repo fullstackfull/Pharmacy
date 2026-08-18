@@ -87,8 +87,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('all_zones') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('name') }}</th><th>{{ translate('countries') }}</th>
                                     <th class="text-end">{{ translate('base_cost') }}</th><th class="text-end">{{ translate('per_kg') }}</th>

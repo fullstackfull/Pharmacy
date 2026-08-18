@@ -68,8 +68,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('rules') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('name') }}</th><th>{{ translate('gateway') }}</th><th>{{ translate('action') }}</th>
                                     <th>{{ translate('conditions') }}</th><th>{{ translate('status') }}</th><th></th>

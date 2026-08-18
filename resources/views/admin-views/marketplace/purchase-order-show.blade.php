@@ -39,8 +39,8 @@
         <div class="card">
             <div class="card-header"><h5 class="mb-0">{{ translate('lines') }}</h5></div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead><tr>
                             <th>{{ translate('product') }}</th><th class="text-end">{{ translate('ordered') }}</th>
                             <th class="text-end">{{ translate('received') }}</th><th class="text-end">{{ translate('outstanding') }}</th>

@@ -47,8 +47,8 @@
                         <form method="get"><input type="text" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="{{ translate('search') }}"></form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('name') }}</th><th>{{ translate('contact') }}</th>
                                     <th>{{ translate('status') }}</th><th class="text-end">{{ translate('action') }}</th>

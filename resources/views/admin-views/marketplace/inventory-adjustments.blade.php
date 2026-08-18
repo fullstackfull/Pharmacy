@@ -74,8 +74,8 @@
                         </form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('date') }}</th><th>{{ translate('product') }}</th><th>{{ translate('type') }}</th>
                                     <th class="text-end">{{ translate('change') }}</th><th class="text-end">{{ translate('balance') }}</th>
