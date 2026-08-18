@@ -38,12 +38,3 @@ $("#date_type").change(function () {
     }
 }).change();
 
-// Bar Charts
-Chart.plugins.unregister(ChartDataLabels);
-
-$('.js-chart').each(function () {
-    $.HSCore.components.HSChartJS.init($(this));
-});
-
-var updatingChart = $.HSCore.components.HSChartJS.init($('#updatingData'));
-

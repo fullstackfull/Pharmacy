@@ -5,7 +5,7 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0 text-capitalize d-flex align-items-center gap-2">
-                <img width="20" src="{{asset('public/assets/back-end/img/order_report.png') }}" alt="">
+                <img width="20" src="{{ dynamicAsset(path: 'public/assets/back-end/img/order_report.png') }}" alt="">
                 {{ translate('order_Report') }}
             </h2>
         </div>
