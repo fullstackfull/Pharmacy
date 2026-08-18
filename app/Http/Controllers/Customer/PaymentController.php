@@ -218,9 +218,16 @@ class PaymentController extends Controller
         return response()->json(['message' => 'Payment succeeded'], 200);
     }
 
-    public function fail(): JsonResponse
+    public function fail(Request $request): JsonResponse|\Illuminate\Contracts\View\View
     {
-        return response()->json(['message' => 'Payment failed'], 403);
+        // The apps expect JSON here; but gateways also redirect the shopper's
+        // BROWSER to this route, which used to dead-end on raw {"message":
+        // "Payment failed"} with a 403. Browsers now get a page with a way
+        // back into checkout.
+        if ($request->expectsJson() || (session()->has('payment_mode') && session('payment_mode') == 'app')) {
+            return response()->json(['message' => 'Payment failed'], 403);
+        }
+        return view(VIEW_FILE_NAMES['payment_failed'] ?? 'web-views.checkout.payment-failed');
     }
 
     public function web_payment_success(Request $request)
@@ -256,8 +263,10 @@ class PaymentController extends Controller
             if (session()->has('payment_mode') && session('payment_mode') == 'app') {
                 return response()->json(['message' => 'Payment failed'], 403);
             } else {
+                // Was: toast + homepage — the shopper lost all order context and
+                // had to find their own way back to checkout.
                 Toastr::error(translate('Payment_failed') . '!');
-                return redirect(url('/'));
+                return redirect()->route('payment-fail');
             }
         }
     }
