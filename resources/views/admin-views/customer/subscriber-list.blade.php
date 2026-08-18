@@ -54,75 +54,54 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-body d-flex flex-column gap-20">
-                    <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                        <h3 class="mb-0">
-                            {{translate('subscriber_list')}}
-                            <span class="badge text-dark bg-body-secondary fw-semibold rounded-50">{{ $subscriberList->total() }}</span>
-                        </h3>
-                        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-sm-end flex-grow-1">
-                            <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                                <form action="{{ url()->current() }}" method="GET">
-                                    <input type="hidden" name="subscription_date" value="{{request('subscription_date')}}">
-                                    <input type="hidden" name="sort_by" value="{{ request('sort_by')}}">
-                                    <input type="hidden" name="choose_first" value="{{request('choose_first')}}">
-                                    <div class="input-group">
-                                       <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                            placeholder="{{ translate('search_by_email')}}"  aria-label="Search orders" value="{{ request('searchValue') }}">
-                                            <div class="input-group-append search-submit">
-                                                <button type="submit">
-                                                    <i class="fi fi-rr-search"></i>
-                                                </button>
-                                            </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="dropdown">
-                                <a type="button" class="btn btn-outline-primary" href="{{route('admin.customer.subscriber-list.export', ['sort_by' => request('sort_by'), 'choose_first' => request('choose_first'), 'subscription_date' => request('subscription_date'), 'searchValue' => request('searchValue')])}}">
-                                    <i class="fi fi-sr-inbox-in"></i>
-                                    <span class="fs-12">{{ translate('export') }}</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table style="text-align: {{Session::get('direction') === "rtl" ? 'right' : 'left'}};"
-                            class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                            <thead class="thead-light thead-50 text-capitalize">
-                            <tr>
-                                <th>{{ translate('SL')}}</th>
-                                <th scope="col">
-                                    {{ translate('email')}}
-                                </th>
-                                <th>{{ translate('subscription_date')}}</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($subscriberList as $key=>$item)
-                                    <tr>
-                                        <td>{{$subscriberList->firstItem()+$key}}</td>
-                                        <td>{{$item->email}}</td>
-                                        <td>
-                                            {{date('d M Y, h:i A',strtotime($item->created_at))}}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+            <x-k.data-view :title="translate('subscriber_list')" :count="$subscriberList->total()"
+                           searchName="searchValue" :searchValue="request('searchValue')"
+                           :searchPlaceholder="translate('search_by_email')">
 
-                    </div>
+                <x-slot:actions>
+                    <a class="k-btn k-btn--secondary"
+                       href="{{route('admin.customer.subscriber-list.export', ['sort_by' => request('sort_by'), 'choose_first' => request('choose_first'), 'subscription_date' => request('subscription_date'), 'searchValue' => request('searchValue')])}}">
+                        <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                    </a>
+                </x-slot:actions>
 
-                    <div class="table-responsive">
-                        <div class="px-4 d-flex justify-content-lg-end">
-                            {{$subscriberList->links()}}
-                        </div>
-                    </div>
-                    @if(count($subscriberList)==0)
-                        @include('layouts.admin.partials._empty-state',['text'=>'no_subscriber_found'],['image'=>'default'])
-                    @endif
-                </div>
-            </div>
+                <table class="k-table">
+                    <thead>
+                    <tr>
+                        <th>{{ translate('email') }}</th>
+                        <th>{{ translate('subscription_date') }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($subscriberList as $item)
+                        <tr>
+                            <td>
+                                <a href="mailto:{{ $item->email }}">{{ $item->email }}</a>
+                            </td>
+                            <td>
+                                <span class="k-num">{{ date('d M Y, h:i A', strtotime($item->created_at)) }}</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+
+                @if(count($subscriberList)==0)
+                    <x-k.empty icon="customers" :title="translate('no_subscriber_found')"
+                               :text="request('searchValue') ? translate('no_subscriber_matches_your_search') : null" />
+                @endif
+
+                @if ($subscriberList->total() > 0)
+                    <x-slot:pager>
+                        <span class="k-pager__info">
+                            {{ translate('showing') }}
+                            <span class="k-num">{{ $subscriberList->firstItem() }}–{{ $subscriberList->lastItem() }}</span>
+                            {{ translate('of') }} <span class="k-num">{{ $subscriberList->total() }}</span>
+                        </span>
+                        <div>{!! $subscriberList->appends(request()->except('page'))->links() !!}</div>
+                    </x-slot:pager>
+                @endif
+            </x-k.data-view>
         </div>
     </div>
 </div>
