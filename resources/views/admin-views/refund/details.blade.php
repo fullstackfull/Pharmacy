@@ -373,14 +373,13 @@
             <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
                 <h3 class="mb-0">{{ translate('refund_status_changed_log') }}</h3>
             </div>
-            <div class="table-responsive">
-                <table
-                    class="table table-hover table-borderless align-middle">
-                    <thead class="text-capitalize">
+            <div class="k-table-wrap">
+                <table class="k-table">
+                    <thead>
                     <tr>
-                        <th class="text-start">{{ translate('SL') }}</th>
-                        <th class="text-center">{{ translate('changed_by') }}</th>
-                        <th class="text-start">{{ translate('Date') }}</th>
+                        <th>{{ translate('SL') }}</th>
+                        <th>{{ translate('changed_by') }}</th>
+                        <th>{{ translate('Date') }}</th>
                         <th>{{ translate('status') }}</th>
                         <th>{{ translate('approved_/_rejected_note') }}</th>
                     </tr>
@@ -388,33 +387,17 @@
                     <tbody>
                     @foreach ($refund->refundStatus as $key => $status)
                         <tr>
-                            <td>
-                                {{ $key+1}}
-                            </td>
-                            <td class="text-capitalize text-center">
+                            <td><span class="k-num">{{ $key+1}}</span></td>
+                            <td class="text-capitalize">
                                 {{ $status->change_by == 'seller' ? 'vendor' : $status->change_by}}
                             </td>
-                            <td>{{date('d M Y, h:s:A',strtotime($refund['created_at'])) }}</td>
+                            <td><span class="k-num">{{date('d M Y, h:s:A',strtotime($refund['created_at'])) }}</span></td>
                             <td class="text-capitalize">
-                                @if ($status['status'] == 'pending')
-                                    <span class="badge badge-secondary text-bg-secondary text-secondary bg-opacity-10">
-                                        {{ translate($status['status']) }}
-                                    </span>
-                                @elseif($status['status'] == 'approved')
-                                    <span class="badge badge-primary text-bg-primary text-primary bg-opacity-10">
-                                        {{ translate($status['status']) }}
-                                    </span>
-                                @elseif($status['status'] == 'refunded')
-                                    <span class="badge badge-success text-bg-success text-success bg-opacity-10">
-                                        {{ translate($status['status']) }}
-                                    </span>
-                                @elseif($status['status'] == 'rejected')
-                                    <span class="badge badge-danger text-bg-danger text-danger bg-opacity-10">
-                                        {{ translate($status['status']) }}
-                                    </span>
+                                @php($refundLogTones = ['pending' => 'info', 'approved' => 'accent', 'refunded' => 'success', 'rejected' => 'danger'])
+                                @if(isset($refundLogTones[$status['status']]))
+                                    <x-k.badge :tone="$refundLogTones[$status['status']]">{{ translate($status['status']) }}</x-k.badge>
                                 @endif
                             </td>
-
                             <td class="text-break">
                                 @if($status?->message)
                                     <div class="word-break max-w-370 min-w-180">
@@ -436,12 +419,7 @@
                     </tbody>
                 </table>
                 @if(count($refund->refundStatus)==0)
-                    <div class="text-center p-4">
-                        <img class="mb-3 w-160"
-                             src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/empty-state-icon/default.png') }}"
-                             alt="{{ translate('image_description') }}">
-                        <p class="mb-0">{{ translate('no_data_to_show') }}</p>
-                    </div>
+                    <x-k.empty icon="info" :title="translate('no_data_to_show')" />
                 @endif
             </div>
         </div>
