@@ -169,6 +169,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     // rather than discovered later on a production screen.
     Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
 
+    // Analytics: visits, sources, products, vendors and API load, read from
+    // the telemetry rollups.
+    Route::get('analytics', [\App\Http\Controllers\Admin\Telemetry\AnalyticsController::class, 'index'])
+        ->name('analytics.index')->middleware('module:reports');
+
     // Monitoring: the live state of the server, the store and both apps. The
     // pulse feed is excluded from telemetry so the page cannot watch itself.
     Route::group(['prefix' => 'monitoring', 'as' => 'monitoring.', 'middleware' => ['module:system_settings']], function () {

@@ -571,6 +571,15 @@
                 <div class="v2-ctx-group-body"></div>
             </div>
 
+            @if (Helpers::module_permission_check('reports'))
+                <div class="v2-ctx-group">
+                    <a class="v2-nav-item {{ Request::is('admin/analytics*') ? 'v2-is-active' : '' }}" data-item="analytics" href="{{ route('admin.analytics.index') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Analytics') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="analytics" aria-label="Pin"></button></div>
+                    </a>
+                </div>
+            @endif
+
             <div class="v2-ctx-group">
                 <div class="v2-ctx-group-head"><span>{{ translate('finance') }}</span></div>
                 <a class="v2-nav-item {{ (Request::is('admin/report/admin-earning') || Request::is('admin/report/vendor-earning')) ? 'v2-is-active' : '' }}" data-item="earnings" href="{{ route('admin.report.admin-earning') }}">
