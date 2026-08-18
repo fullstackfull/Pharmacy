@@ -3061,4 +3061,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"select_coupon" => "Select coupon",
 	"updating_coupons" => "Updating coupons",
 	"search_by_banner_type" => "Search by banner type",
+	"please_select_valid_product_options" => "Please select valid product options",
 ];

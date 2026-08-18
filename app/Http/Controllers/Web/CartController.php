@@ -47,6 +47,12 @@ class CartController extends Controller
 
     public function getVariantPrice(Request $request): array
     {
+        // This endpoint fires on every option click. It used to null-deref on a
+        // missing product id, an unknown colour code, or NULL choice_options -
+        // and the storefront's error handler is silent, so shoppers just saw a
+        // stale price. Bad input now fails loudly instead of 500ing quietly.
+        $request->validate(['id' => 'required|integer']);
+
         $string = '';
         $quantity = 0;
         $price = 0;
@@ -58,13 +64,14 @@ class CartController extends Controller
         $product = Product::with(['digitalVariation', 'clearanceSale' => function ($query) {
             return $query->active();
         }])->where(['id' => $request['id']])->first();
+        abort_if(!$product, 404);
         $productVariationCode = $request['product_variation_code'];
 
         if ($request->has('color')) {
-            $string = Color::where('code', $request['color'])->first()->name;
+            $string = Color::where('code', $request['color'])->first()?->name ?? '';
         }
 
-        foreach (json_decode(Product::find($request->id)->choice_options) as $key => $choice) {
+        foreach (json_decode($product->choice_options) ?? [] as $choice) {
             if ($string != null) {
                 $string .= '-' . str_replace(' ', '', $request[$choice->name]);
             } else {
@@ -92,14 +99,15 @@ class CartController extends Controller
 
 
         if ($string != null) {
-            $count = count(json_decode($product->variation));
-            for ($i = 0; $i < $count; $i++) {
-                if (json_decode($product->variation)[$i]->type == $string) {
-                    $discount = getProductPriceByType(product: $product, type: 'discounted_amount', result: 'value', price: json_decode($product->variation)[$i]->price);
-                    $price = json_decode($product->variation)[$i]->price - $discount;
-                    $discountedUnitPrice = json_decode($product->variation)[$i]->price - $discount;
-                    $unit_price = json_decode($product->variation)[$i]->price;
-                    $quantity = json_decode($product->variation)[$i]->qty;
+            // Decoded once; the old loop re-decoded the variation JSON six
+            // times per matching iteration.
+            foreach (json_decode($product->variation) ?? [] as $productVariation) {
+                if ($productVariation->type == $string) {
+                    $discount = getProductPriceByType(product: $product, type: 'discounted_amount', result: 'value', price: $productVariation->price);
+                    $price = $productVariation->price - $discount;
+                    $discountedUnitPrice = $productVariation->price - $discount;
+                    $unit_price = $productVariation->price;
+                    $quantity = $productVariation->qty;
                 }
             }
         } else {
@@ -136,7 +144,7 @@ class CartController extends Controller
         }
 
         if ($request->has('color')) {
-            $color_name = Color::where(['code' => $request->color])->first()->name;
+            $color_name = Color::where(['code' => $request->color])->first()?->name ?? '';
         }
 
         $restockRequestStatus = 0;
