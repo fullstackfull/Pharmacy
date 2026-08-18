@@ -52,30 +52,15 @@
                                     <div class="order-status d-flex justify-content-sm-end gap-10 text-capitalize fs-12">
                                         <span class="text-dark">{{ translate('status') }}: </span>
                                         @if(($order['order_status'] ?? '')=='pending')
-                                            <span
-                                                class="badge badge-info text-bg-info fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="info">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='failed')
-                                            <span
-                                                class="badge badge-danger text-bg-danger fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="danger">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='processing' || ($order['order_status'] ?? '')=='out_for_delivery')
-                                            <span
-                                                class="badge badge-warning text-bg-warning fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="warning">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='delivered' || ($order['order_status'] ?? '')=='confirmed')
-                                            <span
-                                                class="badge badge-success text-bg-success fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="success">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @else
-                                            <span
-                                                class="badge badge-danger text-bg-danger fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="danger">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @endif
                                     </div>
 
@@ -113,17 +98,16 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive datatable-custom">
-                            <table
-                                class="table fs-12 table-hover table-borderless align-middle">
-                                <thead class="text-capitalize">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                 <tr>
                                     <th>{{translate('SL')}}</th>
                                     <th>{{translate('item_details')}}</th>
-                                    <th class="text-center">{{ translate('Qty') }}</th>
-                                    <th class="text-end">{{translate('item_price')}}</th>
-                                    <th class="text-end">{{translate('discount')}}</th>
-                                    <th class="text-end">{{translate('total_price')}}</th>
+                                    <th class="k-table__num">{{ translate('Qty') }}</th>
+                                    <th class="k-table__num">{{translate('item_price')}}</th>
+                                    <th class="k-table__num">{{translate('discount')}}</th>
+                                    <th class="k-table__num">{{translate('total_price')}}</th>
                                 </tr>
                                 </thead>
 
@@ -147,7 +131,7 @@
 
                                     @if($productDetails)
                                         <tr>
-                                            <td>{{++$key}}</td>
+                                            <td><span class="k-num">{{++$key}}</span></td>
                                             <td>
                                                 <div class="{{ $isProductUnavailable ? 'table-row-disabled' : '' }}" data-bs-toggle="tooltip"
                                                      title="{{ $isProductUnavailable ? translate('This_product_has_been_deleted') : '' }}">
@@ -188,14 +172,14 @@
                                                     @endif
                                                 </div>
                                             </td>
-                                            <td class="text-center">{{$detail['qty'] ?? 0}}</td>
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  ($detail['price'] ?? 0)*($detail['qty'] ?? 0)), currencyCode: getCurrencyCode()) }}</td>
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $detail['discount'] ?? 0), currencyCode: getCurrencyCode()) }}</td>
+                                            <td class="k-table__num"><span class="k-num">{{$detail['qty'] ?? 0}}</span></td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  ($detail['price'] ?? 0)*($detail['qty'] ?? 0)), currencyCode: getCurrencyCode()) }}</span></td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $detail['discount'] ?? 0), currencyCode: getCurrencyCode()) }}</span></td>
                                             @php($item_price+=(($detail['price'] ?? 0)*($detail['qty'] ?? 0)))
                                             @php($subtotal=((($detail['price'] ?? 0)*($detail['qty'] ?? 0)) - ($detail['discount'] ?? 0)))
                                             @php($product_price = ($detail['price'] ?? 0)*($detail['qty'] ?? 0))
                                             @php($total_product_price+=$product_price)
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $subtotal), currencyCode: getCurrencyCode()) }}</td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $subtotal), currencyCode: getCurrencyCode()) }}</span></td>
                                         </tr>
                                         @php($discount+=($detail['discount'] ?? 0))
                                         @php($total+=$subtotal)

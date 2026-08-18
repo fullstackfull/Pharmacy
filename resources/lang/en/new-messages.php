@@ -3142,4 +3142,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"SEO_Health" => "SEO Health",
 	".jpeg,.png,.jpg,.webp_Image_size_:Max_2MB_" => ".jpeg,.png,.jpg,.webp Image size :Max 2MB ",
 	".jpeg,.png,.jpg,.webp_Image_size_:Max_2MB" => ".jpeg,.png,.jpg,.webp Image size :Max 2MB",
+	"again" => "Again",
+	"thank_you_for_buying._please_visit" => "Thank you for buying. please visit",
+	"Print_Invoice" => "Print Invoice",
+	"shop_logo" => "Shop logo",
+	"out_of_stock." => "Out of stock.",
 ];

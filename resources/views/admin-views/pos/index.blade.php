@@ -82,7 +82,7 @@
                         @else
                             <div class="p-4 bg-chat rounded text-center">
                                 <div class="py-5">
-                                    <img src="{{ asset('assets/back-end/img/empty-product.png') }}" width="64" alt="">
+                                    <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/empty-product.png') }}" width="64" alt="">
                                     <div class="mx-auto my-3 max-w-353px">
                                         {{ translate('No_product_found') }}
                                     </div>

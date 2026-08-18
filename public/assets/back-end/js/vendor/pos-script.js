@@ -112,11 +112,6 @@ function renderCustomerAmountForPay() {
     let wrapper = $(".place-order-wrapper");
     button.attr("disabled", shouldDisable);
     if (shouldDisable) {
-        button.removeAttr("data-toggle").removeAttr("data-target");
-    } else {
-        button.attr("data-toggle", "modal").attr("data-target", "#paymentModal");
-    }
-    if (shouldDisable) {
         wrapper.attr("title", "Insufficient wallet balance").attr("data-toggle", "tooltip");
         if (!wrapper.data('bs.tooltip')) {
             wrapper.tooltip();

@@ -1,7 +1,7 @@
 @if ($totalHoldOrders > 0)
-    <div class="table-responsive datatable-custom custom-scrollbar-pos min-h-300">
-        <table class="table table-hover table-thead-bordered table-nowrap align-middle">
-            <thead class="text-capitalize">
+    <div class="k-table-wrap custom-scrollbar-pos min-h-300">
+        <table class="k-table">
+            <thead>
             <tr>
                 <th>{{ translate('SL')}}</th>
                 <th>{{ translate('date')}}</th>
@@ -28,7 +28,7 @@
                     ?>
                     @if($singleCart['customerOnHold'])
                         <tr>
-                        <td>{{ $totalHoldOrdersCount }}</td>
+                        <td><span class="k-num">{{ $totalHoldOrdersCount }}</span></td>
                             <?php $totalHoldOrdersCount++; ?>
                         <td>
                             @if($addedAt)
