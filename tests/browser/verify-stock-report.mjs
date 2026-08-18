@@ -50,6 +50,12 @@ ok('product report renders', !(await hasServerError(page)));
 ok('product report data-view + rows', (await page.locator('.k-view').count()) === 1
     && (await page.locator('.k-view .k-table tbody tr').count()) >= 1);
 
+// Inhouse sale report.
+await page.goto(BASE + '/admin/report/inhouse-product-sale', { waitUntil: 'load' });
+ok('inhouse sale renders', !(await hasServerError(page)));
+ok('inhouse sale data-view + category filter', (await page.locator('.k-view').count()) === 1
+    && (await page.locator('.k-view select[name="category_id"]').count()) === 1);
+
 ok('no console/JS/HTTP problems', problems.length === 0);
 if (problems.length) console.log('  problems:', problems.slice(0, 6));
 await browser.close();

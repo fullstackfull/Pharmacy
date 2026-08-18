@@ -3104,4 +3104,5 @@ ____________________________________________________on_search_engines_and_see_th
 	"filter_endpoints" => "Filter endpoints",
 	"review_cart" => "Review cart",
 	"Thank_You_For_Your_Purchase!" => "Thank You For Your Purchase!",
+	"inhouse_product_sale_Report" => "Inhouse product sale Report",
 ];
