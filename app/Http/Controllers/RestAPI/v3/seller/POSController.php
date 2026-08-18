@@ -14,6 +14,7 @@ use App\Models\BusinessSetting;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ShippingAddress;
 use App\Services\PasswordResetService;
 use App\Models\User;
 use App\Traits\API\v3\VendorPOSManagement;
@@ -277,8 +278,20 @@ class POSController extends Controller
         $couponCode = $request['coupon_code'];
         $paymentMethod = $request['payment_method'];
         $paidAmount = currencyConverter(amount: $request['paid_amount'] ?? 0);
+        // Same lifecycle contract as the panel POS: a delivery-fulfillment sale
+        // starts pending and, when paid in cash, is stored as a COD/unpaid
+        // order settled through the standard status machinery.
+        $fulfillment = $request['fulfillment'] == 'delivery' ? 'delivery' : 'instant';
+        $isCashOnDelivery = $fulfillment == 'delivery' && $paymentMethod == 'cash';
 
         $taxConfig = self::getTaxSystemType();
+
+        if ($customerId == 0 && $fulfillment == 'delivery') {
+            return response()->json([
+                'checkProductTypeForWalkingCustomer' => true,
+                'message' => translate('To_place_a_delivery_order') . ',' . translate('_kindly_select_a_customer_or_fill_up_the_“Add_New_Customer”_form') . '.'
+            ]);
+        }
 
         $isDigitalProduct = self::isDigitalProductExist(cartList: $carts);
         if ($customerId == 0 && $isDigitalProduct) {
@@ -341,8 +354,8 @@ class POSController extends Controller
                             'tax_model' => $taxConfig['is_included'] ? 'include' : 'exclude',
                             'discount' => $cartItem['discount'] * $cartItem['quantity'],
                             'discount_type' => 'discount_on_product',
-                            'delivery_status' => 'delivered',
-                            'payment_status' => 'paid',
+                            'delivery_status' => $fulfillment == 'delivery' ? 'pending' : 'delivered',
+                            'payment_status' => $isCashOnDelivery ? 'unpaid' : 'paid',
                             'variant' => $getProductArray['variant'],
                             'variation' => json_encode($cartItem['variation']),
                             'created_at' => now(),
@@ -355,16 +368,27 @@ class POSController extends Controller
             }
         }
 
+        $deliveryShippingAddress = null;
+        $deliveryShippingResponsibility = null;
+        if ($fulfillment == 'delivery') {
+            $deliveryShippingAddress = ShippingAddress::where(['customer_id' => $customerId])->orderByDesc('id')->first();
+            $deliveryShippingResponsibility = getWebConfig(name: 'shipping_method');
+        }
+
         $orderData = [
             'id' => $generateOrderID,
             'customer_id' => $customerId,
             'customer_type' => 'customer',
-            'payment_status' => 'paid',
-            'order_status' => 'delivered',
+            'payment_status' => $isCashOnDelivery ? 'unpaid' : 'paid',
+            'order_status' => $fulfillment == 'delivery' ? 'pending' : 'delivered',
             'seller_id' => $seller->id,
             'seller_is' => 'seller',
-            'payment_method' => $paymentMethod,
+            'payment_method' => $isCashOnDelivery ? 'cash_on_delivery' : $paymentMethod,
             'order_type' => 'POS',
+            'shipping_address' => $deliveryShippingAddress?->id,
+            'shipping_address_data' => $deliveryShippingAddress ? json_encode($deliveryShippingAddress) : null,
+            'shipping_responsibility' => $deliveryShippingResponsibility,
+            'verification_code' => $fulfillment == 'delivery' ? rand(100000, 999999) : '0',
             'checked' => 1,
             'extra_discount' => $extraDiscount ?? 0,
             'extra_discount_type' => $extraDiscountType ?? null,
@@ -372,7 +396,7 @@ class POSController extends Controller
             'init_order_amount' => $cartsTotalAmount,
             'total_tax_amount' => $request['total_tax_amount'] ?? 0,
             'tax_type' => $taxConfig['SystemTaxVatType'],
-            'paid_amount' => $paidAmount,
+            'paid_amount' => $isCashOnDelivery ? 0 : $paidAmount,
             'discount_amount' => currencyConverter(amount: $couponDiscountAmount ?? 0),
             'coupon_code' => $couponCode ?? null,
             'discount_type' => (isset($carts['coupon_code']) && $carts['coupon_code']) ? 'coupon_discount' : NULL,

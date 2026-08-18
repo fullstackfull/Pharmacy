@@ -139,10 +139,10 @@ use Illuminate\Support\Facades\Session;
                         <span class="badge badge-soft-dark radius-50 fs-12">{{ $shippingMethods->count() }}</span>
                     </h5>
                 </div>
-                <div class="table-responsive">
+                <div class="k-table-wrap">
                     <table id="datatable"
-                           class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table text-start">
-                        <thead class="thead-light thead-50 text-capitalize">
+                           class="k-table">
+                        <thead>
                         <tr>
                             <th>{{translate('SL')}}</th>
                             <th>{{translate('title')}}</th>
@@ -247,12 +247,12 @@ use Illuminate\Support\Facades\Session;
                 </form>
             </div>
             <div class="card-body px-0">
-                <div class="table-responsive">
+                <div class="k-table-wrap">
                     <form action="{{route('vendor.business-settings.category-wise-shipping-cost.index')}}" method="POST">
                         @csrf
-                        <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table"
+                        <table class="k-table"
                                style="text-align: {{$direction === "rtl" ? 'right' : 'left'}};">
-                            <thead class="thead-light thead-50 text-capitalize">
+                            <thead>
                             <tr>
                                 <th>{{translate('SL')}}</th>
                                 <th>{{translate('category_name')}}</th>

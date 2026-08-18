@@ -149,10 +149,10 @@
                     </div>
                 </div>
                 <div class="mt-4">
-                    <div class="table-responsive">
+                    <div class="k-table-wrap">
                         <table
-                            class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table text-start">
-                            <thead class="thead-light thead-50 text-capitalize">
+                            class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('currency_name') }}</th>

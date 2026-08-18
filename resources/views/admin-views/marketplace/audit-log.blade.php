@@ -3,7 +3,7 @@
 @section('title', translate('audit_log'))
 
 @php
-    $actorColours = ['admin' => 'primary', 'seller' => 'info', 'customer' => 'secondary', 'system' => 'dark'];
+    $actorColours = ['admin' => 'accent', 'seller' => 'info', 'customer' => 'secondary', 'system' => 'secondary'];
 @endphp
 
 @section('content')
@@ -56,8 +56,8 @@
 
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>{{ translate('when') }}</th>
@@ -72,7 +72,7 @@
                                 <tr>
                                     <td class="fs-12 text-nowrap">{{ $entry->created_at?->format('d M Y H:i:s') }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $actorColours[$entry->actor_type] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $actorColours[$entry->actor_type] ?? 'secondary' }}">
                                             {{ translate($entry->actor_type ?? 'system') }}
                                         </span>
                                         <div class="fs-12">{{ $entry->actor_name }}@if ($entry->actor_id) #{{ $entry->actor_id }}@endif</div>
@@ -89,12 +89,12 @@
                                         @if ($entry->context)
                                             @foreach ($entry->context as $key => $value)
                                                 @if (!is_null($value) && $value !== '')
-                                                    <span class="badge bg-light text-dark">{{ $key }}: {{ is_scalar($value) ? $value : json_encode($value) }}</span>
+                                                    <span class="k-badge">{{ $key }}: {{ is_scalar($value) ? $value : json_encode($value) }}</span>
                                                 @endif
                                             @endforeach
                                         @endif
                                         @if ($entry->before || $entry->after)
-                                            <span class="badge bg-warning text-dark">{{ translate('changed') }}</span>
+                                            <span class="k-badge k-badge--warning">{{ translate('changed') }}</span>
                                         @endif
                                     </td>
                                 </tr>

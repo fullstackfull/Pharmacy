@@ -101,11 +101,11 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
+            <div class="k-table-wrap">
                 <table id="datatable"
                        style="text-align: {{Session::get('direction') === "rtl" ? 'right' : 'left'}};"
-                       class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                    <thead class="thead-light thead-50 text-capitalize">
+                       class="k-table">
+                    <thead>
                     <tr>
                         <th>{{translate('SL')}}</th>
                         <th>{{translate('vendor_name')}}</th>

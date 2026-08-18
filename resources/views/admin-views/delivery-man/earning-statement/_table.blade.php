@@ -1,109 +1,88 @@
 <div class="col-sm-12 mb-3">
-    <div class="card">
-        <div class="table-responsive datatable-custom">
-            <table class="table table-hover table-borderless align-middle">
-                <thead class="text-capitalize table-nowrap">
+    <div class="k-card">
+        <div class="k-table-wrap">
+            <table class="k-table">
+                <thead>
                 <tr>
                     <th>{{ translate('SL') }}</th>
                     <th>{{ translate('order_no') }}</th>
-                    <th>{{ translate('earning') }}</th>
-                    <th class="text-center text-capitalize">{{ translate('earning_status') }}</th>
-                    <th class="text-center text-capitalize">{{ translate('payment_method') }}</th>
-                    <th class="text-center">{{ translate('status') }}</th>
+                    <th class="k-table__num">{{ translate('earning') }}</th>
+                    <th>{{ translate('earning_status') }}</th>
+                    <th>{{ translate('payment_method') }}</th>
+                    <th>{{ translate('status') }}</th>
                 </tr>
                 </thead>
-
                 <tbody id="set-rows">
                 @foreach($orders as $key=>$order)
                     <tr>
-                        <td>{{ $orders->firstItem()+$key }}</td>
+                        <td><span class="k-num">{{ $orders->firstItem()+$key }}</span></td>
                         <td>
-                            <div class="media d-flex align-items-center gap-10 flex-wrap">
-                                <a class="text-dark" title="{{translate('order_details')}}"
-                                   href="{{route('admin.orders.details',['id'=>$order['id']])}}">
-                                    {{ $order->id }}
-                                </a>
-                            </div>
+                            <a class="text-dark" title="{{translate('order_details')}}"
+                               href="{{route('admin.orders.details',['id'=>$order['id']])}}">
+                                {{ $order->id }}
+                            </a>
                         </td>
-                        <td>
-                            <div class="d-flex flex-column gap-1">
-                                <div class="media-body">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->deliveryman_charge), currencyCode: getCurrencyCode()) }}</div>
-                            </div>
+                        <td class="k-table__num">
+                            <span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $order->deliveryman_charge), currencyCode: getCurrencyCode()) }}</span>
                         </td>
-                        <td class="text-center text-capitalize">
+                        <td class="text-capitalize">
                             @if($order['order_status'] == 'delivered' && $order['payment_status']=='paid')
-                                <span class="badge badge-success text-bg-success">
-                                        {{translate('received')}}
-                                </span>
+                                <x-k.badge tone="success">{{translate('received')}}</x-k.badge>
                             @else
-                                <span class="badge badge-danger text-bg-danger fs-12">
-                                    {{translate('not_received')}}
-                                </span>
+                                <x-k.badge tone="danger">{{translate('not_received')}}</x-k.badge>
                             @endif
                         </td>
-                        <td>
-                            <div class="text-center">
-                                {{translate($order['payment_method'])}}
-                            </div>
+                        <td>{{translate($order['payment_method'])}}</td>
+                        <td class="text-capitalize">
+                            @switch($order['order_status'])
+                                @case('pending')
+                                    <x-k.badge tone="info">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('processing')
+                                    <x-k.badge tone="warning">{{ translate('packaging') }}</x-k.badge>
+                                    @break
+                                @case('out_for_delivery')
+                                    <x-k.badge tone="warning">{{ translate(str_replace('_',' ',$order['order_status'])) }}</x-k.badge>
+                                    @break
+                                @case('confirmed')
+                                @case('delivered')
+                                    <x-k.badge tone="success">{{ translate($order['order_status']) }}</x-k.badge>
+                                    @break
+                                @case('failed')
+                                    <x-k.badge tone="danger">{{ translate('Failed_To_Deliver') }}</x-k.badge>
+                                    @break
+                                @default
+                                    <x-k.badge tone="danger">{{ translate($order['order_status']) }}</x-k.badge>
+                            @endswitch
                         </td>
-                        <td class="text-center text-capitalize">
-                            @if($order['order_status']=='pending')
-                                <span class="badge badge-info text-bg-info fs-12">
-                                        {{translate($order['order_status'])}}
-                                </span>
-
-                            @elseif($order['order_status']=='out_for_delivery')
-                                <span class="badge badge-warning text-bg-warning fs-12">
-                                                {{translate(str_replace('_',' ',$order['order_status']))}}
-                                            </span>
-                            @elseif($order['order_status']=='processing')
-                                <span class="badge badge-secondary text-bg-secondary fs-12">
-                                                {{translate(str_replace('_',' ',$order['order_status']))}}
-                                            </span>
-                            @elseif($order['order_status']=='confirmed')
-                                <span class="badge badge-success text-bg-success">
-                                                {{translate($order['order_status'])}}
-                                            </span>
-                            @elseif($order['order_status']=='failed')
-                                <span class="badge badge-danger text-bg-danger fs-12">
-                                                {{translate('Failed_To_Deliver')}}
-                                            </span>
-                            @elseif($order['order_status']=='delivered')
-                                <span class="badge badge-success text-bg-success">
-                                                {{translate($order['order_status'])}}
-                                            </span>
-                            @else
-                                <span class="badge badge-danger text-bg-danger fs-12">
-                                                {{translate($order['order_status'])}}
-                                            </span>
-                            @endif
-                        </td>
-
                     </tr>
                 @endforeach
                 </tbody>
             </table>
         </div>
 
-        <div class="table-responsive mt-4">
-            <div class="px-4 d-flex justify-content-lg-end">
-             @if(isset($currentFilters))
-                    {{ $orders->appends([
+        @if(count($orders)==0)
+            <x-k.empty icon="orders" :title="translate('no_data_to_show')" />
+        @endif
+
+        <div class="k-pager">
+            <span class="k-pager__info">
+                @if ($orders->total() > 0)
+                    {{ translate('showing') }}
+                    <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                    {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                @endif
+            </span>
+            <div>
+                @if(isset($currentFilters))
+                    {!! $orders->appends([
                         'order_status' => $currentFilters['order_status'],
                         'payment_status' => $currentFilters['payment_status']
-                    ])->links() }}
+                    ])->links() !!}
                 @else
-                    {{ $orders->links() }}
+                    {!! $orders->links() !!}
                 @endif
             </div>
         </div>
-        @if(count($orders)==0)
-            <div class="text-center p-4">
-                <img class="mb-3 w-160"
-                     src="{{dynamicAsset(path: 'public/assets/back-end/svg/illustrations/sorry.svg')}}"
-                     alt="{{translate('image_description')}}">
-                <p class="mb-0">{{translate('no_data_to_show')}}</p>
-            </div>
-        @endif
     </div>
 </div>

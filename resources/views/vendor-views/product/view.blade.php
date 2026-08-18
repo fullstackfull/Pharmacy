@@ -531,10 +531,10 @@
                 <div class="col-md-12">
                     <div class="card border-0">
                         <div class="card-body p-0">
-                            <div class="table-responsive datatable-custom">
+                            <div class="k-table-wrap">
                                 <table
-                                    class="table table-borderless table-nowrap table-align-middle card-table w-100 text-start">
-                                    <thead class="thead-light thead-50 text-capitalize">
+                                    class="k-table">
+                                    <thead>
                                     <tr>
                                         <th class="text-center">{{ translate('SKU') }}</th>
                                         <th class="text-center text-capitalize">{{ translate('variation_wise_price') }}</th>
@@ -571,10 +571,10 @@
                 <div class="col-md-12">
                     <div class="card border-0">
                         <div class="card-body p-0">
-                            <div class="table-responsive datatable-custom">
+                            <div class="k-table-wrap">
                                 <table
-                                    class="table table-borderless table-nowrap table-align-middle card-table w-100 text-start">
-                                    <thead class="thead-light thead-50 text-capitalize">
+                                    class="k-table">
+                                    <thead>
                                     <tr>
                                         <th class="text-center">{{ translate('SL') }}</th>
                                         <th class="text-center">{{ translate('Variation_Name') }}</th>
@@ -697,10 +697,10 @@
             <div class="col-12">
                 <div class="card">
                     @php($vendorReviewReplyStatus = getWebConfig('vendor_review_reply_status') ?? 0)
-                    <div class="table-responsive datatable-custom">
+                    <div class="k-table-wrap">
                         <table
-                            class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 text-start">
-                            <thead class="thead-light thead-50 text-capitalize">
+                            class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('Review_ID') }}</th>

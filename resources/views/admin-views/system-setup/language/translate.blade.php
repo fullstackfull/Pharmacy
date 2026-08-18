@@ -64,8 +64,8 @@
                         </div>
                     </div>
                     <div class="card-body pt-0">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <div class="k-table-wrap">
+                            <table class="k-table" id="dataTable" width="100%" cellspacing="0">
                                 <thead class="bg-white">
                                 <tr>
                                     <th class="max-width-100px border-0">{{translate('SL')}}</th>

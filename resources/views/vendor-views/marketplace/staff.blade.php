@@ -56,13 +56,13 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('roles') }}</h5></div>
                     <div class="card-body p-0">
-                        <table class="table table-sm align-middle mb-0">
+                        <table class="k-table">
                             <tbody>
                             @forelse ($roles as $r)
                                 <tr>
                                     <td>
                                         <strong>{{ $r->name }}</strong>
-                                        @if($r->status !== 'active')<span class="badge bg-secondary text-dark">{{ translate($r->status) }}</span>@endif
+                                        @if($r->status !== 'active')<span class="k-badge">{{ translate($r->status) }}</span>@endif
                                         <div class="fs-10 text-muted">{{ count($r->permissions ?? []) }} {{ translate('permissions') }}</div>
                                     </td>
                                     <td class="text-end">
@@ -105,14 +105,14 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('team') }}</h5></div>
                     <div class="card-body p-0">
-                        <table class="table table-sm align-middle mb-0">
+                        <table class="k-table">
                             <thead><tr><th>{{ translate('name') }}</th><th>{{ translate('role') }}</th><th>{{ translate('status') }}</th><th></th></tr></thead>
                             <tbody>
                             @forelse ($staff as $s)
                                 <tr>
                                     <td>{{ $s->name }}<div class="fs-10 text-muted">{{ $s->email }}</div></td>
                                     <td>{{ $s->role?->name ?: translate('no_role') }}</td>
-                                    <td><span class="badge bg-{{ $s->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($s->status) }}</span></td>
+                                    <td><span class="k-badge k-badge--{{ $s->status === 'active' ? 'success' : 'secondary' }}">{{ translate($s->status) }}</span></td>
                                     <td class="text-end">
                                         <form action="{{ route('vendor.business-settings.staff.destroy', $s->id) }}" method="post" onsubmit="return confirm('{{ translate('are_you_sure') }}')">
                                             @csrf @method('DELETE') <button class="btn btn-sm btn-outline-danger">{{ translate('remove') }}</button>

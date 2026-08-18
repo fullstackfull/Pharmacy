@@ -29,8 +29,8 @@
                 </form>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead><tr>
                             <th>{{ translate('reference') }}</th><th>{{ translate('supplier') }}</th>
                             <th>{{ translate('status') }}</th><th class="text-end">{{ translate('total') }}</th>
@@ -41,7 +41,7 @@
                             <tr>
                                 <td><a href="{{ route('admin.marketplace.purchase-orders.show', $o->id) }}">{{ $o->reference }}</a></td>
                                 <td>{{ $o->supplier->name ?? '—' }}</td>
-                                <td><span class="badge bg-{{ $statusMap[$o->status] ?? 'secondary' }} text-dark">{{ translate($o->status) }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $statusMap[$o->status] ?? 'secondary' }}">{{ translate($o->status) }}</span></td>
                                 <td class="text-end">{{ number_format((float) $o->total, 2) }}</td>
                                 <td class="fs-12">{{ $o->expected_at?->toDateString() ?: '—' }}</td>
                                 <td class="text-end"><a href="{{ route('admin.marketplace.purchase-orders.show', $o->id) }}" class="btn btn-sm btn-outline-primary">{{ translate('open') }}</a></td>

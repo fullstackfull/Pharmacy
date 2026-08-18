@@ -99,9 +99,9 @@
                                                 </div>
                                             </form>
                                         </div>
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-borderless">
-                                                <thead class="text-capitalize">
+                                        <div class="k-table-wrap">
+                                            <table class="k-table">
+                                                <thead>
                                                     <tr>
                                                         <th>{{ translate('sl') }}</th>
                                                         <th class="text-center">{{ translate('country_Name') }}</th>
@@ -135,7 +135,7 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <div class="table-responsive">
+                                        <div class="k-table-wrap">
                                             <div class="d-flex justify-content-lg-end">
                                                 {{ $storedCountries->links() }}
                                             </div>
@@ -235,9 +235,9 @@
                                                 </div>
                                             </form>
                                         </div>
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-borderless">
-                                                <thead class="text-capitalize">
+                                        <div class="k-table-wrap">
+                                            <table class="k-table">
+                                                <thead>
                                                     <tr>
                                                         <th>{{ translate('sl') }}</th>
                                                         <th class="text-center">{{ translate('zip_code') }}</th>
@@ -269,7 +269,7 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <div class="table-responsive">
+                                        <div class="k-table-wrap">
                                             <div class="d-flex justify-content-lg-end">
                                                 {{ $storedZip->links() }}
                                             </div>

@@ -90,10 +90,10 @@
                     <span class="badge text-dark bg-body-secondary fw-semibold rounded-50 fs-14">{{ $vendorList->count() > 0? count($vendorList) : null }}</span>
                 </h3>
                 @if($vendorList->count() > 0)
-                    <div class="table-responsive datatable-custom">
+                    <div class="k-table-wrap">
                         <table
-                            class="table table-hover table-borderless align-middle">
-                            <thead class="text-capitalize">
+                            class="k-table">
+                            <thead>
                             <tr>
                                 <th>{{ translate('sl') }}</th>
                                 <th>{{ translate('shop_info')}}</th>

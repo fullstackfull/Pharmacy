@@ -3,7 +3,7 @@
 @section('title', translate('returns'))
 
 @php
-    $statusMap = ['authorized' => 'info', 'in_transit' => 'primary', 'received' => 'secondary', 'restocked' => 'success', 'rejected' => 'danger'];
+    $statusMap = ['authorized' => 'info', 'in_transit' => 'warning', 'received' => 'secondary', 'restocked' => 'success', 'rejected' => 'danger'];
 @endphp
 
 @section('content')
@@ -60,8 +60,8 @@
                         </form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('reference') }}</th><th>{{ translate('product') }}</th>
                                     <th class="text-end">{{ translate('qty') }}</th><th>{{ translate('status') }}</th>
@@ -75,10 +75,10 @@
                                             @if($r->tracking_number)<div class="fs-10 text-muted">{{ $r->carrier }} {{ $r->tracking_number }}</div>@endif
                                         </td>
                                         <td>{{ $r->product_id ? ('#' . $r->product_id) : ($r->order_id ? (translate('order') . ' #' . $r->order_id) : '—') }}
-                                            @unless($r->restock)<span class="badge bg-warning text-dark fs-10">{{ translate('no_restock') }}</span>@endunless
+                                            @unless($r->restock)<span class="k-badge k-badge--warning fs-10">{{ translate('no_restock') }}</span>@endunless
                                         </td>
                                         <td class="text-end">{{ $r->qty }}</td>
-                                        <td><span class="badge bg-{{ $statusMap[$r->status] ?? 'secondary' }} text-dark">{{ translate($r->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $statusMap[$r->status] ?? 'secondary' }}">{{ translate($r->status) }}</span></td>
                                         <td class="text-end">
                                             @if ($r->status === 'authorized')
                                                 <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#tr-{{ $r->id }}">{{ translate('mark_in_transit') }}</button>

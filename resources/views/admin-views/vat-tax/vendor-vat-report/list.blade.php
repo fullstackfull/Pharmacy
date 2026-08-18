@@ -116,9 +116,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-borderless align-middle text-dark">
-                        <thead class="text-capitalize">
+                <div class="k-table-wrap">
+                    <table class="k-table">
+                        <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('Vendor_Info') }}</th>

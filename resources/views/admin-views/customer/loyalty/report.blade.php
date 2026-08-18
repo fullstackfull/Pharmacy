@@ -119,104 +119,67 @@
                 </div>
             </div>
         </div>
-        <div class="card card-body">
-            <div class="d-flex justify-content-end flex-wrap gap-3 align-items-center mb-4">
-                <h3 class="mb-0 text-nowrap text-capitalize d-flex gap-1 align-items-center flex-grow-1">
-                    {{ translate('transactions') }}
-                    <span class="badge badge-info text-bg-info">{{ $transactions->total() }}</span>
-                </h3>
+        <x-k.data-view :title="translate('transactions')" :count="$transactions->total()"
+                       searchName="searchValue" :searchValue="request('searchValue')"
+                       :searchPlaceholder="translate('search_By_Transaction_Id,Customer Name')">
 
-                <form action="{{ url()->current() }}" method="GET" class="min-w-100-mobile min-w-280">
-                    <div class="form-group">
-                        <div class="input-group">
-                            <input type="hidden" name="order_date" value="{{request('order_date')}}">
-                            <input type="hidden" name="customer_joining_date" value="{{request('customer_joining_date')}}">
-                            <input type="hidden" name="is_active" value="{{request('is_active')}}">
-                            <input type="hidden" name="sort_by" value="{{request('sort_by')}}">
-                            <input type="hidden" name="choose_first" value="{{request('choose_first')}}">
-                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                    placeholder="{{ translate('search_By_Transaction_Id,Customer Name')}}"  aria-label="Search orders" value="{{ request('searchValue') }}">
-                            <div class="input-group-append search-submit">
-                                <button type="submit">
-                                    <i class="fi fi-rr-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-                <a type="button" class="btn btn-outline-primary" href="{{route('admin.customer.loyalty.export',['transaction_type'=>$transaction_status,'customer_id'=>request('customer_id'),'to'=>request('to'),'from'=>request('from')])}}">
-                    <i class="fi fi-sr-inbox-in"></i>
-                    <span class="fs-12">{{ translate('export') }}</span>
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{route('admin.customer.loyalty.export',['transaction_type'=>$transaction_status,'customer_id'=>request('customer_id'),'to'=>request('to'),'from'=>request('from')])}}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
                 </a>
-            </div>
-            <div class="table-responsive">
-                <table id="datatable"
-                    class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table {{Session::get('direction') === "rtl" ? 'text-right' : 'text-left'}}">
-                    <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{ translate('SL') }}</th>
-                            <th>{{ translate('transaction_ID') }}</th>
-                            <th>{{ translate('created_at') }}</th>
-                            <th>{{ translate('Customer_Name') }}</th>
-                            <th>
-                                {{ translate('credit') }}
-                                ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})
-                            </th>
-                            <th>
-                                {{ translate('debit') }}
-                                ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})
-                            </th>
-                            <th>
-                                {{ translate('balance') }}
-                                ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})
-                            </th>
-                            <th>{{ translate('transaction_type') }}</th>
-                            <th>{{ translate('reference') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($transactions as $key => $transaction)
-                        <tr scope="row">
-                            <td >{{$key+$transactions->firstItem()}}</td>
-                            <td>{{$transaction['transaction_id']}}</td>
-                            <td class="text-center">{{date('Y/m/d '.config('timeformat'), strtotime($transaction['created_at']))}}</td>
-                            <td><a href="{{route('admin.customer.view',['user_id'=>$transaction['user_id']])}}" class="text-dark text-hover-primary">{{Str::limit($transaction->user?$transaction->user->f_name.' '.$transaction->user->l_name:translate('not_found'),20)}}</a></td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['credit'])) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['debit'])) }}</td>
-                            <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['balance'])) }}</td>
-                            <td class="text-capitalize">
-                                <span class="badge badge-{{$transaction['transaction_type']=='order_refund'
-                                    ?'danger'
-                                    :($transaction['transaction_type']=='loyalty_point'?'warning'
-                                        :($transaction['transaction_type']=='order_place'
-                                            ?'info'
-                                            :'success'))
-                                    }} text-bg-{{$transaction['transaction_type']=='order_refund'
-                                    ?'danger'
-                                    :($transaction['transaction_type']=='loyalty_point'?'warning'
-                                        :($transaction['transaction_type']=='order_place'
-                                            ?'info'
-                                            :'success'))
-                                    }}">
-                                    {{translate($transaction['transaction_type'])}}
-                                </span>
-                            </td>
-                            <td>{{$transaction['reference']}}</td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
+            </x-slot:actions>
 
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{ translate('SL') }}</th>
+                    <th>{{ translate('transaction_ID') }}</th>
+                    <th>{{ translate('created_at') }}</th>
+                    <th>{{ translate('Customer_Name') }}</th>
+                    <th class="k-table__num">{{ translate('credit') }} ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})</th>
+                    <th class="k-table__num">{{ translate('debit') }} ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})</th>
+                    <th class="k-table__num">{{ translate('balance') }} ({{ getCurrencySymbol(currencyCode: getCurrencyCode()) }})</th>
+                    <th>{{ translate('transaction_type') }}</th>
+                    <th>{{ translate('reference') }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($transactions as $key => $transaction)
+                    <tr>
+                        <td><span class="k-num">{{$key+$transactions->firstItem()}}</span></td>
+                        <td><span class="k-num">{{$transaction['transaction_id']}}</span></td>
+                        <td><span class="k-num">{{date('Y/m/d '.config('timeformat'), strtotime($transaction['created_at']))}}</span></td>
+                        <td><a href="{{route('admin.customer.view',['user_id'=>$transaction['user_id']])}}" class="text-dark text-hover-primary">{{Str::limit($transaction->user?$transaction->user->f_name.' '.$transaction->user->l_name:translate('not_found'),20)}}</a></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['credit'])) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['debit'])) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['balance'])) }}</span></td>
+                        <td class="text-capitalize">
+                            @php($loyaltyTxnTones = ['order_refund' => 'danger', 'loyalty_point' => 'warning', 'order_place' => 'info'])
+                            <x-k.badge :tone="$loyaltyTxnTones[$transaction['transaction_type']] ?? 'success'">
+                                {{translate($transaction['transaction_type'])}}
+                            </x-k.badge>
+                        </td>
+                        <td>{{$transaction['reference']}}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-lg-end">
-                    {!!$transactions->appends(request()->query())->links()!!}
-                </div>
-            </div>
             @if(count($transactions)==0)
-                @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
+                <x-k.empty icon="reports" :title="translate('no_data_found')" />
             @endif
-        </div>
+
+            @if ($transactions->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $transactions->firstItem() }}–{{ $transactions->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $transactions->total() }}</span>
+                    </span>
+                    <div>{!! $transactions->appends(request()->query())->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 @endsection

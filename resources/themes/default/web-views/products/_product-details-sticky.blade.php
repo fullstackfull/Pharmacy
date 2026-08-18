@@ -130,7 +130,7 @@
                     </div>
 
                     <div class="d-sm-none d-flex gap-1 fs-12">
-                        {!! getPriceRangeWithDiscount(product: $productDetails) !!}
+                        <span class="product-bottom-section-price font-bold text-nowrap">{{$initialProductConfig['price']}}</span>
                     </div>
                 </div>
 
@@ -152,7 +152,7 @@
                         </span>
                     </div>
 
-                    <div class="font-weight-normal text-accent align-items-end gap-2 d-none d-lg-flex">
+                    <div class="font-weight-normal text-accent align-items-end gap-2 d-none d-sm-flex">
                         <span class="product-bottom-section-price fs-24 font-bold user-select-none text-nowrap">{{$initialProductConfig['price']}}</span>
                     </div>
 
@@ -162,7 +162,8 @@
                             {{translate('you_cannot_add_product_to_cart_from_this_shop_for_now')}}
                         </div>
                     @else
-                        <div class="product-add-and-buy-section d-flex gap-2">
+                        <div class="product-add-and-buy-section gap-2 {!! $firstVariationQuantity <= 0 ? '' : 'd-flex' !!}"
+                             {!! $firstVariationQuantity <= 0 ? 'style="display: none;"' : '' !!}>
                             <button type="button" class="btn btn-secondary element-center btn-gap-right product-buy-now-button"
                                     data-form=".add-to-cart-sticky-form"
                                     data-auth="{{( getWebConfig(name: 'guest_checkout') == 1 || Auth::guard('customer')->check() ? 'true':'false')}}"

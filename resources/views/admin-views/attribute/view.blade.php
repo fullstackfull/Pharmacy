@@ -78,82 +78,60 @@
             </div>
 
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-body d-flex flex-column gap-20">
-                        <div class="d-flex justify-content-between align-items-center gap-20 flex-wrap">
-                            <h3 class="mb-0 d-flex align-items-center gap-2">
-                                {{ translate('Attribute_List') }}
-                                <span class="badge text-dark bg-body-secondary fw-semibold rounded-50">
-                                    {{ $attributes->total() }}
-                                </span>
-                            </h3>
-                            <div class="flex-grow-1 max-w-300 min-w-100-mobile">
-                                <form action="{{ url()->current() }}" method="get">
-                                    @csrf
-                                    <div class="input-group">
-                                        <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control"
-                                               placeholder="{{ translate('search_by_Attribute_Name') }}"
-                                               aria-label="Search orders" value="{{ request('searchValue') }}" required>
-                                        <div class="input-group-append search-submit">
-                                            <button type="submit">
-                                                <i class="fi fi-rr-search"></i>
-                                            </button>
-                                        </div>
+                <x-k.data-view :title="translate('Attribute_List')" :count="$attributes->total()"
+                               searchName="searchValue" :searchValue="request('searchValue')"
+                               :searchPlaceholder="translate('search_by_Attribute_Name')">
+
+                    <table class="k-table">
+                        <thead>
+                        <tr>
+                            <th>{{ translate('SL') }}</th>
+                            <th>{{ translate('attribute_Name') }} </th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($attributes as $key => $attribute)
+                            <tr>
+                                <td><span class="k-num">{{ $attributes->firstItem() + $key }}</span></td>
+                                <td>{{ $attribute['name'] }}</td>
+                                <td>
+                                    <div class="k-table__actions">
+                                        <button type="button"
+                                                class="k-btn k-btn--ghost k-btn--sm k-btn--icon attribute-edit-btn"
+                                                title="{{ translate('edit') }}"
+                                                data-id="{{ $attribute['id'] }}"
+                                                data-name="{{ $attribute['name'] }}"
+                                                data-action="{{route('admin.attribute.translation-data', ['id' => $attribute['id']] )}}">
+                                            <x-k.icon name="edit" :size="15" />
+                                        </button>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon attribute-delete-button" role="button"
+                                              title="{{ translate('delete') }}"
+                                              id="{{ $attribute['id'] }}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
                                     </div>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-borderless align-middle">
-                                <thead class="text-capitalize">
-                                <tr>
-                                    <th>{{ translate('SL') }}</th>
-                                    <th>{{ translate('attribute_Name') }} </th>
-                                    <th class="text-center w-200">{{ translate('action') }}</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @foreach($attributes as $key => $attribute)
-                                    <tr>
-                                        <td>{{ $attributes->firstItem() + $key }}</td>
-                                        <td>{{ $attribute['name'] }}</td>
-                                        <td>
-                                            <div class="d-flex justify-content-center gap-2">
-                                                <button type="button"
-                                                        class="btn btn-outline-info icon-btn attribute-edit-btn"
-                                                        title="{{ translate('edit') }}"
-                                                        data-id="{{ $attribute['id'] }}"
-                                                        data-name="{{ $attribute['name'] }}"
-                                                        data-action="{{route('admin.attribute.translation-data', ['id' => $attribute['id']] )}}">
-                                                    <i class="fi fi-sr-pencil"></i>
-                                                </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
 
-                                                <a class="btn btn-outline-danger icon-btn attribute-delete-button"
-                                                   title="{{ translate('delete') }}"
-                                                   id="{{ $attribute['id'] }}">
-                                                    <i class="fi fi-rr-trash"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
+                    @if(count($attributes) == 0)
+                        <x-k.empty icon="catalog" :title="translate('no_attribute_found')" />
+                    @endif
 
-                                @endforeach
-
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="table-responsive mt-4">
-                            <div class="d-flex justify-content-lg-end">
-                                {!! $attributes->links() !!}
-                            </div>
-                        </div>
-
-                        @if(count($attributes) == 0)
-                            @include('layouts.admin.partials._empty-state',['text'=>'no_attribute_found'],['image'=>'default'])
-                        @endif
-                    </div>
-                </div>
+                    @if ($attributes->total() > 0)
+                        <x-slot:pager>
+                            <span class="k-pager__info">
+                                {{ translate('showing') }}
+                                <span class="k-num">{{ $attributes->firstItem() }}–{{ $attributes->lastItem() }}</span>
+                                {{ translate('of') }} <span class="k-num">{{ $attributes->total() }}</span>
+                            </span>
+                            <div>{!! $attributes->appends(request()->except('page'))->links() !!}</div>
+                        </x-slot:pager>
+                    @endif
+                </x-k.data-view>
             </div>
         </div>
     </div>

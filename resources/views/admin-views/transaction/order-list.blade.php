@@ -211,156 +211,127 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h4 class="mb-0 me-auto">
-                        {{translate('total_Transactions')}}
-                        <span class="badge badge-info text-bg-info">{{ $transactions->total() }}</span>
-                    </h4>
-                    <div class="d-flex flex-wrap gap-3">
-                        <form action="{{ url()->full() }}" method="GET" class="mb-0">
-                            <div class="form-group">
-                                <div class="input-group">
-                                    <input type="hidden" name="date_type" value="{{ $date_type }}">
-                                    <input type="hidden" name="from" value="{{ $from }}">
-                                    <input type="hidden" name="to" value="{{ $to }}">
-                                    <input type="hidden" name="seller_id" value="{{ $seller_id }}">
-                                    <input type="hidden" name="status" value="{{ $status }}">
-                                    <input type="hidden" name="customer_id" value="{{ $customer_id }}">
-                                    <input id="datatableSearch_" type="search"  name="search"  class="form-control"  value="{{ $search }}" placeholder="{{ translate('search_by_orders_id')}}">
-                                    <div class="input-group-append search-submit">
-                                        <button type="submit">
-                                            <i class="fi fi-rr-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
+        <x-k.data-view :title="translate('total_Transactions')" :count="$transactions->total()"
+                       searchName="search" :searchValue="$search"
+                       :searchPlaceholder="translate('search_by_orders_id')">
+
+            <x-slot:actions>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.transaction.order-transaction-summary-pdf', ['search'=>$search, 'date_type'=>request('date_type'), 'seller_id'=>request('seller_id'), 'customer_id'=>request('customer_id'), 'status'=>request('status'), 'from'=>request('from'), 'to'=>request('to')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('download_PDF') }}
+                </a>
+                <a class="k-btn k-btn--secondary"
+                   href="{{ route('admin.transaction.order-transaction-export-excel', ['search'=>$search,'date_type'=>request('date_type'), 'seller_id'=>request('seller_id'), 'customer_id'=>request('customer_id'), 'status'=>request('status'), 'from'=>request('from'), 'to'=>request('to')]) }}">
+                    <x-k.icon name="download" :size="15" /> {{ translate('export') }}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('order_id')}}</th>
+                    <th>{{translate('shop_name')}}</th>
+                    <th>{{translate('customer_name')}}</th>
+                    <th class="k-table__num">{{translate('total_product_amount')}}</th>
+                    <th class="k-table__num">{{translate('product_discount')}}</th>
+                    <th class="k-table__num">{{translate('coupon_discount')}}</th>
+                    <th class="k-table__num">{{translate('referral_Discount')}}</th>
+                    <th class="k-table__num">{{translate('discounted_amount')}}</th>
+                    <th class="k-table__num">{{translate('VAT/TAX')}}</th>
+                    <th class="k-table__num">{{translate('shipping_charge')}}</th>
+                    <th class="k-table__num">{{translate('order_amount')}}</th>
+                    <th class="k-table__num">{{translate('Due_Amount')}}</th>
+                    <th class="k-table__num">{{translate('Return_Amount')}}</th>
+                    <th>{{translate('delivered_by')}}</th>
+                    <th class="k-table__num">{{translate('deliveryman_incentive')}}</th>
+                    <th class="k-table__num">{{translate('admin_discount')}}</th>
+                    <th class="k-table__num">{{translate('vendor_discount') }}</th>
+                    <th class="k-table__num">{{translate('admin_commission') }}</th>
+                    <th class="k-table__num">{{translate('admin_net_income')}}</th>
+                    <th class="k-table__num">{{translate('vendor_net_income')}}</th>
+                    <th>{{translate('payment_method')}}</th>
+                    <th>{{translate('payment_Status')}}</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($transactionsTableData as $key => $transaction)
+                    <tr>
+                        <td><span class="k-num">{{ $key }}</span></td>
+                        <td>
+                            <a class="title-color" href="{{ route('admin.orders.details', ['id' => $transaction['order_id']]) }}">
+                                {{ $transaction['order_id'] }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="k-truncate" style="max-inline-size:200px" title="{{ $transaction['shop_name'] }}">
+                                {{ $transaction['shop_name'] }}
                             </div>
-                        </form>
-                        <div>
-                            <a href="{{ route('admin.transaction.order-transaction-summary-pdf', ['search'=>$search, 'date_type'=>request('date_type'), 'seller_id'=>request('seller_id'), 'customer_id'=>request('customer_id'), 'status'=>request('status'), 'from'=>request('from'), 'to'=>request('to')]) }}"
-                               class="btn btn-outline-primary text-nowrap btn-block">
-                               <i class="fi fi-rr-document"></i>
-                                <span class="fs-12">{{translate('download_PDF')}}</span>
-                            </a>
-                        </div>
-                        <div class="dropdown">
-                            <a type="button" class="btn btn-outline-primary" href="{{ route('admin.transaction.order-transaction-export-excel', ['search'=>$search,'date_type'=>request('date_type'), 'seller_id'=>request('seller_id'), 'customer_id'=>request('customer_id'), 'status'=>request('status'), 'from'=>request('from'), 'to'=>request('to')]) }}">
-                                <i class="fi fi-sr-inbox-in"></i>
-                                <span class="fs-12">{{ translate('export') }}</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                        </td>
+                        <td>
+                            @if (!$transaction['is_guest'] && $transaction['customer_id'])
+                                <a href="{{ route('admin.customer.view',[$transaction['customer_id']]) }}"
+                                   class="title-color hover-c1">
+                                    {{ $transaction['customer_name'] }}
+                                </a>
+                            @elseif($transaction['is_guest'])
+                                {{ translate('guest_customer') }}
+                            @else
+                                <span class="k-text-subtle">{{translate('not_found')}}</span>
+                            @endif
+                        </td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['total_product_amount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['product_discount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['coupon_discount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['referral_discount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['discounted_amount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['tax']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['shipping_charge']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['order_amount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['edit_due_amount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['edit_return_amount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td>{{ $transaction['delivered_by'] }}</td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['deliveryman_incentive']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_discount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['vendor_discount']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_commission']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_net_income']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['vendor_net_income']), currencyCode: getCurrencyCode()) }}</span></td>
+                        <td>{{ ucwords(str_replace('_',' ', $transaction['payment_method'])) }}</td>
+                        <td>
+                            <x-k.badge :tone="$transaction['payment_status'] == 'disburse' ? 'success' : 'warning'">
+                                {{ translate(str_replace('_',' ', $transaction['payment_status'])) }}
+                            </x-k.badge>
+                        </td>
+                        <td>
+                            <div class="k-table__actions">
+                                <a href="{{ route('admin.transaction.pdf-order-wise-transaction', ['order_id'=> $transaction['order_id']]) }}"
+                                   class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('download_PDF') }}">
+                                    <x-k.icon name="download" :size="15" />
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                <div class="table-responsive">
-                    <table id="datatable"
-                        class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100 __table">
-                        <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{translate('SL')}}</th>
-                            <th>{{translate('order_id')}}</th>
-                            <th>{{translate('shop_name')}}</th>
-                            <th>{{translate('customer_name')}}</th>
-                            <th>{{translate('total_product_amount')}}</th>
-                            <th>{{translate('product_discount')}}</th>
-                            <th>{{translate('coupon_discount')}}</th>
-                            <th>{{translate('referral_Discount')}}</th>
-                            <th>{{translate('discounted_amount')}}</th>
-                            <th>{{translate('VAT/TAX')}}</th>
-                            <th>{{translate('shipping_charge')}}</th>
-                            <th>{{translate('order_amount')}}</th>
-                            <th>{{translate('Due_Amount')}}</th>
-                            <th>{{translate('Return_Amount')}}</th>
-                            <th>{{translate('delivered_by')}}</th>
-                            <th>{{translate('deliveryman_incentive')}}</th>
-                            <th>{{translate('admin_discount')}}</th>
-                            <th>{{translate('vendor_discount') }}</th>
-                            <th>{{translate('admin_commission') }}</th>
-                            <th>{{translate('admin_net_income')}}</th>
-                            <th>{{translate('vendor_net_income')}}</th>
-                            <th>{{translate('payment_method')}}</th>
-                            <th>{{translate('payment_Status')}}</th>
-                            <th class="text-center">{{translate('action')}}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($transactionsTableData as $key => $transaction)
-                            <tr>
-                                <td>{{ $key }}</td>
-                                <td>
-                                    <a class="title-color" href="{{ route('admin.orders.details', ['id' => $transaction['order_id']]) }}">
-                                        {{ $transaction['order_id'] }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <div class="text-wrap line-2 w-180 max-w-200">
-                                        {{ $transaction['shop_name'] }}
-                                        {{ $transaction['is_guest'] }}
-                                    </div>
-                                </td>
-                                <td>
-                                    @if (!$transaction['is_guest'] && $transaction['customer_id'])
-                                        <a href="{{ route('admin.customer.view',[$transaction['customer_id']]) }}"
-                                           class="title-color hover-c1 d-flex align-items-center gap-10">
-                                            {{ $transaction['customer_name'] }}
-                                        </a>
-                                    @elseif($transaction['is_guest'])
-                                        {{ translate('guest_customer') }}
-                                    @else
-                                        {{translate('not_found')}}
-                                    @endif
-                                </td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['total_product_amount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['product_discount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['coupon_discount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['referral_discount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['discounted_amount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['tax']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['shipping_charge']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['order_amount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['edit_due_amount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['edit_return_amount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ $transaction['delivered_by'] }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['deliveryman_incentive']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_discount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['vendor_discount']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_commission']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_net_income']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['vendor_net_income']), currencyCode: getCurrencyCode()) }}</td>
-                                <td>{{ ucwords(str_replace('_',' ', $transaction['payment_method'])) }}</td>
-                                <td>
-                                    <div class="text-center">
-                                            <span class="badge {{ $transaction['payment_status'] == 'disburse' ? 'badge-soft-success' : 'badge-soft-warning' }}">
-                                                {{ translate(str_replace('_',' ', $transaction['payment_status'])) }}
-                                            </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-center">
-                                        <a href="{{ route('admin.transaction.pdf-order-wise-transaction', ['order_id'=> $transaction['order_id']]) }}"
-                                           class="btn btn-outline-success square-btn btn-sm">
-                                            <i class="fi fi-rr-download"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
+            @if(count($transactions)==0)
+                <x-k.empty icon="reports" :title="translate('no_data_found')" />
+            @endif
 
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {{$transactions->links()}}
-                    </div>
-                </div>
-                @if(count($transactions)==0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+            @if ($transactions->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $transactions->firstItem() }}–{{ $transactions->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $transactions->total() }}</span>
+                    </span>
+                    <div>{!! $transactions->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 
     <span id="currency_symbol" data-text="{{ getCurrencySymbol(currencyCode: getCurrencyCode()) }}"></span>

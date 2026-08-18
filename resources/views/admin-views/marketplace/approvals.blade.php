@@ -44,8 +44,8 @@
 
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>{{ translate('reference') }}</th>
@@ -70,7 +70,7 @@
                                     <td class="text-end fs-12">{{ !is_null($req->amount) ? setCurrencySymbol($req->amount) : '—' }}</td>
                                     <td class="fs-12">{{ $req->approvals_count }} / {{ $req->required_approvals }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $statusColours[$req->status] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $statusColours[$req->status] ?? 'secondary' }}">
                                             {{ translate($req->status) }}
                                         </span>
                                     </td>

@@ -94,9 +94,9 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('Existing_Templates') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead class="thead-light">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                     <tr>
                                         <th>{{ translate('entity') }}</th>
                                         <th>{{ translate('language') }}</th>

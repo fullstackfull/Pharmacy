@@ -37,8 +37,8 @@
                     <button type="button" class="btn btn-sm btn-outline-primary" id="add-line">+ {{ translate('add_line') }}</button>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table mb-0">
+                    <div class="k-table-wrap">
+                        <table class="k-table">
                             <thead><tr>
                                 <th style="width:130px">{{ translate('product_id') }}</th>
                                 <th>{{ translate('description') }}</th>

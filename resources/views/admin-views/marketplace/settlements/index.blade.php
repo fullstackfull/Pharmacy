@@ -5,7 +5,7 @@
 @php
     $statusColours = [
         'draft' => 'secondary', 'calculated' => 'info', 'under_review' => 'warning',
-        'approved' => 'primary', 'paid' => 'success', 'cancelled' => 'danger',
+        'approved' => 'accent', 'paid' => 'success', 'cancelled' => 'danger',
     ];
 @endphp
 
@@ -28,7 +28,7 @@
                 <form action="{{ route('admin.marketplace.settlements.toggle-maker-checker') }}" method="post" class="d-flex align-items-center gap-2">
                     @csrf
                     <input type="hidden" name="status" value="{{ $makerChecker ? 0 : 1 }}">
-                    <span class="badge {{ $makerChecker ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                    <span class="k-badge {{ $makerChecker ? 'k-badge--success' : '' }}">
                         {{ $makerChecker ? translate('enabled') : translate('disabled') }}
                     </span>
                     <button class="btn btn-sm {{ $makerChecker ? 'btn-outline-danger' : 'btn-primary' }}">
@@ -72,15 +72,15 @@
                 <a href="{{ route('admin.marketplace.settlements.index', ['status' => $key]) }}"
                    class="btn btn-sm {{ $status === $key ? 'btn-' . $colour : 'btn-outline-' . $colour }}">
                     {{ translate($key) }}
-                    <span class="badge bg-light text-dark ms-1">{{ $counts[$key] ?? 0 }}</span>
+                    <span class="k-badge ms-1">{{ $counts[$key] ?? 0 }}</span>
                 </a>
             @endforeach
         </div>
 
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>{{ translate('reference') }}</th>
@@ -109,7 +109,7 @@
                                     <td class="text-end fw-semibold">{{ setCurrencySymbol($settlement->net_amount) }}</td>
                                     <td>{{ $settlement->entry_count }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $statusColours[$settlement->status] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $statusColours[$settlement->status] ?? 'secondary' }}">
                                             {{ translate($settlement->status) }}
                                         </span>
                                     </td>

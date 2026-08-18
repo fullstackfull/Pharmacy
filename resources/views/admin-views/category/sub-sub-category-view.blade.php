@@ -47,8 +47,8 @@
                             </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-hover table-borderless align-middle">
-                                <thead class="text-capitalize">
+                            <table class="k-table">
+                                <thead>
                                 <tr>
                                     <th>{{ translate('SL') }}</th>
                                     <th>{{ translate('sub_sub_category_name') }}</th>

@@ -104,13 +104,19 @@ class POSOrderController extends BaseController
     public function placeOrder(Request $request): JsonResponse
     {
         $amount = $request['amount'];
-        $paidAmount = $request['type'] == 'cash' ? ($request['paid_amount'] ?? 0) : null;
+        $fulfillment = $request['fulfillment'] == 'delivery' ? 'delivery' : 'instant';
+        // Cash for a delivery order is collected on delivery, so the tendered
+        // amount is neither required nor recorded here — same as a web COD order.
+        $paidAmount = ($request['type'] == 'cash' && $fulfillment == 'instant') ? ($request['paid_amount'] ?? 0) : null;
         $cartId = session(SessionKey::CURRENT_USER);
         $condition = $this->POSService->checkConditions(amount: $amount, paidAmount: $paidAmount);
         if ($condition == 'true') {
             return response()->json();
         }
         $userId = $this->cartService->getUserId();
+        if ($userId == 0 && $fulfillment == 'delivery') {
+            return response()->json(['checkProductTypeForWalkingCustomer' => true, 'message' => translate('To_place_a_delivery_order') . ',' . translate('_kindly_select_a_customer_or_fill_up_the_“Add_New_Customer”_form') . '.']);
+        }
         if ($request['type'] == 'wallet' && $userId != 0) {
             $customerBalance = $this->customerRepo->getFirstWhere(params: ['id' => $userId]) ?? 0;
             if ($customerBalance['wallet_balance'] >= currencyConverter(amount: $amount)) {
@@ -172,7 +178,8 @@ class POSOrderController extends BaseController
 
                         $orderDetail = $this->orderDetailsService->getPOSOrderDetailsData(
                             orderId: $orderId, item: $item,
-                            product: $product, price: $price, tax: $cartSubTotalCalculation['appliedTaxAmount']
+                            product: $product, price: $price, tax: $cartSubTotalCalculation['appliedTaxAmount'],
+                            fulfillment: $fulfillment, paymentType: $request['type']
                         );
                         $totalTaxAmount += $cartSubTotalCalculation['appliedTaxAmount'];
                         if ($item['variant'] != null) {
@@ -251,10 +258,11 @@ class POSOrderController extends BaseController
                 cart: $cart,
                 amount: $amount,
                 totalTaxAmount: $totalTaxAmount,
-                paidAmount: $request['type'] == 'cash' ? $paidAmount : $amount,
+                paidAmount: $paidAmount ?? ($request['type'] == 'cash' ? 0 : $amount),
                 paymentType: $request['type'],
                 addedBy: 'seller',
-                userId: $userId
+                userId: $userId,
+                fulfillment: $fulfillment
             );
             $this->orderRepo->add(data: $order);
             if ($checkProductTypeDigital) {

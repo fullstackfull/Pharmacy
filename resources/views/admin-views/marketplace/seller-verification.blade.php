@@ -50,8 +50,8 @@
                 </form>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>{{ translate('seller') }}</th>
@@ -81,7 +81,7 @@
                                 </td>
                                 <td>
                                     @php($map = ['pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger', 'expired' => 'secondary'])
-                                    <span class="badge bg-{{ $map[$doc->status] ?? 'secondary' }} text-dark">{{ translate($doc->status) }}</span>
+                                    <span class="k-badge k-badge--{{ $map[$doc->status] ?? 'secondary' }}">{{ translate($doc->status) }}</span>
                                     @if ($doc->status === 'rejected' && $doc->rejection_reason)
                                         <div class="fs-10 text-danger">{{ $doc->rejection_reason }}</div>
                                     @endif
@@ -92,7 +92,7 @@
                                 <td>
                                     @php($ov = $standing[$doc->seller_id] ?? 'unverified')
                                     @php($ovMap = ['verified' => 'success', 'pending' => 'warning', 'rejected' => 'danger', 'unverified' => 'secondary', 'not_required' => 'info'])
-                                    <span class="badge bg-{{ $ovMap[$ov] ?? 'secondary' }} text-dark">{{ translate($ov) }}</span>
+                                    <span class="k-badge k-badge--{{ $ovMap[$ov] ?? 'secondary' }}">{{ translate($ov) }}</span>
                                 </td>
                                 <td class="text-end">
                                     @if (in_array($doc->status, ['pending','rejected','expired']))

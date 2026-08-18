@@ -34,8 +34,9 @@ ok('order details: invoice + totals intact', (await page.locator('a[href*="gener
     && (await page.locator('.table-borderless.table-sm').count()) === 1);
 ok('order details: order.js data spans intact', (await page.locator('#order-status-url, [id*="message-status"]').count()) >= 1);
 
-// ---- Refund details (pending QA refund) ----------------------------------
-await page.goto(BASE + '/vendor/refund/details/1', { waitUntil: 'load' });
+// ---- Refund details (pending QA refund; refund 1 was approved in an earlier
+// verified flow, refund 2 is the standing pending fixture) ------------------
+await page.goto(BASE + '/vendor/refund/details/2', { waitUntil: 'load' });
 ok('refund details: renders', !(await hasServerError(page)));
 ok('refund details: logs k-table or honest empty', (await page.locator('.k-table').count()) === 1
     && ((await page.locator('.k-table tbody tr').count()) >= 1 || (await page.locator('.k-empty').count()) >= 1));

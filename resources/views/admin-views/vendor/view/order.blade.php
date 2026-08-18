@@ -246,27 +246,23 @@ use Illuminate\Support\Facades\Session;
                     </div>
                 </div>
 
-                <div class="table-responsive datatable-custom mt-4">
-                    <table id="datatable"
-                           style="text-align: {{$direction === "rtl" ? 'right' : 'left'}};"
-                           class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
+                <div class="k-table-wrap mt-4">
+                    <table class="k-table">
+                        <thead>
                         <tr>
                             <th>{{translate('SL')}}</th>
                             <th>{{translate('Order ID')}}</th>
                             <th>{{translate('Order Date')}}</th>
                             <th>{{translate('Customer info')}}</th>
-                            <th class="text-end">{{translate('Total_Amount')}}</th>
-                            <th class="text-center">{{ translate('order_Status') }}</th>
-                            <th class="text-center">{{translate('action')}}</th>
+                            <th class="k-table__num">{{translate('Total_Amount')}}</th>
+                            <th>{{ translate('order_Status') }}</th>
+                            <th></th>
                         </tr>
                         </thead>
                         <tbody id="set-rows">
                         @foreach($orders as $key=>$order)
                             <tr class="status class-all">
-                                <td>
-                                    {{$orders->firstItem()+$key}}
-                                </td>
+                                <td><span class="k-num">{{$orders->firstItem()+$key}}</span></td>
                                 <td>
                                     <div class="d-flex gap-1 flex-column">
                                         <div class="d-flex align-items-center gap-1">
@@ -292,15 +288,13 @@ use Illuminate\Support\Facades\Session;
                                             @endif
                                         </div>
                                         @if($order->edited_status == 1)
-                                            <span class="badge badge-info text-bg-info w-max-content">
-                                                {{ translate('Edited') }}
-                                            </span>
+                                            <x-k.badge tone="info">{{ translate('Edited') }}</x-k.badge>
                                         @endif
                                     </div>
                                 </td>
                                 <td>
-                                    <div>{{date('d M Y',strtotime($order['created_at']))}},</div>
-                                    <div>{{ date("h:i A",strtotime($order['created_at'])) }}</div>
+                                    <div class="k-num">{{date('d M Y',strtotime($order['created_at']))}}</div>
+                                    <div class="k-text-subtle k-num">{{ date("h:i A",strtotime($order['created_at'])) }}</div>
                                 </td>
                                 <td>
                                     @if($order->is_guest)
@@ -318,69 +312,55 @@ use Illuminate\Support\Facades\Session;
                                             </a>
                                             <a class="d-block text-dark" href="tel:{{ $order->customer['phone'] }}">{{ $order->customer['phone'] }}</a>
                                         @else
-                                            <label class="badge badge-danger text-bg-danger">{{translate('invalid_customer_data')}}</label>
+                                            <x-k.badge tone="danger">{{translate('invalid_customer_data')}}</x-k.badge>
                                         @endif
                                     @endif
                                 </td>
-                                <td class="text-end">
-                                    <div>
-                                        @php($orderTotalPriceSummary = \App\Utils\OrderManager::getOrderTotalPriceSummary(order: $order))
-                                        {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $orderTotalPriceSummary['totalAmount']), currencyCode: getCurrencyCode()) }}
-                                    </div>
-
+                                <td class="k-table__num">
+                                    @php($orderTotalPriceSummary = \App\Utils\OrderManager::getOrderTotalPriceSummary(order: $order))
+                                    <div class="k-num">{{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $orderTotalPriceSummary['totalAmount']), currencyCode: getCurrencyCode()) }}</div>
                                     @if ($order->payment_status == 'paid')
-                                        <span
-                                            class="fs-12 fw-medium text-success">{{ translate('paid') }}</span>
+                                        <x-k.badge tone="success">{{ translate('paid') }}</x-k.badge>
                                     @else
-                                        <span
-                                            class="fs-12 fw-medium text-danger">{{ translate('unpaid') }}</span>
+                                        <x-k.badge tone="danger">{{ translate('unpaid') }}</x-k.badge>
                                     @endif
                                 </td>
-                                <td class="text-capitalize text-center">
-                                    @if($order['order_status']=='pending')
-                                        <span class="badge badge-info text-bg-info">
-                                            {{translate('pending')}}
-                                        </span>
-                                    @elseif($order['order_status']=='confirmed')
-                                        <span class="badge badge-info text-bg-info">
-                                            {{translate('confirmed')}}
-                                        </span>
-                                    @elseif($order['order_status']=='processing')
-                                        <span class="badge badge-warning text-bg-warning">
-                                            {{translate('processing')}}
-                                        </span>
-                                    @elseif($order['order_status']=='out_for_delivery')
-                                        <span class="badge badge-warning text-bg-warning">
-                                            {{translate('out_for_delivery')}}
-                                        </span>
-                                    @elseif($order['order_status']=='delivered')
-                                        <span class="badge badge-success text-bg-success">
-                                            {{translate('delivered')}}
-                                        </span>
-                                    @else
-                                        <span class="badge badge-danger text-bg-danger">
-                                            {{ translate(str_replace('_',' ',$order['order_status'])) }}
-                                        </span>
-                                    @endif
+                                <td class="text-capitalize">
+                                    @switch($order['order_status'])
+                                        @case('pending')
+                                        @case('confirmed')
+                                            <x-k.badge tone="info">{{ translate($order['order_status']) }}</x-k.badge>
+                                            @break
+                                        @case('processing')
+                                        @case('out_for_delivery')
+                                            <x-k.badge tone="warning">{{ translate($order['order_status']) }}</x-k.badge>
+                                            @break
+                                        @case('delivered')
+                                            <x-k.badge tone="success">{{ translate($order['order_status']) }}</x-k.badge>
+                                            @break
+                                        @default
+                                            <x-k.badge tone="danger">{{ translate(str_replace('_',' ',$order['order_status'])) }}</x-k.badge>
+                                    @endswitch
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center gap-2">
+                                    <div class="k-table__actions">
                                         @if($order->edited_status == 1 && $order?->edit_return_amount > 0)
-                                            <button type="button" class="btn btn-outline-warning icon-btn"
+                                            <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
+                                                    title="{{ translate('return_amount') }}"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#returnDueAmountModal-{{$order['id']}}">
-                                                <i class="fi fi-sr-undo-alt d-flex"></i>
+                                                <x-k.icon name="refresh" :size="15" />
                                             </button>
                                         @endif
-                                        <a class="btn btn-outline-success btn-outline-success-dark icon-btn"
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
                                            title="{{ translate('view') }}"
                                            href="{{ route('admin.vendors.order-details',['order_id' => $order['id'],'vendor_id' => $order['seller_id']]) }}">
-                                            <i class="fi fi-sr-eye d-flex"></i>
+                                            <x-k.icon name="eye" :size="15" />
                                         </a>
-                                        <a class="btn btn-outline-success btn-outline-success-dark icon-btn"
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon"
                                            target="_blank" title="{{ translate('invoice') }}"
                                            href="{{ route('admin.orders.generate-invoice', [$order['id']]) }}">
-                                            <i class="fi fi-sr-down-to-line d-flex"></i>
+                                            <x-k.icon name="download" :size="15" />
                                         </a>
                                     </div>
                                 </td>
@@ -389,15 +369,19 @@ use Illuminate\Support\Facades\Session;
                         </tbody>
                     </table>
                 </div>
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-end">
-                        {!! $orders->links() !!}
-                    </div>
-                </div>
-
                 @if(count($orders)==0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_order_found'],['image'=>'default'])
+                    <x-k.empty icon="orders" :title="translate('no_order_found')" />
                 @endif
+                <div class="k-pager">
+                    <span class="k-pager__info">
+                        @if ($orders->total() > 0)
+                            {{ translate('showing') }}
+                            <span class="k-num">{{ $orders->firstItem() }}–{{ $orders->lastItem() }}</span>
+                            {{ translate('of') }} <span class="k-num">{{ $orders->total() }}</span>
+                        @endif
+                    </span>
+                    <div>{!! $orders->appends(request()->except('page'))->links() !!}</div>
+                </div>
             </div>
         </div>
     </div>

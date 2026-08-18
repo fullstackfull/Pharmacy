@@ -52,7 +52,7 @@
                     <div class="col-sm-12 mb-3">
                         <div class="card">
                             <div class="table-responsive datatable-custom br-inherit">
-                                <table class="table table-hover table-borderless align-middle">
+                                <table class="k-table">
                                     <thead class="text-capitalize table-nowrap">
                                     <tr>
                                         <th>{{ translate('SL') }}</th>

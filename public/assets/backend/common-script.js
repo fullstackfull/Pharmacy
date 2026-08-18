@@ -47,6 +47,15 @@ $(document).ready(function () {
             $(this).easyZoom();
         });
 
+        // Pages with several quick-view sliders (product gallery) initialize each
+        // by id with its own navigation; a blanket class init there grabs the
+        // first slider with the wrong config and crashes Swiper's thumbs module.
+        let quickviewSliders = document.querySelectorAll(".quickviewSlider2");
+        let quickviewThumbs = document.querySelectorAll(".quickviewSliderThumb2");
+        if (quickviewSliders.length !== 1 || quickviewThumbs.length !== 1 || quickviewSliders[0].swiper) {
+            return;
+        }
+
         new Swiper(".quickviewSlider2", {
             slidesPerView: 1,
             spaceBetween: 10,

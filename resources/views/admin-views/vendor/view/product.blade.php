@@ -90,15 +90,15 @@
                     </h3>
                 </div>
 
-                <div class="table-responsive datatable-custom">
-                    <table id="columnSearchDatatable" class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
+                <div class="k-table-wrap">
+                    <table id="columnSearchDatatable" class="k-table">
+                        <thead>
                             <tr>
                                 <th>{{translate('SL')}}</th>
                                 <th>{{translate('product Name')}}</th>
-                                <th class="text-center">{{translate('product_Type')}}</th>
-                                <th class="text-center">{{translate('unit_price')}}</th>
-                                <th class="text-center">{{ translate('stock') }}</th>
+                                <th>{{translate('product_Type')}}</th>
+                                <th class="k-table__num">{{translate('unit_price')}}</th>
+                                <th class="k-table__num">{{ translate('stock') }}</th>
                                 @if ($productWiseTax)
                                     <th class="text-center">{{ translate('Vat/Tax') }}</th>
                                 @endif
@@ -126,7 +126,7 @@
                         <tbody id="set-rows">
                         @foreach($products as $k=>$product)
                             <tr>
-                                <td>{{$products->firstItem()+$k}}</td>
+                                <td><span class="k-num">{{$products->firstItem()+$k}}</span></td>
                                 <td>
                                     <a href="{{ route('admin.products.view', ['addedBy' => ($product['added_by'] == 'seller' ? 'vendor' : 'in-house'), 'id' => $product['id']]) }}"
                                     class="text-dark text-hover-primary gap-3 d-flex align-items-center">
@@ -147,11 +147,11 @@
                                                 <div class="text-body">
                                                     {{ translate('Id') }} # {{$product['id']}}
                                                     @if($product->request_status == 0)
-                                                        <label class="badge badge-soft-warning m-0 font-weight-normal">{{translate('pending')}}</label>
+                                                        <x-k.badge tone="warning">{{translate('pending')}}</x-k.badge>
                                                     @elseif($product->request_status == 1)
-                                                        <label class="badge badge-soft-success m-0 font-weight-normal">{{translate('approved')}}</label>
+                                                        <x-k.badge tone="success">{{translate('approved')}}</x-k.badge>
                                                     @elseif($product->request_status == 2)
-                                                        <label class="badge badge-soft-danger m-0 font-weight-normal">{{translate('denied')}}</label>
+                                                        <x-k.badge tone="danger">{{translate('denied')}}</x-k.badge>
                                                     @endif
                                                 </div>
                                             </div>
@@ -161,8 +161,8 @@
                                 <td class="text-center">
                                     {{translate(str_replace('_',' ',$product['product_type']))}}
                                 </td>
-                                <td class="text-center">
-                                    {{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product['unit_price']))}}
+                                <td class="k-table__num">
+                                    <span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product['unit_price']))}}</span>
                                 </td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-3 align-items-center lh-1">
@@ -242,19 +242,19 @@
                                     </form>
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center gap-10">
-                                        <a class="btn btn-outline-warning btn-outline-warning-dark icon-btn" title="{{ translate('barcode') }}" href="{{ route('admin.products.barcode', [$product['id']]) }}">
-                                            <i class="fi fi-rr-barcode"></i>
+                                    <div class="k-table__actions">
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('barcode') }}" href="{{ route('admin.products.barcode', [$product['id']]) }}">
+                                            <x-k.icon name="grip" :size="15" />
                                         </a>
-                                        <a class="btn btn-outline-success btn-outline-success-dark icon-btn" title="View" href="{{route('admin.products.view',['addedBy'=>($product['added_by']=='seller'?'vendor' : 'in-house'),'id'=>$product['id']])}}">
-                                            <i class="fi fi-rr-eye"></i>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('view') }}" href="{{route('admin.products.view',['addedBy'=>($product['added_by']=='seller'?'vendor' : 'in-house'),'id'=>$product['id']])}}">
+                                            <x-k.icon name="eye" :size="15" />
                                         </a>
-                                        <a class="btn btn-outline-info icon-btn" href="{{route('admin.products.update',[$product['id']])}}">
-                                            <i class="fi fi-sr-pencil"></i>
+                                        <a class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('edit') }}" href="{{route('admin.products.update',[$product['id']])}}">
+                                            <x-k.icon name="edit" :size="15" />
                                         </a>
-                                        <a class="btn btn-outline-danger icon-btn delete-data" href="javascript:" data-id="product-{{$product['id']}}">
-                                            <i class="fi fi-rr-trash"></i>
-                                        </a>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data" role="button" title="{{ translate('delete') }}" data-id="product-{{$product['id']}}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
                                     </div>
                                     <form action="{{route('admin.products.delete',[$product['id']])}}"
                                         method="post" id="product-{{$product['id']}}">
@@ -267,14 +267,19 @@
                     </table>
                 </div>
 
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-end">
-                        {{$products->links()}}
-                    </div>
-                </div>
                 @if(count($products)==0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_product_found'],['image'=>'default'])
+                    <x-k.empty icon="catalog" :title="translate('no_product_found')" />
                 @endif
+                <div class="k-pager">
+                    <span class="k-pager__info">
+                        @if ($products->total() > 0)
+                            {{ translate('showing') }}
+                            <span class="k-num">{{ $products->firstItem() }}–{{ $products->lastItem() }}</span>
+                            {{ translate('of') }} <span class="k-num">{{ $products->total() }}</span>
+                        @endif
+                    </span>
+                    <div>{!! $products->appends(request()->except('page'))->links() !!}</div>
+                </div>
             </div>
         </div>
     </div>

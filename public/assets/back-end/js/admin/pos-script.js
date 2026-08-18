@@ -118,11 +118,6 @@ function renderCustomerAmountForPay() {
     let wrapper = $(".place-order-wrapper");
     button.attr("disabled", shouldDisable);
     if (shouldDisable) {
-        button.removeAttr("data-bs-toggle").removeAttr("data-bs-target");
-    } else {
-        button.attr("data-bs-toggle", "modal").attr("data-bs-target", "#paymentModal");
-    }
-    if (shouldDisable) {
         wrapper.attr("title", "Insufficient wallet balance").attr("data-bs-toggle", "tooltip");
         let tooltipInstance = bootstrap.Tooltip.getInstance(wrapper[0]);
         if (!tooltipInstance) {
@@ -399,7 +394,7 @@ function basicFunctionalityForCartSummary() {
         }
     });
 
-    $(".option-buttons input").on("change", function () {
+    $(".option-buttons input[name=\"type\"]").on("change", function () {
         renderCustomerAmountForPay();
         let type = $(this).val();
         if ($(this).is(":checked")) {
@@ -427,7 +422,7 @@ function basicFunctionalityForCartSummary() {
         }
     });
 
-    $(".option-buttons input").trigger("change");
+    $(".option-buttons input[name=\"type\"]").trigger("change");
 
     $(".pos-paid-amount-element")
         .on("keypress", function (event) {
@@ -472,6 +467,11 @@ basicFunctionalityForCartSummary();
 posUpdateQuantityFunctionality();
 
 function checkedPaidAmount() {
+    // Cash for a delivery-fulfillment order is collected on delivery,
+    // so the tendered amount is not required at checkout.
+    if ($('input[name="fulfillment"]:checked').val() === "delivery") {
+        return true;
+    }
     let paidAmount = $(".pos-paid-amount-element");
     if ($(".paid-by-cash").prop("checked") && paidAmount.val() === "") {
         toastMagic.error($("#message-enter-valid-amount").data("text"));
@@ -1429,3 +1429,10 @@ function initSliderWithZoom() {
     });
 }
 
+
+
+$(document).on("change", 'input[name="fulfillment"], input[name="type"]', function () {
+    let isDelivery = $('input[name="fulfillment"]:checked').val() === "delivery";
+    $(".fulfillment-delivery-note").toggleClass("d-none", !isDelivery);
+    $(".cash-change-amount").toggleClass("d-none", isDelivery && $(".paid-by-cash").prop("checked"));
+});

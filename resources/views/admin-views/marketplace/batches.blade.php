@@ -64,8 +64,8 @@
                         </form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('product') }}</th><th>{{ translate('batch_number') }}</th>
                                     <th>{{ translate('expiry_date') }}</th><th class="text-end">{{ translate('quantity') }}</th>
@@ -78,10 +78,10 @@
                                         <td>#{{ $b->product_id }}</td>
                                         <td>{{ $b->batch_number ?: '—' }}</td>
                                         <td class="fs-12">{{ $b->expiry_date?->toDateString() ?: '—' }}
-                                            @if($expired && $b->status === 'active')<span class="badge bg-danger text-dark fs-10">{{ translate('expired') }}</span>@endif
+                                            @if($expired && $b->status === 'active')<span class="k-badge k-badge--danger fs-10">{{ translate('expired') }}</span>@endif
                                         </td>
                                         <td class="text-end">{{ $b->quantity }}</td>
-                                        <td><span class="badge bg-{{ $b->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($b->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $b->status === 'active' ? 'success' : 'secondary' }}">{{ translate($b->status) }}</span></td>
                                         <td class="text-end">
                                             @if ($b->status === 'active' && $b->quantity > 0)
                                                 <form action="{{ route('admin.marketplace.batches.write-off', $b->id) }}" method="post" onsubmit="return confirm('{{ translate('write_off_this_batch_from_sellable_stock') }}?')">

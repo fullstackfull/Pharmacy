@@ -12,7 +12,7 @@
             </div>
 
             <div class="offcanvas-body p-3 overflow-auto flex-grow-1">
-                <div class="product-gallery-item mb-4" id="product-gallery-item-{{ $product->id }}">
+                <div class="mb-4" id="product-gallery-offcanvas-item-{{ $product->id }}">
                     <div class="pd-img-wrap position-relative d-flex gap-4 gap-sm-3 flex-column flex-sm-row">
                         <div class="">
                             <div class="quickviewSlider2 swiper-container border rounded aspect-1 inline-size-100 max-w-130 mx-auto position-relative" id="offcanvasQuickviewSlider2-{{ $product->id }}">
@@ -267,10 +267,10 @@
                     @if(!empty($product['variation']) && count(json_decode($product['variation'])) >0)
                         <div class="card border-0">
                                 <div class="card-body p-0">
-                                    <div class="table-responsive datatable-custom">
+                                    <div class="k-table-wrap">
                                         <table
-                                            class="table table-borderless table-nowrap table-align-middle card-table w-100 text-start">
-                                            <thead class="thead-light thead-50 text-capitalize">
+                                            class="k-table">
+                                            <thead>
                                             <tr>
                                                 <th class="text-center">{{ translate('SKU') }}</th>
                                                 <th class="text-center text-capitalize">{{ translate('variation_wise_price') }}</th>
@@ -305,10 +305,10 @@
                     @if(!empty($product->digitalVariation) && count($product->digitalVariation) > 0)
                         <div class="card border-0">
                                 <div class="card-body p-0">
-                                    <div class="table-responsive datatable-custom">
+                                    <div class="k-table-wrap">
                                         <table
-                                            class="table table-borderless table-nowrap table-align-middle card-table w-100 text-start">
-                                            <thead class="thead-light thead-50 text-capitalize">
+                                            class="k-table">
+                                            <thead>
                                             <tr>
                                                 <th class="text-center">{{ translate('SL') }}</th>
                                                 <th class="text-center">{{ translate('Variation_Name') }}</th>

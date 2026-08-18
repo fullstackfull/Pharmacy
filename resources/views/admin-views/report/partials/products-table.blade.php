@@ -1,4 +1,4 @@
-<table class="table" id="datatable">
+<table class="k-table" id="datatable">
     <thead>
     <tr>
         <th scope="col">#</th>

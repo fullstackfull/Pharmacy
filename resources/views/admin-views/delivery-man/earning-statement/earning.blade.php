@@ -79,7 +79,7 @@
                                 <i class="fi fi-sr-info"></i>
                             </span>
                             <div class="card-body d-flex flex-column gap-2 align-items-center justify-content-center">
-                                <img src="{{ asset('public/assets/back-end/img/cash-in-hand.png') }}" width="40"
+                                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/cash-in-hand.png') }}" width="40"
                                     class="mb-2" alt="">
                                 <h4 class="text-capitalize mb-2">{{ translate('cash_in_hand') }}</h4>
                                 <h2 class="business-analytics__title h1 fw-bold">

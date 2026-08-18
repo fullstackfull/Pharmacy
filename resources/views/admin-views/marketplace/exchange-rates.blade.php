@@ -16,7 +16,7 @@
                     <div class="card-body">
                         <form action="{{ route('admin.marketplace.exchange-rates.bulk-update') }}" method="post">
                             @csrf
-                            <table class="table table-sm align-middle mb-2">
+                            <table class="k-table">
                                 <thead><tr><th>{{ translate('currency') }}</th><th style="width:160px">{{ translate('rate') }}</th></tr></thead>
                                 <tbody>
                                 @forelse ($currencies as $c)
@@ -42,8 +42,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('change_history') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('date') }}</th><th>{{ translate('currency') }}</th>
                                     <th class="text-end">{{ translate('from') }}</th><th class="text-end">{{ translate('to') }}</th>
@@ -56,7 +56,7 @@
                                         <td>{{ $h->code ?: ($currencyNames[$h->currency_id] ?? ('#' . $h->currency_id)) }}</td>
                                         <td class="text-end text-muted">{{ $h->old_rate !== null ? rtrim(rtrim(number_format((float) $h->old_rate, 6), '0'), '.') : '—' }}</td>
                                         <td class="text-end fw-bold">{{ rtrim(rtrim(number_format((float) $h->new_rate, 6), '0'), '.') }}</td>
-                                        <td><span class="badge bg-light text-dark">{{ translate($h->source) }}</span></td>
+                                        <td><span class="k-badge">{{ translate($h->source) }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="5" class="text-center text-muted py-4">{{ translate('no_rate_changes_recorded_yet') }}</td></tr>

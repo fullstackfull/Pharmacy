@@ -58,8 +58,8 @@
 
         <div class="card mt-3">
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-borderless">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead class="text-uppercase">
                         <tr>
                             <th class="w-95">

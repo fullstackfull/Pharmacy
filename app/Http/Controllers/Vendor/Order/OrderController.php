@@ -516,7 +516,7 @@ class OrderController extends BaseController
                 'countryRestrictStatus','totalDelivered', 'zipRestrictStatus', 'countries', 'zipCodes', 'orderCount', 'previousOrder', 'nextOrder', 'allProductsList', 'isOrderEditable', 'orderProductsSession', 'editOrderSummary', 'orderEditPaymentHistory'));
         } else {
             $orderCount = $this->orderRepo->getListWhereCount(filters: ['customer_id' => $order['customer_id'], 'order_type' => 'POS']);
-            return view('vendor-views.pos.order.order-details', compact('order', 'orderCount','totalDelivered', 'previousOrder', 'nextOrder', 'isOrderEditable', 'editOrderSummary'));
+            return view('vendor-views.pos.order.order-details', compact('order', 'orderCount','totalDelivered', 'previousOrder', 'nextOrder', 'isOrderEditable', 'editOrderSummary', 'deliveryMen', 'physicalProduct'));
         }
     }
 
@@ -633,6 +633,22 @@ class OrderController extends BaseController
 
         $this->orderRepo->updateStockOnOrderStatusChange($request['id'], $request['order_status']);
         $this->orderRepo->update(id: $request['id'], data: ['order_status' => $request['order_status']]);
+        // A wallet-paid POS sale was debited at the counter; cancelling the order is
+        // the only path that returns that money. Reference-keyed so a repeated cancel
+        // can never credit twice.
+        if ($request['order_status'] == 'canceled'
+            && $order['order_type'] == 'POS'
+            && $order['payment_method'] == 'wallet'
+            && $order['customer_id'] != 0
+            && !$this->walletTransactionRepo->getFirstWhere(params: ['reference' => 'pos_order_cancel_' . $order['id'], 'transaction_type' => 'order_refund'])
+        ) {
+            $this->createWalletTransaction(
+                user_id: $order['customer_id'],
+                amount: usdToDefaultCurrency(amount: $order['order_amount']),
+                transaction_type: 'order_refund',
+                reference: 'pos_order_cancel_' . $order['id']
+            );
+        }
         if ($request['order_status'] == 'delivered') {
             $this->orderRepo->update(id: $request['id'], data: ['payment_status' => 'paid', 'is_pause' => 0]);
             $this->orderDetailRepo->updateWhere(params: ['order_id' => $order['id']], data: ['delivery_status' => $request['order_status'], 'payment_status' => 'paid']);

@@ -13,48 +13,32 @@
 
         @include('admin-views.third-party._third-party-payment-method-menu')
 
-        <div class="card card-body mt-3">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                <h3 class="flex-grow-1 mb-0">
-                    {{ translate('Withdraw_Method_List')}}
-                    <span class="badge badge-info text-bg-info"> {{ $withdrawalMethods->total() }}</span>
-                </h3>
-                <div class="d-flex align-items-stretch justify-content-md-end gap-3 flex-wrap flex-grow-1">
-                    <form action="{{ url()->current() }}" method="GET" class="min-w-280 w-100-mobile">
-                        <div class="input-group">
-                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control fs-12"
-                                    placeholder="{{translate('Search_by_withdraw_method_name')}}" aria-label="Search orders"
-                                    value="{{ request('searchValue') }}" >
-                            <div class="input-group-append search-submit">
-                                <button type="submit">
-                                    <i class="fi fi-rr-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <a href="{{route('admin.third-party.withdraw-method.add')}}" class="btn btn-primary fs-12">
-                        <i class="fi fi-sr-add d-flex"></i> {{translate('Add_New_Method')}}
-                    </a>
-                </div>
-            </div>
+        <x-k.data-view class="mt-3" :title="translate('Withdraw_Method_List')" :count="$withdrawalMethods->total()"
+                       searchName="searchValue" :searchValue="request('searchValue')"
+                       :searchPlaceholder="translate('Search_by_withdraw_method_name')">
 
-            <div class="table-responsive">
-                <table id="datatable" class="table table-hover table-borderless table-nowrap align-middle text-dark">
-                    <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{translate('SL')}}</th>
-                            <th>{{translate('method_name')}}</th>
-                            <th>{{ translate('method_fields') }}</th>
-                            <th>{{ translate('method_for') }}</th>
-                            <th class="text-center">{{translate('default_method')}}</th>
-                            <th class="text-center">{{translate('status')}}</th>
-                            <th class="text-center">{{translate('action')}}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <x-slot:actions>
+                <a href="{{route('admin.third-party.withdraw-method.add')}}" class="k-btn k-btn--primary">
+                    <x-k.icon name="plus" :size="15" /> {{translate('Add_New_Method')}}
+                </a>
+            </x-slot:actions>
+
+            <table class="k-table">
+                <thead>
+                    <tr>
+                        <th>{{translate('SL')}}</th>
+                        <th>{{translate('method_name')}}</th>
+                        <th>{{ translate('method_fields') }}</th>
+                        <th>{{ translate('method_for') }}</th>
+                        <th>{{translate('default_method')}}</th>
+                        <th>{{translate('status')}}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
                     @foreach($withdrawalMethods as $key => $withdrawalMethod)
                         <tr>
-                            <td>{{$withdrawalMethods->firstitem() + $key}}</td>
+                            <td><span class="k-num">{{$withdrawalMethods->firstitem() + $key}}</span></td>
                             <td>{{$withdrawalMethod['method_name']}}</td>
                             <td>
                                 @foreach($withdrawalMethod['method_fields'] as $methodField)
@@ -137,14 +121,15 @@
 
                             </td>
                             <td>
-                                <div class="d-flex justify-content-center gap-2">
-                                    <a href="{{route('admin.third-party.withdraw-method.edit',[$withdrawalMethod->id])}}" class="btn btn-outline-primary icon-btn">
-                                        <i class="fi fi-rr-pencil"></i>
+                                <div class="k-table__actions">
+                                    <a href="{{route('admin.third-party.withdraw-method.edit',[$withdrawalMethod->id])}}"
+                                       class="k-btn k-btn--ghost k-btn--sm k-btn--icon" title="{{ translate('edit') }}">
+                                        <x-k.icon name="edit" :size="15" />
                                     </a>
                                     @if(!$withdrawalMethod->is_default)
-                                        <a class="btn btn-outline-danger icon-btn delete-data" href="javascript:" title="{{translate('delete')}}" data-id="delete-{{$withdrawalMethod->id}}">
-                                            <i class="fi fi-rr-trash"></i>
-                                        </a>
+                                        <span class="k-btn k-btn--ghost k-btn--sm k-btn--icon delete-data" role="button" title="{{translate('delete')}}" data-id="delete-{{$withdrawalMethod->id}}">
+                                            <x-k.icon name="trash" :size="15" />
+                                        </span>
                                     @endif
                                 </div>
                                 <form action="{{route('admin.third-party.withdraw-method.delete',[$withdrawalMethod->id])}}" method="post" id="delete-{{$withdrawalMethod->id}}">
@@ -155,17 +140,22 @@
                     @endforeach
                     </tbody>
                 </table>
-            </div>
 
-            <div class="table-responsive mt-4">
-                <div class="px-4 d-flex justify-content-center justify-content-end">
-                    {{$withdrawalMethods->links()}}
-                </div>
-            </div>
             @if(count($withdrawalMethods)==0)
-                @include('layouts.admin.partials._empty-state',['text'=>'no_withdraw_method_found'],['image'=>'default'])
+                <x-k.empty icon="reports" :title="translate('no_withdraw_method_found')" />
             @endif
-        </div>
+
+            @if ($withdrawalMethods->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $withdrawalMethods->firstItem() }}–{{ $withdrawalMethods->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $withdrawalMethods->total() }}</span>
+                    </span>
+                    <div>{!! $withdrawalMethods->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
     <span id="get-withdrawal-method-default-text"
           data-success="{{translate('default_method_updated_successfully').'.'}}"

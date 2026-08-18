@@ -1,6 +1,6 @@
 @if(count($combinations) > 0)
-    <table class="table physical_product_show table-borderless">
-        <thead class="text-capitalize">
+    <table class="k-table physical_product_show">
+        <thead>
             <tr>
                 <th class="py-2">
                     <label for="" class="control-label">

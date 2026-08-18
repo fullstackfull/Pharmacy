@@ -161,6 +161,24 @@ $isExpanded = $totalCartItemProduct > 0;
                    value="{{usdToDefaultCurrency(amount: $cartItems['total']+ ($cartItems['totalTax'] ?? 0) -$cartItems['couponDiscount'])}}"
                    readonly>
             <div class="p-3 bg-section rounded">
+                <div class="mb-3">
+                    <div class="text-dark fw-medium text-capitalize d-flex mb-3">{{ translate('order_fulfillment') }}:</div>
+                    <ul class="list-unstyled option-buttons d-flex flex-wrap gap-2 align-items-center mb-0 p-0">
+                        <li>
+                            <input type="radio" id="fulfillment-instant" value="instant" name="fulfillment" hidden checked>
+                            <label for="fulfillment-instant"
+                                   class="btn text-dark border bg-white fw-normal btn-sm mb-0">{{ translate('instant_sale') }}</label>
+                        </li>
+                        <li>
+                            <input type="radio" id="fulfillment-delivery" value="delivery" name="fulfillment" hidden>
+                            <label for="fulfillment-delivery"
+                                   class="btn text-dark border bg-white fw-normal btn-sm mb-0">{{ translate('home_delivery') }}</label>
+                        </li>
+                    </ul>
+                    <div class="fs-12 mt-2 d-none fulfillment-delivery-note">
+                        {{ translate('the_order_starts_as_pending_and_follows_the_regular_order_statuses_from_the_order_details_page._cash_is_collected_on_delivery.') }}
+                    </div>
+                </div>
                 <div>
                     <div class="text-dark fw-medium text-capitalize d-flex mb-3">{{ translate('paid_By') }}:</div>
                     <ul class="list-unstyled option-buttons d-flex flex-wrap gap-2 align-items-center mb-0 p-0">
@@ -253,7 +271,7 @@ $isExpanded = $totalCartItemProduct > 0;
                         {{ translate('hold')}}
                     </button>
                 <div class="place-order-wrapper w-100">
-                    <button id="submit_order" type="button" class="btn btn-primary btn-block m-0 fs-12-mobile p-2 min-h-40 action-form-submit" data-message="{{ translate('want_to_place_this_order').'?'}}" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                    <button id="submit_order" type="button" class="btn btn-primary btn-block m-0 fs-12-mobile p-2 min-h-40 action-form-submit" data-message="{{ translate('want_to_place_this_order').'?'}}">
                         <i class="fa fa-shopping-bag"></i>
                         {{ translate('place_Order') }}
                     </button>

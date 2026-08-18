@@ -1,6 +1,6 @@
 @if(isset($combinations) && count($combinations) > 0)
-    <table class="table physical_product_show table-borderless">
-        <thead class="thead-light thead-50 text-capitalize">
+    <table class="k-table physical_product_show">
+        <thead>
         <tr>
             <th class="text-center">
                 <label for="" class="control-label">

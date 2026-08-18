@@ -1,7 +1,7 @@
 @if(count($combinations) > 0)
     <div>
-        <table class="table physical_product_show table-borderless">
-            <thead class="thead-light thead-50 text-capitalize">
+        <table class="k-table physical_product_show">
+            <thead>
             <tr>
                 <th class="text-start">
                     <label for="" class="control-label">

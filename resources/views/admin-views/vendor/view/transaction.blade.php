@@ -147,101 +147,79 @@
                 </form>
             </div>
         </div>
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-                    <h3 class="mb-0 text-capitalize d-flex gap-1 align-items-center">{{ translate('transaction_table')}}
-                        <span class="badge badge-info text-bg-info">{{$transactions->total()}}</span>
-                    </h3>
-                    <form action="{{ url()->current() }}" method="GET" class="flex-grow-1 max-w-360 max-w-100-mobile">
-                        <div class="input-group">
-                            <input id="datatableSearch_" type="search" name="searchValue"
-                                   class="form-control"
-                                   placeholder="{{translate('search_by_orders_id_or_transaction_id')}}"
-                                   aria-label="Search orders" value="{{ request('searchValue') }}">
-                            <div class="input-group-append search-submit">
-                                <button type="submit">
-                                    <i class="fi fi-rr-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+        <x-k.data-view :title="translate('transaction_table')" :count="$transactions->total()"
+                       searchName="searchValue" :searchValue="request('searchValue')"
+                       :searchPlaceholder="translate('search_by_orders_id_or_transaction_id')">
 
-                <div class="table-responsive">
-                    <table id="datatable"
-                           style="text-align: {{Session::get('direction') === "rtl" ? 'right' : 'left'}};"
-                           class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table w-100">
-                        <thead class="thead-light thead-50 text-capitalize">
-                        <tr>
-                            <th>{{translate('SL')}}</th>
-                            <th>{{translate('vendor_name')}}</th>
-                            <th>{{translate('customer_name')}}</th>
-                            <th>{{translate('order_id')}}</th>
-                            <th>{{translate('transaction_id')}}</th>
-                            <th>{{translate('order_amount')}}</th>
-                            <th>{{translate('vendor_amount') }}</th>
-                            <th>{{translate('admin_commission')}}</th>
-                            <th>{{translate('received_by')}}</th>
-                            <th>{{translate('delivered_by')}}</th>
-                            <th>{{translate('delivery_charge')}}</th>
-                            <th>{{translate('payment_method')}}</th>
-                            <th>{{translate('tax')}}</th>
-                            <th class="text-center">{{translate('status')}}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @php($companyName = getInHouseShopConfig(key:'name'))
-                        @foreach($transactions as $key=>$transaction)
-                            <tr>
-                                <td>{{$transactions->firstItem()+$key}}</td>
-                                <td>
-                                    @if($transaction['seller_is'] == 'admin')
-                                        {{ $companyName }}
-                                    @else
-                                        {{ $transaction?->seller->f_name .' '.$transaction?->seller->l_name }}
-                                    @endif
-                                </td>
-                                <td>
-                                    {{ $transaction->order->is_guest ? translate('guest_customer'):($transaction->order->customer ? $transaction->order->customer->f_name.' '.$transaction->order->customer->l_name : translate('customer_not_found')) }}
-                                </td>
-                                <td>{{$transaction['order_id']}}</td>
-                                <td>{{$transaction['transaction_id']}}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['order_amount']))}}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['seller_amount']))}}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_commission']))}}</td>
-                                <td>{{$transaction['received_by']}}</td>
-                                <td>{{$transaction['delivered_by']}}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['delivery_charge']))}}</td>
-                                <td>{{str_replace('_',' ',$transaction['payment_method'])}}</td>
-                                <td>{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['tax']))}}</td>
-                                <td class="text-center">
-                                    @if($transaction['status'] == 'disburse')
-                                        <span class="badge badge-success text-bg-success">
-                                            {{translate($transaction['status'])}}
-                                        </span>
-                                    @else
-                                        <span class="badge badge-warning text-bg-warning">
-                                            {{translate($transaction['status'])}}
-                                        </span>
-                                    @endif
+            <table class="k-table">
+                <thead>
+                <tr>
+                    <th>{{translate('SL')}}</th>
+                    <th>{{translate('vendor_name')}}</th>
+                    <th>{{translate('customer_name')}}</th>
+                    <th>{{translate('order_id')}}</th>
+                    <th>{{translate('transaction_id')}}</th>
+                    <th class="k-table__num">{{translate('order_amount')}}</th>
+                    <th class="k-table__num">{{translate('vendor_amount') }}</th>
+                    <th class="k-table__num">{{translate('admin_commission')}}</th>
+                    <th>{{translate('received_by')}}</th>
+                    <th>{{translate('delivered_by')}}</th>
+                    <th class="k-table__num">{{translate('delivery_charge')}}</th>
+                    <th>{{translate('payment_method')}}</th>
+                    <th class="k-table__num">{{translate('tax')}}</th>
+                    <th>{{translate('status')}}</th>
+                </tr>
+                </thead>
+                <tbody>
+                @php($companyName = getInHouseShopConfig(key:'name'))
+                @foreach($transactions as $key=>$transaction)
+                    <tr>
+                        <td><span class="k-num">{{$transactions->firstItem()+$key}}</span></td>
+                        <td>
+                            @if($transaction['seller_is'] == 'admin')
+                                {{ $companyName }}
+                            @else
+                                {{ $transaction?->seller->f_name .' '.$transaction?->seller->l_name }}
+                            @endif
+                        </td>
+                        <td>
+                            {{ $transaction->order->is_guest ? translate('guest_customer'):($transaction->order->customer ? $transaction->order->customer->f_name.' '.$transaction->order->customer->l_name : translate('customer_not_found')) }}
+                        </td>
+                        <td><span class="k-num">{{$transaction['order_id']}}</span></td>
+                        <td><span class="k-num">{{$transaction['transaction_id']}}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['order_amount']))}}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['seller_amount']))}}</span></td>
+                        <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['admin_commission']))}}</span></td>
+                        <td>{{$transaction['received_by']}}</td>
+                        <td>{{$transaction['delivered_by']}}</td>
+                        <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['delivery_charge']))}}</span></td>
+                        <td>{{str_replace('_',' ',$transaction['payment_method'])}}</td>
+                        <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount: $transaction['tax']))}}</span></td>
+                        <td>
+                            <x-k.badge :tone="$transaction['status'] == 'disburse' ? 'success' : 'warning'">
+                                {{translate($transaction['status'])}}
+                            </x-k.badge>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
 
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="table-responsive mt-4">
-                    <div class="px-4 d-flex justify-content-lg-end">
-                        {{$transactions->links()}}
-                    </div>
-                </div>
-                @if(count($transactions)==0)
-                    @include('layouts.admin.partials._empty-state',['text'=>'no_data_found'],['image'=>'default'])
-                @endif
-            </div>
-        </div>
+            @if(count($transactions)==0)
+                <x-k.empty icon="reports" :title="translate('no_data_found')" />
+            @endif
+
+            @if ($transactions->total() > 0)
+                <x-slot:pager>
+                    <span class="k-pager__info">
+                        {{ translate('showing') }}
+                        <span class="k-num">{{ $transactions->firstItem() }}–{{ $transactions->lastItem() }}</span>
+                        {{ translate('of') }} <span class="k-num">{{ $transactions->total() }}</span>
+                    </span>
+                    <div>{!! $transactions->appends(request()->except('page'))->links() !!}</div>
+                </x-slot:pager>
+            @endif
+        </x-k.data-view>
     </div>
 </div>
 @endsection

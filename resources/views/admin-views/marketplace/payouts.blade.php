@@ -4,8 +4,8 @@
 
 @php
     $statusColours = [
-        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'primary',
-        'processing' => 'primary', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
+        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'accent',
+        'processing' => 'warning', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
     ];
 @endphp
 
@@ -30,16 +30,16 @@
                     <a href="{{ route('admin.marketplace.payouts.index', array_filter(['status' => $key])) }}"
                        class="btn btn-sm {{ ($status ?? '') === $key || ($key === '' && !$status) ? 'btn-primary' : 'btn-outline-secondary' }}">
                         {{ $label }}
-                        @if ($key && isset($counts[$key])) <span class="badge badge-light ms-1">{{ $counts[$key] }}</span> @endif
+                        @if ($key && isset($counts[$key])) <span class="k-badge ms-1">{{ $counts[$key] }}</span> @endif
                     </a>
                 @endforeach
             </div>
 
             <div class="card">
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="overflow-x:auto">
-                        <table class="table table-hover table-borderless align-middle mb-0">
-                            <thead class="thead-light">
+                    <div class="k-table-wrap" style="overflow-x:auto">
+                        <table class="k-table">
+                            <thead>
                                 <tr>
                                     <th>{{ translate('reference') }}</th>
                                     <th>{{ translate('seller') }}</th>
@@ -71,7 +71,7 @@
                                             @endif
                                         </td>
                                         <td>{{ translate(str_replace('_', ' ', $payout->method)) }}</td>
-                                        <td><span class="badge badge-soft-{{ $statusColours[$payout->status] ?? 'secondary' }} text-capitalize">{{ translate($payout->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $statusColours[$payout->status] ?? 'secondary' }} text-capitalize">{{ translate($payout->status) }}</span></td>
                                         <td class="fs-12">{{ $payout->created_at?->format('d M Y, h:i A') }}</td>
                                         <td class="text-end">
                                             @if (in_array($payout->status, ['requested', 'under_review']))

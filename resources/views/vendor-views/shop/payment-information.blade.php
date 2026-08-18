@@ -64,8 +64,8 @@
 
                 <div class="table-responsive">
                     <table id="datatable"
-                        class="table table-hover table-thead-bordered table-nowrap table-align-middle card-table">
-                        <thead class="thead-light thead-50 text-capitalize">
+                        class="k-table">
+                        <thead>
                             <tr>
                                 <th>{{ translate('SL') }}</th>
                                 <th>{{ translate('method_name') }}</th>
@@ -92,7 +92,7 @@
 
                                     <td>{{ $method->withdraw_method->method_name ?? 'N/A' }}</td>
                                     <td>
-                                        <table class="table-borderless" role="presentation">
+                                        <table class="k-table" role="presentation">
                                             <tbody>
                                             @foreach ($method->method_info as $label => $info)
                                                 <tr class="align-items-start bg-transparent d-flex">

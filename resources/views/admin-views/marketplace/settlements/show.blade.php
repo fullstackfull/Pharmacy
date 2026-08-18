@@ -5,11 +5,11 @@
 @php
     $statusColours = [
         'draft' => 'secondary', 'calculated' => 'info', 'under_review' => 'warning',
-        'approved' => 'primary', 'paid' => 'success', 'cancelled' => 'danger',
+        'approved' => 'accent', 'paid' => 'success', 'cancelled' => 'danger',
     ];
     $entryColours = [
         'order_earning' => 'success', 'commission_charge' => 'warning', 'refund' => 'danger',
-        'return_adjustment' => 'info', 'payout' => 'primary', 'penalty' => 'danger', 'bonus' => 'success',
+        'return_adjustment' => 'info', 'payout' => 'accent', 'penalty' => 'danger', 'bonus' => 'success',
     ];
 @endphp
 
@@ -25,7 +25,7 @@
                     {{ optional($settlement->period_end)->format('d M Y') }}
                 </p>
             </div>
-            <span class="badge bg-{{ $statusColours[$settlement->status] ?? 'secondary' }} fs-14">
+            <span class="k-badge k-badge--{{ $statusColours[$settlement->status] ?? 'secondary' }} fs-14">
                 {{ translate($settlement->status) }}
             </span>
         </div>
@@ -95,8 +95,8 @@
         <div class="card">
             <div class="card-header"><h5 class="mb-0">{{ translate('claimed_ledger_entries') }} ({{ $settlement->entry_count }})</h5></div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -112,7 +112,7 @@
                                 <tr>
                                     <td>{{ $entry->id }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
+                                        <span class="k-badge k-badge--{{ $entryColours[$entry->entry_type] ?? 'secondary' }}">
                                             {{ translate($entry->entry_type) }}
                                         </span>
                                     </td>

@@ -82,8 +82,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('rules') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead>
                                     <tr>
                                         <th>{{ translate('label') }}</th>
@@ -106,7 +106,7 @@
                                             </td>
                                             <td>{{ $rule->priority }}</td>
                                             <td>
-                                                <span class="badge {{ $rule->is_active ? 'badge-soft-success' : 'badge-soft-secondary' }}">
+                                                <span class="k-badge {{ $rule->is_active ? 'k-badge--success' : '' }}">
                                                     {{ $rule->is_active ? translate('active') : translate('inactive') }}
                                                 </span>
                                             </td>

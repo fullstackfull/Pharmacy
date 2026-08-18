@@ -9,7 +9,7 @@
                 <h2 class="h1 mb-0 d-flex align-items-center gap-2"><i class="fi fi-rr-balance-scale-right"></i> {{ translate('financial_reconciliation') }}</h2>
                 <p class="mb-0 fs-12">{{ translate('integrity_checks_over_the_ledger_commissions_and_settlements') }}.</p>
             </div>
-            <span class="badge bg-{{ $clean ? 'success' : 'danger' }} text-dark fs-14 px-3 py-2">
+            <span class="k-badge k-badge--{{ $clean ? 'success' : 'danger' }} fs-14 px-3 py-2">
                 {{ $clean ? translate('all_reconciled') : translate('discrepancies_found') }}
             </span>
         </div>
@@ -19,7 +19,7 @@
             <div class="card mb-3">
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <div>
-                        <span class="badge bg-{{ $ok ? 'success' : 'danger' }} text-dark me-2">{{ $ok ? '✓' : '!' }}</span>
+                        <span class="k-badge k-badge--{{ $ok ? 'success' : 'danger' }} me-2">{{ $ok ? '✓' : '!' }}</span>
                         <strong>{{ translate($r['label']) }}</strong>
                         <span class="fs-11 text-muted">— {{ translate($r['scope']) }}</span>
                     </div>
@@ -27,8 +27,8 @@
                 </div>
                 @unless ($ok)
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('reference') }}</th>
                                     <th class="text-end">{{ translate('expected') }}</th>

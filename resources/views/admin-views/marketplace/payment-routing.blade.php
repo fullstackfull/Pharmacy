@@ -54,7 +54,7 @@
                             <div class="fs-12 text-muted mb-1">{{ translate('gateways_offered_in_order') }}:</div>
                             <div class="d-flex flex-wrap gap-1">
                                 @forelse ($preview['result'] as $g)
-                                    <span class="badge bg-light text-dark border">{{ $g }}</span>
+                                    <span class="k-badge border">{{ $g }}</span>
                                 @empty
                                     <span class="text-danger fs-12">{{ translate('none') }}</span>
                                 @endforelse
@@ -68,8 +68,8 @@
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">{{ translate('rules') }}</h5></div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('name') }}</th><th>{{ translate('gateway') }}</th><th>{{ translate('action') }}</th>
                                     <th>{{ translate('conditions') }}</th><th>{{ translate('status') }}</th><th></th>
@@ -79,13 +79,13 @@
                                     <tr>
                                         <td>{{ $r->name }} <span class="fs-10 text-muted">p{{ $r->priority }}</span></td>
                                         <td>{{ $r->gateway_code }}</td>
-                                        <td><span class="badge bg-{{ $r->action === 'hide' ? 'danger' : 'success' }} text-dark">{{ translate($r->action) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $r->action === 'hide' ? 'danger' : 'success' }}">{{ translate($r->action) }}</span></td>
                                         <td class="fs-12">
                                             @if($r->min_amount !== null || $r->max_amount !== null){{ translate('amount') }}: {{ $r->min_amount !== null ? number_format((float)$r->min_amount,0) : '0' }}–{{ $r->max_amount !== null ? number_format((float)$r->max_amount,0) : '∞' }}@endif
                                             @if($r->country) · {{ $r->country }}@endif
                                             @if($r->min_amount === null && $r->max_amount === null && !$r->country)<span class="text-muted">{{ translate('always') }}</span>@endif
                                         </td>
-                                        <td><span class="badge bg-{{ $r->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($r->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $r->status === 'active' ? 'success' : 'secondary' }}">{{ translate($r->status) }}</span></td>
                                         <td class="text-end"><form action="{{ route('admin.marketplace.payment-routing.destroy', $r->id) }}" method="post" onsubmit="return confirm('{{ translate('are_you_sure') }}')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">{{ translate('delete') }}</button></form></td>
                                     </tr>
                                 @empty

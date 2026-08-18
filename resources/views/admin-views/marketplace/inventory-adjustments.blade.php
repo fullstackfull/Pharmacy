@@ -3,7 +3,7 @@
 @section('title', translate('inventory_adjustments'))
 
 @php
-    $typeMap = ['adjustment' => 'primary', 'receipt' => 'success', 'sale' => 'secondary', 'return' => 'info', 'transfer' => 'warning'];
+    $typeMap = ['adjustment' => 'accent', 'receipt' => 'success', 'sale' => 'secondary', 'return' => 'info', 'transfer' => 'warning'];
 @endphp
 
 @section('content')
@@ -74,8 +74,8 @@
                         </form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('date') }}</th><th>{{ translate('product') }}</th><th>{{ translate('type') }}</th>
                                     <th class="text-end">{{ translate('change') }}</th><th class="text-end">{{ translate('balance') }}</th>
@@ -86,7 +86,7 @@
                                     <tr>
                                         <td class="fs-12">{{ $m->created_at?->format('Y-m-d H:i') }}</td>
                                         <td>#{{ $m->product_id }}</td>
-                                        <td><span class="badge bg-{{ $typeMap[$m->type] ?? 'secondary' }} text-dark">{{ translate($m->type) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $typeMap[$m->type] ?? 'secondary' }}">{{ translate($m->type) }}</span></td>
                                         <td class="text-end {{ $m->qty_change < 0 ? 'text-danger' : 'text-success' }}">{{ $m->qty_change > 0 ? '+' : '' }}{{ $m->qty_change }}</td>
                                         <td class="text-end">{{ $m->balance_after ?? '—' }}</td>
                                         <td class="fs-12">{{ $m->reason ? translate($m->reason) : '—' }}@if($m->note)<div class="fs-10 text-muted">{{ $m->note }}</div>@endif</td>

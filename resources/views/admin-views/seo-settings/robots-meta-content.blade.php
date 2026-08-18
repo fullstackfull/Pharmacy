@@ -50,8 +50,8 @@
             </div>
             <div class="card-body px-0">
                 @if(count($pageListData) > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover table-borderless">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead class="text-capitalize">
                         <tr>
                             <th>{{ translate('SL') }}</th>

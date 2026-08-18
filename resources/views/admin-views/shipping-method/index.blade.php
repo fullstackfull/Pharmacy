@@ -293,9 +293,9 @@
                                             </div>
                                         </form>
                                     </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover table-borderless">
-                                            <thead class="text-capitalize">
+                                    <div class="k-table-wrap">
+                                        <table class="k-table">
+                                            <thead>
                                             <tr>
                                                 <th>{{ translate('SL') }}</th>
                                                 <th>{{ translate('Title') }}</th>
@@ -365,7 +365,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="table-responsive">
+                                    <div class="k-table-wrap">
                                         <div class="d-flex justify-content-lg-end">
                                             {{ $shippingMethods->links() }}
                                         </div>
@@ -405,12 +405,12 @@
                                         </div>
                                     </form>
                                 </div>
-                                <div class="table-responsive">
+                                <div class="k-table-wrap">
                                     <form action="{{route('admin.business-settings.category-shipping-cost.store')}}"
                                           method="POST">
                                         @csrf
-                                        <table class="table table-hover table-borderless">
-                                            <thead class="text-capitalize">
+                                        <table class="k-table">
+                                            <thead>
                                             <tr>
                                                 <th>{{ translate('SL') }}</th>
                                                 <th>{{ translate('Image	') }}</th>
@@ -476,7 +476,7 @@
                                         </table>
                                     </form>
                                 </div>
-                                <div class="table-responsive">
+                                <div class="k-table-wrap">
                                     <div class="d-flex justify-content-lg-end">
                                         {{ $shippingMethods->links() }}
                                     </div>

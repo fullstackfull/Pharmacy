@@ -14,7 +14,7 @@
                 <h2 class="h1 mb-0">{{ translate('my_performance') }}</h2>
                 <p class="mb-0 fs-12">{{ translate('how_your_store_is_doing_on_the_metrics_that_matter') }}.</p>
             </div>
-            <span class="badge bg-{{ $tierMap[$card['tier']] ?? 'secondary' }} text-dark fs-14 px-3 py-2">
+            <span class="k-badge k-badge--{{ $tierMap[$card['tier']] ?? 'secondary' }} fs-14 px-3 py-2">
                 {{ translate('health') }}: {{ translate($card['tier']) }}
             </span>
         </div>

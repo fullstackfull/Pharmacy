@@ -111,10 +111,10 @@
                 </div>
             </div>
             @if(count($mostDemandedProducts)>0)
-            <div class="table-responsive">
+            <div class="k-table-wrap">
                 <table id="columnSearchDatatable"
-                    class="table table-hover table-borderless align-middle">
-                    <thead class="text-capitalize">
+                    class="k-table">
+                    <thead>
                     <tr>
                         <th class="pl-xl-5">{{ translate('SL') }}</th>
                         <th>{{ translate('banner') }}</th>

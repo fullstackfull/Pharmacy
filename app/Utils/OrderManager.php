@@ -333,10 +333,15 @@ class OrderManager
             $wallet->save();
         } else {
             $transaction = OrderTransaction::where(['order_id' => $order['id']])->first();
-            if ($transaction) {
-                $transaction->status = 'disburse';
-                $transaction->save();
+            // No transaction row means no money ever entered the platform's pending
+            // pipeline — a card/wallet POS sale collected at the counter. Web digital
+            // payments always create the row at payment success, so this only skips
+            // settlements that would drive pending_amount negative.
+            if (!$transaction) {
+                return;
             }
+            $transaction->status = 'disburse';
+            $transaction->save();
 
             $wallet = AdminWallet::where('admin_id', 1)->first();
             $wallet->commission_earned += $commission;

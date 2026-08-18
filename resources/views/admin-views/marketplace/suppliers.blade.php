@@ -47,8 +47,8 @@
                         <form method="get"><input type="text" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="{{ translate('search') }}"></form>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
                                 <thead><tr>
                                     <th>{{ translate('name') }}</th><th>{{ translate('contact') }}</th>
                                     <th>{{ translate('status') }}</th><th class="text-end">{{ translate('action') }}</th>
@@ -58,7 +58,7 @@
                                     <tr>
                                         <td>{{ $s->name }}@if($s->tax_number)<div class="fs-10 text-muted">{{ $s->tax_number }}</div>@endif</td>
                                         <td class="fs-12">{{ $s->contact_name ?: '—' }}<br>{{ $s->phone ?: $s->email }}</td>
-                                        <td><span class="badge bg-{{ $s->status === 'active' ? 'success' : 'secondary' }} text-dark">{{ translate($s->status) }}</span></td>
+                                        <td><span class="k-badge k-badge--{{ $s->status === 'active' ? 'success' : 'secondary' }}">{{ translate($s->status) }}</span></td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#edit-{{ $s->id }}">{{ translate('edit') }}</button>
                                             <form action="{{ route('admin.marketplace.suppliers.destroy', $s->id) }}" method="post" class="d-inline" onsubmit="return confirm('{{ translate('are_you_sure') }}')">

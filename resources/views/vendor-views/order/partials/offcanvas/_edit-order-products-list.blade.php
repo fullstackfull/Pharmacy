@@ -5,9 +5,9 @@
     </span>
 </h4>
 <input type="hidden" name="order_id" value="{{ $order['id'] }}">
-<div class="table-responsive border rounded-10">
-    <table class="table table-hover align-middle td-padding-sm mb-0">
-        <thead class="thead-light thead-50 text-capitalize">
+<div class="k-table-wrap border rounded-10">
+    <table class="k-table">
+        <thead>
         <tr>
             <th>{{ translate('SL') }}</th>
             <th>{{ translate('Item_List') }}</th>

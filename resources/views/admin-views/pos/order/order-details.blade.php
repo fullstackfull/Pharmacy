@@ -52,30 +52,15 @@
                                     <div class="order-status d-flex justify-content-sm-end gap-10 text-capitalize fs-12">
                                         <span class="text-dark">{{ translate('status') }}: </span>
                                         @if(($order['order_status'] ?? '')=='pending')
-                                            <span
-                                                class="badge badge-info text-bg-info fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="info">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='failed')
-                                            <span
-                                                class="badge badge-danger text-bg-danger fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="danger">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='processing' || ($order['order_status'] ?? '')=='out_for_delivery')
-                                            <span
-                                                class="badge badge-warning text-bg-warning fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="warning">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @elseif(($order['order_status'] ?? '')=='delivered' || ($order['order_status'] ?? '')=='confirmed')
-                                            <span
-                                                class="badge badge-success text-bg-success fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="success">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @else
-                                            <span
-                                                class="badge badge-danger text-bg-danger fw-bold rounded-50 d-flex align-items-center py-1 px-2">
-                                                {{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}
-                                            </span>
+                                            <x-k.badge tone="danger">{{ translate(str_replace('_',' ',($order['order_status'] ?? ''))) }}</x-k.badge>
                                         @endif
                                     </div>
 
@@ -113,17 +98,16 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive datatable-custom">
-                            <table
-                                class="table fs-12 table-hover table-borderless align-middle">
-                                <thead class="text-capitalize">
+                        <div class="k-table-wrap">
+                            <table class="k-table">
+                                <thead>
                                 <tr>
                                     <th>{{translate('SL')}}</th>
                                     <th>{{translate('item_details')}}</th>
-                                    <th class="text-center">{{ translate('Qty') }}</th>
-                                    <th class="text-end">{{translate('item_price')}}</th>
-                                    <th class="text-end">{{translate('discount')}}</th>
-                                    <th class="text-end">{{translate('total_price')}}</th>
+                                    <th class="k-table__num">{{ translate('Qty') }}</th>
+                                    <th class="k-table__num">{{translate('item_price')}}</th>
+                                    <th class="k-table__num">{{translate('discount')}}</th>
+                                    <th class="k-table__num">{{translate('total_price')}}</th>
                                 </tr>
                                 </thead>
 
@@ -147,7 +131,7 @@
 
                                     @if($productDetails)
                                         <tr>
-                                            <td>{{++$key}}</td>
+                                            <td><span class="k-num">{{++$key}}</span></td>
                                             <td>
                                                 <div class="{{ $isProductUnavailable ? 'table-row-disabled' : '' }}" data-bs-toggle="tooltip"
                                                      title="{{ $isProductUnavailable ? translate('This_product_has_been_deleted') : '' }}">
@@ -188,14 +172,14 @@
                                                     @endif
                                                 </div>
                                             </td>
-                                            <td class="text-center">{{$detail['qty'] ?? 0}}</td>
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  ($detail['price'] ?? 0)*($detail['qty'] ?? 0)), currencyCode: getCurrencyCode()) }}</td>
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $detail['discount'] ?? 0), currencyCode: getCurrencyCode()) }}</td>
+                                            <td class="k-table__num"><span class="k-num">{{$detail['qty'] ?? 0}}</span></td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  ($detail['price'] ?? 0)*($detail['qty'] ?? 0)), currencyCode: getCurrencyCode()) }}</span></td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $detail['discount'] ?? 0), currencyCode: getCurrencyCode()) }}</span></td>
                                             @php($item_price+=(($detail['price'] ?? 0)*($detail['qty'] ?? 0)))
                                             @php($subtotal=((($detail['price'] ?? 0)*($detail['qty'] ?? 0)) - ($detail['discount'] ?? 0)))
                                             @php($product_price = ($detail['price'] ?? 0)*($detail['qty'] ?? 0))
                                             @php($total_product_price+=$product_price)
-                                            <td  class="text-end">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $subtotal), currencyCode: getCurrencyCode()) }}</td>
+                                            <td class="k-table__num"><span class="k-num">{{setCurrencySymbol(amount: usdToDefaultCurrency(amount:  $subtotal), currencyCode: getCurrencyCode()) }}</span></td>
                                         </tr>
                                         @php($discount+=($detail['discount'] ?? 0))
                                         @php($total+=$subtotal)
@@ -414,6 +398,185 @@
             </div>
 
             <div class="col-lg-4 d-flex flex-column gap-3">
+                @php($shippingAddress = $order['shipping_address_data'] ?? null)
+                <div class="card">
+                    <div class="card-body d-flex flex-column gap-4">
+                        <h4 class="d-flex gap-2 fs-14 fw-bold mb-0">
+                            <img src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/shop-information.png') }}" alt="">
+                            {{ translate('order_&_shipping_info') }}
+                        </h4>
+                        <div class="text-capitalize">
+                            <label class="form-label fw-bold mb-2">{{translate('change_order_status')}}</label>
+                            <div class="select-wrapper">
+                                <select name="order_status" id="order_status"
+                                        class="status form-select" data-id="{{$order['id']}}">
+                                    <option
+                                        value="pending" {{$order->order_status == 'pending'?'selected':''}} > {{translate('pending')}}</option>
+                                    <option
+                                        value="confirmed" {{$order->order_status == 'confirmed'?'selected':''}} > {{translate('confirmed')}}</option>
+                                    <option
+                                        value="processing" {{$order->order_status == 'processing'?'selected':''}} >{{translate('packaging')}} </option>
+                                    <option class="text-capitalize"
+                                            value="out_for_delivery" {{$order->order_status == 'out_for_delivery'?'selected':''}} >{{translate('out_for_delivery')}} </option>
+                                    <option
+                                        value="delivered" {{$order->order_status == 'delivered'?'selected':''}} >{{translate('delivered')}} </option>
+                                    <option
+                                        value="returned" {{$order->order_status == 'returned'?'selected':''}} > {{translate('returned')}}</option>
+                                    <option
+                                        value="failed" {{$order->order_status == 'failed'?'selected':''}} >{{translate('failed_to_Deliver')}} </option>
+                                    <option
+                                        value="canceled" {{$order->order_status == 'canceled'?'selected':''}} >{{translate('canceled')}} </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div
+                            class="d-flex justify-content-between align-items-center gap-10 form-control py-10 h-auto flex-wrap text-capitalize">
+                            <span class="text-dark">
+                                {{translate('payment_status')}}
+                            </span>
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <span
+                                    class="text-primary fw-bold">{{ $order->payment_status=='paid' ? translate('paid'):translate('unpaid')}}</span>
+                                <label
+                                    class="switcher payment-status-text">
+                                    <input class="switcher_input payment-status" type="checkbox" name="status"
+                                           data-id="{{$order->id}}"
+                                           value="{{$order->payment_status}}"
+                                        {{ $order->payment_status == 'paid' ? 'checked':''}} >
+                                    <span class="switcher_control switcher_control_add
+                                        {{ $order->payment_status=='paid' ? 'checked':'unchecked'}}"></span>
+                                </label>
+                            </div>
+                        </div>
+                        @if($physicalProduct ?? false)
+                            <ul class="list-unstyled list-unstyled-py-4 d-flex flex-column gap-4 mb-0 pe-0">
+                                <li>
+                                    <div class="select-wrapper">
+                                        <select class="form-select"
+                                                name="delivery_type"
+                                                id="choose_delivery_type"
+                                            {{ $order->order_status == 'delivered' ? 'disabled' : '' }}>
+                                            <option value="0">
+                                                {{ translate('choose_delivery_type') }}
+                                            </option>
+                                            <option value="self_delivery"
+                                                {{ $order->delivery_type == 'self_delivery' ? 'selected' : '' }}>
+                                                {{ translate('by_self_delivery_man') }}
+                                            </option>
+                                            <option value="third_party_delivery"
+                                                {{ $order->delivery_type == 'third_party_delivery' ? 'selected' : '' }}>
+                                                {{ translate('by_third_party_delivery_service') }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </li>
+                                <li class="choose_delivery_man">
+                                    <label class="form-label fw-bold mb-2">
+                                        {{translate('delivery_man')}}
+                                    </label>
+                                    <select class="custom-select"
+                                            name="delivery_man_id"
+                                            id="addDeliveryMan"
+                                            data-order-id="{{$order['id']}}"
+                                            data-placeholder="{{ translate('Select Deliveryman') }}"
+                                        {{ $order->order_status == 'delivered' ? 'disabled' : '' }}
+                                    >
+                                        <option value="" readonly>--{{ translate('Select Deliveryman') }}--</option>
+                                        @foreach(($deliveryMen ?? []) as $deliveryMan)
+                                            <option
+                                                value="{{$deliveryMan['id']}}" {{$order['delivery_man_id']==$deliveryMan['id']?'selected':''}}>
+                                                {{$deliveryMan['f_name'].' '.$deliveryMan['l_name'].' ('.(isset($deliveryMan['country_code']) ? $deliveryMan['country_code'] : '').$deliveryMan['phone'].' )'}}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @if (isset($order->deliveryMan))
+                                        <div class="p-2 bg-section rounded mt-4">
+                                            <div class="media m-1 gap-3">
+                                                <img class="avatar rounded-circle"
+                                                     src="{{ getStorageImages(path: $order->deliveryMan?->image_full_url, type: 'backend-profile') }}"
+                                                     alt="{{translate('Image')}}">
+                                                <div class="media-body">
+                                                    <h5 class="mb-1">{{ $order->deliveryMan?->f_name.' '.$order->deliveryMan?->l_name}}</h5>
+                                                    <a href="tel:{{$order->deliveryMan?->phone}}"
+                                                       class="fs-12 text-dark">{{ $order->deliveryMan?->phone ?? '' }}</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="p-3 bg-section rounded mt-4">
+                                            <div class="media m-1 gap-2 align-items-center">
+                                                <img class="avatar rounded-circle"
+                                                     src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/delivery-man.png')}}"
+                                                     alt="{{translate('Image')}}">
+                                                <div class="media-body">
+                                                    <div
+                                                        class="fs-12">{{translate('no_delivery_man_assigned')}}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </li>
+                                @if (isset($order->deliveryMan))
+                                    <li class="choose_delivery_man">
+                                        <label class="form-label fw-semibold">
+                                            {{translate('delivery_man_incentive')}} ({{ getCurrencySymbol() }})
+                                        </label>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <input type="number"
+                                                   value="{{ usdToDefaultCurrency(amount: $order->deliveryman_charge) }}"
+                                                   name="deliveryman_charge" data-order-id="{{$order['id']}}"
+                                                   class="form-control" placeholder="{{translate('ex').': 20'}}"
+                                                   {{$order['order_status']=='delivered' ? 'readonly':''}} required>
+                                            <button
+                                                class="btn btn-primary h-40 {{$order['order_status']=='delivered' ? 'disabled deliveryman-charge-alert':'deliveryman-charge'}}">{{translate('update')}}</button>
+                                        </div>
+                                    </li>
+                                    <li class="choose_delivery_man">
+                                        <label
+                                            class="form-label fw-semibold">{{translate('expected_delivery_date')}}</label>
+                                        <input type="date" data-order-id="{{$order['id']}}"
+                                               value="{{ $order->expected_delivery_date }}"
+                                               name="expected_delivery_date" id="expected_delivery_date"
+                                               class="form-control set-today-date-minimum" {{ $order->order_status == 'delivered' ? 'disabled' : 'required' }}>
+                                    </li>
+                                @endif
+                                <li class="mt-1" id="by_third_party_delivery_service_info"
+                                    @if($order->delivery_type != 'third_party_delivery') style="display: none;" @endif>
+                                    <div class="p-2 bg-section rounded">
+                                        <div class="media overflow-hidden m-1 gap-3">
+                                            <img class="avatar rounded-circle"
+                                                 src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/third-party-delivery.png')}}"
+                                                 alt="{{translate('image')}}">
+                                            <div class="media-body w-100">
+                                                <h5 class="">{{$order->delivery_service_name ?? translate('not_assign_yet')}}</h5>
+                                                <span
+                                                    class="fs-12 text-dark text-wrap d-block">{{translate('track_ID').' '.':'.' '.$order->third_party_delivery_tracking_id}}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+                @if(!empty((array) $shippingAddress))
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="d-flex gap-2 fs-14 fw-bold mb-3">
+                                <img src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/vendor-information.png')}}" alt="">
+                                {{translate('shipping_address')}}
+                            </h4>
+                            <div class="d-flex flex-column gap-2 fs-12">
+                                <div><span class="fw-semibold">{{ $shippingAddress->contact_person_name ?? '' }}</span></div>
+                                @if(!empty($shippingAddress->phone))
+                                    <a class="text-dark" href="tel:{{ $shippingAddress->phone }}">{{ $shippingAddress->phone }}</a>
+                                @endif
+                                <div>{{ $shippingAddress->address ?? '' }}</div>
+                                <div>{{ ($shippingAddress->city ?? '') }} {{ ($shippingAddress->zip ?? '') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
                 <div class="card">
                     @if(!empty($order['customer'] ?? null))
                         <div class="card-body">
@@ -540,10 +703,35 @@
     </div>
 
     <span id="route-admin-orders-payment-status" data-url="{{ route('admin.orders.payment-status') }}"></span>
+
+    <span id="message-status-title-text" data-text="{{ translate("are_you_sure_change_this") }}"></span>
+    <span id="message-status-subtitle-text" data-text="{{ translate("you_will_not_be_able_to_revert_this") }}!"></span>
+    <span id="message-status-confirm-text" data-text="{{ translate("yes_change_it") }}!"></span>
+    <span id="message-status-cancel-text" data-text="{{ translate("cancel") }}"></span>
+    <span id="message-status-success-text" data-text="{{ translate("status_change_successfully") }}"></span>
+    <span id="payment-status-message" data-title="{{translate('confirm_payments_before_change_the_status').'.'}}"
+          data-message="{{ translate('you_want_to_change_this_payment_status').'?' }}"></span>
+    <span id="order-status-url" data-url="{{route('admin.orders.status')}}"></span>
+    <span id="payment-status-url" data-url="{{ route('admin.orders.payment-status') }}"></span>
+    <span id="add-delivery-man-url" data-url="{{url('/admin/orders/add-delivery-man/'.$order['id'])}}/"></span>
+    <span id="message-deliveryman-add-success-text"
+          data-text="{{ translate("delivery_man_successfully_assigned") }}"></span>
+    <span id="message-deliveryman-add-error-text"
+          data-text="{{ translate("deliveryman_can_not_assign_in_this_order") }}"></span>
+    <span id="message-deliveryman-add-invalid-text" data-text="{{ translate("add_valid_data") }}"></span>
+    <span id="message-deliveryman-charge-success-text"
+          data-text="{{ translate("deliveryman_charge_added_successfully") }}"></span>
+    <span id="message-deliveryman-charge-error-text"
+          data-text="{{ translate("deliveryman_charge_can_not_add_in_this_order") }}"></span>
+    <span id="message-deliveryman-charge-invalid-text" data-text="{{ translate("add_valid_data") }}"></span>
+    <span id="amount-cannot-be-empty-message" data-message="{{ translate('amount_cannot_be_empty_or_zero') }}"></span>
+    <span id="add-date-update-url" data-url="{{route('admin.orders.amount-date-update')}}"></span>
+    <span id="delivery-type" data-type="{{ $order->delivery_type }}"></span>
 @endsection
 
 @push('script')
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/file-upload/pdf.min.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/file-upload/pdf-worker.min.js') }}"></script>
     <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/file-upload/multiple-document-upload.js') }}"></script>
+    <script src="{{ dynamicAsset(path: 'public/assets/back-end/js/admin/order.js') }}"></script>
 @endpush

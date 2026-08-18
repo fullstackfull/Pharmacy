@@ -3,7 +3,7 @@
 @section('title', translate('fulfilment'))
 
 @php
-    $statusMap = ['pending' => 'secondary', 'picking' => 'info', 'packed' => 'primary', 'ready' => 'warning', 'shipped' => 'success', 'canceled' => 'danger'];
+    $statusMap = ['pending' => 'secondary', 'picking' => 'info', 'packed' => 'accent', 'ready' => 'warning', 'shipped' => 'success', 'canceled' => 'danger'];
 @endphp
 
 @section('content')
@@ -45,8 +45,8 @@
                 </form>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead><tr>
                             <th>{{ translate('reference') }}</th><th>{{ translate('order') }}</th>
                             <th>{{ translate('status') }}</th><th>{{ translate('action') }}</th>
@@ -60,7 +60,7 @@
                                     @if($f->tracking_number)<div class="fs-10 text-muted">{{ $f->carrier }} {{ $f->tracking_number }}</div>@endif
                                 </td>
                                 <td>#{{ $f->order_id }}@if($f->warehouse_id)<div class="fs-10 text-muted">{{ translate('warehouse') }} #{{ $f->warehouse_id }}</div>@endif</td>
-                                <td><span class="badge bg-{{ $statusMap[$f->status] ?? 'secondary' }} text-dark">{{ translate($f->status) }}</span></td>
+                                <td><span class="k-badge k-badge--{{ $statusMap[$f->status] ?? 'secondary' }}">{{ translate($f->status) }}</span></td>
                                 <td>
                                     @if ($f->isOpen() && $next)
                                         @if ($next === 'shipped')

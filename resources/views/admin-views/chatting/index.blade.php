@@ -10,7 +10,7 @@
     <div class="content container-fluid">
         <div class="mb-3">
             <h2 class="h1 mb-0 text-capitalize d-flex align-items-center gap-2">
-                <img src="{{asset('public/assets/back-end/img/support-ticket.png')}}" alt="">
+                <img src="{{ dynamicAsset(path: 'public/assets/back-end/img/support-ticket.png') }}" alt="">
                 {{translate('chatting_List')}}
             </h2>
         </div>

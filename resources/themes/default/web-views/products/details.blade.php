@@ -271,14 +271,6 @@
                                                         </div>
                                                     </div>
                                                 @endif
-                                                @php
-                                                    $qty = 0;
-                                                    if(!empty($product->variation)){
-                                                    foreach (json_decode($product->variation) as $key => $variation) {
-                                                            $qty += $variation->qty;
-                                                        }
-                                                    }
-                                                @endphp
                                             </div>
 
                                             @php($extensionIndex=0)
@@ -527,12 +519,14 @@
                                             <div class="row pt-2 specification">
 
                                                 @if($product->video_url != null && (str_contains($product->video_url, "youtube.com/embed/")))
-                                                    <div class="col-12 mb-4">
-                                                        <iframe width="420" height="315" src="{{ $product->video_url }}"
-                                                                title="YouTube video player" frameborder="0"
-                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                                referrerpolicy="strict-origin-when-cross-origin"
-                                                                allowfullscreen></iframe>
+                                                    <div class="col-12 col-md-8 col-lg-6 mb-4">
+                                                        <div class="embed-responsive embed-responsive-16by9 rounded">
+                                                            <iframe class="embed-responsive-item" src="{{ $product->video_url }}"
+                                                                    title="YouTube video player" frameborder="0"
+                                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                                    referrerpolicy="strict-origin-when-cross-origin"
+                                                                    allowfullscreen></iframe>
+                                                        </div>
                                                     </div>
                                                 @endif
                                                 @if ($product['details'])
@@ -804,68 +798,9 @@
                                                 </div>
                                             </a>
                                         </div>
-                                        <div class="col-12 mt-2">
-                                            <div class="row d-flex justify-content-between">
-                                                <div class="col-6 ">
-                                                    <div
-                                                        class="d-flex justify-content-center align-items-center rounded __h-79px hr-right-before">
-                                                        <div class="text-center">
-                                                            <img
-                                                                src="{{ theme_asset(path: 'public/assets/front-end/img/rating.svg') }}"
-                                                                class="mb-2" alt="">
-                                                            <div class="__text-12px text-base">
-                                                                <strong>{{ $totalReviews }}</strong>
-                                                                {{ translate('reviews') }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div
-                                                        class="d-flex justify-content-center align-items-center rounded __h-79px">
-                                                        <div class="text-center">
-                                                            <img
-                                                                src="{{ theme_asset(path: 'public/assets/front-end/img/products.svg') }}"
-                                                                class="mb-2" alt="">
-                                                            <div class="__text-12px text-base">
-                                                                <strong>{{ $productsForReview->total() }}</strong>
-                                                                {{ translate('products') }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-12 position-static mt-3">
-                                            <div class="chat_with_seller-buttons">
-                                                @if (auth('customer')->id())
-                                                    <button
-                                                        class="btn w-100 d-block text-center web--bg-primary text-white"
-                                                        data-toggle="modal"
-                                                        data-target="#chatting_modal"
-                                                        @if(checkVendorAbility(type: 'vendor', status: 'temporary_close', vendor: $product->seller->shop))
-                                                            disabled
-                                                        @endif
-                                                    >
-                                                        <img class="mb-1" alt=""
-                                                             src="{{ theme_asset(path: 'public/assets/front-end/img/chat-16-filled-icon.png') }}">
-                                                        <span class="d-none d-sm-inline-block text-capitalize">
-                                                        {{ translate('chat_with_vendor') }}
-                                                    </span>
-                                                    </button>
-                                                @else
-                                                    <a href="{{ route('customer.auth.login') }}"
-                                                       class="btn w-100 d-block text-center web--bg-primary text-white">
-                                                        <img
-                                                            src="{{ theme_asset(path: 'public/assets/front-end/img/chat-16-filled-icon.png') }}"
-                                                            class="mb-1" alt="">
-                                                        <span class="d-none d-sm-inline-block text-capitalize">
-                                                        {{ translate('chat_with_vendor') }}
-                                                    </span>
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        </div>
+                                        @include('web-views.products.partials._seller-stats-chat', [
+                                            'chatDisabled' => checkVendorAbility(type: 'vendor', status: 'temporary_close', vendor: $product->seller->shop),
+                                        ])
                                     </div>
                                 @endif
                             @else
@@ -898,63 +833,9 @@
                                         </a>
                                     </div>
 
-                                    <div class="col-12 mt-2">
-                                        <div class="row d-flex justify-content-between">
-                                            <div class="col-6 ">
-                                                <div
-                                                    class="d-flex justify-content-center align-items-center rounded __h-79px hr-right-before">
-                                                    <div class="text-center">
-                                                        <img
-                                                            src="{{ theme_asset(path: 'public/assets/front-end/img/rating.svg') }}"
-                                                            class="mb-2" alt="">
-                                                        <div class="__text-12px text-base">
-                                                            <strong>{{ $totalReviews}}</strong>
-                                                            {{ translate('reviews') }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div
-                                                    class="d-flex justify-content-center align-items-center rounded __h-79px">
-                                                    <div class="text-center">
-                                                        <img
-                                                            src="{{ theme_asset(path: 'public/assets/front-end/img/products.svg') }}"
-                                                            class="mb-2" alt="">
-                                                        <div class="__text-12px text-base">
-                                                            <strong>{{ $productsForReview->total() }}</strong>
-                                                            {{ translate('products') }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 position-static mt-3">
-                                        <div class="chat_with_seller-buttons">
-                                            @if (auth('customer')->id())
-                                                <button class="btn w-100 d-block text-center web--bg-primary text-white"
-                                                        data-toggle="modal" data-target="#chatting_modal"
-                                                    {{ checkVendorAbility(type: 'inhouse', status: 'temporary_close') ? 'disabled' : '' }}
-                                                >
-                                                    <img class="mb-1" alt=""
-                                                         src="{{ theme_asset(path: 'public/assets/front-end/img/chat-16-filled-icon.png') }}">
-                                                    <span class="d-none d-sm-inline-block text-capitalize">
-                                                        {{ translate('chat_with_vendor') }}
-                                                </span>
-                                                </button>
-                                            @else
-                                                <a href="{{ route('vendor-shop', ['slug' => getInHouseShopConfig(key:'slug')]) }}"
-                                                   class="btn w-100 d-block text-center web--bg-primary text-white">
-                                                    <img class="mb-1" alt=""
-                                                         src="{{ theme_asset(path: 'public/assets/front-end/img/chat-16-filled-icon.png') }}">
-                                                    <span class="d-none d-sm-inline-block text-capitalize">
-                                                        {{ translate('chat_with_vendor') }}
-                                                    </span>
-                                                </a>
-                                            @endif
-                                        </div>
-                                    </div>
+                                    @include('web-views.products.partials._seller-stats-chat', [
+                                        'chatDisabled' => checkVendorAbility(type: 'inhouse', status: 'temporary_close'),
+                                    ])
                                 </div>
                             @endif
                         </div>
@@ -1058,19 +939,26 @@
         $(document).on('change', 'input[name="color"]', function() {
             const selectedColor = $(this).val();
             const colors = @json(json_decode($product->colors));
-            console.log(colors);
             const colorIndex = colors.indexOf(selectedColor);
-            if (colorIndex !== -1) {
-                const mainSwiper = document.querySelector('.quickviewSlider2').swiper;
-                const thumbSwiper = document.querySelector('.quickviewSliderThumb2').swiper;
+            // Color-indexed slides only exist while the gallery is in
+            // color-image mode; guard so a plain gallery never throws.
+            const mainSwiper = document.querySelector('.quickviewSlider2')?.swiper;
+            const thumbSwiper = document.querySelector('.quickviewSliderThumb2')?.swiper;
+            if (colorIndex !== -1 && mainSwiper && thumbSwiper) {
                 mainSwiper.slideTo(colorIndex);
                 thumbSwiper.slideTo(colorIndex);
             }
         });
     </script>
     <script src="{{ theme_asset(path: 'public/assets/front-end/js/product-details.js') }}"></script>
-    <script type="text/javascript" async="async"
-            src="https://platform-api.sharethis.com/js/sharethis.js#property=5f55f75bde227f0012147049&product=sticky-share-buttons"></script>
+    @php($shareThisPropertyId = getWebConfig(name: 'sharethis_property_id'))
+    @if($shareThisPropertyId)
+        {{-- Loaded only when the store configured its own ShareThis property —
+             the stock template shipped the demo property id, sending every
+             store's share analytics to the demo account. --}}
+        <script type="text/javascript" async="async"
+                src="https://platform-api.sharethis.com/js/sharethis.js#property={{ $shareThisPropertyId }}&product=sticky-share-buttons"></script>
+    @endif
 
     <script>
         $(document).ready(function () {

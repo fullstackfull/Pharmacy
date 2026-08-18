@@ -107,8 +107,8 @@
             </div>
         </div>
         <div class="card">
-            <div class="table-responsive datatable-custom">
-                <table id="datatable" class="table table-borderless table-thead-bordered table-nowrap card-table"
+            <div class="k-table-wrap">
+                <table id="datatable" class="k-table"
                        data-hs-datatables-options='{
                      "columnDefs": [{
                         "targets": [0, 3, 6],
@@ -125,7 +125,7 @@
                      "isShowPaging": false,
                      "pagination": "datatablePagination"
                    }'>
-                    <thead class="thead-light">
+                    <thead>
                     <tr>
                         <th>{{translate('reviewer')}}</th>
                         <th>{{translate('review')}}</th>

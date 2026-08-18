@@ -13,7 +13,7 @@
                 <h2 class="h1 mb-0">{{ $order->reference }}</h2>
                 <p class="mb-0 fs-12 text-muted">{{ $order->supplier->name ?? '—' }} · {{ translate('created') }} {{ $order->created_at?->toDateString() }}</p>
             </div>
-            <span class="badge bg-{{ $statusMap[$order->status] ?? 'secondary' }} text-dark fs-14 px-3 py-2">{{ translate($order->status) }}</span>
+            <span class="k-badge k-badge--{{ $statusMap[$order->status] ?? 'secondary' }} fs-14 px-3 py-2">{{ translate($order->status) }}</span>
         </div>
 
         <div class="d-flex gap-2 mb-3 flex-wrap">
@@ -39,8 +39,8 @@
         <div class="card">
             <div class="card-header"><h5 class="mb-0">{{ translate('lines') }}</h5></div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                <div class="k-table-wrap">
+                    <table class="k-table">
                         <thead><tr>
                             <th>{{ translate('product') }}</th><th class="text-end">{{ translate('ordered') }}</th>
                             <th class="text-end">{{ translate('received') }}</th><th class="text-end">{{ translate('outstanding') }}</th>
@@ -53,7 +53,7 @@
                                 <td>
                                     {{ $item->description ?: ($item->product_id ? ('#' . $item->product_id) : '—') }}
                                     @if ($item->sku)<div class="fs-10 text-muted">{{ $item->sku }}</div>@endif
-                                    @if ($item->product_id)<span class="badge bg-light text-dark fs-10">{{ translate('product') }} #{{ $item->product_id }}</span>@endif
+                                    @if ($item->product_id)<span class="k-badge fs-10">{{ translate('product') }} #{{ $item->product_id }}</span>@endif
                                 </td>
                                 <td class="text-end">{{ $item->qty_ordered }}</td>
                                 <td class="text-end">{{ $item->qty_received }}</td>
@@ -70,7 +70,7 @@
                                                 <button class="btn btn-sm btn-success">{{ translate('receive') }}</button>
                                             </form>
                                         @else
-                                            <span class="badge bg-success text-dark">{{ translate('complete') }}</span>
+                                            <span class="k-badge k-badge--success">{{ translate('complete') }}</span>
                                         @endif
                                     </td>
                                 @endif

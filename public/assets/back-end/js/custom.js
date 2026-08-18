@@ -1658,9 +1658,9 @@ function productStockLimitStatus() {
                         .empty()
                         .html(
                             response.product_count <= 100
-                                ? response.product_count -
-                                1 +
-                                "+ " +
+                                ? "<bdi>" +
+                                (response.product_count - 1) +
+                                "+</bdi> " +
                                 getMessage.data(
                                     "message-for-three-plus-product"
                                 )

@@ -870,6 +870,13 @@ class OrderRepository implements OrderRepositoryInterface
             $wallet->save();
         } else {
             $transaction = $this->orderTransaction->where(['order_id' => $order['id']])->first();
+            // No transaction row means no money ever entered the platform's pending
+            // pipeline — a card/wallet POS sale collected at the counter. Web digital
+            // payments always create the row at payment success, so this only skips
+            // settlements that would corrupt pending_amount (or fatal on the null).
+            if (!$transaction) {
+                return true;
+            }
             $transaction->status = 'disburse';
             $transaction->save();
 
