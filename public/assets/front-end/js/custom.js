@@ -1032,6 +1032,12 @@ $(".action-hide-billing-address").on("click", function () {
     hideBillingAddressFunction();
 });
 
+// Apply the checkbox's initial state at load — the handler above only ran on
+// click, so a default-checked box still showed the expanded billing form.
+if ($("#same_as_shipping_address").length) {
+    hideBillingAddressFunction();
+}
+
 function hideBillingAddressFunction() {
     let checkSameAsShipping = $("#same_as_shipping_address").is(":checked");
     if (checkSameAsShipping) {
