@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ShippingAddress;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
 
 class OrderService
@@ -27,7 +28,7 @@ class OrderService
         $shippingResponsibility = null;
         if ($isDelivery) {
             $shippingAddress = $userId != 0
-                ? \App\Models\ShippingAddress::where(['customer_id' => $userId])->orderByDesc('id')->first()
+                ? ShippingAddress::where(['customer_id' => $userId])->orderByDesc('id')->first()
                 : null;
             $shippingResponsibility = getWebConfig(name: 'shipping_method');
         }
@@ -42,6 +43,7 @@ class OrderService
             'seller_is' => $addedBy,
             'payment_method' => $isCashOnDelivery ? 'cash_on_delivery' : $paymentType,
             'order_type' => 'POS',
+            'shipping_address' => $shippingAddress?->id,
             'shipping_address_data' => $shippingAddress,
             'shipping_responsibility' => $shippingResponsibility,
             'verification_code' => $isDelivery ? rand(100000, 999999) : '0',

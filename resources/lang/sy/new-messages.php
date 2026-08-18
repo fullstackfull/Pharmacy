@@ -286,4 +286,7 @@ return [
 	"mark_as_shipped" => "Mark as shipped",
 	"remove_filter" => "Remove filter",
 	"last_30_days" => "Last 30 days",
+	"To_place_a_delivery_order" => "لإنشاء طلب توصيل",
+	"_kindly_select_a_customer_or_fill_up_the_“Add_New_Customer”_form" => " يرجى اختيار عميل أو تعبئة نموذج «إضافة عميل جديد»",
+	"you_can_not_change_the_payment_status_after_paid" => "لا يمكن تغيير حالة الدفع بعد أن أصبحت مدفوعة",
 ];

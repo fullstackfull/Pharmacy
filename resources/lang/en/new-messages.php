@@ -3288,4 +3288,12 @@ ____________________________________________________on_search_engines_and_see_th
 	"document_number" => "Document number",
 	"bank_transfer" => "Bank transfer",
 	"required" => "Required",
+	"expiring" => "Expiring",
+	"no_groups_yet" => "No groups yet",
+	"rates_are_relative_to_the_base_currency_only_changed_values_are_recorded" => "Rates are relative to the base currency only changed values are recorded",
+	"all_orders" => "All orders",
+	"cancelled" => "Cancelled",
+	"base_cost" => "Base cost",
+	"add_supplier" => "Add supplier",
+	"roles" => "Roles",
 ];

@@ -146,6 +146,9 @@ class POSFulfillmentTest extends TestCase
         $this->assertNotNull($order['shipping_address_data']);
         $this->assertSame($latest->id, $order['shipping_address_data']->id);
         $this->assertSame('Salmiya Block 10', $order['shipping_address_data']->address);
+        // The FK must be set too — the delivery-man app reads the shippingAddress
+        // relation, not the JSON snapshot.
+        $this->assertSame($latest->id, $order['shipping_address']);
     }
 
     public function test_delivery_without_a_stored_address_stays_null_without_crashing(): void

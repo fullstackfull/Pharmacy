@@ -3,7 +3,7 @@
 @section('title', translate('fulfilment'))
 
 @php
-    $statusMap = ['pending' => 'secondary', 'picking' => 'info', 'packed' => 'primary', 'ready' => 'warning', 'shipped' => 'success', 'canceled' => 'danger'];
+    $statusMap = ['pending' => 'secondary', 'picking' => 'info', 'packed' => 'accent', 'ready' => 'warning', 'shipped' => 'success', 'canceled' => 'danger'];
 @endphp
 
 @section('content')

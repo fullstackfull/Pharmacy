@@ -3,7 +3,7 @@
 @section('title', translate('audit_log'))
 
 @php
-    $actorColours = ['admin' => 'primary', 'seller' => 'info', 'customer' => 'secondary', 'system' => 'dark'];
+    $actorColours = ['admin' => 'accent', 'seller' => 'info', 'customer' => 'secondary', 'system' => 'secondary'];
 @endphp
 
 @section('content')

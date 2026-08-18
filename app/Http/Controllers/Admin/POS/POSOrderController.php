@@ -241,7 +241,7 @@ class POSOrderController extends BaseController
                 cart: $cart,
                 amount: $amount,
                 totalTaxAmount: $totalTaxAmount,
-                paidAmount: ($request['type'] == 'cash' && $fulfillment == 'instant') ? $paidAmount : ($fulfillment == 'delivery' && $request['type'] == 'cash' ? 0 : $amount),
+                paidAmount: $paidAmount ?? ($request['type'] == 'cash' ? 0 : $amount),
                 paymentType: $request['type'],
                 addedBy: 'admin',
                 userId: $userId,

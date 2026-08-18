@@ -5,11 +5,11 @@
 @php
     $statusColours = [
         'draft' => 'secondary', 'calculated' => 'info', 'under_review' => 'warning',
-        'approved' => 'primary', 'paid' => 'success', 'cancelled' => 'danger',
+        'approved' => 'accent', 'paid' => 'success', 'cancelled' => 'danger',
     ];
     $entryColours = [
         'order_earning' => 'success', 'commission_charge' => 'warning', 'refund' => 'danger',
-        'return_adjustment' => 'info', 'payout' => 'primary', 'penalty' => 'danger', 'bonus' => 'success',
+        'return_adjustment' => 'info', 'payout' => 'accent', 'penalty' => 'danger', 'bonus' => 'success',
     ];
 @endphp
 

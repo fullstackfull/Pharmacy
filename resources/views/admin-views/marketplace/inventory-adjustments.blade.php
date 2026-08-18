@@ -3,7 +3,7 @@
 @section('title', translate('inventory_adjustments'))
 
 @php
-    $typeMap = ['adjustment' => 'primary', 'receipt' => 'success', 'sale' => 'secondary', 'return' => 'info', 'transfer' => 'warning'];
+    $typeMap = ['adjustment' => 'accent', 'receipt' => 'success', 'sale' => 'secondary', 'return' => 'info', 'transfer' => 'warning'];
 @endphp
 
 @section('content')

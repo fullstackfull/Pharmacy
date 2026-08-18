@@ -5,7 +5,7 @@
 @php
     $statusColours = [
         'draft' => 'secondary', 'calculated' => 'info', 'under_review' => 'warning',
-        'approved' => 'primary', 'paid' => 'success', 'cancelled' => 'danger',
+        'approved' => 'accent', 'paid' => 'success', 'cancelled' => 'danger',
     ];
 @endphp
 

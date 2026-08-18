@@ -4,8 +4,8 @@
 
 @php
     $statusColours = [
-        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'primary',
-        'processing' => 'primary', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
+        'requested' => 'info', 'under_review' => 'warning', 'approved' => 'accent',
+        'processing' => 'warning', 'paid' => 'success', 'rejected' => 'danger', 'failed' => 'danger',
     ];
 @endphp
 

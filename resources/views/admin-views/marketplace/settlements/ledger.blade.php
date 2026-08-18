@@ -5,10 +5,10 @@
 @php
     $entryColours = [
         'order_earning' => 'success', 'commission_charge' => 'warning', 'refund' => 'danger',
-        'return_adjustment' => 'info', 'payout' => 'primary', 'penalty' => 'danger',
+        'return_adjustment' => 'info', 'payout' => 'info', 'penalty' => 'danger',
         'bonus' => 'success', 'manual_adjustment' => 'secondary',
     ];
-    $statusColours = ['pending' => 'warning', 'available' => 'success', 'reserved' => 'info', 'paid' => 'dark'];
+    $statusColours = ['pending' => 'warning', 'available' => 'success', 'reserved' => 'info', 'paid' => 'accent'];
 @endphp
 
 @section('content')

@@ -3,7 +3,7 @@
 @section('title', translate('returns'))
 
 @php
-    $statusMap = ['authorized' => 'info', 'in_transit' => 'primary', 'received' => 'secondary', 'restocked' => 'success', 'rejected' => 'danger'];
+    $statusMap = ['authorized' => 'info', 'in_transit' => 'warning', 'received' => 'secondary', 'restocked' => 'success', 'rejected' => 'danger'];
 @endphp
 
 @section('content')

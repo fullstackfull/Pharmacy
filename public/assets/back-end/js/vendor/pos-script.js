@@ -372,7 +372,7 @@ function basicFunctionalityForCartSummary() {
         return true;
     }
 
-    $('.option-buttons input').on('change', function () {
+    $('.option-buttons input[name="type"]').on('change', function () {
         renderCustomerAmountForPay();
         let type = $(this).val();
         if ($(this).is(':checked')) {
@@ -393,7 +393,7 @@ function basicFunctionalityForCartSummary() {
         }
     });
 
-    $('.option-buttons input').trigger('change');
+    $('.option-buttons input[name="type"]').trigger('change');
 
     $('.pos-paid-amount-element').on("keypress", function (event) {
         let charCode = event.which || event.keyCode;
