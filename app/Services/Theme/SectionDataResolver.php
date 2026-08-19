@@ -87,7 +87,11 @@ class SectionDataResolver
         });
 
         return $rows->map(fn (Banner $banner) => [
-            'image'       => $banner->photo_full_url,
+            // photo_full_url is the storage descriptor array, not a url. The section
+            // partials echo `image` straight into src, so resolve it here — echoing the
+            // array fatals the whole home page the moment a theme with a banner section
+            // is published.
+            'image'       => getStorageImages(path: $banner->photo_full_url, type: 'banner'),
             'title'       => $banner->title,
             'subtitle'    => $banner->sub_title,
             'link'        => $banner->url,
