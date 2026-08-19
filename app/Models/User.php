@@ -108,6 +108,12 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password', 'remember_token',
+        // Never serialize these into API payloads that embed a customer (delivery-man and
+        // seller apps receive whole orders with their customer): auth/session secrets, push
+        // tokens and gateway card data are server-side only. Flows that hand the app its
+        // temporary_token do so as an explicit response key, which $hidden does not affect.
+        'temporary_token', 'cm_firebase_token', 'cm_firebase_token_web',
+        'payment_card_last_four', 'payment_card_brand', 'payment_card_fawry_token',
     ];
 
     /**

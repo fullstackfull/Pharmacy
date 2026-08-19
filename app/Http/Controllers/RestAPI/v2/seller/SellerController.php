@@ -198,6 +198,15 @@ class SellerController extends Controller
             return response()->json(['message'=>translate('Update your bank info first')], 202);
         }
 
+        // Same anti-takeover controls the ledger payout path and the v3 seller app enforce, so the
+        // legacy app cannot bypass them: bank-change cooling window and the KYC-for-payout gate.
+        if (app(\App\Services\Marketplace\PayoutService::class)->isInCoolingPeriod($seller['id'])) {
+            return response()->json(['message' => translate('bank_details_recently_changed_payouts_are_temporarily_paused')], 403);
+        }
+        if (!app(\App\Services\Marketplace\SellerVerificationService::class)->isPayoutEligible($seller['id'])) {
+            return response()->json(['message' => translate('kyc_verification_required')], 403);
+        }
+
         $wallet = SellerWallet::where('seller_id', $seller['id'])->first();
         if (($wallet->total_earning) >= Convert::usd($request['amount']) && $request['amount'] > 0) {
             DB::table('withdraw_requests')->insert([

@@ -60,7 +60,7 @@
                                         </div>
                                         @if (isset($employee->role))
                                             <div class="tags d-flex gap-2 flex-wrap text-capitalize">
-                                                @foreach (json_decode($employee->role->module_access) as $key=>$value)
+                                                @foreach (json_decode($employee->role->module_access) ?? [] as $key=>$value)
                                                     <span class="badge badge-info text-bg-info">{{str_replace('_' ,' ',$value)}}</span>
                                                 @endforeach
                                             </div>

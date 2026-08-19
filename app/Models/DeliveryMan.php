@@ -127,7 +127,12 @@ class DeliveryMan extends Model
     {
         $images = [];
         $value = $this->identity_image;
-        if ($value) {
+        // Legacy rows carry the JSON double-encoded, so the 'array' cast unwraps only the
+        // outer layer and hands back a string — decode once more instead of crashing.
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+        if ($value && is_array($value)) {
             foreach ($value as $item) {
                 $item = isset($item['image_name']) ? (array)$item : ['image_name' => $item, 'storage' => 'public'];
                 $images[] = $this->storageLink('delivery-man', $item['image_name'], $item['storage'] ?? 'public');

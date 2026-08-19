@@ -56,6 +56,9 @@ class SupportTicketController extends BaseController
     public function getView($id): View
     {
         $supportTicket = $this->supportTicketRepo->getListWhere(filters: ['id'=>$id], relations: ['conversations'], dataLimit: 'all');
+        // The blade keeps using $ticket after its @foreach; an unknown id used to leave it
+        // undefined and 500 — a missing ticket is a 404, not a crash.
+        abort_if(boolean: $supportTicket->isEmpty(), code: 404);
         return view('admin-views.support-ticket.singleView', compact('supportTicket'));
     }
 

@@ -3,7 +3,7 @@
 
 @section('title', translate('my_Order_List').' | '.$web_config['company_name'].' '.translate('ecommerce'))
 @push('css_or_js')
-    <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/payment.css') }}">
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/front-end/css/payment.css') }}">
 @endpush
 @section('content')
     <main class="main-content d-flex flex-column gap-3 py-3 mb-4">

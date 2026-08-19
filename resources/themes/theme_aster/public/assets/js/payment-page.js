@@ -36,7 +36,7 @@ $(".checkout-payment-form").on("submit", function (event) {
     });
     $.ajax({
         url: $(this).attr("action"),
-        method: "GET",
+        method: ($(this).attr("method") || "get").toUpperCase(),
         data: $(this).serialize(),
         beforeSend: function () {
             $("#loading").addClass("d-grid");
