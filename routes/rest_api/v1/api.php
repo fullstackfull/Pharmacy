@@ -400,6 +400,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
     Route::group(['prefix' => 'banners'], function () {
         Route::controller(BannerController::class)->group(function () {
             Route::get('/', 'getBannerList');
+            Route::get('category-sections', 'getCategorySectionBanners');
         });
     });
 

@@ -55,6 +55,28 @@ class CategoryPageService
         ];
     }
 
+    /**
+     * The home page's category-section banners, keyed by the category whose
+     * product row they sit above. The apps read the same records through the
+     * API and render them with the banner's mobile image.
+     *
+     * @return Collection<int, Banner>
+     */
+    public function getSectionBanners(): Collection
+    {
+        $themeName = theme_root_path() ?? 'default';
+        $cacheKey = 'cache_banner_type_category_section_banner_' . $themeName;
+        $this->cacheBannerAllTypeKeys(cacheKey: $cacheKey);
+
+        return Cache::remember($cacheKey, CACHE_FOR_3_HOURS, function () use ($themeName) {
+            return Banner::with(['storage'])
+                ->where(['banner_type' => 'Category Section Banner', 'published' => 1, 'theme' => $themeName])
+                ->where('resource_type', 'category')
+                ->orderBy('id', 'desc')->get()
+                ->keyBy('resource_id');
+        });
+    }
+
     /** The category's own banner, else the nearest ancestor's. */
     private function getBanner(Category $category): ?Banner
     {

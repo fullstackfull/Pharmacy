@@ -212,6 +212,54 @@
                                                 {{ translate('banner_Image_ratio_is_not_same_for_all_sections_in_website.') }}
                                                 {{ translate('please_review_the_ratio_before_upload') }}
                                             </p>
+
+                                            {{-- Optional phone-shaped image served to the mobile apps; leaving
+                                                 it empty keeps whatever is already stored. --}}
+                                            <div class="text-center">
+                                                <label for="banner-mobile" class="form-label fw-semibold mb-1">
+                                                    {{ translate('mobile_app_image') }}
+                                                    <span class="text-muted fs-12">({{ translate('optional') }})</span>
+                                                </label>
+                                                <h4 class="mb-0"><span class="text-info-dark"> ( {{ translate('ratio') }} 2:1 )</span></h4>
+                                            </div>
+                                            <div class="upload-file">
+                                                <input type="file"
+                                                       name="mobile_image"
+                                                       id="banner-mobile"
+                                                       class="upload-file__input single_file_input"
+                                                       data-max-size="{{ getFileUploadMaxSize() }}"
+                                                       accept="{{ getFileUploadFormats(skip: '.svg') }}">
+
+                                                <div class="upload-file__wrapper ratio-2-1">
+                                                    <div class="upload-file-textbox text-center">
+                                                        <img width="34" height="34" class="svg"
+                                                             src="{{ dynamicAsset(path: 'public/assets/new/back-end/img/svg/image-upload.svg') }}"
+                                                             alt="image upload">
+                                                        <h6 class="mt-1 fw-medium lh-base text-center">
+                                                            <span class="text-info">{{ translate('Click to upload') }}</span>
+                                                            <br>
+                                                            {{ translate('or_drag_and_drop') }}
+                                                        </h6>
+                                                    </div>
+                                                    <img class="upload-file-img" loading="lazy"
+                                                         src="{{ $banner['mobile_photo'] ? getStorageImages(path: $banner['mobile_photo_full_url'], type: 'banner') : '' }}"
+                                                         data-default-src="{{ $banner['mobile_photo'] ? getStorageImages(path: $banner['mobile_photo_full_url'], type: 'banner') : '' }}"
+                                                         alt="">
+                                                </div>
+                                                <div class="overlay">
+                                                    <div class="d-flex gap-10 justify-content-center align-items-center h-100">
+                                                        <button type="button" class="btn btn-outline-info icon-btn view_btn">
+                                                            <i class="fi fi-sr-eye"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-info icon-btn edit_btn">
+                                                            <i class="fi fi-rr-camera"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="fs-12 text-center max-w-360 m-auto">
+                                                {{ translate('used_by_the_mobile_apps_where_a_wide_banner_would_crop_badly_on_a_phone') }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

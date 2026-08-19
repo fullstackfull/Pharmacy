@@ -99,6 +99,20 @@ class DeveloperPortalService
                     . "# (type: Category Banner) and are NOT part of /api/v1/banners.",
             ],
             [
+                'title' => translate('category_section_banners'),
+                'body' => translate('one_call_returns_every_category_section_banner_with_both_its_web_and_mobile_image'),
+                'snippet' => "curl {$baseUrl}/api/v1/banners/category-sections\n\n"
+                    . "# [ {\n"
+                    . "#   id, title, sub_title, button_text, background_color, url,\n"
+                    . "#   photo_full_url,         # wide image, what the web renders\n"
+                    . "#   mobile_photo_full_url,  # phone-shaped image (falls back to the wide one)\n"
+                    . "#   category_id, category: { id, name, slug }\n"
+                    . "# } ]\n"
+                    . "# Render each banner above that category's product row on the home\n"
+                    . "# screen, using mobile_photo_full_url. Like the category page banner,\n"
+                    . "# these are NOT part of /api/v1/banners.",
+            ],
+            [
                 'title' => translate('vendor_app'),
                 'body' => translate('the_seller_api_lives_under_api_v3_seller_with_its_own_token'),
                 'snippet' => "curl -X POST {$baseUrl}/api/v3/seller/auth/login \\\n"

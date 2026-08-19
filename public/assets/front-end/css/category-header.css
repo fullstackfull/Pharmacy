@@ -128,3 +128,22 @@
         font-size: 1.5rem;
     }
 }
+
+/* Category section banner — the merchandising strip above a category's product
+   row on the home page. Same rounding/behaviour as the category page banner. */
+.category-section-banner {
+    overflow: hidden;
+    border-radius: var(--theme-border-radius, 10px);
+    line-height: 0;
+}
+
+.category-section-banner img {
+    width: 100%;
+    aspect-ratio: 4 / 1;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.category-section-banner:hover img {
+    transform: scale(1.02);
+}

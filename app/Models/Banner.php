@@ -42,6 +42,7 @@ class Banner extends Model
 
     protected $fillable = [
         'photo',
+        'mobile_photo',
         'banner_type',
         'theme',
         'published',
@@ -54,7 +55,7 @@ class Banner extends Model
         'background_color',
     ];
 
-    protected $appends = ['photo_full_url'];
+    protected $appends = ['photo_full_url', 'mobile_photo_full_url'];
 
     public function product(): BelongsTo
     {
@@ -70,25 +71,42 @@ class Banner extends Model
         return $this->storageLink('banner', $value, $storage['value'] ?? 'public');
     }
 
+    /**
+     * The app-facing image. Banners without one fall back to the web image, so
+     * an app always has something to render.
+     */
+    public function getMobilePhotoFullUrlAttribute(): string|null|array
+    {
+        if (empty($this->mobile_photo)) {
+            return $this->photo_full_url;
+        }
+
+        if (count($this->storage) > 0) {
+            $storage = $this->storage->where('key', 'mobile_photo')->first();
+        }
+        return $this->storageLink('banner', $this->mobile_photo, $storage['value'] ?? 'public');
+    }
+
     protected static function boot(): void
     {
         parent::boot();
         static::saved(function ($model) {
             cacheRemoveByType(type: 'banners');
 
-            $file = 'photo';
             $storage = config('filesystems.disks.default') ?? 'public';
-            if ($model->isDirty($file)) {
-                $value = $storage;
-                DB::table('storages')->updateOrInsert([
-                    'data_type' => get_class($model),
-                    'data_id' => $model->id,
-                    'key' => $file,
-                ], [
-                    'value' => $value,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            foreach (['photo', 'mobile_photo'] as $file) {
+                if ($model->isDirty($file) && !empty($model->{$file})) {
+                    $value = $storage;
+                    DB::table('storages')->updateOrInsert([
+                        'data_type' => get_class($model),
+                        'data_id' => $model->id,
+                        'key' => $file,
+                    ], [
+                        'value' => $value,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         });
 

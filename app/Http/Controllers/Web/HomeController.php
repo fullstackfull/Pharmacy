@@ -18,6 +18,7 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Seller;
 use App\Models\Review;
+use App\Services\CategoryPageService;
 use App\Utils\ProductManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -100,11 +101,14 @@ class HomeController extends Controller
             $auctionProducts->load(['myBid', 'myParticipation']);
         }
 
+        $categorySectionBanners = app(CategoryPageService::class)->getSectionBanners();
+
         return view(VIEW_FILE_NAMES['home'],
             compact(
                 'flashDeal', 'featuredProductsList', 'topRatedProducts', 'bestSellProduct', 'latestProductsList', 'categories', 'brands',
                 'dealOfTheDay', 'topVendorsList', 'homeCategories', 'bannerTypeMainBanner', 'bannerTypeMainSectionBanner',
-                'current_date', 'recommendedProduct', 'bannerTypeFooterBanner', 'newArrivalProducts', 'clearanceSaleProducts', 'robotsMetaContentData', 'auctionProducts'
+                'current_date', 'recommendedProduct', 'bannerTypeFooterBanner', 'newArrivalProducts', 'clearanceSaleProducts', 'robotsMetaContentData', 'auctionProducts',
+                'categorySectionBanners'
             )
         );
     }

@@ -44,6 +44,7 @@ class CategoryPageHeaderTest extends TestCase
             Schema::create('banners', function (Blueprint $table) {
                 $table->id();
                 $table->string('photo')->nullable();
+                $table->string('mobile_photo')->nullable();
                 $table->string('banner_type');
                 $table->string('theme')->default('default');
                 $table->integer('published')->default(0);
@@ -214,6 +215,41 @@ class CategoryPageHeaderTest extends TestCase
         $this->assertNull($header['category']);
         $this->assertNull($header['banner']);
         $this->assertCount(0, $header['subCategories']);
+    }
+
+    public function test_section_banners_are_keyed_by_the_category_they_sit_above(): void
+    {
+        $tree = $this->makeTree();
+        $sectionBanner = $this->makeBanner($tree['parent']->id, ['banner_type' => 'Category Section Banner']);
+        $this->makeBanner($tree['child']->id, ['banner_type' => 'Category Section Banner', 'published' => 0]);
+
+        $sectionBanners = app(CategoryPageService::class)->getSectionBanners();
+
+        $this->assertCount(1, $sectionBanners);
+        $this->assertSame($sectionBanner->id, $sectionBanners->get($tree['parent']->id)->id);
+    }
+
+    public function test_a_section_banner_is_not_served_as_a_category_page_banner(): void
+    {
+        $tree = $this->makeTree();
+        $this->makeBanner($tree['parent']->id, ['banner_type' => 'Category Section Banner']);
+
+        $this->assertNull(app(CategoryPageService::class)->getPageHeader($tree['parent'])['banner']);
+    }
+
+    public function test_a_banner_without_a_mobile_image_reports_the_web_image_as_its_mobile_url(): void
+    {
+        $banner = $this->makeBanner(1, ['photo' => 'web.webp']);
+
+        $this->assertSame($banner->photo_full_url, $banner->mobile_photo_full_url);
+    }
+
+    public function test_a_banner_with_a_mobile_image_reports_its_own(): void
+    {
+        $banner = $this->makeBanner(1, ['photo' => 'web.webp', 'mobile_photo' => 'phone.webp']);
+
+        $this->assertNotSame($banner->photo_full_url, $banner->mobile_photo_full_url);
+        $this->assertSame('phone.webp', $banner->mobile_photo_full_url['key']);
     }
 
     public function test_the_deepest_category_filter_wins_when_resolving_the_page(): void

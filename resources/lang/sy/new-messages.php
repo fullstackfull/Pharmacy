@@ -695,4 +695,10 @@ return [
 	'category_page_header' => 'ترويسة صفحة الفئة',
 	'one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen' => 'استدعاء واحد يعيد بانر الفئة وتصنيفاتها الفرعية لشاشة الفئة',
 	'category_not_found' => 'الفئة غير موجودة',
+	'category_Section_Banner' => 'بانر قسم الفئة',
+	'mobile_app_image' => 'صورة تطبيق الجوال',
+	'used_by_the_mobile_apps_where_a_wide_banner_would_crop_badly_on_a_phone' => 'تُستخدم في تطبيقات الجوال، حيث يُقتطع البانر العريض بشكل سيئ على الهاتف',
+	'category_section_banners' => 'بانرات أقسام الفئات',
+	'one_call_returns_every_category_section_banner_with_both_its_web_and_mobile_image' => 'استدعاء واحد يعيد كل بانرات أقسام الفئات مع صورتي الويب والجوال',
+	'optional' => 'اختياري',
 ];

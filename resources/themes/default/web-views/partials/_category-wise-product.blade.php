@@ -1,7 +1,19 @@
 @if (count($category['products']) > 0)
+@php($sectionBanner = ($categorySectionBanners ?? collect())->get($category['id']))
 <section class="container rtl pb-0 px-max-sm-0">
     <div class="__shadow-2">
         <div class="__p-20px rounded bg-white overflow-hidden">
+            {{-- Category section banner: merchandising strip above this category's
+                 products. The apps render the same record with its mobile image. --}}
+            @if ($sectionBanner)
+                <a class="category-section-banner d-block mb-3"
+                   href="{{ $sectionBanner['url'] ?: route('category-products', ['slug' => $category['slug']]) }}">
+                    <img loading="lazy"
+                         src="{{ getStorageImages(path: $sectionBanner->photo_full_url, type: 'banner') }}"
+                         alt="{{ $sectionBanner['title'] ?: $category['name'] }}">
+                </a>
+            @endif
+
             <div class="d-flex __gap-6px flex-between align-items-baseline px-sm-3">
                 <h2 class="category-product-view-title mb-0">
                     <span class="for-feature-title font-bold __text-20px text-uppercase">

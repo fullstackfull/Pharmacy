@@ -3449,4 +3449,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen" => "One call returns the category banner and its sub categories for the category screen",
 	"category_not_found" => "Category not found",
 	"the_live_api_surface_of_this_store_generated_from_the_route_table_so_it_can_never_go_stale" => "The live api surface of this store generated from the route table so it can never go stale",
+	"category_Section_Banner" => "Category section banner",
+	"mobile_app_image" => "Mobile app image",
+	"used_by_the_mobile_apps_where_a_wide_banner_would_crop_badly_on_a_phone" => "Used by the mobile apps, where a wide banner would crop badly on a phone",
+	"category_section_banners" => "Category section banners",
+	"one_call_returns_every_category_section_banner_with_both_its_web_and_mobile_image" => "One call returns every category section banner with both its web and mobile image",
+	"Category_Section_Banner" => "Category Section Banner",
+	"the_image_size_max_2_mb" => "The image size max 2 mb",
 ];
