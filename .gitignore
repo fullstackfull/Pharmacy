@@ -35,3 +35,9 @@
 # regenerable or environment-specific. Files already tracked here stay tracked —
 # an ignore rule does not untrack anything.
 /storage/app/public/
+
+# Staging-only symlink so artisan serve (public/ docroot) can reach theme
+# assets. Never commit it: production uses the repo-root docroot (see the
+# deployment runbook), and shipping the link would expose theme blade sources
+# as static files on any deployment that points its domain at public/.
+/public/themes
