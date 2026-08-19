@@ -84,8 +84,12 @@ class BannerController extends BaseController
             return null;
         }
 
-        return translate('a_') . translate(str_replace(' ', '_', (string)$request['banner_type']))
-            . ' ' . translate('must_point_at_a_') . translate($required);
+        // One whole sentence per case rather than concatenated fragments: a message
+        // stitched from pieces cannot be translated into a language that orders them
+        // differently.
+        return $required === 'brand'
+            ? translate('this_banner_type_must_point_at_a_brand')
+            : translate('this_banner_type_must_point_at_a_category');
     }
 
     public function add(BannerAddRequest $request): RedirectResponse

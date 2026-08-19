@@ -86,6 +86,14 @@ class StorefrontThemeRenderer
     public function pageSectionsRenderBannerType(string $page, string $bannerType): bool
     {
         foreach ($this->sectionsFor($page) ?? [] as $section) {
+            // A section has two independent hide switches: the structure panel's
+            // is_visible column (already filtered out upstream) and the settings
+            // panel's `visible` toggle. Standing the built-in slot down for a section
+            // the merchant has hidden would make the banners disappear entirely.
+            if (($section['settings']['visible'] ?? true) === false) {
+                continue;
+            }
+
             if (($section['type'] ?? null) === 'store_banner'
                 && ($section['settings']['banner_type'] ?? null) === $bannerType) {
                 return true;

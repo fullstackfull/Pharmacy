@@ -3494,4 +3494,11 @@ ____________________________________________________on_search_engines_and_see_th
 	'brand_not_found' => 'Brand not found',
 	'a_' => 'A ',
 	'must_point_at_a_' => 'must point at a',
+	'this_banner_type_must_point_at_a_category' => 'This banner type must point at a category',
+	'this_banner_type_must_point_at_a_brand' => 'This banner type must point at a brand',
+	'banner_unpublished_successfully' => 'Banner unpublished successfully',
+	'banner_published_successfully' => 'Banner published successfully',
+	'banner_added_successfully' => 'Banner added successfully',
+	'banner_updated_successfully' => 'Banner updated successfully',
+	'no_banner_matches_your_filter' => 'No banner matches your filter',
 ];
