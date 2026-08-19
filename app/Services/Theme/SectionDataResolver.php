@@ -3,6 +3,7 @@
 namespace App\Services\Theme;
 
 use App\Models\Banner;
+use App\Services\BannerService;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -73,10 +74,20 @@ class SectionDataResolver
     public function dashboardBanners(string $bannerType, int $limit): array
     {
         $rows = $this->safely(function () use ($bannerType, $limit) {
-            $base = fn () => Banner::where('published', 1)->where('banner_type', $bannerType);
+            $base = fn () => Banner::with(['storage'])
+                ->where('published', 1)
+                ->where('banner_type', $bannerType)
+                // Placement types find their page through their resource; one pointing
+                // elsewhere renders an image that leads nowhere.
+                ->when(
+                    BannerService::REQUIRED_RESOURCE_TYPES[$bannerType] ?? null,
+                    fn ($query, $resourceType) => $query->where('resource_type', $resourceType),
+                );
 
-            // Priority first so the merchant's ordering carries into the themed section too.
-            $ordered = fn ($query) => $query->orderBy('priority')->orderByDesc('id');
+            // Same ordering as BannerPlacementService — priority first, then creation
+            // order — so a section shows the banners in the arrangement the merchant
+            // sees in their built-in slot.
+            $ordered = fn ($query) => $query->orderBy('priority')->orderBy('id');
 
             $scoped = $ordered((clone $base())->where('theme', theme_root_path()))
                 ->take($this->bounded($limit, 24))->get();

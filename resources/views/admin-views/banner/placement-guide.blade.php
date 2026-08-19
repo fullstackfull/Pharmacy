@@ -141,6 +141,10 @@
             ];
         @endphp
 
+        {{-- Only what this theme actually offers: the type list differs per theme, and
+             a card for a type the merchant cannot create is a promise the form breaks. --}}
+        @php($placements = array_values(array_filter($placements, fn ($placement) => isset($bannerTypes[$placement['type']]))))
+
         <div class="row g-3">
             @foreach ($placements as $placement)
                 <div class="col-xl-3 col-lg-4 col-md-6">

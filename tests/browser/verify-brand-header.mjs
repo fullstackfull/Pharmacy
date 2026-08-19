@@ -159,6 +159,25 @@ if (differentSlug) {
     console.log('SKIP only one brand available to compare against');
 }
 
+// ---- app API ----------------------------------------------------------------
+const api = async (path) => page.evaluate(async (url) => {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    return { status: response.status, body: await response.json().catch(() => null) };
+}, path);
+
+const header = await api(`/api/v1/brands/page-header/${BRAND_ID}?guest_id=1`);
+ok('api: brand page-header 200', header.status === 200);
+ok('api: returns the brand banner with both images',
+    !!header.body?.banner?.photo_full_url && !!header.body?.banner?.mobile_photo_full_url);
+ok('api: returns the same categories the web shows',
+    (header.body?.categories?.length ?? 0) === chipCount - 1
+    && (header.body?.categories ?? []).every(category => category.products_count > 0));
+const missingBrand = await api('/api/v1/brands/page-header/999999?guest_id=1');
+ok('api: unknown brand 404s', missingBrand.status === 404);
+const feed = await api('/api/v1/banners?guest_id=1');
+ok('api: the installed apps banner feed excludes brand banners',
+    feed.status === 200 && !(feed.body || []).some(b => b.banner_type === 'Brand Banner'));
+
 // ---- the placement guide ----------------------------------------------------
 await go(BASE + '/admin/banner/placement-guide');
 ok('guide: renders', !(await hasServerError(page)));
@@ -167,7 +186,9 @@ ok('guide: the new types are marked', await page.locator('.k-badge').filter({ ha
 ok('guide: reachable from the banner list',
     await (await go(BASE + '/admin/banner/list'), page.locator('a[href$="/admin/banner/placement-guide"]').count()) === 1);
 
-const known = problems.filter(p => !p.includes('Element not found') && !p.includes('google') && !p.includes('maps'));
+const known = problems.filter(p => !p.includes('Element not found') && !p.includes('google') && !p.includes('maps')
+    // the unknown-brand probe above asserts this 404 deliberately
+    && !p.includes('page-header/999999'));
 ok('no console/JS/HTTP problems', known.length === 0);
 if (known.length) console.log('  problems:', known.slice(0, 8));
 await browser.close();

@@ -12,9 +12,14 @@
 @if ($brandOfPage && ($brandBanner || $brandCategories->count() > 0))
     <div class="category-header mb-3 mb-md-4" dir="{{ session('direction') }}">
         @if ($brandBanner)
+            {{-- Links to the brand page itself, not to the generic listing url the
+                 banner CRUD generates: this banner heads that page, so sending the
+                 visitor to a different listing of the same products is a dead end. --}}
             <a class="category-header__banner d-block"
-               href="{{ $brandBanner['url'] ?: route('brand-products', ['slug' => $brandOfPage['slug']]) }}">
-                <img loading="lazy"
+               href="{{ route('brand-products', ['slug' => $brandOfPage['slug']]) }}">
+                {{-- The header banner is the page's largest paint; lazy-loading it
+                     delays the very thing the visitor is waiting for. --}}
+                <img loading="eager" fetchpriority="high"
                      src="{{ getStorageImages(path: $brandBanner->photo_full_url, type: 'banner') }}"
                      alt="{{ $brandBanner['title'] ?: $brandOfPage['name'] }}">
             </a>

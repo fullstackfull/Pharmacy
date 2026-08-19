@@ -10,10 +10,13 @@
 @if ($categoryBanner || $categorySubCategories->count() > 0)
     <div class="category-header mb-3 mb-md-4" dir="{{ session('direction') }}">
         @if ($categoryBanner)
+            {{-- Links to this category's own page rather than the generic listing url
+                 the banner CRUD generates, which is a second route to the same
+                 products with no header on it. --}}
             <a class="category-header__banner d-block"
-               href="{{ $categoryBanner['url'] ?? 'javascript:' }}"
-               @if (empty($categoryBanner['url'])) tabindex="-1" aria-hidden="true" @endif>
-                <img loading="lazy"
+               href="{{ route('category-products', ['slug' => $categoryPageHeader['category']['slug']]) }}">
+                {{-- The header banner is the page's largest paint. --}}
+                <img loading="eager" fetchpriority="high"
                      src="{{ getStorageImages(path: $categoryBanner->photo_full_url, type: 'banner') }}"
                      alt="{{ $categoryBanner['title'] ?? $categoryPageHeader['category']['name'] }}">
                 @if (!empty($categoryBanner['title']) || !empty($categoryBanner['sub_title']))

@@ -425,6 +425,9 @@
         function getThemeWiseRatio() {
             let banner_type = elementBannerTypeSelect.val();
             let theme = '{{ theme_root_path() }}';
+            {{-- Fed from BannerService so the form and the server agree on which types
+                 take a layout; the JS used to carry its own copy of the list. --}}
+            window.bannerGridTypes = {!! json_encode(\App\Services\BannerService::GRID_TYPES) !!};
             let theme_ratio = {!! json_encode(THEME_RATIO) !!};
             let get_ratio = theme_ratio[theme][banner_type];
             $('#theme_ratio').text(get_ratio);

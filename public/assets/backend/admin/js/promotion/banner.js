@@ -6,7 +6,9 @@ let messageAreYouSureDeleteThis = $('#message-are-you-sure-delete-this').data('t
 let messageYouWillNotAbleRevertThis = $('#message-you-will-not-be-able-to-revert-this').data('text');
 
 // Banner types laid out as a grid, where layout and priority are meaningful.
-const bannerGridTypes = ["Home Promo Banner", "Category Section Banner"];
+// Supplied by the view from BannerService::GRID_TYPES so this cannot drift from
+// what the server accepts; the fallback only covers a cached older page.
+const bannerGridTypes = window.bannerGridTypes ?? ["Home Promo Banner", "Category Section Banner"];
 
 $('#banner_type_select').on('change', function () {
     let inputValue = ($(this).val() ?? '').toString();

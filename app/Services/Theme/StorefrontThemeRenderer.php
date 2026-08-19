@@ -63,14 +63,17 @@ class StorefrontThemeRenderer
         }
 
         try {
-            return Cache::remember(self::CACHE_KEY_PREFIX . $page, self::CACHE_TTL, function () use ($page) {
+            // Wrapped in an array so the common "nothing published" result is cached
+            // too: Cache::remember treats a bare null as a miss, and this runs several
+            // times per storefront render (once per page area, plus the banner
+            // hand-off), each miss costing a publishedVersion() lookup.
+            $cached = Cache::remember(self::CACHE_KEY_PREFIX . $page, self::CACHE_TTL, function () use ($page) {
                 $version = $this->publishedVersion();
-                if (!$version) {
-                    return null;
-                }
 
-                return $this->buildSections($version->id, $page);
+                return ['sections' => $version ? $this->buildSections($version->id, $page) : null];
             });
+
+            return $cached['sections'] ?? null;
         } catch (\Throwable) {
             // A theme problem must never take the storefront down.
             return null;
