@@ -61,6 +61,18 @@ class BannerController extends BaseController
         return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes'));
     }
 
+    /**
+     * Wireframes of where each banner type lands and what each layout looks like,
+     * so a merchant (or a developer wiring the apps) can see the shape before
+     * uploading anything.
+     */
+    public function getPlacementGuide(): View
+    {
+        return view('admin-views.banner.placement-guide', [
+            'bannerTypes' => $this->bannerService->getBannerTypes(),
+        ]);
+    }
+
     public function add(BannerAddRequest $request): RedirectResponse
     {
         $banner = $this->getBannerUrl(request: $request);

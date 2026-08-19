@@ -7,9 +7,8 @@ use App\Models\Category;
 use App\Services\BannerPlacementService;
 use App\Services\BannerService;
 use App\Services\CategoryPageService;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\CreatesCatalogueSchema;
 use Tests\TestCase;
 
 /**
@@ -22,107 +21,14 @@ use Tests\TestCase;
  */
 class CategoryPageHeaderTest extends TestCase
 {
+    use CreatesCatalogueSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
         Cache::flush();
 
-        if (!Schema::hasTable('categories')) {
-            Schema::create('categories', function (Blueprint $table) {
-                $table->id();
-                $table->string('name')->nullable();
-                $table->string('slug')->nullable();
-                $table->string('icon')->nullable();
-                $table->string('icon_storage_type')->nullable();
-                $table->integer('parent_id')->default(0);
-                $table->integer('position')->default(0);
-                $table->integer('priority')->default(0);
-                $table->boolean('home_status')->default(0);
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('banners')) {
-            Schema::create('banners', function (Blueprint $table) {
-                $table->id();
-                $table->string('photo')->nullable();
-                $table->string('mobile_photo')->nullable();
-                $table->string('banner_type');
-                $table->string('layout', 20)->default('full');
-                $table->integer('priority')->default(0);
-                $table->string('theme')->default('default');
-                $table->integer('published')->default(0);
-                $table->string('url')->nullable();
-                $table->string('resource_type')->nullable();
-                $table->unsignedBigInteger('resource_id')->nullable();
-                $table->string('title')->nullable();
-                $table->string('sub_title')->nullable();
-                $table->string('button_text')->nullable();
-                $table->string('background_color')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        // Saving a banner registers its file in `storages`; category names resolve
-        // through `translations` + the settings table; the sub-category counts read
-        // `products`.
-        if (!Schema::hasTable('storages')) {
-            Schema::create('storages', function (Blueprint $table) {
-                $table->id();
-                $table->string('data_type')->nullable();
-                $table->unsignedBigInteger('data_id')->nullable();
-                $table->string('key')->nullable();
-                $table->string('value')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('business_settings')) {
-            Schema::create('business_settings', function (Blueprint $table) {
-                $table->id();
-                $table->string('type')->nullable();
-                $table->text('value')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('translations')) {
-            Schema::create('translations', function (Blueprint $table) {
-                $table->id();
-                $table->string('translationable_type')->nullable();
-                $table->unsignedBigInteger('translationable_id')->nullable();
-                $table->string('locale')->nullable();
-                $table->string('key')->nullable();
-                $table->text('value')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        // Product::active() joins the seller and filters on the publication columns.
-        if (!Schema::hasTable('products')) {
-            Schema::create('products', function (Blueprint $table) {
-                $table->id();
-                $table->string('name')->nullable();
-                $table->unsignedBigInteger('category_id')->nullable();
-                $table->unsignedBigInteger('sub_category_id')->nullable();
-                $table->unsignedBigInteger('sub_sub_category_id')->nullable();
-                $table->unsignedBigInteger('brand_id')->nullable();
-                $table->unsignedBigInteger('user_id')->nullable();
-                $table->string('added_by')->default('admin');
-                $table->string('product_type')->default('physical');
-                $table->integer('status')->default(1);
-                $table->integer('request_status')->default(1);
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('sellers')) {
-            Schema::create('sellers', function (Blueprint $table) {
-                $table->id();
-                $table->string('status')->default('approved');
-                $table->timestamps();
-            });
-        }
+        $this->createCatalogueSchema();
 
         Banner::query()->delete();
         Category::query()->delete();

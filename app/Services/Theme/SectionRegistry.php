@@ -29,6 +29,9 @@ class SectionRegistry
     public const STORE_BANNER_TYPES = [
         'Main Banner', 'Main Section Banner', 'Footer Banner',
         'Header Banner', 'Sidebar Banner', 'Top Side Banner',
+        // The grid types: placing one of these as a section lets the merchant put the
+        // promo grid wherever they want in the page order, instead of its default slot.
+        'Home Promo Banner', 'Category Section Banner', 'Category Banner',
     ];
 
     /**

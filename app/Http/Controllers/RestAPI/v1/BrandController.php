@@ -10,6 +10,7 @@ use App\Utils\BrandManager;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
 use Illuminate\Http\JsonResponse;
+use App\Services\BrandPageService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -17,6 +18,51 @@ use Illuminate\Support\Collection;
 
 class BrandController extends Controller
 {
+    public function __construct(private readonly BrandPageService $brandPageService)
+    {
+    }
+
+    /**
+     * The brand landing header the app renders above the product grid: the
+     * brand's banner and the categories its products actually live in, each with
+     * a count. Filter the product list with the same category id to reproduce
+     * what the web page does.
+     */
+    public function getPageHeader(Request $request, $brandId): JsonResponse
+    {
+        $brand = Brand::active()->find($brandId);
+        if (!$brand) {
+            return response()->json(['errors' => [['code' => 'brand', 'message' => translate('brand_not_found')]]], 404);
+        }
+
+        $header = $this->brandPageService->getPageHeader(brand: $brand, request: $request);
+        $banner = $header['banner'];
+
+        return response()->json([
+            'brand' => [
+                'id' => $brand['id'],
+                'name' => $brand['name'],
+                'slug' => $brand['slug'],
+                'image_full_url' => $brand->image_full_url,
+            ],
+            'banner' => $banner ? [
+                'id' => $banner['id'],
+                'title' => $banner['title'],
+                'sub_title' => $banner['sub_title'],
+                'url' => $banner['url'],
+                'photo_full_url' => $banner->photo_full_url,
+                'mobile_photo_full_url' => $banner->mobile_photo_full_url,
+            ] : null,
+            'categories' => $header['categories']->map(fn ($category) => [
+                'id' => $category['id'],
+                'name' => $category['name'],
+                'slug' => $category['slug'],
+                'products_count' => $category['products_count'],
+                'icon_full_url' => $category->icon_full_url,
+            ])->values(),
+        ], 200);
+    }
+
     public function get_brands(Request $request): array
     {
         $shop = $request->has('shop_slug') && empty($request['shop_slug']) ? Shop::where('slug', $request['shop_slug'])->first() : null;

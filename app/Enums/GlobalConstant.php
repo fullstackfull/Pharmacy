@@ -477,6 +477,7 @@ enum GlobalConstant
             'Main Section Banner' => 'Ratio 4:1 (2000 x 500 px)',
             'Category Banner' => 'Ratio 4:1 (2000 x 500 px)',
             'Category Section Banner' => 'Ratio 4:1 (2000 x 500 px)',
+            'Brand Banner' => 'Ratio 4:1 (2000 x 500 px)',
             'Store cover Image' => 'Ratio 4:1 (2000 x 500 px)',
             'Main website Logo' => '(1000 x 308 px)',
             'Product Image' => 'Ratio 1:1 (500 x 500 px)',

@@ -74,6 +74,8 @@ class BannerService
                 // A home-page promo grid that belongs to no category: each banner
                 // takes a full row, half a row, or joins the rotating slider.
                 "Home Promo Banner" => translate('home_Promo_Banner'),
+                // Heads the page of the brand named by its brand resource.
+                "Brand Banner" => translate('brand_Banner'),
             ];
 
         }elseif (theme_root_path() == 'theme_aster') {

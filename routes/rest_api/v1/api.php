@@ -229,6 +229,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
         Route::group(['prefix' => 'brands'], function () {
             Route::controller(BrandController::class)->group(function () {
                 Route::get('/', 'get_brands');
+                Route::get('page-header/{brand_id}', 'getPageHeader');
                 Route::get('products/{brand_id}', 'get_products');
             });
         });

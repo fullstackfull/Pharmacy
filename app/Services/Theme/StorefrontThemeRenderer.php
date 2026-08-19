@@ -77,6 +77,24 @@ class StorefrontThemeRenderer
         }
     }
 
+    /**
+     * Whether the published theme already renders a dashboard banner type as one of its own
+     * sections on the given page. The storefront's built-in slots for those banners stand down
+     * when it does, so a merchant who places the banners themselves in the builder — to control
+     * where in the page order they sit — does not get them twice.
+     */
+    public function pageSectionsRenderBannerType(string $page, string $bannerType): bool
+    {
+        foreach ($this->sectionsFor($page) ?? [] as $section) {
+            if (($section['type'] ?? null) === 'store_banner'
+                && ($section['settings']['banner_type'] ?? null) === $bannerType) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Effective global settings (branding/colors/typography/layout) of the published version. */
     public function globalSettings(ThemeManager $manager): array
     {

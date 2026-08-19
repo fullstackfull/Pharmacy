@@ -18,6 +18,7 @@
     <div class="container py-3" dir="{{ session('direction') }}">
 
         @include('web-views.products.partials._category-header')
+        @include('web-views.products.partials._brand-header')
 
         <form method="POST" action="{{ url()->current() }}" class="product-list-filter">
             <input hidden name="offer_type" value="{{ $data['offer_type'] }}">

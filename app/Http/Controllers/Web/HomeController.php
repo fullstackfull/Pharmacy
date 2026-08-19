@@ -19,6 +19,7 @@ use App\Models\Product;
 use App\Models\Seller;
 use App\Models\Review;
 use App\Services\BannerPlacementService;
+use App\Services\Theme\StorefrontThemeRenderer;
 use App\Utils\ProductManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -102,8 +103,15 @@ class HomeController extends Controller
         }
 
         $bannerPlacement = app(BannerPlacementService::class);
-        $categorySectionBanners = $bannerPlacement->getCategorySectionBanners();
-        $homePromoBanners = $bannerPlacement->getHomePromoBanners();
+        $themeRenderer = app(StorefrontThemeRenderer::class);
+        // A merchant can instead place these banners as a theme-builder section, to control where
+        // in the page order they sit; the built-in slots stand down so they never render twice.
+        $categorySectionBanners = $themeRenderer->pageSectionsRenderBannerType(page: 'home', bannerType: 'Category Section Banner')
+            ? collect()
+            : $bannerPlacement->getCategorySectionBanners();
+        $homePromoBanners = $themeRenderer->pageSectionsRenderBannerType(page: 'home', bannerType: 'Home Promo Banner')
+            ? collect()
+            : $bannerPlacement->getHomePromoBanners();
 
         return view(VIEW_FILE_NAMES['home'],
             compact(

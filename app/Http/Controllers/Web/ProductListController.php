@@ -14,6 +14,7 @@ use App\Utils\CategoryManager;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Services\BrandPageService;
 use App\Services\CategoryPageService;
 use App\Utils\ProductManager;
 use Brian2694\Toastr\Facades\Toastr;
@@ -29,7 +30,10 @@ use Throwable;
 
 class ProductListController extends Controller
 {
-    public function __construct(private readonly CategoryPageService $categoryPageService)
+    public function __construct(
+        private readonly CategoryPageService $categoryPageService,
+        private readonly BrandPageService    $brandPageService,
+    )
     {
     }
 
@@ -64,7 +68,8 @@ class ProductListController extends Controller
             request: $request,
             pageType: $dataForm,
             pageTitle: ucwords(str_replace(['-', '_'], ' ', $brand['name'])) . ' ' . translate('products'),
-            metaData: $brand?->seo
+            metaData: $brand?->seo,
+            brand: $brand,
         );
     }
 
@@ -186,15 +191,15 @@ class ProductListController extends Controller
     }
 
 
-    public function getProductsListPage(object|array $request, string $pageType = 'default', string $offerType = '', string $pageTitle = '', object|array|null $metaData = null)
+    public function getProductsListPage(object|array $request, string $pageType = 'default', string $offerType = '', string $pageTitle = '', object|array|null $metaData = null, ?Brand $brand = null)
     {
         return match (theme_root_path()) {
-            'default' => self::default_theme(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData),
+            'default' => self::default_theme(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData, brand: $brand),
             'theme_aster' => self::theme_aster(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData),
         };
     }
 
-    public function default_theme(object|array $request, string $pageType = 'default', string $pageTitle = '', object|array|null $metaData = null): View|JsonResponse|Redirector|RedirectResponse
+    public function default_theme(object|array $request, string $pageType = 'default', string $pageTitle = '', object|array|null $metaData = null, ?Brand $brand = null): View|JsonResponse|Redirector|RedirectResponse
     {
         if ($request->has('min_price') && $request['min_price'] != '' && $request->has('max_price') && $request['max_price'] != '' && $request['min_price'] > $request['max_price']) {
             if ($request->ajax()) {
@@ -224,6 +229,7 @@ class ProductListController extends Controller
         $categoryPageHeader = $this->categoryPageService->getPageHeader(
             category: $this->categoryPageService->resolveCategory(request: $request)
         );
+        $brandPageHeader = $this->brandPageService->getPageHeader(brand: $brand, request: $request);
 
         return view(VIEW_FILE_NAMES['products_view_page'], [
             'pageTitleContent' => $pageTitle ?? translate('products'),
@@ -233,6 +239,7 @@ class ProductListController extends Controller
             'categories' => $categories,
             'robotsMetaContentData' => $metaData,
             'categoryPageHeader' => $categoryPageHeader,
+            'brandPageHeader' => $brandPageHeader,
         ]);
     }
 

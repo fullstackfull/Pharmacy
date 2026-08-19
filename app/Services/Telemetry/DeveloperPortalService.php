@@ -99,6 +99,20 @@ class DeveloperPortalService
                     . "# (type: Category Banner) and are NOT part of /api/v1/banners.",
             ],
             [
+                'title' => translate('brand_page_header'),
+                'body' => translate('one_call_returns_the_brand_banner_and_the_categories_its_products_live_in'),
+                'snippet' => "curl {$baseUrl}/api/v1/brands/page-header/3\n\n"
+                    . "# {\n"
+                    . "#   brand:      { id, name, slug, image_full_url },\n"
+                    . "#   banner:     null | { id, title, sub_title, url,\n"
+                    . "#                        photo_full_url, mobile_photo_full_url },\n"
+                    . "#   categories: [ { id, name, slug, products_count, icon_full_url } ]\n"
+                    . "# }\n"
+                    . "# The categories are only those holding active products of this brand, so a\n"
+                    . "# chip never leads to an empty list. Filter with the same category id:\n"
+                    . "# /api/v1/categories/products/{category_id}?brand_id=3",
+            ],
+            [
                 'title' => translate('home_promo_banners'),
                 'body' => translate('one_call_returns_the_home_promo_grid_with_each_banners_layout_and_both_images'),
                 'snippet' => "curl {$baseUrl}/api/v1/banners/home-promos\n\n"

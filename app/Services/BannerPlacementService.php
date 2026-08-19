@@ -25,6 +25,16 @@ class BannerPlacementService
         return $this->remember(type: 'Category Banner', cacheKey: 'category_banner');
     }
 
+    /** Brand-page banners, each naming the brand whose page it heads. */
+    public function getBrandPageBanners(): Collection
+    {
+        return $this->remember(
+            type: 'Brand Banner',
+            cacheKey: 'brand_banner',
+            build: fn ($query) => $query->where('resource_type', 'brand'),
+        );
+    }
+
     /**
      * Category-section banners grouped by the category whose product row they
      * sit above; a category may carry several, laid out by each one's layout.

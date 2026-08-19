@@ -204,3 +204,64 @@
         display: none;
     }
 }
+
+/* Brand page filter chips — the categories a brand's products actually live in. */
+.brand-header__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+
+.brand-header__chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border1, #dfe0e5);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--title-clr, #262d34);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.brand-header__chip:hover {
+    border-color: var(--base, var(--primary-clr, #1455ac));
+    color: var(--base, var(--primary-clr, #1455ac));
+}
+
+.brand-header__chip--active {
+    background: var(--base, var(--primary-clr, #1455ac));
+    border-color: var(--base, var(--primary-clr, #1455ac));
+    color: #fff;
+}
+
+.brand-header__chip-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--bg-section1, #f6f6f6);
+    font-size: 0.6875rem;
+    color: var(--title-semidark, #7f8185);
+}
+
+.brand-header__chip--active .brand-header__chip-count {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+@media (max-width: 575.98px) {
+    .brand-header__filters {
+        flex-wrap: nowrap;
+    }
+}

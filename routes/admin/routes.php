@@ -381,6 +381,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     Route::group(['prefix' => 'banner', 'as' => 'banner.', 'middleware' => ['module:marketing']], function () {
         Route::controller(BannerController::class)->group(function () {
             Route::get('list', 'index')->name('list');
+            Route::get('placement-guide', 'getPlacementGuide')->name('placement-guide');
             Route::post('add', 'add')->name('store');
             Route::post('delete', 'delete')->name('delete');
             Route::post('status', 'updateStatus')->name('status');

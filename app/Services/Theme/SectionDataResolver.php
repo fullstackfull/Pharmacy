@@ -75,12 +75,15 @@ class SectionDataResolver
         $rows = $this->safely(function () use ($bannerType, $limit) {
             $base = fn () => Banner::where('published', 1)->where('banner_type', $bannerType);
 
-            $scoped = (clone $base())->where('theme', theme_root_path())
-                ->latest('id')->take($this->bounded($limit, 24))->get();
+            // Priority first so the merchant's ordering carries into the themed section too.
+            $ordered = fn ($query) => $query->orderBy('priority')->orderByDesc('id');
+
+            $scoped = $ordered((clone $base())->where('theme', theme_root_path()))
+                ->take($this->bounded($limit, 24))->get();
 
             return $scoped->isNotEmpty()
                 ? $scoped
-                : $base()->latest('id')->take($this->bounded($limit, 24))->get();
+                : $ordered($base())->take($this->bounded($limit, 24))->get();
         });
 
         return $rows->map(fn (Banner $banner) => [
@@ -91,7 +94,9 @@ class SectionDataResolver
             'button_text' => $banner->button_text,
             'background'  => $banner->background_color,
             'badge'       => null,
-            'span'        => 'small',
+            // A grid banner already carries how wide it wants to sit; a mosaic honours it so the
+            // arrangement is the same whether the banners render in their built-in slot or here.
+            'span'        => ($banner->layout ?? 'full') === 'full' ? 'wide' : 'small',
         ])->all();
     }
 

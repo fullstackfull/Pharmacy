@@ -307,7 +307,12 @@
                                 </select>
                             </div>
                         </form>
-                        <div id="banner-btn">
+                        <div id="banner-btn" class="d-flex flex-wrap gap-2">
+                            <a href="{{ route('admin.banner.placement-guide') }}"
+                               class="k-btn k-btn--secondary text-nowrap text-capitalize">
+                                <x-k.icon name="image" :size="15" />
+                                {{ translate('placement_guide') }}
+                            </a>
                             <button type="button" id="main-banner-add"
                                 class="k-btn k-btn--primary text-nowrap text-capitalize">
                                 <x-k.icon name="plus" :size="15" />
