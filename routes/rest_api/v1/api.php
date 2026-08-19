@@ -221,6 +221,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
             Route::controller(CategoryController::class)->group(function () {
                 Route::get('/', 'get_categories');
                 Route::get('products/{category_id}', 'get_products');
+                Route::get('page-header/{category_id}', 'getPageHeader');
                 Route::get('/find-what-you-need', 'find_what_you_need');
             });
         });

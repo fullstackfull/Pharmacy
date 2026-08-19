@@ -476,6 +476,24 @@ trait CacheManagerTrait
         });
     }
 
+    /**
+     * Every published category banner for the active theme, as one collection.
+     * The category page resolves its own banner from this in memory (walking up
+     * the tree), so a per-category cache key is never needed.
+     */
+    public function cacheBannerForTypeCategoryBanner()
+    {
+        $themeName = theme_root_path() ?? 'default';
+        $cacheKey = 'cache_banner_type_category_banner_' . ($themeName);
+        $this->cacheBannerAllTypeKeys(cacheKey: $cacheKey);
+
+        return Cache::remember($cacheKey, CACHE_FOR_3_HOURS, function () use ($themeName) {
+            return Banner::with(['storage'])
+                ->where(['banner_type' => 'Category Banner', 'published' => 1, 'theme' => $themeName])
+                ->orderBy('id', 'desc')->get();
+        });
+    }
+
     public function cacheBannerForTypePromoBannerLeft()
     {
         $themeName = theme_root_path() ?? 'default';

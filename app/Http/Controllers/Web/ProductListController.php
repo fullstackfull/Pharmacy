@@ -14,6 +14,7 @@ use App\Utils\CategoryManager;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Services\CategoryPageService;
 use App\Utils\ProductManager;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Contracts\View\View;
@@ -28,6 +29,10 @@ use Throwable;
 
 class ProductListController extends Controller
 {
+    public function __construct(private readonly CategoryPageService $categoryPageService)
+    {
+    }
+
     public function products(Request $request)
     {
         $pageTitle = translate('Products');
@@ -216,6 +221,10 @@ class ProductListController extends Controller
             ], 200);
         }
 
+        $categoryPageHeader = $this->categoryPageService->getPageHeader(
+            category: $this->categoryPageService->resolveCategory(request: $request)
+        );
+
         return view(VIEW_FILE_NAMES['products_view_page'], [
             'pageTitleContent' => $pageTitle ?? translate('products'),
             'products' => $products,
@@ -223,6 +232,7 @@ class ProductListController extends Controller
             'activeBrands' => $activeBrands,
             'categories' => $categories,
             'robotsMetaContentData' => $metaData,
+            'categoryPageHeader' => $categoryPageHeader,
         ]);
     }
 

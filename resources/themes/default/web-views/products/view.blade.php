@@ -11,10 +11,13 @@
     <meta property="twitter:title" content="Products of {{$web_config['company_name']}}"/>
     <meta property="twitter:url" content="{{env('APP_URL')}}">
     <meta property="twitter:description" content="{{ $web_config['meta_description'] }}">
+    <link rel="stylesheet" href="{{ theme_asset(path: 'public/assets/front-end/css/category-header.css') }}">
 @endpush
 
 @section('content')
     <div class="container py-3" dir="{{ session('direction') }}">
+
+        @include('web-views.products.partials._category-header')
 
         <form method="POST" action="{{ url()->current() }}" class="product-list-filter">
             <input hidden name="offer_type" value="{{ $data['offer_type'] }}">

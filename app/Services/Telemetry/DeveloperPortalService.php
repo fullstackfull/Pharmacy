@@ -84,6 +84,21 @@ class DeveloperPortalService
                     . "curl '{$baseUrl}/api/v1/products/search?name=serum&limit=10&offset=1'",
             ],
             [
+                'title' => translate('category_page_header'),
+                'body' => translate('one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen'),
+                'snippet' => "curl {$baseUrl}/api/v1/categories/page-header/7\n\n"
+                    . "# {\n"
+                    . "#   category:      { id, name, slug, position, parent_id, icon_full_url },\n"
+                    . "#   banner:        null | { id, title, sub_title, button_text, background_color,\n"
+                    . "#                           url, resource_type, resource_id, photo_full_url,\n"
+                    . "#                           inherited },   # inherited = the banner belongs to a parent\n"
+                    . "#   sub_categories: [ { id, name, slug, position, products_count, icon_full_url } ]\n"
+                    . "# }\n"
+                    . "# Render the banner above the grid and the sub_categories as an entry strip;\n"
+                    . "# hide either half when it is null/empty. Banners come from admin > banners\n"
+                    . "# (type: Category Banner) and are NOT part of /api/v1/banners.",
+            ],
+            [
                 'title' => translate('vendor_app'),
                 'body' => translate('the_seller_api_lives_under_api_v3_seller_with_its_own_token'),
                 'snippet' => "curl -X POST {$baseUrl}/api/v3/seller/auth/login \\\n"

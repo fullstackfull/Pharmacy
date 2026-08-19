@@ -3442,4 +3442,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"the_delivery_man_has_already_withdrawn_this_amount" => "The delivery man has already withdrawn this amount",
 	"join" => "Join",
 	"EMP" => "EMP",
+	"category_Banner" => "Category Banner",
+	"Category_Banner" => "Category Banner",
+	"sub_categories" => "Sub categories",
+	"category_page_header" => "Category page header",
+	"one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen" => "One call returns the category banner and its sub categories for the category screen",
+	"category_not_found" => "Category not found",
+	"the_live_api_surface_of_this_store_generated_from_the_route_table_so_it_can_never_go_stale" => "The live api surface of this store generated from the route table so it can never go stale",
 ];

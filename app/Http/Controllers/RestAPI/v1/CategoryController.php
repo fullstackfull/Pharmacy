@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\CategoryPageService;
 use App\Utils\CategoryManager;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,10 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    public function __construct(private readonly CategoryPageService $categoryPageService)
+    {
+    }
+
     public function get_categories(Request $request): JsonResponse
     {
         $categoriesID = [];
@@ -69,6 +74,56 @@ class CategoryController extends Controller
             'limit' => (int)$request['limit'],
             'offset' => (int)$request['offset'],
             'products' => $productFinal,
+        ], 200);
+    }
+
+    /**
+     * The category landing header the app renders above the product grid: the
+     * category's banner (inherited from its nearest ancestor when it has none of
+     * its own) and its direct sub-categories as an entry strip.
+     */
+    public function getPageHeader(Request $request, $categoryId): JsonResponse
+    {
+        $category = Category::find($categoryId);
+        if (!$category) {
+            return response()->json(['errors' => [['code' => 'category', 'message' => translate('category_not_found')]]], 404);
+        }
+
+        $header = $this->categoryPageService->getPageHeader(category: $category);
+        $banner = $header['banner'];
+
+        return response()->json([
+            'category' => [
+                'id' => $category['id'],
+                'name' => $category['name'],
+                'slug' => $category['slug'],
+                'position' => $category['position'],
+                'parent_id' => $category['parent_id'],
+                'icon_full_url' => $category->icon_full_url,
+            ],
+            'banner' => $banner ? [
+                'id' => $banner['id'],
+                'title' => $banner['title'],
+                'sub_title' => $banner['sub_title'],
+                'button_text' => $banner['button_text'],
+                'background_color' => $banner['background_color'],
+                'url' => $banner['url'],
+                'resource_type' => $banner['resource_type'],
+                'resource_id' => $banner['resource_id'],
+                'photo_full_url' => $banner->photo_full_url,
+                // The banner may belong to an ancestor; the app can label it accordingly.
+                'inherited' => (int)$banner['resource_id'] !== (int)$category['id'],
+            ] : null,
+            'sub_categories' => $header['subCategories']->map(function ($subCategory) {
+                return [
+                    'id' => $subCategory['id'],
+                    'name' => $subCategory['name'],
+                    'slug' => $subCategory['slug'],
+                    'position' => $subCategory['position'],
+                    'products_count' => $subCategory['products_count'],
+                    'icon_full_url' => $subCategory->icon_full_url,
+                ];
+            })->values(),
         ], 200);
     }
 

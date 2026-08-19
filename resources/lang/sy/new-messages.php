@@ -690,4 +690,9 @@ return [
 	'critical' => 'حرج',
 	'order_place_in_pos' => 'إنشاء طلب في نقطة البيع',
 	'the_delivery_man_has_already_withdrawn_this_amount' => 'سحب مندوب التوصيل هذا المبلغ بالفعل',
+	'category_Banner' => 'بانر الفئة',
+	'sub_categories' => 'التصنيفات الفرعية',
+	'category_page_header' => 'ترويسة صفحة الفئة',
+	'one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen' => 'استدعاء واحد يعيد بانر الفئة وتصنيفاتها الفرعية لشاشة الفئة',
+	'category_not_found' => 'الفئة غير موجودة',
 ];

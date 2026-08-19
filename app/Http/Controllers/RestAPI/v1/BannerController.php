@@ -16,9 +16,15 @@ class BannerController extends Controller
 {
     use CacheManagerTrait;
 
+    /** Banner types that belong to a specific screen and are served by that screen's own endpoint. */
+    private const SCREEN_SCOPED_TYPES = ['Category Banner'];
+
     public function getBannerList(Request $request): JsonResponse
     {
-        $banners = $this->cacheBannerTable();
+        // Screen-scoped banners are excluded so the installed apps keep receiving
+        // exactly the home-screen banners they render today; the category screen
+        // reads its own from /categories/page-header/{id}.
+        $banners = $this->cacheBannerTable()->whereNotIn('banner_type', self::SCREEN_SCOPED_TYPES);
         $productIds = [];
         $shopIds = [];
         $brandIds = [];

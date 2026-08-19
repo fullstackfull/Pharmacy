@@ -38,7 +38,10 @@ class BannerService
                 "Main Banner" => translate('main_Banner'),
                 "Popup Banner" => translate('popup_Banner'),
                 "Footer Banner" => translate('footer_Banner'),
-                "Main Section Banner" => translate('main_Section_Banner')
+                "Main Section Banner" => translate('main_Section_Banner'),
+                // Placed on the category page named by its category resource, and
+                // inherited by that category's sub-categories.
+                "Category Banner" => translate('category_Banner'),
             ];
 
         }elseif (theme_root_path() == 'theme_aster') {
