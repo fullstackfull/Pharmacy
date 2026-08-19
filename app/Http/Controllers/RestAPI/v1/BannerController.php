@@ -7,7 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Shop;
-use App\Services\CategoryPageService;
+use App\Services\BannerPlacementService;
 use App\Traits\CacheManagerTrait;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
@@ -18,33 +18,41 @@ class BannerController extends Controller
     use CacheManagerTrait;
 
     /** Banner types that belong to a specific screen and are served by that screen's own endpoint. */
-    private const SCREEN_SCOPED_TYPES = ['Category Banner', 'Category Section Banner'];
+    private const SCREEN_SCOPED_TYPES = ['Category Banner', 'Category Section Banner', 'Home Promo Banner'];
 
-    public function __construct(private readonly CategoryPageService $categoryPageService)
+    public function __construct(private readonly BannerPlacementService $bannerPlacement)
     {
     }
 
     /**
-     * The home screen's category-section banners: one per category, rendered
-     * above that category's product row. `photo_full_url` is the wide web image
-     * and `mobile_photo_full_url` the phone-shaped one (it falls back to the web
-     * image when no mobile image was uploaded), so the app can pick either.
+     * The home screen's promo grid: banners that belong to no category. `layout`
+     * says how the banner is meant to sit — `full` on its own row, `half` beside
+     * the next half, `slider` pooled with the other sliders into one rotating
+     * slot — and they arrive in the admin's display order.
+     */
+    public function getHomePromoBanners(): JsonResponse
+    {
+        $banners = $this->bannerPlacement->getHomePromoBanners()
+            ->map(fn ($banner) => $this->formatBanner(banner: $banner))
+            ->values();
+
+        return response()->json($banners, 200);
+    }
+
+    /**
+     * The home screen's category-section banners, one group per category and
+     * rendered above that category's product row. `photo_full_url` is the wide
+     * web image and `mobile_photo_full_url` the phone-shaped one (it falls back
+     * to the web image when no mobile image was uploaded), so the app can pick
+     * either; `layout` carries the same grid intent as the promo banners.
      */
     public function getCategorySectionBanners(): JsonResponse
     {
-        $banners = $this->categoryPageService->getSectionBanners()->values()
+        $banners = $this->bannerPlacement->getCategorySectionBanners()->flatten(1)
             ->map(function ($banner) {
                 $category = Category::find($banner['resource_id']);
 
-                return [
-                    'id' => $banner['id'],
-                    'title' => $banner['title'],
-                    'sub_title' => $banner['sub_title'],
-                    'button_text' => $banner['button_text'],
-                    'background_color' => $banner['background_color'],
-                    'url' => $banner['url'],
-                    'photo_full_url' => $banner->photo_full_url,
-                    'mobile_photo_full_url' => $banner->mobile_photo_full_url,
+                return $this->formatBanner(banner: $banner) + [
                     'category_id' => (int)$banner['resource_id'],
                     'category' => $category ? [
                         'id' => $category['id'],
@@ -58,6 +66,25 @@ class BannerController extends Controller
             ->values();
 
         return response()->json($banners, 200);
+    }
+
+    /** @return array<string, mixed> */
+    private function formatBanner(object $banner): array
+    {
+        return [
+            'id' => $banner['id'],
+            'title' => $banner['title'],
+            'sub_title' => $banner['sub_title'],
+            'button_text' => $banner['button_text'],
+            'background_color' => $banner['background_color'],
+            'url' => $banner['url'],
+            'layout' => $banner['layout'],
+            'priority' => $banner['priority'],
+            'resource_type' => $banner['resource_type'],
+            'resource_id' => $banner['resource_id'],
+            'photo_full_url' => $banner->photo_full_url,
+            'mobile_photo_full_url' => $banner->mobile_photo_full_url,
+        ];
     }
 
     public function getBannerList(Request $request): JsonResponse

@@ -36,6 +36,7 @@ class Banner extends Model
         'id' => 'integer',
         'published' => 'integer',
         'resource_id' => 'integer',
+        'priority' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -44,6 +45,8 @@ class Banner extends Model
         'photo',
         'mobile_photo',
         'banner_type',
+        'layout',
+        'priority',
         'theme',
         'published',
         'url',

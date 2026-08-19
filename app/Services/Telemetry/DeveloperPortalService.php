@@ -99,6 +99,19 @@ class DeveloperPortalService
                     . "# (type: Category Banner) and are NOT part of /api/v1/banners.",
             ],
             [
+                'title' => translate('home_promo_banners'),
+                'body' => translate('one_call_returns_the_home_promo_grid_with_each_banners_layout_and_both_images'),
+                'snippet' => "curl {$baseUrl}/api/v1/banners/home-promos\n\n"
+                    . "# [ { id, title, sub_title, button_text, background_color, url,\n"
+                    . "#     layout,   # full | half | slider — how the banner is meant to sit\n"
+                    . "#     priority, # display order, lowest first\n"
+                    . "#     resource_type, resource_id,   # what tapping it opens\n"
+                    . "#     photo_full_url, mobile_photo_full_url } ]\n"
+                    . "# Render in the given order: `full` on its own row, two `half` side by\n"
+                    . "# side, every `slider` pooled into one rotating slot. These banners\n"
+                    . "# belong to no category and are NOT part of /api/v1/banners.",
+            ],
+            [
                 'title' => translate('category_section_banners'),
                 'body' => translate('one_call_returns_every_category_section_banner_with_both_its_web_and_mobile_image'),
                 'snippet' => "curl {$baseUrl}/api/v1/banners/category-sections\n\n"

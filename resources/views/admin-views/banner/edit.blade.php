@@ -46,6 +46,28 @@
                                             </select>
                                         </div>
 
+                                        {{-- Layout only applies to the grid banner types; the
+                                             type select shows and hides this block. --}}
+                                        <div class="form-group {{ in_array($banner['banner_type'], \App\Services\BannerService::GRID_TYPES) ? '' : 'd-none' }}"
+                                             id="banner_layout_group">
+                                            <div class="row g-3">
+                                                <div class="col-md-7">
+                                                    <label class="form-label">{{ translate('banner_layout') }}</label>
+                                                    <select class="custom-select" name="layout">
+                                                        <option value="full" {{ $banner['layout'] == 'full' ? 'selected' : '' }}>{{ translate('full_width_row') }}</option>
+                                                        <option value="half" {{ $banner['layout'] == 'half' ? 'selected' : '' }}>{{ translate('half_width_beside_another') }}</option>
+                                                        <option value="slider" {{ $banner['layout'] == 'slider' ? 'selected' : '' }}>{{ translate('inside_the_rotating_slider') }}</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label">{{ translate('priority') }}</label>
+                                                    <input type="number" name="priority" class="form-control" min="0"
+                                                           value="{{ $banner['priority'] }}">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ translate('lower_numbers_come_first_in_the_grid') }}</small>
+                                        </div>
+
                                         <div class="form-group" id="banner_resource_type" >
                                             <label for="resource_id"
                                                    class="form-label">{{ translate('resource_type') }} <span class="text-danger">*</span></label>

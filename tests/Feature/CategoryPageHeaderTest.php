@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Banner;
 use App\Models\Category;
+use App\Services\BannerPlacementService;
+use App\Services\BannerService;
 use App\Services\CategoryPageService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
@@ -46,6 +48,8 @@ class CategoryPageHeaderTest extends TestCase
                 $table->string('photo')->nullable();
                 $table->string('mobile_photo')->nullable();
                 $table->string('banner_type');
+                $table->string('layout', 20)->default('full');
+                $table->integer('priority')->default(0);
                 $table->string('theme')->default('default');
                 $table->integer('published')->default(0);
                 $table->string('url')->nullable();
@@ -217,16 +221,54 @@ class CategoryPageHeaderTest extends TestCase
         $this->assertCount(0, $header['subCategories']);
     }
 
-    public function test_section_banners_are_keyed_by_the_category_they_sit_above(): void
+    public function test_section_banners_are_grouped_by_the_category_they_sit_above(): void
     {
         $tree = $this->makeTree();
-        $sectionBanner = $this->makeBanner($tree['parent']->id, ['banner_type' => 'Category Section Banner']);
+        $first = $this->makeBanner($tree['parent']->id, ['banner_type' => 'Category Section Banner', 'layout' => 'half', 'priority' => 2]);
+        $second = $this->makeBanner($tree['parent']->id, ['banner_type' => 'Category Section Banner', 'layout' => 'half', 'priority' => 1]);
         $this->makeBanner($tree['child']->id, ['banner_type' => 'Category Section Banner', 'published' => 0]);
 
-        $sectionBanners = app(CategoryPageService::class)->getSectionBanners();
+        $sectionBanners = app(BannerPlacementService::class)->getCategorySectionBanners();
 
         $this->assertCount(1, $sectionBanners);
-        $this->assertSame($sectionBanner->id, $sectionBanners->get($tree['parent']->id)->id);
+        // both halves belong to the same row, lowest priority first
+        $this->assertSame(
+            [$second->id, $first->id],
+            $sectionBanners->get($tree['parent']->id)->pluck('id')->all()
+        );
+    }
+
+    public function test_home_promo_banners_are_not_bound_to_a_category_and_follow_priority(): void
+    {
+        $late = $this->makeBanner(0, ['banner_type' => 'Home Promo Banner', 'resource_type' => 'custom', 'priority' => 5]);
+        $early = $this->makeBanner(0, ['banner_type' => 'Home Promo Banner', 'resource_type' => 'custom', 'priority' => 1]);
+        $this->makeBanner(0, ['banner_type' => 'Home Promo Banner', 'resource_type' => 'custom', 'published' => 0]);
+
+        $promos = app(BannerPlacementService::class)->getHomePromoBanners();
+
+        $this->assertSame([$early->id, $late->id], $promos->pluck('id')->all());
+    }
+
+    public function test_a_home_promo_banner_is_not_served_to_the_category_placements(): void
+    {
+        $tree = $this->makeTree();
+        $this->makeBanner($tree['parent']->id, ['banner_type' => 'Home Promo Banner']);
+
+        $this->assertNull(app(CategoryPageService::class)->getPageHeader($tree['parent'])['banner']);
+        $this->assertCount(0, app(BannerPlacementService::class)->getCategorySectionBanners());
+    }
+
+    public function test_an_unknown_layout_falls_back_to_a_full_row(): void
+    {
+        $data = app(BannerService::class)->getProcessedData(
+            request: new \Illuminate\Http\Request(['banner_type' => 'Home Promo Banner', 'layout' => 'diagonal', 'priority' => '3']),
+            bannerUrl: 'https://example.test',
+            image: 'kept.webp',
+        );
+
+        $this->assertSame('full', $data['layout']);
+        $this->assertSame(3, $data['priority']);
+        $this->assertSame('kept.webp', $data['photo']);
     }
 
     public function test_a_section_banner_is_not_served_as_a_category_page_banner(): void

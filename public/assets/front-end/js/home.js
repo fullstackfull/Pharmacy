@@ -810,3 +810,26 @@ $(document).ready(function () {
         othersStore.trigger("prev.owl.carousel", [600]);
     });
 });
+
+// Banner grid slider: the banners an admin marked `slider` share one rotating
+// full-width slot (home promo grid and category section banners alike).
+$(function () {
+    const directionFromSession = $("html").attr("dir") === "rtl" ? "rtl" : "ltr";
+    $(".banner-grid-slider").each(function () {
+        $(this).owlCarousel({
+            items: 1,
+            loop: $(this).children().length > 1,
+            autoplay: true,
+            autoplayTimeout: 6000,
+            autoplayHoverPause: true,
+            margin: 0,
+            nav: true,
+            navText:
+                directionFromSession === "rtl"
+                    ? ["<i class='czi-arrow-right'></i>", "<i class='czi-arrow-left'></i>"]
+                    : ["<i class='czi-arrow-left'></i>", "<i class='czi-arrow-right'></i>"],
+            dots: true,
+            rtl: directionFromSession === "rtl",
+        });
+    });
+});

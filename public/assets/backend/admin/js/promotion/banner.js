@@ -5,14 +5,18 @@ let getNoWord = $('#message-no-word').data('text');
 let messageAreYouSureDeleteThis = $('#message-are-you-sure-delete-this').data('text');
 let messageYouWillNotAbleRevertThis = $('#message-you-will-not-be-able-to-revert-this').data('text');
 
+// Banner types laid out as a grid, where layout and priority are meaningful.
+const bannerGridTypes = ["Home Promo Banner", "Category Section Banner"];
+
 $('#banner_type_select').on('change', function () {
-    let inputValue = $(this).val().toString();
+    let inputValue = ($(this).val() ?? '').toString();
     if (inputValue === "Main Banner") {
         $('.input-field-for-main-banner').removeClass('d-none');
     } else {
         $('.input-field-for-main-banner').addClass('d-none');
     }
-});
+    $('#banner_layout_group').toggleClass('d-none', !bannerGridTypes.includes(inputValue));
+}).trigger('change');
 
 $(".js-example-theme-single").select2({theme: "classic"});
 $(".js-example-responsive").select2({width: 'resolve'});

@@ -8,6 +8,12 @@ class BannerService
 {
     use FileManagerTrait;
 
+    /** How a grid banner sits: its own row, half a row, or pooled into the slider. */
+    public const LAYOUTS = ['full', 'half', 'slider'];
+
+    /** The banner types laid out as a grid, so the form only offers layout where it applies. */
+    public const GRID_TYPES = ['Home Promo Banner', 'Category Section Banner'];
+
     public function getProcessedData(object $request, ?string $bannerUrl = null, ?string $image = null, ?string $mobileImage = null): array
     {
         if ($image) {
@@ -19,6 +25,8 @@ class BannerService
         return [
             'banner_type' => $request['banner_type'],
             'mobile_photo' => $this->getProcessedMobileImage(request: $request, mobileImage: $mobileImage),
+            'layout' => in_array($request['layout'], self::LAYOUTS) ? $request['layout'] : 'full',
+            'priority' => (int)($request['priority'] ?? 0),
             'resource_type' => $request['resource_type'],
             'resource_id' => $request[$request->resource_type . '_id'],
             'theme' => theme_root_path(),
@@ -63,6 +71,9 @@ class BannerService
                 // Placed above its category's product row on the home page; the apps
                 // render it inside that same row using the banner's mobile image.
                 "Category Section Banner" => translate('category_Section_Banner'),
+                // A home-page promo grid that belongs to no category: each banner
+                // takes a full row, half a row, or joins the rotating slider.
+                "Home Promo Banner" => translate('home_Promo_Banner'),
             ];
 
         }elseif (theme_root_path() == 'theme_aster') {

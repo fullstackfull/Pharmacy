@@ -43,6 +43,21 @@ const api = async (path) => page.evaluate(async (url) => {
 
 await loginAdmin(page);
 
+// ---- start from a clean slate so a re-run asserts on its own banner ---------
+const sectionRow = () => page.locator('table tbody tr').filter({ hasText: /Category Section Banner|بانر قسم الفئة/i }).first();
+const sectionRows = () => page.locator('table tbody tr').filter({ hasText: /Category Section Banner|بانر قسم الفئة/i });
+for (let attempt = 0; attempt < 20; attempt++) {
+    await page.goto(BASE + '/admin/banner/list', { waitUntil: 'load' });
+    await dismissNewOrderPopup();
+    if (await sectionRows().count() === 0) break;
+    await sectionRow().locator('.banner-delete-button').first().click();
+    await page.waitForSelector('.swal2-confirm', { timeout: 6000 }).catch(() => {});
+    if (await page.locator('.swal2-confirm').count() > 0) await page.locator('.swal2-confirm').click();
+    await page.waitForLoadState('load').catch(() => {});
+    await page.waitForTimeout(1800);
+}
+ok('setup: no leftover section banners', await sectionRows().count() === 0);
+
 // ---- admin: create with both images ----------------------------------------
 await page.goto(BASE + '/admin/banner/list', { waitUntil: 'load' });
 const typeOptions = await page.locator('#banner_type_select option').allTextContents();
@@ -68,7 +83,6 @@ await page.waitForLoadState('load').catch(() => {});
 await page.waitForTimeout(2500);
 ok('admin: banner saved without a server error', !(await hasServerError(page)));
 
-const sectionRow = () => page.locator('table tbody tr').filter({ hasText: /Category Section Banner|بانر قسم الفئة/i }).first();
 ok('admin: the new banner appears in the list', await sectionRow().count() > 0);
 
 await dismissNewOrderPopup();
@@ -117,7 +131,9 @@ ok('edit: both images survived an edit with no new upload',
 // ---- storefront: the banner sits above its category row --------------------
 await page.goto(BASE + '/', { waitUntil: 'load' });
 ok('home: renders', !(await hasServerError(page)));
-const banners = page.locator('.category-section-banner');
+// section banners render through the shared banner grid; scope to the category
+// rows so the home promo grid (its own placement) is not counted here
+const banners = page.locator('section:has(.category-product-view-title) .banner-grid__item');
 ok('home: exactly one section banner rendered', await banners.count() === 1);
 const bannerLoaded = await banners.first().locator('img')
     .evaluate(img => img.complete && img.naturalWidth > 0).catch(() => false);

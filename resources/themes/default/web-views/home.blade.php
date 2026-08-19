@@ -123,6 +123,14 @@
 
         @include('web-views.partials._category-section-home')
 
+        {{-- Home promo grid: banners that belong to no category, laid out full
+             row / half row / rotating slider by each banner's own layout. --}}
+        @if (($homePromoBanners ?? collect())->count() > 0)
+            <section class="container rtl pb-0 px-max-sm-0">
+                @include('web-views.partials._banner-grid', ['banners' => $homePromoBanners])
+            </section>
+        @endif
+
          @if(getFeaturedDealsProductList() && (count(getFeaturedDealsProductList()) > 0))
             <section class="featured_deal pb-3">
                 <div class="container">
