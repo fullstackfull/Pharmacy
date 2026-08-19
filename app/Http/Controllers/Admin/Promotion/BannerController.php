@@ -73,8 +73,29 @@ class BannerController extends BaseController
         ]);
     }
 
+    /**
+     * A placement banner that points at the wrong kind of resource names no page and
+     * would silently never render, so the save is refused with an explanation.
+     */
+    private function getResourceMismatchError($request): ?string
+    {
+        $required = $this->bannerService->getRequiredResourceType($request['banner_type']);
+        if ($required === null || $request['resource_type'] === $required) {
+            return null;
+        }
+
+        return translate('a_') . translate(str_replace(' ', '_', (string)$request['banner_type']))
+            . ' ' . translate('must_point_at_a_') . translate($required);
+    }
+
     public function add(BannerAddRequest $request): RedirectResponse
     {
+        $mismatch = $this->getResourceMismatchError(request: $request);
+        if ($mismatch) {
+            ToastMagic::error($mismatch);
+            return redirect()->route('admin.banner.list');
+        }
+
         $banner = $this->getBannerUrl(request: $request);
         if (!empty($banner['error'])) {
             ToastMagic::error($banner['error']);
@@ -143,16 +164,24 @@ class BannerController extends BaseController
 
     public function update(BannerUpdateRequest $request, $id): RedirectResponse
     {
-        $banner = $this->getBannerUrl(request: $request);
-        if (!empty($banner['error'])) {
-            ToastMagic::error($banner['error']);
+        $mismatch = $this->getResourceMismatchError(request: $request);
+        if ($mismatch) {
+            ToastMagic::error($mismatch);
+            return redirect()->route('admin.banner.list');
+        }
+
+        $resource = $this->getBannerUrl(request: $request);
+        if (!empty($resource['error'])) {
+            ToastMagic::error($resource['error']);
             return redirect()->route('admin.banner.list');
         }
 
         $banner = $this->bannerRepo->getFirstWhere(params: ['id' => $id]);
+        // The freshly resolved link, not $banner['banner_url'] — there is no such column,
+        // so every edit used to null the banner's click-through url.
         $data = $this->bannerService->getProcessedData(
             request: $request,
-            bannerUrl: $banner['banner_url'],
+            bannerUrl: $resource['banner_url'],
             image: $banner['photo'],
             mobileImage: $banner['mobile_photo'],
         );
@@ -163,11 +192,21 @@ class BannerController extends BaseController
 
     public function updateStatus(Request $request): JsonResponse
     {
-        $bannerType = $this->bannerRepo->getListWhere(searchValue: "Popup Banner", dataLimit: 'all');
-        foreach ($bannerType as $item) {
-            $this->bannerRepo->update(id: $item['id'], data: ['published' => 0]);
-        }
         $status = $request->get('status', 0);
+        $banner = $this->bannerRepo->getFirstWhere(params: ['id' => $request['id']]);
+
+        // Only one popup can be live at a time, so publishing one retires the others.
+        // Previously this ran for EVERY banner type: turning on a footer or promo banner
+        // silently unpublished the merchant's popup.
+        if ($status == 1 && $banner && $banner['banner_type'] == 'Popup Banner') {
+            $popupBanners = $this->bannerRepo->getListWhere(filters: ['banner_type' => 'Popup Banner'], dataLimit: 'all');
+            foreach ($popupBanners as $popupBanner) {
+                if ($popupBanner['id'] != $request['id']) {
+                    $this->bannerRepo->update(id: $popupBanner['id'], data: ['published' => 0]);
+                }
+            }
+        }
+
         $this->bannerRepo->update(id: $request['id'], data: ['published' => $status]);
         return response()->json([
             'message' => $status == 1 ? translate("banner_published_successfully") : translate("banner_unpublished_successfully"),
@@ -178,7 +217,14 @@ class BannerController extends BaseController
     {
         $banner = $this->bannerRepo->getFirstWhere(params: ['id' => $request['id']]);
         $this->deleteFile(filePath: '/banner/' . $banner['photo']);
+        if (!empty($banner['mobile_photo'])) {
+            $this->deleteFile(filePath: '/banner/' . $banner['mobile_photo']);
+        }
         $this->bannerRepo->delete(params: ['id' => $request['id']]);
+        // The repository deletes through the query builder, so the model's deleted event —
+        // which is what drops the banner caches — never fires. Without this a deleted
+        // banner keeps rendering for up to three hours.
+        cacheRemoveByType(type: 'banners');
         return response()->json(['message' => translate('banner_deleted_successfully')]);
     }
 }

@@ -29,6 +29,14 @@ class BannerAddRequest extends FormRequest
                 maxSize: getFileUploadMaxSize(unit: 'kb'),
                 isDisallowed: true
             ),
+            // Optional, but held to the same rules as the web image — it is stored and
+            // served to the apps exactly the same way.
+            'mobile_image' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg'],
+                maxSize: getFileUploadMaxSize(unit: 'kb'),
+                isDisallowed: true
+            ),
         ];
     }
 
@@ -39,6 +47,8 @@ class BannerAddRequest extends FormRequest
             'image.required' => translate('the_image_is_required'),
             'image.max' => translate('the_image_size_max_').getFileUploadMaxSize().' '.translate('MB'),
             'image.mimes' => translate('only_'). getFileUploadFormats(skip: '.svg', asMessage: 'true'),
+            'mobile_image.max' => translate('the_image_size_max_').getFileUploadMaxSize().' '.translate('MB'),
+            'mobile_image.mimes' => translate('only_'). getFileUploadFormats(skip: '.svg', asMessage: 'true'),
         ];
     }
 

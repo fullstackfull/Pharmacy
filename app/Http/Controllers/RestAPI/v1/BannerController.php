@@ -18,7 +18,9 @@ class BannerController extends Controller
     use CacheManagerTrait;
 
     /** Banner types that belong to a specific screen and are served by that screen's own endpoint. */
-    private const SCREEN_SCOPED_TYPES = ['Category Banner', 'Category Section Banner', 'Home Promo Banner'];
+    private const SCREEN_SCOPED_TYPES = [
+        'Category Banner', 'Category Section Banner', 'Home Promo Banner', 'Brand Banner',
+    ];
 
     public function __construct(private readonly BannerPlacementService $bannerPlacement)
     {

@@ -14,6 +14,26 @@ class BannerService
     /** The banner types laid out as a grid, so the form only offers layout where it applies. */
     public const GRID_TYPES = ['Home Promo Banner', 'Category Section Banner'];
 
+    /**
+     * Placement types that find their page through the resource they point at: a
+     * category banner with a product resource names no page and would never render,
+     * so the resource type is part of the contract, not a free choice.
+     */
+    public const REQUIRED_RESOURCE_TYPES = [
+        'Category Banner' => 'category',
+        'Category Section Banner' => 'category',
+        'Brand Banner' => 'brand',
+    ];
+
+    /**
+     * The resource a banner type must point at, or null when any resource will do.
+     * Callers reject the save rather than storing a banner that can never appear.
+     */
+    public function getRequiredResourceType(?string $bannerType): ?string
+    {
+        return self::REQUIRED_RESOURCE_TYPES[$bannerType] ?? null;
+    }
+
     public function getProcessedData(object $request, ?string $bannerUrl = null, ?string $image = null, ?string $mobileImage = null): array
     {
         if ($image) {

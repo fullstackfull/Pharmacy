@@ -1,13 +1,19 @@
 $('.product-list-filter-input').on('change', function () {
     const inputName = $(this).attr('name');
     const inputValue = $(this).val();
-    const baseUrl = window.location.origin + window.location.pathname;
-    const newUrl = new URL(baseUrl);
+    // Built from the full current URL, not origin+pathname: rebuilding from the path
+    // dropped every other active filter, so changing the sort on a filtered listing
+    // silently widened the results back out (brand page category chips, offer_type,
+    // data_from, price...). Only the changed key is replaced.
+    const newUrl = new URL(window.location.href);
     if (inputValue) {
         newUrl.searchParams.set(inputName, inputValue);
     } else {
         newUrl.searchParams.delete(inputName);
     }
+    // A narrower list has fewer pages; staying on the old page number lands on an
+    // empty one.
+    newUrl.searchParams.delete('page');
     window.location.href = newUrl.toString();
 });
 $("#search-brand").on("keyup", function () {

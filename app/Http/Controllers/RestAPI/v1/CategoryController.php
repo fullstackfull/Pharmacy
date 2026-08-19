@@ -111,6 +111,7 @@ class CategoryController extends Controller
                 'resource_type' => $banner['resource_type'],
                 'resource_id' => $banner['resource_id'],
                 'photo_full_url' => $banner->photo_full_url,
+                'mobile_photo_full_url' => $banner->mobile_photo_full_url,
                 // The banner may belong to an ancestor; the app can label it accordingly.
                 'inherited' => (int)$banner['resource_id'] !== (int)$category['id'],
             ] : null,

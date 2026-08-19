@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Banner;
 use App\Traits\CacheManagerTrait;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Where the screen-scoped banners appear.
@@ -19,19 +20,30 @@ class BannerPlacementService
 {
     use CacheManagerTrait;
 
-    /** Every published category-page banner, for resolving a page's own or its ancestor's. */
+    /**
+     * Every published category-page banner, for resolving a page's own or its
+     * ancestor's. One page shows one banner, so when a merchant has created several
+     * for the same category the newest wins — the convention every other single-banner
+     * slot in this codebase follows.
+     */
     public function getCategoryPageBanners(): Collection
     {
-        return $this->remember(type: 'Category Banner', cacheKey: 'category_banner');
+        return $this->remember(
+            type: 'Category Banner',
+            cacheKey: 'category_banner',
+            build: fn ($query) => $query->where('resource_type', 'category'),
+            newestFirst: true,
+        );
     }
 
-    /** Brand-page banners, each naming the brand whose page it heads. */
+    /** Brand-page banners, each naming the brand whose page it heads; newest wins. */
     public function getBrandPageBanners(): Collection
     {
         return $this->remember(
             type: 'Brand Banner',
             cacheKey: 'brand_banner',
             build: fn ($query) => $query->where('resource_type', 'brand'),
+            newestFirst: true,
         );
     }
 
@@ -60,17 +72,23 @@ class BannerPlacementService
         return $this->remember(type: 'Home Promo Banner', cacheKey: 'home_promo_banner');
     }
 
-    private function remember(string $type, string $cacheKey, ?callable $build = null): Collection
+    /**
+     * @param bool $newestFirst Single-banner placements take the first match, so they
+     *                          want the newest; grids keep creation order within a priority.
+     */
+    private function remember(string $type, string $cacheKey, ?callable $build = null, bool $newestFirst = false): Collection
     {
         $themeName = theme_root_path() ?? 'default';
         $key = 'cache_banner_type_' . $cacheKey . '_' . $themeName;
         $this->cacheBannerAllTypeKeys(cacheKey: $key);
 
-        return \Illuminate\Support\Facades\Cache::remember($key, CACHE_FOR_3_HOURS, function () use ($type, $themeName, $build) {
+        return Cache::remember($key, CACHE_FOR_3_HOURS, function () use ($type, $themeName, $build, $newestFirst) {
             $query = Banner::with(['storage'])
                 ->where(['banner_type' => $type, 'published' => 1, 'theme' => $themeName]);
 
-            return ($build ? $build($query) : $query)->orderBy('priority')->orderBy('id')->get();
+            $query = ($build ? $build($query) : $query)->orderBy('priority');
+
+            return ($newestFirst ? $query->orderByDesc('id') : $query->orderBy('id'))->get();
         });
     }
 }

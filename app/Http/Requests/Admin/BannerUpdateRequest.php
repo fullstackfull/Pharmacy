@@ -26,6 +26,10 @@ class BannerUpdateRequest extends FormRequest
                 rules: ['nullable', 'image'],
                 skipMimes: ['.svg', '.gif'],
             ),
+            'mobile_image' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg', '.gif'],
+            ),
         ];
     }
 
@@ -36,6 +40,8 @@ class BannerUpdateRequest extends FormRequest
             'image.required' => translate('the_image_is_required'),
             'image.max' => translate('the_image_size_max_2_mb'),
             'image.mimes' => translate('only_webp_jpg_jpeg_png_allowed'),
+            'mobile_image.max' => translate('the_image_size_max_2_mb'),
+            'mobile_image.mimes' => translate('only_webp_jpg_jpeg_png_allowed'),
         ];
     }
 

@@ -93,6 +93,9 @@
           data-url="{{ url()->current() }}"
           data-brand="{{ $data['brand_id'] ?? '' }}"
           data-category="{{ $data['category_id'] ?? '' }}"
+          {{-- carried so an AJAX re-render (sort, price, product type) keeps a
+               category chosen from a chip instead of silently dropping it --}}
+          data-category-ids="{{ json_encode(array_values(array_filter((array) request('category_ids', [])))) }}"
           data-name="{{ $data['name'] }}"
           data-offer-type="{{ $data['offer_type'] }}"
           data-from="{{ $data['data_from'] ?? $data['product_type'] }}"

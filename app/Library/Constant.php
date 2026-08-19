@@ -477,6 +477,11 @@ const THEME_RATIO = [
         'Footer Banner'=>'Ratio 2:1',
         'Popup Banner'=>'Ratio 1:1 (1200 x 1200 px)',
         'Main Section Banner'=>'Ratio 4:1 (2000 x 500 px)',
+        // The placement types; this is the copy the banner form's ratio hint reads.
+        'Home Promo Banner'=>'Ratio 4:1 (2000 x 500 px)',
+        'Category Section Banner'=>'Ratio 4:1 (2000 x 500 px)',
+        'Category Banner'=>'Ratio 4:1 (2000 x 500 px)',
+        'Brand Banner'=>'Ratio 4:1 (2000 x 500 px)',
         'Store cover Image'=>'Ratio 4:1 (2000 x 500 px)',
         'Main website Logo'=>'(1000 x 308 px)',
         'Product Image'=>'Ratio 1:1 (500 x 500 px)',

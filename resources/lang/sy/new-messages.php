@@ -735,4 +735,6 @@ return [
 	'brand_page_header' => 'ترويسة صفحة الماركة',
 	'one_call_returns_the_brand_banner_and_the_categories_its_products_live_in' => 'استدعاء واحد يعيد بانر الماركة والتصنيفات التي توجد فيها منتجاتها',
 	'brand_not_found' => 'الماركة غير موجودة',
+	'a_' => 'بانر ',
+	'must_point_at_a_' => 'يجب أن يشير إلى',
 ];

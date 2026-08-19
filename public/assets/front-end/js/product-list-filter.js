@@ -9,6 +9,10 @@ let productListPageData = {
     product_name: productListPageBackup.data('name'),
     brand_id: productListPageBackup.data('brand'),
     category_id: productListPageBackup.data('category'),
+    // A category picked from a brand-page chip lives in category_ids; without it
+    // here the first sort/price change would re-render the list unfiltered while
+    // the chip still looked selected.
+    category_ids: productListPageBackup.data('category-ids') || [],
     data_from: productListPageBackup.data('from'),
     offer_type: productListPageBackup.data('offer'),
     product_check: productListPageBackup.data('product-check'),

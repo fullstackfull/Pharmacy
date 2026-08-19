@@ -3492,4 +3492,6 @@ ____________________________________________________on_search_engines_and_see_th
 	'brand_page_header' => 'Brand page header',
 	'one_call_returns_the_brand_banner_and_the_categories_its_products_live_in' => 'One call returns the brand banner and the categories its products live in',
 	'brand_not_found' => 'Brand not found',
+	'a_' => 'A ',
+	'must_point_at_a_' => 'must point at a',
 ];

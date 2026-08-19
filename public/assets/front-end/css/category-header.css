@@ -145,8 +145,11 @@
     line-height: 0;
 }
 
+/* No flex-grow: a half stays half even when it has no partner on its row,
+   which is what the placement guide promises and what a merchant who picked
+   "half" expects while they are still adding the second banner. */
 .banner-grid__item--half {
-    flex: 1 1 calc(50% - 0.5rem);
+    flex: 0 1 calc(50% - 0.5rem);
     min-width: calc(50% - 0.5rem);
 }
 
