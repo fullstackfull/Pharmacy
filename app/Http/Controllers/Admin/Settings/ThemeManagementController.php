@@ -116,6 +116,40 @@ class ThemeManagementController extends BaseController
         return $this->backToIndex();
     }
 
+    /** Delete a theme with all its versions and stored asset files. Active and system themes are protected. */
+    public function delete(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+
+        if (!$this->permissions->canPublish()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_publish_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $theme = $this->themeRepo->getFirstWhere(params: ['id' => $request['id']]);
+        if (!$theme instanceof Theme) {
+            ToastMagic::error(translate('theme_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        if ($theme->is_active || $theme->is_system) {
+            ToastMagic::error(translate('active_and_system_themes_cannot_be_deleted') . '!');
+            return $this->backToIndex();
+        }
+
+        try {
+            \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory('theme-assets/' . $theme->id);
+        } catch (\Throwable) {
+            // missing files must not block removing the theme; versions/sections/assets rows cascade
+        }
+        $theme->delete();
+        ToastMagic::success(translate('theme_deleted_successfully'));
+
+        return $this->backToIndex();
+    }
+
     /** Publish a draft version (previous published version becomes archived). */
     public function publishVersion(Request $request): RedirectResponse
     {

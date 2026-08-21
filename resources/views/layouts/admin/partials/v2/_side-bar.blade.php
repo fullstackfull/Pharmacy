@@ -1054,10 +1054,7 @@
             @if (Helpers::module_permission_check('themes_and_addons'))
                 <div class="v2-ctx-group">
                     <div class="v2-ctx-group-head"><span>{{ translate('Themes_&_Addons') }}</span></div>
-                    <a class="v2-nav-item {{ Request::is('admin/system-setup/theme/setup') ? 'v2-is-active' : '' }}" data-item="theme-setup" href="{{ route('admin.system-setup.theme.setup') }}">
-                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Theme_Setup') }}</span></span>
-                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="theme-setup" aria-label="Pin"></button></div>
-                    </a>
+                    {{-- Theme Setup lives inside Theme Management now (admin/theme) — one entry, one place. --}}
                     <a class="v2-nav-item {{ Request::is('admin/system-setup/addon') ? 'v2-is-active' : '' }}" data-item="system-addons" href="{{ route('admin.system-setup.addon.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('System_Addons') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="system-addons" aria-label="Pin"></button></div>

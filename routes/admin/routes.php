@@ -1364,6 +1364,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::controller(ThemeManagementController::class)->group(function () {
             Route::get('', 'index')->name('index');
             Route::post('store', 'store')->name('store');
+            Route::post('delete', 'delete')->name('delete');
             Route::post('activate', 'activate')->name('activate');
             Route::post('version/publish', 'publishVersion')->name('version.publish');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');

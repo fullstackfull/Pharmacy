@@ -754,4 +754,7 @@ return [
 	'Brand_Banner' => 'بانر الماركة',
 	'download_example_theme' => 'تنزيل الثيم النموذجي',
 	'shop_by_category' => 'تسوق حسب الفئة',
+	'delete_this_theme_and_all_its_versions' => 'حذف هذا الثيم وكل نسخه',
+	'active_and_system_themes_cannot_be_deleted' => 'لا يمكن حذف الثيم المفعّل أو ثيم النظام',
+	'theme_deleted_successfully' => 'تم حذف الثيم بنجاح',
 ];

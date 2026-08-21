@@ -25,16 +25,20 @@
 
 @section('content')
 
-{{-- Visual Theme Builder home sections (Phase 1). Renders only when a published theme defines home
-     sections; otherwise outputs nothing and the default home below is shown unchanged.
+{{-- Visual Theme Builder home sections (Phase 1). When a published theme defines home sections they
+     REPLACE the hardcoded home below — one theme on the page, never two stacked. With no published
+     sections this outputs nothing and the default home renders unchanged.
      Guarded: a problem inside a section must NEVER take the storefront (or the builder iframe) down —
-     it is logged and the rest of the home renders normally. --}}
+     it is logged and the default home renders as the fallback. --}}
 @php
+    $__themedHome = '';
     try {
-        echo view('theme-sections.home')->render();
+        $__themedHome = trim(view('theme-sections.home')->render());
     } catch (\Throwable $themeSectionsError) {
         report($themeSectionsError);
+        $__themedHome = '';
     }
+    echo $__themedHome;
 @endphp
 
 @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
@@ -74,6 +78,7 @@
 ?>
 @include("web-views.partials._order-success-modal",['orderSuccessIds' => $orderSuccessIds,'isNewCustomerInSession' => $isNewCustomerInSession])
 
+@if ($__themedHome === '')
 <div class="__inline-61 d-flex flex-column gap-20">
         @php($decimalPointSettings = !empty(getWebConfig(name: 'decimal_point_settings')) ? getWebConfig(name: 'decimal_point_settings') : 0)
 
@@ -289,6 +294,7 @@
             @include('web-views.partials._company-reliability')
         @endif
     </div>
+@endif
 
     <span id="direction-from-session" data-value="{{ session()->get('direction') }}"></span>
 @endsection

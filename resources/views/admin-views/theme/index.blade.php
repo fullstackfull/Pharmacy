@@ -206,6 +206,14 @@
                                                         <button type="submit" class="btn btn-sm btn-outline-secondary">{{ translate('duplicate_to_draft') }}</button>
                                                     </form>
                                                 @endif
+                                                @if(!$theme->is_active && !$theme->is_system)
+                                                    <form action="{{ route('admin.theme.delete') }}" method="post"
+                                                          onsubmit="return confirm('{{ translate('delete_this_theme_and_all_its_versions') }}?')">
+                                                        @csrf
+                                                        <input type="hidden" name="id" value="{{ $theme->id }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">{{ translate('delete') }}</button>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
