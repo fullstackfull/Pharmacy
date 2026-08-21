@@ -488,7 +488,8 @@ const THEME_RATIO = [
         'Category Image'=>'Ratio 1:1 (500 x 500 px)',
         'Brand Image'=>'Ratio 1:1 (500 x 500 px)',
         'Seller Image'=>'Ratio 1:1 (500 x 500 px)',
-        'Meta Thumbnail' => '(Ratio 2:1)'
+        'Meta Thumbnail' => '(Ratio 2:1)',
+        'Theme Banner' => '(free ratio — sized by its theme section)'
     ],
 
 ];

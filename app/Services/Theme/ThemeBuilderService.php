@@ -199,7 +199,15 @@ class ThemeBuilderService
         }
 
         $block->settings = $this->registry->normalizeBlockSettings($block->type, $settings);
-        return $block->save();
+        $saved = $block->save();
+
+        // A banner image uploaded straight in the builder is registered in Promotion -> Banners
+        // and linked back, so Banner Setup always knows about it (see ThemeBannerLink).
+        if ($saved) {
+            app(ThemeBannerLink::class)->syncBlock($block);
+        }
+
+        return $saved;
     }
 
     public function setBlockVisibility(ThemeBlock $block, bool $visible): bool
@@ -298,12 +306,24 @@ class ThemeBuilderService
     {
         $settings = $block->settings ?? [];
         $imageKey = $this->registry->blockImageKey($block->type);
+        $image = $imageKey ? ($settings[$imageKey] ?? null) : null;
+        $label = $this->registry->blockLabel($block->type, $settings);
+
+        // A banner-linked block previews its LINKED banner in the panel, same as it renders.
+        if (!empty($settings['banner_id'])) {
+            $linked = app(ThemeBannerLink::class)->cardOverrides([(int) $settings['banner_id']]);
+            $linked = $linked[(int) $settings['banner_id']] ?? null;
+            if ($linked) {
+                $image = $linked['image'] ?: $image;
+                $label = $linked['title'] ?: $label;
+            }
+        }
 
         return [
             'id'         => $block->id,
             'type'       => $block->type,
-            'label'      => $this->registry->blockLabel($block->type, $settings),
-            'image'      => $imageKey ? ($settings[$imageKey] ?? null) : null,
+            'label'      => $label,
+            'image'      => $image,
             'sort_order' => $block->sort_order,
             'is_visible' => $block->is_visible,
             'settings'   => $settings,

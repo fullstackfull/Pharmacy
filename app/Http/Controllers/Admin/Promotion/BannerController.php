@@ -58,7 +58,8 @@ class BannerController extends BaseController
         $shops = $shops->prepend($inhouseShop);
         $brands = $this->brandRepo->getListWhere(dataLimit: 'all');
         $products = $this->productRepo->getListWithScope(scope: 'active', dataLimit: 'all');
-        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes'));
+        $themeUsage = app(\App\Services\Theme\ThemeBannerLink::class)->usage();
+        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes', 'themeUsage'));
     }
 
     /**

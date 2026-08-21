@@ -101,6 +101,10 @@ npm run production      # أو npm run watch أثناء التطوير
 - **إن لم توجد** (الوضع الافتراضي) ← تُعرض الصفحة الرئيسية الافتراضية كما هي.
 - أي خطأ داخل قسم لا يُسقط المتجر أبداً: يُسجَّل ويُعرض الاحتياطي.
 
+**الهيدر والفوتر قابلان للتحرير أيضاً:**
+- صفحة **header** في المحرر: قسم «شريط الإعلان» يظهر فوق هيدر المتجر مباشرة (نص + رابط + زر إغلاق يتذكر إغلاقه).
+- صفحة **footer** في المحرر: أقسام «أعمدة الفوتر» (روابط/نص/تواصل/سوشال/تطبيقات) و«النشرة البريدية» و«HTML مخصص» — عند نشرها **تستبدل** الفوتر المدمج بالكامل (سطر الحقوق يبقى تلقائياً)، وعند عدم وجودها يبقى الفوتر المدمج كما هو.
+
 بهذا يكون **سير العمل الكامل لتغيير شكل الرئيسية**:
 
 ```
@@ -121,6 +125,16 @@ Brand Banner.
 - الصفحة الافتراضية تعرضها في مواضعها المدمجة.
 - وفي الـBuilder يوجد قسم **«بانرات من لوحة التحكم» (store_banner)** يعرض أي نوع منها في أي
   موضع تختاره وبأي تخطيط — وعندها يقف الموضع المدمج تلقائياً كي لا تتكرر.
+
+**الربط الذكي في الاتجاهين:**
+- كل بلوك بانر في المحرر (سلايد الهيرو، بلاطة إعلانية، موزاييك، سبليت) فيه حقل
+  **«بانر مربوط من لوحة البانرات»**: اربطه بأي بانر موجود فتُعرض صورته ورابطه ونصوصه
+  **مباشرة من صف البانر** — أي تعديل لاحق في شاشة البانرات يظهر في المتجر فوراً، وإيقاف نشره
+  يخفي البطاقة من الثيم.
+- وإن رفعت صورة داخل المحرر مباشرة، تُسجَّل تلقائياً كبانر بنوع **«بانر الثيم» (Theme Banner)**
+  في شاشة البانرات ويُربط البلوك بها — فلا يوجد بانر في الثيم لا تعرفه شاشة البانرات.
+- شاشة البانرات تعرض شارة **«معروض عبر الثيم»** على كل بانر يستخدمه المحرر (بالرابط المباشر أو
+  عبر قسم store_banner لنوعه)، مع رابط يفتح المحرر.
 
 ---
 
@@ -157,3 +171,11 @@ Brand Banner.
 - **Sections catalogue.** `app/Services/Theme/SectionRegistry.php` is the contract between the
   Builder UI and the storefront renderer (`StorefrontThemeRenderer`); add a type there plus its
   Blade partial and the Builder picks it up automatically.
+- **Header & footer.** `theme-sections/header.blade.php` renders published header sections
+  (announcement bar) above the built-in header; `theme-sections/footer.blade.php` REPLACES the
+  built-in footer when footer sections are published (copyright bar always appended), falling back
+  otherwise — same replace-not-stack contract as the home page.
+- **Banner smart link.** `app/Services/Theme/ThemeBannerLink.php`: banner-shaped blocks carry a
+  `banner_id` picker over Promotion -> Banners rows and render the linked row live (unpublished =
+  hidden); an image uploaded straight in the builder is auto-registered as a `Theme Banner` row and
+  linked back; the Banner Setup list badges every banner the theme shows.

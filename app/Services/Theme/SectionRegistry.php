@@ -14,7 +14,10 @@ namespace App\Services\Theme;
 class SectionRegistry
 {
     /** Field types the builder UI knows how to render. */
-    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source'];
+    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source', 'banner'];
+
+    /** Block types whose cards can be backed by a row in Promotion -> Banners (see ThemeBannerLink). */
+    public const BANNER_BACKED_BLOCK_TYPES = ['slide', 'banner', 'mosaic_tile', 'split'];
 
     /** Hard cap on repeatable child blocks per section, so a runaway UI cannot bloat a page. */
     public const MAX_BLOCKS_PER_SECTION = 24;
@@ -32,6 +35,9 @@ class SectionRegistry
         // The grid types: placing one of these as a section lets the merchant put the
         // promo grid wherever they want in the page order, instead of its default slot.
         'Home Promo Banner', 'Category Section Banner', 'Category Banner',
+        // Banners minted by (or for) the Theme Builder itself — no built-in slot renders these,
+        // so a section here is the only place they appear.
+        'Theme Banner',
     ];
 
     /**
@@ -220,6 +226,7 @@ class SectionRegistry
             'slide' => [
                 'label' => 'hero_slide', 'title_key' => 'title', 'image_key' => 'image',
                 'schema' => [
+                    'banner_id'    => ['type' => 'banner', 'label' => 'linked_dashboard_banner', 'default' => null],
                     'image'        => ['type' => 'image',  'label' => 'image', 'default' => ''],
                     'image_mobile' => ['type' => 'image',  'label' => 'mobile_image', 'default' => ''],
                     'eyebrow'      => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
@@ -236,6 +243,7 @@ class SectionRegistry
             'banner' => [
                 'label' => 'banner_tile', 'title_key' => 'title', 'image_key' => 'image',
                 'schema' => [
+                    'banner_id'   => ['type' => 'banner', 'label' => 'linked_dashboard_banner', 'default' => null],
                     'image'       => ['type' => 'image', 'label' => 'image', 'default' => ''],
                     'badge'       => ['type' => 'text',  'label' => 'badge', 'default' => ''],
                     'title'       => ['type' => 'text',  'label' => 'title', 'default' => ''],
@@ -247,6 +255,7 @@ class SectionRegistry
             'split' => [
                 'label' => 'split_panel', 'title_key' => 'title', 'image_key' => 'image',
                 'schema' => [
+                    'banner_id'   => ['type' => 'banner', 'label' => 'linked_dashboard_banner', 'default' => null],
                     'image'       => ['type' => 'image',  'label' => 'image', 'default' => ''],
                     'media_side'  => ['type' => 'select', 'label' => 'image_side', 'default' => 'start',
                                       'options' => ['start', 'end']],
@@ -261,6 +270,7 @@ class SectionRegistry
             'mosaic_tile' => [
                 'label' => 'mosaic_tile', 'title_key' => 'title', 'image_key' => 'image',
                 'schema' => [
+                    'banner_id'   => ['type' => 'banner', 'label' => 'linked_dashboard_banner', 'default' => null],
                     'image'       => ['type' => 'image',  'label' => 'image', 'default' => ''],
                     'span'        => ['type' => 'select', 'label' => 'tile_size', 'default' => 'small',
                                       'options' => ['small', 'wide', 'tall', 'large']],
@@ -458,6 +468,7 @@ class SectionRegistry
     {
         return match ($field['type']) {
             'number'  => is_numeric($value) ? $value + 0 : ($field['default'] ?? null),
+            'banner'  => (is_numeric($value) && (int) $value > 0) ? (int) $value : null,
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
             'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
