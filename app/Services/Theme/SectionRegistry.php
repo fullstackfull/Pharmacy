@@ -241,6 +241,147 @@ class SectionRegistry
                     'add_to_cart'  => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
+            // --- Offers & Deals: windows onto the Promotion screens the merchant already uses ---
+            'deal_of_the_day' => [
+                'preview' => 'split', 'label' => 'deal_of_the_day', 'pages' => ['home'],
+                'hint' => 'the_single_product_you_set_as_todays_deal_with_a_countdown_to_midnight',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title_leave_empty_for_the_deal_title', 'default' => ''],
+                    'countdown'   => ['type' => 'boolean','label' => 'show_countdown', 'default' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            'featured_deal' => [
+                'preview' => 'rail', 'label' => 'featured_deal', 'pages' => ['home'],
+                'hint' => 'products_of_the_running_featured_deal_campaign',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            'clearance_sale' => [
+                'preview' => 'rail', 'label' => 'clearance_sale', 'pages' => ['home'],
+                'hint' => 'products_you_put_on_clearance_from_promotion_clearance_sale',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            'coupon_strip' => [
+                'preview' => 'coupon', 'label' => 'coupons', 'pages' => ['home'],
+                'hint' => 'your_live_coupons_as_cards_the_customer_can_copy_with_one_tap',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 4],
+                    'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
+                ],
+            ],
+
+            // --- Storytelling, trust and conversion -------------------------------------------
+            'stats_bar' => [
+                'preview' => 'usp', 'label' => 'store_stats', 'pages' => ['home'],
+                'hint' => 'counters_that_count_up_products_brands_customers_and_anything_you_add',
+                'blocks' => ['stat'],
+                'schema' => [
+                    'eyebrow'    => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'      => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'columns'    => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
+                    'style'      => ['type' => 'select', 'label' => 'display_style', 'default' => 'boxed',
+                                     'options' => ['boxed', 'dark']],
+                    'animate'    => ['type' => 'boolean','label' => 'count_up_when_it_scrolls_into_view', 'default' => true],
+                ],
+            ],
+            'bundle' => [
+                'preview' => 'showcase', 'label' => 'bundle_buy_the_set', 'pages' => ['home'],
+                'hint' => 'pick_the_products_of_a_set_show_what_it_costs_and_add_them_all_with_one_button',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',    'label' => 'title', 'default' => ''],
+                    'subtitle'    => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
+                    'product_ids' => ['type' => 'resource','label' => 'choose_products', 'default' => null,
+                                      'resource' => 'product', 'multiple' => true,
+                                      'hint' => 'pick_at_least_two_products_they_are_added_to_the_cart_together'],
+                    'discount'    => ['type' => 'number',  'label' => 'bundle_discount_percent', 'default' => 0],
+                    'button_text' => ['type' => 'text',    'label' => 'button_text', 'default' => ''],
+                ],
+            ],
+            'interest_tiles' => [
+                'preview' => 'mosaic', 'label' => 'shop_by_interest', 'pages' => ['home'],
+                'blocks' => ['interest'],
+                'hint' => 'large_tiles_that_lead_to_a_ready_made_filtered_page_skin_type_concern_routine',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
+                    'gap'     => ['type' => 'number', 'label' => 'gap', 'default' => 16],
+                    'height'  => ['type' => 'number', 'label' => 'tile_height', 'default' => 260, 'responsive' => true],
+                ],
+            ],
+            'stories' => [
+                'preview' => 'stories', 'label' => 'stories', 'pages' => ['home'],
+                'blocks' => ['story'],
+                'hint' => 'vertical_story_cards_that_open_full_screen_and_link_to_a_product',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                ],
+            ],
+            'blog_posts' => [
+                'preview' => 'tiles', 'label' => 'from_the_blog', 'pages' => ['home'],
+                'hint' => 'the_newest_published_posts_from_your_blog',
+                'schema' => [
+                    'eyebrow'  => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'limit'    => ['type' => 'number', 'label' => 'max_items', 'default' => 3],
+                    'columns'  => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
+                    'view_all' => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                ],
+            ],
+            'branches' => [
+                'preview' => 'columns', 'label' => 'our_branches', 'pages' => ['home'],
+                'blocks' => ['branch'],
+                'hint' => 'addresses_opening_hours_and_a_map_link_for_each_branch',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
+                ],
+            ],
+            'shipping_cutoff' => [
+                'preview' => 'bar', 'label' => 'ship_today_countdown', 'pages' => ['home'],
+                'hint' => 'order_within_x_to_have_it_shipped_today_counts_down_to_your_cut_off_time',
+                'schema' => [
+                    'cutoff'   => ['type' => 'text',   'label' => 'cut_off_time_24h', 'default' => '16:00'],
+                    'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'subtitle' => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
+                    'style'    => ['type' => 'select', 'label' => 'display_style', 'default' => 'strip',
+                                   'options' => ['strip', 'card']],
+                ],
+            ],
+            'before_after' => [
+                'preview' => 'beforeafter', 'label' => 'before_and_after', 'pages' => ['home'],
+                'blocks' => ['comparison'],
+                'hint' => 'a_slider_the_customer_drags_to_compare_two_photos',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 2, 'responsive' => true],
+                    'height'  => ['type' => 'number', 'label' => 'height', 'default' => 360, 'responsive' => true],
+                ],
+            ],
+
             // --- multi-vendor -----------------------------------------------------------------
             // A marketplace's sellers are as much a browse entry as its categories: one section
             // lists the shops, the other features a single shop with its products.
@@ -400,6 +541,60 @@ class SectionRegistry
                     'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle' => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'link'     => ['type' => 'link',   'label' => 'link', 'default' => ''],
+                ],
+            ],
+            'stat' => [
+                'label' => 'stat', 'title_key' => 'label',
+                'schema' => [
+                    'source' => ['type' => 'select', 'label' => 'value_source', 'default' => 'products',
+                                 'options' => ['products', 'brands', 'categories', 'customers', 'orders', 'custom']],
+                    'value'  => ['type' => 'text',   'label' => 'custom_value', 'default' => '',
+                                 'depends_on' => ['source' => ['custom']]],
+                    'label'  => ['type' => 'text',   'label' => 'label', 'default' => ''],
+                    'suffix' => ['type' => 'text',   'label' => 'suffix_for_example_plus', 'default' => ''],
+                    'icon'   => ['type' => 'select', 'label' => 'icon', 'default' => 'shipping',
+                                 'options' => ['shipping', 'authentic', 'returns', 'support', 'gift', 'secure']],
+                ],
+            ],
+            'interest' => [
+                'label' => 'interest_tile', 'title_key' => 'title', 'image_key' => 'image',
+                'schema' => [
+                    'image'      => ['type' => 'image',   'label' => 'image', 'default' => ''],
+                    'eyebrow'    => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
+                    'title'      => ['type' => 'text',    'label' => 'title', 'default' => ''],
+                    'subtitle'   => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
+                    'link'       => ['type' => 'link',    'label' => 'link', 'default' => ''],
+                    'text_color' => ['type' => 'color',   'label' => 'text_color', 'default' => '#ffffff'],
+                    'overlay'    => ['type' => 'number',  'label' => 'overlay_opacity', 'default' => 35],
+                ],
+            ],
+            'story' => [
+                'label' => 'story', 'title_key' => 'title', 'image_key' => 'image',
+                'schema' => [
+                    'image'      => ['type' => 'image', 'label' => 'cover_image', 'default' => ''],
+                    'video'      => ['type' => 'link',  'label' => 'video_url_mp4_optional', 'default' => ''],
+                    'title'      => ['type' => 'text',  'label' => 'title', 'default' => ''],
+                    'link'       => ['type' => 'link',  'label' => 'link', 'default' => ''],
+                    'button_text'=> ['type' => 'text',  'label' => 'button_text', 'default' => ''],
+                ],
+            ],
+            'branch' => [
+                'label' => 'branch', 'title_key' => 'title',
+                'schema' => [
+                    'title'   => ['type' => 'text',     'label' => 'branch_name', 'default' => ''],
+                    'address' => ['type' => 'textarea', 'label' => 'address', 'default' => ''],
+                    'hours'   => ['type' => 'text',     'label' => 'opening_hours', 'default' => ''],
+                    'phone'   => ['type' => 'text',     'label' => 'phone', 'default' => ''],
+                    'link'    => ['type' => 'link',     'label' => 'map_link', 'default' => ''],
+                ],
+            ],
+            'comparison' => [
+                'label' => 'before_after_pair', 'title_key' => 'title', 'image_key' => 'image',
+                'schema' => [
+                    'image'  => ['type' => 'image', 'label' => 'before_image', 'default' => ''],
+                    'after'  => ['type' => 'image', 'label' => 'after_image', 'default' => ''],
+                    'title'  => ['type' => 'text',  'label' => 'title', 'default' => ''],
+                    'caption'=> ['type' => 'text',  'label' => 'caption', 'default' => ''],
                 ],
             ],
             'qa' => [

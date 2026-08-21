@@ -76,6 +76,35 @@ class ThemeOptionCoverageTest extends TestCase
         }
     }
 
+    public function test_every_home_section_type_has_a_renderer_case(): void
+    {
+        $home = file_get_contents(resource_path('views/theme-sections/home.blade.php'));
+
+        foreach ((new SectionRegistry())->types() as $type => $definition) {
+            if (!in_array('home', $definition['pages'], true)) {
+                continue;
+            }
+            $this->assertStringContainsString(
+                "@case('" . $type . "')",
+                $home,
+                "Section {$type} can be added to the home page but the renderer has no case for it.",
+            );
+        }
+    }
+
+    public function test_every_picker_preview_shape_is_drawn(): void
+    {
+        $builder = file_get_contents(resource_path('views/admin-views/theme/builder.blade.php'));
+
+        foreach ((new SectionRegistry())->types() as $type => $definition) {
+            $this->assertStringContainsString(
+                '[data-shape="' . $definition['preview'] . '"]',
+                $builder,
+                "Section {$type} previews as \"{$definition['preview']}\", a shape the picker never draws.",
+            );
+        }
+    }
+
     public function test_breakpoint_css_is_emitted_only_for_overrides_that_exist(): void
     {
         $this->assertSame('', theme_section_breakpoint_css(settings: ['padding_top' => 40], selector: '#s1'));
