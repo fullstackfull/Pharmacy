@@ -75,6 +75,25 @@ trait CreatesCatalogueSchema
             $table->string('product_type')->default('physical');
             $table->integer('status')->default(1);
             $table->integer('request_status')->default(1);
+            // Columns the product card and the product page read: stock decides the sold-out
+            // state, the price pair drives the discount percentage, and the two description
+            // fields feed the short description.
+            $table->integer('current_stock')->default(0);
+            $table->decimal('unit_price', 24, 3)->default(0);
+            $table->decimal('discount', 24, 3)->default(0);
+            $table->string('discount_type')->default('flat');
+            $table->integer('minimum_order_qty')->default(1);
+            $table->text('meta_description')->nullable();
+            $table->text('details')->nullable();
+            $table->timestamps();
+        });
+
+        // A price read checks for a running clearance sale on the product first.
+        $this->createTable('stock_clearance_products', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->string('discount_type')->nullable();
+            $table->decimal('discount_amount', 24, 3)->default(0);
             $table->timestamps();
         });
 

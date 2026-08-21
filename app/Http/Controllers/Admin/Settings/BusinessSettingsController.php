@@ -135,6 +135,10 @@ class BusinessSettingsController extends BaseController
         $this->businessSettingRepo->updateOrInsert(type: 'company_phone', value: $request['company_phone']);
         $this->businessSettingRepo->updateOrInsert(type: 'country_code', value: $request['country_code']);
         $this->businessSettingRepo->updateOrInsert(type: 'shop_address', value: $request['shop_address']);
+        // Optional legal identifiers shown in the storefront footer when filled.
+        foreach (['company_registration_no', 'company_vat_no', 'company_platform_no'] as $identifier) {
+            $this->businessSettingRepo->updateOrInsert(type: $identifier, value: strip_tags((string) $request[$identifier]));
+        }
         $this->businessSettingRepo->updateOrInsert(type: 'pagination_limit', value: $request['pagination_limit']);
 
         $appAppleStore = json_encode(['status' => $request['app_store_download_status'] ?? 0, 'link' => $request['app_store_download_url']]);
@@ -476,6 +480,16 @@ class BusinessSettingsController extends BaseController
         $this->businessSettingRepo->updateOrInsert(type: 'digital_product', value: $request->get('digital_product', 0));
         $this->businessSettingRepo->updateOrInsert(type: 'new_product_approval', value: $request->get('new_product_approval', 0));
         $this->businessSettingRepo->updateOrInsert(type: 'product_wise_shipping_cost_approval', value: $request->get('product_wise_shipping_cost_approval', 0));
+
+        // Product page signals. The viewer range is clamped here rather than trusted from the form,
+        // so a swapped min/max cannot reach the storefront as an empty range.
+        $viewersMin = max(2, (int) $request->get('product_live_viewers_min', 8));
+        $viewersMax = max($viewersMin + 1, (int) $request->get('product_live_viewers_max', 60));
+        $this->businessSettingRepo->updateOrInsert(type: 'product_live_viewers_status', value: $request->get('product_live_viewers_status', 0));
+        $this->businessSettingRepo->updateOrInsert(type: 'product_live_viewers_min', value: $viewersMin);
+        $this->businessSettingRepo->updateOrInsert(type: 'product_live_viewers_max', value: $viewersMax);
+        $this->businessSettingRepo->updateOrInsert(type: 'product_authenticity_badge_status', value: $request->get('product_authenticity_badge_status', 0));
+        $this->businessSettingRepo->updateOrInsert(type: 'product_authenticity_badge_text', value: strip_tags((string) $request->get('product_authenticity_badge_text', '')));
 
         clearWebConfigCacheKeys();
         ToastMagic::success(translate('updated_successfully'));

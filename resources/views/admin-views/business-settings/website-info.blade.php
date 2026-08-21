@@ -218,6 +218,36 @@
                                             placeholder="{{ translate('Ex : House#38, Road#04, Demo City') }}" required>{{ $businessSetting['shop_address'] }}</textarea>
                                     </div>
                                 </div>
+                                {{-- Legal identifiers. Optional: each one appears in the storefront
+                                     footer only when it is filled in, so a shop that has no VAT
+                                     number simply does not show that badge. --}}
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label" for="company-registration-no">{{ translate('commercial_registration_number') }}</label>
+                                        <input type="text" class="form-control" id="company-registration-no"
+                                               name="company_registration_no" maxlength="40"
+                                               value="{{ getWebConfig(name: 'company_registration_no') }}"
+                                               placeholder="{{ translate('optional') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label" for="company-vat-no">{{ translate('vat_number') }}</label>
+                                        <input type="text" class="form-control" id="company-vat-no"
+                                               name="company_vat_no" maxlength="40"
+                                               value="{{ getWebConfig(name: 'company_vat_no') }}"
+                                               placeholder="{{ translate('optional') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label" for="company-platform-no">{{ translate('business_platform_number') }}</label>
+                                        <input type="text" class="form-control" id="company-platform-no"
+                                               name="company_platform_no" maxlength="40"
+                                               value="{{ getWebConfig(name: 'company_platform_no') }}"
+                                               placeholder="{{ translate('optional') }}">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-xxl-4 {{ getWebConfig('map_api_status') == 1 ? '' : 'd-none' }}">
