@@ -59,7 +59,15 @@ class BannerController extends BaseController
         $brands = $this->brandRepo->getListWhere(dataLimit: 'all');
         $products = $this->productRepo->getListWithScope(scope: 'active', dataLimit: 'all');
         $themeUsage = app(\App\Services\Theme\ThemeBannerLink::class)->usage();
-        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes', 'themeUsage'));
+
+        // Resource names for the placement tag: "Category page — skin care" reads at a glance,
+        // "resource_id 7" does not.
+        $resourceNames = [
+            'category' => \App\Models\Category::pluck('name', 'id'),
+            'brand'    => \App\Models\Brand::pluck('name', 'id'),
+        ];
+
+        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes', 'themeUsage', 'resourceNames'));
     }
 
     /**

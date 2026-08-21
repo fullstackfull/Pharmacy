@@ -156,6 +156,39 @@
                 </div>
             </div>
             <div class="col-lg-6">
+                {{-- Whether customers are ASKED for a postcode at all. Separate from the delivery
+                     restriction below, which limits where you deliver. --}}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 user-select-none">
+                            <div>
+                                <h2 class="fw-medium mb-1">{{ translate('ask_customers_for_a_zip_code') }}</h2>
+                                <p class="mb-0 fs-12">
+                                    {{ translate('if_disabled_the_zip_field_is_hidden_everywhere_and_never_required') }}
+                                </p>
+                            </div>
+                            <form action="{{ route('admin.business-settings.delivery-zone.zipcode-field-status-change') }}"
+                                  method="post" id="zip-code-field-status-form" class="no-reload-form">
+                                @csrf
+                                <label class="switcher mx-auto" for="zip-code-field-status">
+                                    <input class="switcher_input custom-modal-plugin" type="checkbox" value="1" name="status"
+                                           id="zip-code-field-status"
+                                           {{ $zipCodeFieldStatus ? 'checked' : '' }}
+                                           data-modal-type="input-change-form"
+                                           data-modal-form="#zip-code-field-status-form"
+                                           data-on-title="{{ translate('want_to_Turn_ON_Zip_Code_Field') }}"
+                                           data-off-title="{{ translate('want_to_Turn_OFF_Zip_Code_Field') }}"
+                                           data-on-message="<p>{{ translate('if_disabled_the_zip_field_is_hidden_everywhere_and_never_required') }}</p>"
+                                           data-off-message="<p>{{ translate('if_disabled_the_zip_field_is_hidden_everywhere_and_never_required') }}</p>"
+                                           data-on-button-text="{{ translate('turn_on') }}"
+                                           data-off-button-text="{{ translate('turn_off') }}">
+                                    <span class="switcher_control"></span>
+                                </label>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="d-flex flex-column gap-20">

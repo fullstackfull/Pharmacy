@@ -56,6 +56,7 @@
         .tb-item__count { font-size: .68rem; color: #7d8794; }
         .tb-item__eye { border: 0; background: transparent; color: #7d8794; cursor: pointer; padding: 0 .15rem; display: flex; }
         .tb-item__eye:hover { color: #fff; }
+        .tb-item__trash:hover { color: #ff9b9b; }
         .tb-item.is-hidden .tb-item__label { color: #6b7480; text-decoration: line-through; }
         .tb-empty { color: #7d8794; font-size: .8rem; text-align: center; padding: 1.5rem .5rem; }
 
@@ -142,10 +143,15 @@
         .tb-card strong { display: block; font-size: .85rem; margin-bottom: .2rem; text-transform: capitalize; }
         .tb-card span { font-size: .72rem; color: #8d95a1; line-height: 1.45; }
         .tb-media-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap: .55rem; }
-        .tb-media-item { border: 1px solid #262c36; border-radius: .45rem; overflow: hidden; background: #171c24;
-            cursor: pointer; aspect-ratio: 1/1; }
+        .tb-media-item { position: relative; border: 1px solid #262c36; border-radius: .45rem; overflow: hidden;
+            background: #171c24; aspect-ratio: 1/1; }
         .tb-media-item:hover { border-color: #3d8b7a; }
+        .tb-media-pick { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
         .tb-media-item img { width: 100%; height: 100%; object-fit: cover; }
+        .tb-media-trash { position: absolute; top: 4px; inset-inline-end: 4px; z-index: 2; width: 26px; height: 26px;
+            display: grid; place-items: center; border: 0; border-radius: 6px; cursor: pointer;
+            background: rgba(14,17,22,.72); color: #ff9b9b; opacity: 0; transition: opacity .15s; }
+        .tb-media-item:hover .tb-media-trash, .tb-media-trash:focus-visible { opacity: 1; }
 
         @media (max-width: 1199px) {
             .tb-body { grid-template-columns: 220px minmax(0,1fr) 290px; }
@@ -185,7 +191,8 @@
              data-url-block-duplicate="{{ route('admin.theme.builder.block.duplicate') }}"
              data-url-block-delete="{{ route('admin.theme.builder.block.delete') }}"
              data-url-media-upload="{{ route('admin.theme.builder.media.upload') }}"
-             data-url-media-library="{{ route('admin.theme.builder.media.library') }}">
+             data-url-media-library="{{ route('admin.theme.builder.media.library') }}"
+             data-url-media-delete="{{ route('admin.theme.builder.media.delete') }}">
 
             <header class="tb-bar">
                 <div class="tb-bar__group">
@@ -274,6 +281,12 @@
                                 <button type="button" class="tb-item__eye" data-action="toggle"
                                         title="{{ translate('show_hide') }}" {{ $editable ? '' : 'disabled' }}>
                                     <i class="fi {{ $section['is_visible'] ? 'fi-rr-eye' : 'fi-rr-eye-crossed' }}"></i>
+                                </button>
+                                {{-- Delete lives on the row itself: hiding and removing are different
+                                     intentions, and the merchant should not have to hunt for removal. --}}
+                                <button type="button" class="tb-item__eye tb-item__trash" data-action="remove"
+                                        title="{{ translate('delete') }}" {{ $editable ? '' : 'disabled' }}>
+                                    <i class="fi fi-rr-trash"></i>
                                 </button>
                             </div>
                         @empty
@@ -380,6 +393,9 @@
                 visible: @json(translate('visible')),
                 hidden: @json(translate('hidden')),
                 confirm: @json(translate('are_you_sure')),
+                confirmDeleteSection: @json(translate('delete_this_section_and_everything_in_it')),
+                confirmDeleteImage: @json(translate('delete_this_image_from_the_library')),
+                deleteImage: @json(translate('delete_image')),
                 blocks: @json(translate('items')),
                 addBlock: @json(translate('add_item')),
                 backToSection: @json(translate('back_to_section')),
@@ -1027,8 +1043,17 @@
 
             structure.addEventListener('click', function (event) {
                 var toggle = event.target.closest('[data-action="toggle"]');
+                var remove = event.target.closest('[data-action="remove"]');
                 var item = event.target.closest('.tb-item');
                 if (!item) return;
+
+                if (remove) {
+                    event.stopPropagation();
+                    if (!confirm(T.confirmDeleteSection)) return;
+                    post(root.dataset.urlDelete, {section_id: item.dataset.id})
+                        .then(notify).then(function (result) { if (result.ok) location.reload(); });
+                    return;
+                }
 
                 if (toggle) {
                     event.stopPropagation();
@@ -1153,17 +1178,37 @@
                         return;
                     }
                     items.forEach(function (item) {
-                        var cell = document.createElement('button');
-                        cell.type = 'button';
+                        var cell = document.createElement('div');
                         cell.className = 'tb-media-item';
                         cell.title = item.label || '';
-                        cell.innerHTML = '<img src="' + item.url + '" alt="">';
-                        cell.addEventListener('click', function () {
+
+                        var pick = document.createElement('button');
+                        pick.type = 'button';
+                        pick.className = 'tb-media-pick';
+                        pick.innerHTML = '<img src="' + item.url + '" alt="">';
+                        pick.addEventListener('click', function () {
                             mediaTarget.value = item.url;
                             if (mediaPaint) mediaPaint();
                             mediaOverlay.classList.remove('is-open');
                             scheduleAutosave();
                         });
+                        cell.appendChild(pick);
+
+                        if (editable) {
+                            var trash = document.createElement('button');
+                            trash.type = 'button';
+                            trash.className = 'tb-media-trash';
+                            trash.title = T.deleteImage;
+                            trash.innerHTML = '<i class="fi fi-rr-trash"></i>';
+                            trash.addEventListener('click', function (event) {
+                                event.stopPropagation();
+                                if (!confirm(T.confirmDeleteImage)) return;
+                                post(root.dataset.urlMediaDelete, {id: item.id})
+                                    .then(notify).then(function (result) { if (result.ok) cell.remove(); });
+                            });
+                            cell.appendChild(trash);
+                        }
+
                         mediaGrid.appendChild(cell);
                     });
                 });

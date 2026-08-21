@@ -174,7 +174,9 @@ class UserProfileController extends Controller
             'name' => 'required',
             'phone' => 'required|max:20',
             'city' => 'required',
-            'zip' => 'required',
+            // Required only when deliveries are limited to an allow-list of postcodes; markets
+            // without postcodes should never be blocked by an empty field.
+            'zip' => getWebConfig(name: 'delivery_zip_code_area_restriction') ? 'required' : 'nullable',
             'country' => 'required',
             'address' => 'required',
         ]);
@@ -258,7 +260,9 @@ class UserProfileController extends Controller
             'name' => 'required',
             'phone' => 'required|max:20',
             'city' => 'required',
-            'zip' => 'required',
+            // Required only when deliveries are limited to an allow-list of postcodes; markets
+            // without postcodes should never be blocked by an empty field.
+            'zip' => getWebConfig(name: 'delivery_zip_code_area_restriction') ? 'required' : 'nullable',
             'country' => 'required',
             'address' => 'required',
         ]);

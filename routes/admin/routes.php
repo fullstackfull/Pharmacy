@@ -1315,6 +1315,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::delete('zip-code-delete', 'deleteZipCode')->name('zip-code-delete');
                     Route::post('country-restriction-status-change', 'countryRestrictionStatusChange')->name('country-restriction-status-change');
                     Route::post("zipcode-restriction-status-change", 'zipcodeRestrictionStatusChange')->name('zipcode-restriction-status-change');
+                    Route::post('zipcode-field-status-change', 'zipcodeFieldStatusChange')->name('zipcode-field-status-change');
                 });
             });
 
@@ -1406,6 +1407,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
 
                 // Images for image fields, stored through the hardened ThemeAssetService.
                 Route::post('media/upload', 'uploadMedia')->name('media.upload');
+                Route::post('media/delete', 'deleteMedia')->name('media.delete');
                 Route::get('media/library', 'mediaLibrary')->name('media.library');
             });
         });

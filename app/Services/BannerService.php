@@ -29,6 +29,33 @@ class BannerService
      * The resource a banner type must point at, or null when any resource will do.
      * Callers reject the save rather than storing a banner that can never appear.
      */
+    /**
+     * Where each banner type lands on the storefront — the tag shown beside every row in Banner
+     * Setup, so a list of thumbnails is never ambiguous about what it will do.
+     *
+     * Keys mirror getBannerTypes(); the resource-scoped ones say WHICH page they head, and the
+     * caller appends the resource's own name (category / brand).
+     */
+    public const PLACEMENT_TAGS = [
+        'Main Banner'             => 'home_page_top_slider',
+        'Popup Banner'            => 'the_welcome_popup',
+        'Footer Banner'           => 'above_the_footer',
+        'Main Section Banner'     => 'the_home_page_middle_section',
+        'Category Banner'         => 'heads_the_page_of_its_category',
+        'Category Section Banner' => 'above_its_category_row_on_the_home_page',
+        'Home Promo Banner'       => 'the_home_page_promo_grid',
+        'Brand Banner'            => 'heads_the_page_of_its_brand',
+        'Theme Banner'            => 'wherever_the_theme_builder_places_it',
+    ];
+
+    /** Translated placement tag for a banner type, or null for an unknown type. */
+    public function getPlacementTag(?string $bannerType): ?string
+    {
+        $key = self::PLACEMENT_TAGS[$bannerType] ?? null;
+
+        return $key ? translate($key) : null;
+    }
+
     public function getRequiredResourceType(?string $bannerType): ?string
     {
         return self::REQUIRED_RESOURCE_TYPES[$bannerType] ?? null;

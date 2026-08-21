@@ -284,12 +284,13 @@ class CustomerController extends Controller
             'address_type' => 'required',
             'address' => 'required',
             'city' => 'required',
-            'zip' => 'required',
+            'zip' => getWebConfig(name: 'delivery_zip_code_area_restriction') ? 'required' : 'nullable',
             'country' => 'required',
             'phone' => 'required',
             'latitude' => 'required',
             'longitude' => 'required',
-            'is_billing' => 'required'
+            // Optional: an app that only knows about "my address" should not have to classify it.
+            'is_billing' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
@@ -321,7 +322,7 @@ class CustomerController extends Controller
             'email' => $request->email,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'is_billing' => $request->is_billing,
+            'is_billing' => (int) ($request->is_billing ?? 0),
             'created_at' => now(),
             'updated_at' => now(),
         ];

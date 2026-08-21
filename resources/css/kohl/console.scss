@@ -79,3 +79,96 @@
 .k-dev-group > summary::-webkit-details-marker { display: none; }
 
 .k-dev-group[open] > summary { color: var(--k-accent); }
+
+/* ============================================================================
+   Dark mode compatibility for the legacy admin.
+   ----------------------------------------------------------------------------
+   Bootstrap 5.3 themes its own components off [data-bs-theme="dark"], and the v2
+   shell has its own palette — but ~60% of this panel is hand-written CSS and
+   utility classes that hardcode white. Without this layer dark mode came out
+   half-applied: white cards with light text, and modals whose text vanished.
+
+   Scope is deliberately narrow: repaint the surfaces that hardcode a light
+   background or a dark foreground, and let everything else recalculate from
+   Bootstrap's own dark variables.
+   ========================================================================= */
+[data-bs-theme="dark"] {
+    /* Utility backgrounds the legacy markup leans on. */
+    .bg-white,
+    .bg-body,
+    .bg-section,
+    .bg-light {
+        background-color: var(--k-surface) !important;
+    }
+
+    /* Foreground utilities that assume a light surface. */
+    .text-dark,
+    .text-body,
+    .text-black {
+        color: var(--k-text) !important;
+    }
+    .text-muted,
+    .text-secondary {
+        color: var(--k-text-muted) !important;
+    }
+
+    /* Cards, tables and panels: Bootstrap handles most of it, these fill the gaps
+       where the legacy sheets set explicit colours. */
+    .card,
+    .modal-content,
+    .offcanvas,
+    .dropdown-menu {
+        background-color: var(--k-surface);
+        color: var(--k-text);
+        border-color: var(--k-border);
+    }
+
+    .card-header,
+    .card-footer,
+    .modal-header,
+    .modal-footer {
+        background-color: transparent;
+        border-color: var(--k-border);
+    }
+
+    hr,
+    .border,
+    .border-top,
+    .border-bottom,
+    .border-start,
+    .border-end {
+        border-color: var(--k-border) !important;
+    }
+
+    /* Form controls: keep typed text readable on the dark surface. */
+    .form-control,
+    .form-select,
+    .custom-select,
+    .select2-container--default .select2-selection--single,
+    .select2-container--default .select2-selection--multiple {
+        background-color: var(--k-canvas);
+        color: var(--k-text);
+        border-color: var(--k-border);
+    }
+    .form-control::placeholder { color: var(--k-text-muted); }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--k-text); }
+    .select2-dropdown {
+        background-color: var(--k-surface);
+        color: var(--k-text);
+        border-color: var(--k-border);
+    }
+
+    /* Tables: the legacy sheets paint striped rows white. */
+    .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--k-text);
+        color: var(--k-text);
+    }
+    .table > :not(caption) > * > * { border-color: var(--k-border); }
+
+    /* Sweetalert / toast surfaces used across the panel. */
+    .swal2-popup {
+        background-color: var(--k-surface);
+        color: var(--k-text);
+    }
+}

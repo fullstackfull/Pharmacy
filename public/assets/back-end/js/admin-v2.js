@@ -92,12 +92,23 @@
     });
   }
 
-  /* -------------------- theme toggle (light / dark) -------------------- */
+  /* -------------------- theme toggle (light / dark) --------------------
+     The colour scheme has ONE source of truth: Kohl's 'k-theme' key, which stamps the Kohl
+     tokens, Bootstrap 5.3's data-bs-theme and this shell's own class together. Keeping a second
+     store here is what produced a half-dark panel, so this is now a thin wrapper. */
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-k-theme') === 'dark' ? 'dark' : 'light';
+  }
   function applyTheme() {
+    state.theme = currentTheme();
     ROOT.classList.toggle('v2-theme-dark', state.theme === 'dark');
   }
   function toggleTheme() {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    var next = currentTheme() === 'dark' ? 'light' : 'dark';
+    if (window.Kohl && typeof window.Kohl.setTheme === 'function') {
+      window.Kohl.setTheme(next);
+    }
+    state.theme = next;
     persist();
     applyTheme();
   }

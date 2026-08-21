@@ -26,7 +26,9 @@ $('#addressUpdate').on('click', function (e) {
     phone = $('#own_phone').val();
 
     let id = $(this).attr('data-id');
-    if (addressAs != '' && address != '' && name != '' && zip != '' && city != '' && state != '' && country != '' && phone != '') {
+    // The postcode is optional (Delivery restriction settings can hide the field entirely), so it
+    // must not gate the submit — the server enforces it when the zip allow-list is on.
+    if (addressAs != '' && address != '' && name != '' && city != '' && state != '' && country != '' && phone != '') {
         $.ajaxSetup({
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')

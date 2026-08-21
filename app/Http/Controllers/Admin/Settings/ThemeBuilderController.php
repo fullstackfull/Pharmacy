@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeAssetService;
+use App\Services\Theme\ThemePermissionService;
 use App\Services\Theme\ThemeBuilderService;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Contracts\View\View;
@@ -357,6 +358,33 @@ class ThemeBuilderController extends BaseController
             ->values()->all();
 
         return $this->ok(['items' => $items]);
+    }
+
+    /**
+     * Delete an image from the theme's library (builder-side, JSON).
+     *
+     * The management screen already had a delete, but it redirects — the builder needs an answer
+     * it can act on without leaving the editor. Deleting only removes the LIBRARY entry and its
+     * file; a section still pointing at the URL keeps its own copy of the string, so a delete can
+     * never blank a published page on its own.
+     */
+    public function deleteMedia(Request $request): JsonResponse
+    {
+        if (env('APP_MODE') == 'demo') {
+            return $this->fail(translate('you_can_not_update_this_on_demo_mode'));
+        }
+        if (!app(ThemePermissionService::class)->canEdit()) {
+            return $this->fail(translate('you_do_not_have_permission_to_edit_a_theme'));
+        }
+
+        $asset = ThemeAsset::find($request['id']);
+        if (!$asset) {
+            return $this->fail(translate('the_image_was_not_found'));
+        }
+
+        $this->assets->delete($asset);
+
+        return $this->ok();
     }
 
     private function resolveThemeFor(Request $request): ?Theme

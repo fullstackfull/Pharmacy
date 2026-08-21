@@ -28,9 +28,15 @@
 </head>
 
 {{-- Resolve the stored colour-scheme choice before first paint, so a dark-mode admin
-     never sees a white flash. Inline and synchronous on purpose. --}}
-<script>(function(){try{var t=localStorage.getItem('k-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-k-theme',t);}}catch(e){}})();</script>
-<body data-bs-theme="light" class="k k-console {{ env('APP_MODE') == 'demo' ? 'demo' : '' }} v2-active">
+     never sees a white flash. Inline and synchronous on purpose.
+
+     The console theme is an EXPLICIT choice, not the OS preference: most of this panel is legacy
+     Bootstrap CSS with no dark palette, so silently following a dark OS produced the half-dark
+     page (and light text on white modals) merchants reported. Absent a stored value we stamp
+     light, and the header toggle is the only way into dark — which then stamps all three layers
+     at once: Kohl tokens, Bootstrap 5.3's own dark theme, and the v2 shell palette. --}}
+<script>(function(){try{var t=localStorage.getItem('k-theme');t=(t==='dark')?'dark':'light';var r=document.documentElement;r.setAttribute('data-k-theme',t);r.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+<body class="k k-console {{ env('APP_MODE') == 'demo' ? 'demo' : '' }} v2-active">
 <script type="text/javascript">
     localStorage.getItem('aside-mini') === 'true' ? document.body.classList.add('aside-mini') : document.body.classList.remove('aside-mini');
 </script>
