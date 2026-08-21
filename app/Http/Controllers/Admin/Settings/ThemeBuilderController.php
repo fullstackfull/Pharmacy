@@ -225,7 +225,17 @@ class ThemeBuilderController extends BaseController
         $resolver = app(\App\Services\Theme\SectionDataResolver::class);
 
         return match ($type) {
-            'flash_deal' => $resolver->flashDeal()
+            'category_showcase' => (int) ($settings['category_id'] ?? 0) > 0
+                ? null
+                : translate('no_category_chosen_yet_pick_one_so_this_section_can_render'),
+            'product_slider' => match (true) {
+                ($settings['source'] ?? '') === 'manual' && empty($settings['product_ids'])
+                    => translate('pick_the_products_this_section_should_show'),
+                in_array($settings['source'] ?? '', ['category', 'brand'], true) && empty($settings['source_id'])
+                    => translate('pick_the_category_or_brand_this_section_should_show'),
+                default => null,
+            },
+            'flash_deal' => $resolver->flashDeal((int) ($settings['deal_id'] ?? 0) ?: null)
                 ? null
                 : translate('no_flash_deal_is_running_right_now_so_this_section_stays_hidden_create_one_under_promotion_flash_deals'),
             'testimonials' => $resolver->testimonials((int) ($settings['limit'] ?? 3), (int) ($settings['min_rating'] ?? 4))->isNotEmpty()
@@ -236,6 +246,79 @@ class ThemeBuilderController extends BaseController
                 : translate('no_published_banners_of_this_type_yet_add_one_under_promotion_banners'),
             default => null,
         };
+    }
+
+    /**
+     * Catalogue records a `resource` field can pick from — categories, brands, products, flash
+     * deals — as {value,label} pairs.
+     *
+     * Read-only and admin-scoped like the rest of the builder. The list is capped and filtered by
+     * an optional search term so a store with fifty thousand products still answers instantly.
+     */
+    public function resources(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->get('q', ''));
+        $like = '%' . $term . '%';
+        $limit = 40;
+
+        $rows = match ((string) $request->get('resource')) {
+            'category' => \App\Models\Category::query()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->orderBy('position')->orderBy('priority')
+                ->take($limit)->get(['id', 'name', 'position'])
+                ->map(fn ($category) => [
+                    'value' => $category->id,
+                    // The level tells a merchant why two categories share a name.
+                    'label' => $category->name . ($category->position ? ' · ' . translate('sub_category') : ''),
+                ]),
+            'brand' => \App\Models\Brand::query()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->where('status', 1)->orderBy('name')
+                ->take($limit)->get(['id', 'name'])
+                ->map(fn ($brand) => ['value' => $brand->id, 'label' => $brand->name]),
+            'product' => \App\Models\Product::active()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->latest('id')
+                ->take($limit)->get(['id', 'name'])
+                ->map(fn ($product) => ['value' => $product->id, 'label' => $product->name]),
+            'flash_deal' => \App\Models\FlashDeal::where('deal_type', 'flash_deal')
+                ->when($term !== '', fn ($query) => $query->where('title', 'like', $like))
+                ->orderByDesc('id')
+                ->take($limit)->get(['id', 'title', 'status', 'end_date'])
+                ->map(fn ($deal) => [
+                    'value' => $deal->id,
+                    'label' => $deal->title . ' · ' . ($deal->status ? translate('active') : translate('inactive')),
+                ]),
+            default => collect(),
+        };
+
+        return $this->ok(['options' => $rows->values()->all()]);
+    }
+
+    /** Labels for already-picked ids, so the inspector can show names instead of numbers. */
+    public function resourceLabels(Request $request): JsonResponse
+    {
+        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $request->get('ids'))), fn ($id) => $id > 0));
+        if ($ids === []) {
+            return $this->ok(['options' => []]);
+        }
+
+        $rows = match ((string) $request->get('resource')) {
+            'category'   => \App\Models\Category::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'brand'      => \App\Models\Brand::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'product'    => \App\Models\Product::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'flash_deal' => \App\Models\FlashDeal::whereIn('id', $ids)->get(['id', 'title'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->title]),
+            default      => collect(),
+        };
+
+        // Keep the merchant's own order, which is what a hand-picked list means.
+        $ordered = $rows->sortBy(fn ($row) => array_search((int) $row['value'], $ids, true))->values();
+
+        return $this->ok(['options' => $ordered->all()]);
     }
 
     /** Schema + saved settings for one block, so the inspector can render its form. */

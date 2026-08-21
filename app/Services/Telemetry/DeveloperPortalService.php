@@ -246,6 +246,21 @@ class DeveloperPortalService
                     . "#   columns     | columns_tablet     | columns_mobile\n"
                     . "#   height, visible — same pattern; an absent key means 'inherit'.",
             ],
+            [
+                'title' => translate('theme_sections_choose_real_records'),
+                'body' => translate('a_section_stores_the_ids_it_shows_so_an_app_can_mirror_the_same_selection'),
+                'snippet' => "# Section settings carry the merchant's picks as ids:\n"
+                    . "#   product_slider:    source = category|brand|manual\n"
+                    . "#                      source_id   -> that category / brand id\n"
+                    . "#                      product_ids -> \"12,7,90\" (order = display order)\n"
+                    . "#   category_grid:     category_ids -> \"3,8,1\" (empty = top-level by priority)\n"
+                    . "#   flash_deal:        deal_id -> a specific deal (empty = whichever runs now)\n"
+                    . "#   category_showcase: category_id -> the category whose banner,\n"
+                    . "#                      sub-categories and products the block shows\n\n"
+                    . "# A category pick includes everything filed under it, matched on all three\n"
+                    . "# levels: category_id, sub_category_id, sub_sub_category_id.\n"
+                    . "curl '{$baseUrl}/api/v1/categories/products/{category_id}?brand_id=3'",
+            ],
         ];
     }
 }

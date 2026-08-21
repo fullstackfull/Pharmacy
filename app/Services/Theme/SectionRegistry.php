@@ -14,7 +14,10 @@ namespace App\Services\Theme;
 class SectionRegistry
 {
     /** Field types the builder UI knows how to render. */
-    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source', 'banner'];
+    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source', 'banner', 'resource'];
+
+    /** How many records one hand-picked list may hold, so a section cannot be made to query the whole catalogue. */
+    public const MAX_PICKED_RESOURCES = 24;
 
     /** Block types whose cards can be backed by a row in Promotion -> Banners (see ThemeBannerLink). */
     public const BANNER_BACKED_BLOCK_TYPES = ['slide', 'banner', 'mosaic_tile', 'split'];
@@ -87,6 +90,10 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    // Hand-pick the categories, in the order you pick them. Empty = the top-level
+                    // categories by priority, which is what the section did before.
+                    'category_ids' => ['type' => 'resource', 'label' => 'choose_categories', 'default' => null,
+                                       'resource' => 'category', 'multiple' => true],
                     'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 12],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 6, 'responsive' => true],
                 ],
@@ -99,7 +106,14 @@ class SectionRegistry
                     'subtitle'    => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'featured',
                                       'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
-                    'source_id'   => ['type' => 'number', 'label' => 'source_reference', 'default' => null],
+                    // Which category / brand, picked by name. The picker follows the source above:
+                    // choose "category" and it lists categories, "brand" and it lists brands.
+                    'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
+                                      'resource_from' => 'source', 'depends_on' => ['source' => ['category', 'brand']]],
+                    // Source "manual" means: exactly these products, in this order.
+                    'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
+                                      'resource' => 'product', 'multiple' => true,
+                                      'depends_on' => ['source' => ['manual']]],
                     'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
                                       'options' => ['rail', 'grid']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
@@ -109,6 +123,7 @@ class SectionRegistry
                     'arrows'      => ['type' => 'boolean','label' => 'navigation_arrows', 'default' => true],
                     'pagination'  => ['type' => 'boolean','label' => 'pagination_dots', 'default' => false],
                     'view_all'    => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
             'promotional_banner' => [
@@ -192,7 +207,35 @@ class SectionRegistry
                 'schema' => [
                     'title'     => ['type' => 'text',    'label' => 'title', 'default' => ''],
                     'subtitle'  => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
+                    // Which deal to feature. Empty = whichever deal is running now, so the section
+                    // keeps working after a campaign ends without a theme edit.
+                    'deal_id'   => ['type' => 'resource', 'label' => 'choose_flash_deal', 'default' => null,
+                                    'resource' => 'flash_deal'],
                     'countdown' => ['type' => 'boolean', 'label' => 'show_countdown', 'default' => true],
+                    'products'  => ['type' => 'boolean', 'label' => 'show_the_deals_products', 'default' => true],
+                    'limit'     => ['type' => 'number',  'label' => 'max_products', 'default' => 10],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            // One chosen category, presented as its own storefront block: its page banner on top,
+            // its sub-categories as entry chips, then its products — the "show me this category
+            // with its banner" arrangement, composable anywhere on the home page.
+            'category_showcase' => [
+                'preview' => 'showcase', 'label' => 'category_showcase', 'pages' => ['home'],
+                'hint' => 'one_category_with_its_banner_its_sub_categories_and_its_products',
+                'schema' => [
+                    'category_id'  => ['type' => 'resource', 'label' => 'choose_category', 'default' => null,
+                                       'resource' => 'category'],
+                    'eyebrow'      => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'        => ['type' => 'text',   'label' => 'title_leave_empty_for_the_category_name', 'default' => ''],
+                    'banner'       => ['type' => 'boolean','label' => 'show_the_category_banner', 'default' => true],
+                    'sub_categories' => ['type' => 'boolean', 'label' => 'show_sub_category_chips', 'default' => true],
+                    'style'        => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                       'options' => ['rail', 'grid']],
+                    'limit'        => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'      => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'view_all'     => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                    'add_to_cart'  => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
             'testimonials' => [
@@ -503,7 +546,27 @@ class SectionRegistry
             'banner'  => (is_numeric($value) && (int) $value > 0) ? (int) $value : null,
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
             'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
+            'resource' => $this->coerceResource($value, !empty($field['multiple'])),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
         };
+    }
+
+    /**
+     * A picked catalogue record (a category, brand, product or flash deal).
+     *
+     * Stored as an id, or as a comma-separated list of ids for a multi-picker — a list keeps the
+     * merchant's own order, which is the point of hand-picking. Everything that is not a positive
+     * integer is dropped, so a settings payload can never carry anything else into a query.
+     */
+    private function coerceResource(mixed $value, bool $multiple): int|string|null
+    {
+        $ids = is_array($value) ? $value : explode(',', (string) (is_scalar($value) ? $value : ''));
+        $ids = array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
+
+        if (!$multiple) {
+            return $ids[0] ?? null;
+        }
+
+        return implode(',', array_slice(array_unique($ids), 0, self::MAX_PICKED_RESOURCES));
     }
 }

@@ -23,9 +23,21 @@ use Illuminate\Support\Collection;
  */
 class SectionDataResolver
 {
-    /** Top-level categories for the category grid. */
-    public function categories(int $limit): Collection
+    /**
+     * Categories for the category grid: the ones the merchant hand-picked, in the order they
+     * picked them, or the top-level categories by priority when they picked none.
+     */
+    public function categories(int $limit, string|array|null $picked = null): Collection
     {
+        $ids = $this->idList($picked);
+
+        if ($ids !== []) {
+            return $this->safely(fn () => Category::whereIn('id', array_slice($ids, 0, $this->bounded($limit, 24)))
+                ->get(['id', 'name', 'slug', 'icon'])
+                ->sortBy(fn ($category) => array_search($category->id, $ids, true))
+                ->values());
+        }
+
         return $this->safely(fn () => Category::where('position', 0)
             ->orderBy('priority')
             ->take($this->bounded($limit, 24))
@@ -39,6 +51,10 @@ class SectionDataResolver
         $source = (string) ($settings['source'] ?? 'featured');
         $reference = (int) ($settings['source_id'] ?? 0);
 
+        if ($source === 'manual') {
+            return $this->pickedProducts($settings['product_ids'] ?? null, $limit);
+        }
+
         return $this->safely(function () use ($limit, $source, $reference) {
             $query = Product::active();
 
@@ -46,13 +62,66 @@ class SectionDataResolver
                 'best_selling' => $query->withCount('orderDetails')->orderByDesc('order_details_count'),
                 'new_arrival'  => $query->latest('id'),
                 'top_rated'    => $query->withAvg('reviews', 'rating')->orderByDesc('reviews_avg_rating'),
-                'category'     => $query->where('category_id', $reference)->latest('id'),
+                'category'     => $this->scopedToCategory($query, $reference)->latest('id'),
                 'brand'        => $query->where('brand_id', $reference)->latest('id'),
                 default        => $query->where('featured', 1)->latest('id'),
             };
 
             return $query->take($limit)->get();
         });
+    }
+
+    /** Exactly these products, in the order the merchant picked them. */
+    public function pickedProducts(string|array|null $picked, int $limit): Collection
+    {
+        $ids = $this->idList($picked);
+        if ($ids === []) {
+            return collect();
+        }
+
+        return $this->safely(fn () => Product::active()
+            ->whereIn('id', array_slice($ids, 0, $this->bounded($limit, 24)))
+            ->get()
+            ->sortBy(fn ($product) => array_search($product->id, $ids, true))
+            ->values());
+    }
+
+    /**
+     * A category and everything filed under it.
+     *
+     * Products carry their category at three levels; a merchant who picks "Skincare" means the
+     * serums filed under its children too, so all three columns are matched against the category
+     * and its descendants.
+     */
+    private function scopedToCategory(\Illuminate\Database\Eloquent\Builder $query, int $categoryId): \Illuminate\Database\Eloquent\Builder
+    {
+        if ($categoryId <= 0) {
+            return $query;
+        }
+
+        $ids = $this->categoryWithDescendants($categoryId);
+
+        return $query->where(fn ($scoped) => $scoped
+            ->whereIn('category_id', $ids)
+            ->orWhereIn('sub_category_id', $ids)
+            ->orWhereIn('sub_sub_category_id', $ids));
+    }
+
+    /** @return array<int, int> the category id plus its child and grandchild ids */
+    public function categoryWithDescendants(int $categoryId): array
+    {
+        $children = Category::where('parent_id', $categoryId)->pluck('id')->all();
+        $grandChildren = $children === [] ? [] : Category::whereIn('parent_id', $children)->pluck('id')->all();
+
+        return array_values(array_unique(array_merge([$categoryId], $children, $grandChildren)));
+    }
+
+    /** Normalize a picker value ("3,9,1" or [3,9,1]) into a list of positive ids. */
+    private function idList(string|array|null $picked): array
+    {
+        $ids = is_array($picked) ? $picked : explode(',', (string) $picked);
+
+        return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
     }
 
     public function brands(int $limit): Collection
@@ -180,12 +249,16 @@ class SectionDataResolver
      * The running flash deal, for the countdown strip: real title and REAL end date, so the
      * storefront counts down to the moment the deal actually ends (never a hardcoded timer).
      */
-    public function flashDeal(): ?array
+    public function flashDeal(?int $dealId = null): ?array
     {
         try {
+            // A hand-picked deal wins; otherwise whichever deal is running now, so a section keeps
+            // working after a campaign ends without anyone editing the theme.
             $deal = \App\Models\FlashDeal::where(['deal_type' => 'flash_deal', 'status' => 1])
-                ->whereDate('start_date', '<=', date('Y-m-d'))
-                ->whereDate('end_date', '>=', date('Y-m-d'))
+                ->when($dealId, fn ($query) => $query->where('id', $dealId))
+                ->when(!$dealId, fn ($query) => $query
+                    ->whereDate('start_date', '<=', date('Y-m-d'))
+                    ->whereDate('end_date', '>=', date('Y-m-d')))
                 ->withCount('products')
                 ->orderByDesc('id')
                 ->first();
@@ -207,6 +280,67 @@ class SectionDataResolver
                 'url'            => \Illuminate\Support\Facades\Route::has('flash-deals')
                     ? route('flash-deals', ['id' => $deal->id])
                     : null,
+            ];
+        } catch (\Throwable $exception) {
+            report($exception);
+            return null;
+        }
+    }
+
+    /** The products inside a flash deal, so the section sells rather than only counting down. */
+    public function flashDealProducts(int $dealId, int $limit): Collection
+    {
+        return $this->safely(fn () => Product::active()
+            ->whereIn('id', \App\Models\FlashDealProduct::where('flash_deal_id', $dealId)->pluck('product_id'))
+            ->take($this->bounded($limit, 24))
+            ->get());
+    }
+
+    /**
+     * One category presented as its own block: the category, its page banner, its sub-categories
+     * and its products — the same banner row the category page shows, so editing it in Banner
+     * Setup (or on the category form) updates both places.
+     */
+    public function categoryShowcase(array $settings): ?array
+    {
+        $categoryId = (int) ($settings['category_id'] ?? 0);
+        if ($categoryId <= 0) {
+            return null;
+        }
+
+        try {
+            $category = Category::find($categoryId, ['id', 'name', 'slug', 'icon']);
+            if (!$category) {
+                return null;
+            }
+
+            $banner = null;
+            if ($settings['banner'] ?? true) {
+                $row = app(\App\Services\EntityPageBannerService::class)->current(entity: 'category', resourceId: $categoryId);
+                $banner = $row && $row->published
+                    ? [
+                        'image'       => getStorageImages(path: $row->photo_full_url, type: 'banner'),
+                        'title'       => $row->title,
+                        'subtitle'    => $row->sub_title,
+                        'link'        => $row->url,
+                        'button_text' => $row->button_text,
+                    ]
+                    : null;
+            }
+
+            $subCategories = ($settings['sub_categories'] ?? true)
+                ? Category::where('parent_id', $categoryId)->orderBy('priority')->take(12)->get(['id', 'name', 'slug'])
+                : collect();
+
+            return [
+                'category'       => $category,
+                'banner'         => $banner,
+                'sub_categories' => $subCategories,
+                'products'       => $this->products([
+                    'source'    => 'category',
+                    'source_id' => $categoryId,
+                    'limit'     => (int) ($settings['limit'] ?? 10),
+                ]),
             ];
         } catch (\Throwable $exception) {
             report($exception);

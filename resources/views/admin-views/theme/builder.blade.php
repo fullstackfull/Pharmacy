@@ -108,6 +108,20 @@
         .tb-group-title { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: #6f7885;
             margin: 1rem 0 .5rem; padding-top: .75rem; border-top: 1px solid #212832; }
         .tb-hint { font-size: .72rem; color: #7d8794; line-height: 1.5; }
+        /* resource picker: what a section actually shows */
+        .tb-picker { position: relative; display: flex; flex-direction: column; gap: .35rem; }
+        .tb-picker__chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+        .tb-picker__chip { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem;
+            padding: .25rem .3rem .25rem .45rem; border-radius: .3rem; background: #23342f; color: #9fd8c4; }
+        .tb-picker__chip button { border: 0; background: transparent; color: inherit; cursor: pointer;
+            font-size: .85rem; line-height: 1; padding: 0 .1rem; opacity: .7; }
+        .tb-picker__chip button:hover { opacity: 1; }
+        .tb-picker__results { position: absolute; z-index: 5; inset-inline: 0; top: 100%; max-height: 210px;
+            overflow-y: auto; display: flex; flex-direction: column; padding: .25rem; border-radius: .4rem;
+            background: #10151b; border: 1px solid #2b323c; box-shadow: 0 10px 26px rgba(0,0,0,.45); }
+        .tb-picker__results button { text-align: start; font-size: .74rem; padding: .35rem .45rem; border: 0;
+            border-radius: .3rem; background: transparent; color: #d5d9de; cursor: pointer; }
+        .tb-picker__results button:hover { background: #1c2530; color: #fff; }
         .tb-data-note { margin: 0 .75rem .5rem; padding: .5rem .6rem; border-radius: .4rem; font-size: .72rem;
             line-height: 1.5; background: #2a2413; border: 1px solid #4a3f1c; color: #e0c877; }
 
@@ -199,6 +213,10 @@
         .tb-thumb[data-shape="spacer"]::before { inset: 18px 10px; border: 1px dashed #39434f; border-radius: 3px; }
         .tb-thumb[data-shape="columns"]::before { inset: 10px 8px; border-radius: 3px;
             background: repeating-linear-gradient(90deg,#39434f 0 18%,transparent 18% 27%); }
+        .tb-thumb[data-shape="showcase"]::before { inset: 6px 8px auto; height: 20px; border-radius: 3px;
+            background: linear-gradient(120deg,#5b46a8,#2f7fae); }
+        .tb-thumb[data-shape="showcase"]::after { inset: 32px 8px 8px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 22%,transparent 22% 26%); }
         .tb-thumb[data-shape="block"]::before { inset: 12px; border-radius: 3px; background: #39434f; }
 
         .tb-chips { display: flex !important; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
@@ -246,6 +264,8 @@
              data-url-duplicate="{{ route('admin.theme.builder.section.duplicate') }}"
              data-url-delete="{{ route('admin.theme.builder.section.delete') }}"
              data-url-schema="{{ route('admin.theme.builder.section-schema') }}"
+             data-url-resources="{{ route('admin.theme.builder.resources') }}"
+             data-url-resource-labels="{{ route('admin.theme.builder.resource-labels') }}"
              data-url-block-schema="{{ route('admin.theme.builder.block-schema') }}"
              data-url-block-add="{{ route('admin.theme.builder.block.add') }}"
              data-url-block-update="{{ route('admin.theme.builder.block.update') }}"
@@ -492,6 +512,10 @@
             if (!root) return;
 
             var T = {
+                searchToPick: @json(translate('search_to_pick')),
+                noMatches: @json(translate('no_matches')),
+                nothingPicked: @json(translate('nothing_picked_yet')),
+                nothingPickedAll: @json(translate('nothing_picked_showing_all')),
                 saving: @json(translate('saving')),
                 saved: @json(translate('saved')),
                 unsaved: @json(translate('unsaved_changes')),
@@ -771,6 +795,149 @@
                 return input;
             }
 
+            /**
+             * Resource picker: choose the actual records a section shows — this category, that
+             * brand, these products, that flash deal — by name, with search.
+             *
+             * The value written to the settings is an id, or a comma-separated list of ids for a
+             * multi-picker, where the order is the merchant's own pick order.
+             */
+            function buildResourceField(field, key, value, settings) {
+                var wrapper = document.createElement('div');
+                wrapper.className = 'tb-picker';
+
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.dataset.key = key;
+                hidden.value = (value === null || value === undefined) ? '' : String(value);
+
+                // Which catalogue to search: fixed by the field, or taken from a sibling field
+                // (the product slider's "source" decides between categories and brands).
+                function resourceName() {
+                    if (field.resource) return field.resource;
+                    var driver = inspector.querySelector('[data-key="' + field.resource_from + '"]');
+                    return driver ? driver.value : (settings[field.resource_from] || '');
+                }
+
+                var chips = document.createElement('div');
+                chips.className = 'tb-picker__chips';
+
+                var search = document.createElement('input');
+                search.type = 'search';
+                search.className = 'tb-input';
+                search.placeholder = T.searchToPick;
+                search.disabled = !editable;
+
+                var results = document.createElement('div');
+                results.className = 'tb-picker__results';
+                results.hidden = true;
+
+                function ids() {
+                    return hidden.value.split(',').filter(Boolean);
+                }
+                function writeIds(list) {
+                    hidden.value = list.join(',');
+                    scheduleAutosave();
+                }
+
+                function paintChips(labels) {
+                    chips.innerHTML = '';
+                    ids().forEach(function (id) {
+                        var chip = document.createElement('span');
+                        chip.className = 'tb-picker__chip';
+                        chip.textContent = labels[id] || ('#' + id);
+
+                        var remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.innerHTML = '&times;';
+                        remove.disabled = !editable;
+                        remove.addEventListener('click', function () {
+                            writeIds(ids().filter(function (other) { return other !== id; }));
+                            refreshChips();
+                        });
+
+                        chip.appendChild(remove);
+                        chips.appendChild(chip);
+                    });
+                    if (!ids().length) {
+                        var empty = document.createElement('span');
+                        empty.className = 'tb-hint';
+                        empty.textContent = field.multiple ? T.nothingPickedAll : T.nothingPicked;
+                        chips.appendChild(empty);
+                    }
+                }
+
+                // Names for what is already saved, so the inspector never shows bare ids.
+                function refreshChips() {
+                    if (!ids().length) return paintChips({});
+                    var url = root.dataset.urlResourceLabels
+                        + '?resource=' + encodeURIComponent(resourceName())
+                        + '&ids=' + encodeURIComponent(ids().join(','));
+                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                        .then(function (response) { return response.json(); })
+                        .then(function (body) {
+                            var labels = {};
+                            ((body && body.options) || []).forEach(function (option) { labels[String(option.value)] = option.label; });
+                            paintChips(labels);
+                        })
+                        .catch(function () { paintChips({}); });
+                }
+
+                function pick(option) {
+                    var list = field.multiple ? ids() : [];
+                    if (list.indexOf(String(option.value)) === -1) list.push(String(option.value));
+                    writeIds(list);
+                    search.value = '';
+                    results.hidden = true;
+                    refreshChips();
+                }
+
+                var searchTimer = null;
+                function runSearch() {
+                    var resource = resourceName();
+                    if (!resource) { results.hidden = true; return; }
+                    var url = root.dataset.urlResources
+                        + '?resource=' + encodeURIComponent(resource)
+                        + '&q=' + encodeURIComponent(search.value);
+                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                        .then(function (response) { return response.json(); })
+                        .then(function (body) {
+                            results.innerHTML = '';
+                            var options = (body && body.options) || [];
+                            if (!options.length) {
+                                results.innerHTML = '<p class="tb-hint m-0">' + T.noMatches + '</p>';
+                            }
+                            options.forEach(function (option) {
+                                var row = document.createElement('button');
+                                row.type = 'button';
+                                row.textContent = option.label;
+                                row.addEventListener('click', function () { pick(option); });
+                                results.appendChild(row);
+                            });
+                            results.hidden = false;
+                        })
+                        .catch(function () { results.hidden = true; });
+                }
+
+                search.addEventListener('focus', runSearch);
+                search.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(runSearch, 220);
+                });
+                search.addEventListener('blur', function () {
+                    // Let a click on a result land before the list disappears.
+                    setTimeout(function () { results.hidden = true; }, 180);
+                });
+
+                wrapper.appendChild(hidden);
+                wrapper.appendChild(chips);
+                wrapper.appendChild(search);
+                wrapper.appendChild(results);
+                refreshChips();
+
+                return wrapper;
+            }
+
             /** Image field: preview + upload + library + clear, all writing to one hidden text input. */
             function buildImageField(field, key, value) {
                 var wrapper = document.createElement('div');
@@ -839,9 +1006,19 @@
                     label.textContent = (field.label || key).replace(/_/g, ' ');
                     wrapper.appendChild(label);
 
-                    wrapper.appendChild(field.type === 'image'
-                        ? buildImageField(field, key, settings[key])
-                        : buildInput(field, key, settings[key]));
+                    if (field.type === 'image') {
+                        wrapper.appendChild(buildImageField(field, key, settings[key]));
+                    } else if (field.type === 'resource') {
+                        wrapper.appendChild(buildResourceField(field, key, settings[key], settings));
+                    } else {
+                        wrapper.appendChild(buildInput(field, key, settings[key]));
+                    }
+
+                    // A field that only makes sense for one choice of another field (pick products
+                    // only when the source is "manual") hides itself until that choice is made.
+                    if (field.depends_on) {
+                        wrapper.dataset.dependsOn = JSON.stringify(field.depends_on);
+                    }
 
                     if (field.type === 'banner' && field.manage_url) {
                         var manage = document.createElement('a');
@@ -874,6 +1051,21 @@
                     }
 
                     host.appendChild(wrapper);
+                });
+
+                applyDependencies(host);
+                host.addEventListener('change', function () { applyDependencies(host); });
+            }
+
+            /** Show a dependent field only while its driver holds one of the values it needs. */
+            function applyDependencies(host) {
+                host.querySelectorAll('[data-depends-on]').forEach(function (wrapper) {
+                    var rules = JSON.parse(wrapper.dataset.dependsOn);
+                    var visible = Object.keys(rules).every(function (driverKey) {
+                        var driver = host.querySelector('[data-key="' + driverKey + '"]');
+                        return driver && rules[driverKey].indexOf(driver.value) !== -1;
+                    });
+                    wrapper.hidden = !visible;
                 });
             }
 

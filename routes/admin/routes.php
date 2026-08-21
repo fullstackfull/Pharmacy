@@ -1387,6 +1387,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::controller(ThemeBuilderController::class)->group(function () {
                 Route::get('', 'index')->name('index');
                 Route::get('section-schema', 'sectionSchema')->name('section-schema');
+                // Pickers: which category / brand / product / flash deal a section shows.
+                Route::get('resources', 'resources')->name('resources');
+                Route::get('resource-labels', 'resourceLabels')->name('resource-labels');
             Route::post('preview/start', 'startPreview')->name('preview.start');
             Route::get('preview/stop', 'stopPreview')->name('preview.stop');
                 Route::post('section/add', 'addSection')->name('section.add');
