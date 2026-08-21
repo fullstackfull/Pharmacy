@@ -3502,4 +3502,5 @@ ____________________________________________________on_search_engines_and_see_th
 	'banner_updated_successfully' => 'Banner updated successfully',
 	'no_banner_matches_your_filter' => 'No banner matches your filter',
 	'download_example_theme' => 'Download example theme',
+	'shop_by_category' => 'Shop by category',
 ];

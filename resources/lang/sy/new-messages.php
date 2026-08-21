@@ -753,4 +753,5 @@ return [
 	'Home_Promo_Banner' => 'بانر ترويجي بالرئيسية',
 	'Brand_Banner' => 'بانر الماركة',
 	'download_example_theme' => 'تنزيل الثيم النموذجي',
+	'shop_by_category' => 'تسوق حسب الفئة',
 ];
