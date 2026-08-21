@@ -40,7 +40,7 @@ return new class extends Migration
 
             // The subject the approval is about, polymorphic so one table serves every module.
             $table->string('subject_type', 100)->nullable();
-            $table->string('subject_id', 191)->nullable();
+            $table->string('subject_id', 140)->nullable();
 
             // pending -> approved | rejected | cancelled
             $table->string('status', 20)->default('pending');

@@ -69,7 +69,7 @@ return new class extends Migration
 
             // What this entry is about: order, order_details, settlement, payout, refund...
             $table->string('reference_type', 40)->nullable();
-            $table->string('reference_id', 191)->nullable();
+            $table->string('reference_id', 150)->nullable();
 
             $table->string('description', 512)->nullable();
 

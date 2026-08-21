@@ -47,7 +47,7 @@ return new class extends Migration
 
             // --- to which record ---
             $table->string('subject_type', 100)->nullable();
-            $table->string('subject_id', 191)->nullable();
+            $table->string('subject_id', 140)->nullable();
 
             // --- what changed ---
             // Before/after as JSON. Null before = a creation; null after = a deletion. Only the

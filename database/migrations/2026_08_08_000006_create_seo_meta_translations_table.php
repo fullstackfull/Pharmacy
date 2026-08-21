@@ -23,7 +23,7 @@ return new class extends Migration
 
         Schema::create('seo_meta_translations', function (Blueprint $table) {
             $table->id();
-            $table->string('seoable_type');
+            $table->string('seoable_type', 191);
             $table->unsignedBigInteger('seoable_id');
             $table->string('language_code', 10);          // en, ar, sa, sy, ar-KW ...
             $table->string('title')->nullable();
