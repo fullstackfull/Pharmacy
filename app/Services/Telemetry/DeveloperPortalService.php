@@ -233,6 +233,34 @@ class DeveloperPortalService
                     . "# Orders now always carry a billing address: it falls back to the\n"
                     . "# shipping address when the customer does not enter a separate one.",
             ],
+            [
+                'title' => translate('a_theme_reaches_the_store_only_once_published'),
+                'body' => translate('sections_colors_and_typography_all_travel_with_the_published_version_a_draft_changes_nothing'),
+                'snippet' => "# The storefront reads the ACTIVE theme's PUBLISHED version only:\n"
+                    . "#   themes.is_active = 1  AND  theme_versions.status = 'published'\n"
+                    . "# Until both hold, the built-in home renders and Theme Settings colours\n"
+                    . "# are not injected — this is the usual cause of 'the look did not change'.\n"
+                    . "# The builder shows an activate + publish bar whenever that is the case.\n\n"
+                    . "# Section settings carry breakpoint overrides beside the desktop value:\n"
+                    . "#   padding_top | padding_top_tablet | padding_top_mobile\n"
+                    . "#   columns     | columns_tablet     | columns_mobile\n"
+                    . "#   height, visible — same pattern; an absent key means 'inherit'.",
+            ],
+            [
+                'title' => translate('theme_sections_choose_real_records'),
+                'body' => translate('a_section_stores_the_ids_it_shows_so_an_app_can_mirror_the_same_selection'),
+                'snippet' => "# Section settings carry the merchant's picks as ids:\n"
+                    . "#   product_slider:    source = category|brand|manual\n"
+                    . "#                      source_id   -> that category / brand id\n"
+                    . "#                      product_ids -> \"12,7,90\" (order = display order)\n"
+                    . "#   category_grid:     category_ids -> \"3,8,1\" (empty = top-level by priority)\n"
+                    . "#   flash_deal:        deal_id -> a specific deal (empty = whichever runs now)\n"
+                    . "#   category_showcase: category_id -> the category whose banner,\n"
+                    . "#                      sub-categories and products the block shows\n\n"
+                    . "# A category pick includes everything filed under it, matched on all three\n"
+                    . "# levels: category_id, sub_category_id, sub_sub_category_id.\n"
+                    . "curl '{$baseUrl}/api/v1/categories/products/{category_id}?brand_id=3'",
+            ],
         ];
     }
 }

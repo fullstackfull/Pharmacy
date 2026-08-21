@@ -377,8 +377,19 @@ class ThemeManagementController extends BaseController
         return false;
     }
 
+    /**
+     * Back to Theme Management, or to the builder page the action was fired from.
+     *
+     * The builder's go-live bar activates and publishes without leaving the canvas, so a merchant
+     * who clicks "publish" there stays on the page they were composing.
+     */
     private function backToIndex(): RedirectResponse
     {
+        $builderPage = request('return_to_builder');
+        if ($builderPage && in_array($builderPage, ['home', 'header', 'footer'], true)) {
+            return redirect()->route('admin.theme.builder.index', ['page' => $builderPage]);
+        }
+
         return redirect()->route('admin.theme.index');
     }
 }

@@ -10,18 +10,25 @@
     <div class="ml-hero {{ $zoom ? 'is-zoom' : '' }} ml-reveal" data-ml-slider
          data-autoplay="{{ ($settings['autoplay'] ?? true) ? 1 : 0 }}"
          data-interval="{{ (int) ($settings['interval'] ?? 5000) }}"
-         style="min-height:{{ $height }}px">
-        <div class="ml-hero__track" style="height:{{ $height }}px">
+         style="min-height:var(--tb-h,{{ $height }}px)">
+        <div class="ml-hero__track" style="height:var(--tb-h,{{ $height }}px)">
             @foreach ($slides as $slide)
                 @php
                     $overlay = max(0, min(90, (int) ($slide['overlay'] ?? 35))) / 100;
                     $align = in_array($slide['align'] ?? 'start', ['center', 'end'], true) ? $slide['align'] : 'start';
                     $textColor = ($slide['text_color'] ?? null) ?: '#ffffff';
                 @endphp
-                <div class="ml-hero__slide {{ $loop->first ? 'is-active' : '' }}" style="height:{{ $height }}px">
+                <div class="ml-hero__slide {{ $loop->first ? 'is-active' : '' }}" style="height:var(--tb-h,{{ $height }}px)">
                     <div class="ml-hero__media">
-                        <img src="{{ ($slide['image'] ?? null) ?: $placeholder }}" alt="{{ $slide['title'] ?? '' }}"
-                             loading="{{ $loop->first ? 'eager' : 'lazy' }}">
+                        {{-- A phone-shaped artwork can be uploaded per slide; without one the desktop
+                             image is used at every width. --}}
+                        <picture>
+                            @if (!empty($slide['image_mobile']))
+                                <source media="(max-width:767.98px)" srcset="{{ $slide['image_mobile'] }}">
+                            @endif
+                            <img src="{{ ($slide['image'] ?? null) ?: $placeholder }}" alt="{{ $slide['title'] ?? '' }}"
+                                 loading="{{ $loop->first ? 'eager' : 'lazy' }}">
+                        </picture>
                     </div>
                     <div class="ml-hero__scrim" style="background:linear-gradient(90deg,rgba(0,0,0,{{ $overlay }}) 0%,rgba(0,0,0,{{ $overlay / 3 }}) 55%,rgba(0,0,0,0) 100%)"></div>
                     @if (!empty($slide['title']) || !empty($slide['subtitle']) || !empty($slide['link']))

@@ -14,7 +14,7 @@
 @endphp
 
 @if (count($cards))
-    <div class="ml-mosaic" style="grid-template-columns:repeat({{ $columns }},1fr);gap:{{ $gap }}px">
+    <div class="ml-mosaic" style="grid-template-columns:repeat(var(--tb-cols,{{ $columns }}),minmax(0,1fr));gap:{{ $gap }}px">
         @foreach ($cards as $card)
             <a class="ml-tile ml-reveal" data-delay="{{ $loop->index % 6 }}"
                href="{{ ($card['link'] ?? null) ?: 'javascript:void(0)' }}"

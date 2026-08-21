@@ -68,6 +68,8 @@ class ThemeBuilderController extends BaseController
             'previewUrl'    => $this->builderPreviewUrl($page),
             'structure'     => $version ? $this->builder->getPageStructure($version, $page) : [],
             'sectionTypes'  => $version ? $this->registry->forPage($page) : [],
+            'blockLabels'   => array_map(fn ($block) => $block['label'], $this->registry->blockTypes()),
+            'goLive'        => $version ? $this->goLiveState($version) : null,
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
@@ -206,7 +208,117 @@ class ThemeBuilderController extends BaseController
             'accepts'      => $this->registry->blockTypesFor($type),
             'blockLabels'  => $this->blockLabelMap($type),
             'blocks'       => $blocks,
+            'dataNote'     => $this->dataNote($type, $settings),
         ]);
+    }
+
+    /**
+     * Warning for a section that draws its content from the catalogue and would currently render
+     * nothing — a flash-deal countdown with no running deal, a review wall with no reviews.
+     *
+     * These sections deliberately output nothing rather than an empty frame, which looks to a
+     * merchant like a broken option ("the timer is not working"). Naming the missing data, and
+     * where to create it, is the difference between a bug report and a two-minute fix.
+     */
+    private function dataNote(string $type, array $settings): ?string
+    {
+        $resolver = app(\App\Services\Theme\SectionDataResolver::class);
+
+        return match ($type) {
+            'category_showcase' => (int) ($settings['category_id'] ?? 0) > 0
+                ? null
+                : translate('no_category_chosen_yet_pick_one_so_this_section_can_render'),
+            'product_slider' => match (true) {
+                ($settings['source'] ?? '') === 'manual' && empty($settings['product_ids'])
+                    => translate('pick_the_products_this_section_should_show'),
+                in_array($settings['source'] ?? '', ['category', 'brand'], true) && empty($settings['source_id'])
+                    => translate('pick_the_category_or_brand_this_section_should_show'),
+                default => null,
+            },
+            'flash_deal' => $resolver->flashDeal((int) ($settings['deal_id'] ?? 0) ?: null)
+                ? null
+                : translate('no_flash_deal_is_running_right_now_so_this_section_stays_hidden_create_one_under_promotion_flash_deals'),
+            'testimonials' => $resolver->testimonials((int) ($settings['limit'] ?? 3), (int) ($settings['min_rating'] ?? 4))->isNotEmpty()
+                ? null
+                : translate('no_approved_reviews_match_this_rating_yet_so_this_section_stays_hidden'),
+            'store_banner' => count($resolver->dashboardBanners((string) ($settings['banner_type'] ?? 'Main Banner'), (int) ($settings['limit'] ?? 6)))
+                ? null
+                : translate('no_published_banners_of_this_type_yet_add_one_under_promotion_banners'),
+            default => null,
+        };
+    }
+
+    /**
+     * Catalogue records a `resource` field can pick from — categories, brands, products, flash
+     * deals — as {value,label} pairs.
+     *
+     * Read-only and admin-scoped like the rest of the builder. The list is capped and filtered by
+     * an optional search term so a store with fifty thousand products still answers instantly.
+     */
+    public function resources(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->get('q', ''));
+        $like = '%' . $term . '%';
+        $limit = 40;
+
+        $rows = match ((string) $request->get('resource')) {
+            'category' => \App\Models\Category::query()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->orderBy('position')->orderBy('priority')
+                ->take($limit)->get(['id', 'name', 'position'])
+                ->map(fn ($category) => [
+                    'value' => $category->id,
+                    // The level tells a merchant why two categories share a name.
+                    'label' => $category->name . ($category->position ? ' · ' . translate('sub_category') : ''),
+                ]),
+            'brand' => \App\Models\Brand::query()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->where('status', 1)->orderBy('name')
+                ->take($limit)->get(['id', 'name'])
+                ->map(fn ($brand) => ['value' => $brand->id, 'label' => $brand->name]),
+            'product' => \App\Models\Product::active()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->latest('id')
+                ->take($limit)->get(['id', 'name'])
+                ->map(fn ($product) => ['value' => $product->id, 'label' => $product->name]),
+            'flash_deal' => \App\Models\FlashDeal::where('deal_type', 'flash_deal')
+                ->when($term !== '', fn ($query) => $query->where('title', 'like', $like))
+                ->orderByDesc('id')
+                ->take($limit)->get(['id', 'title', 'status', 'end_date'])
+                ->map(fn ($deal) => [
+                    'value' => $deal->id,
+                    'label' => $deal->title . ' · ' . ($deal->status ? translate('active') : translate('inactive')),
+                ]),
+            default => collect(),
+        };
+
+        return $this->ok(['options' => $rows->values()->all()]);
+    }
+
+    /** Labels for already-picked ids, so the inspector can show names instead of numbers. */
+    public function resourceLabels(Request $request): JsonResponse
+    {
+        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $request->get('ids'))), fn ($id) => $id > 0));
+        if ($ids === []) {
+            return $this->ok(['options' => []]);
+        }
+
+        $rows = match ((string) $request->get('resource')) {
+            'category'   => \App\Models\Category::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'brand'      => \App\Models\Brand::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'product'    => \App\Models\Product::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'flash_deal' => \App\Models\FlashDeal::whereIn('id', $ids)->get(['id', 'title'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->title]),
+            default      => collect(),
+        };
+
+        // Keep the merchant's own order, which is what a hand-picked list means.
+        $ordered = $rows->sortBy(fn ($row) => array_search((int) $row['value'], $ids, true))->values();
+
+        return $this->ok(['options' => $ordered->all()]);
     }
 
     /** Schema + saved settings for one block, so the inspector can render its form. */
@@ -395,6 +507,28 @@ class ThemeBuilderController extends BaseController
         }
 
         return Theme::where('is_active', true)->first();
+    }
+
+    /**
+     * What still stands between this draft and the live storefront.
+     *
+     * Composing sections changes nothing for customers until the theme is ACTIVE and a version is
+     * PUBLISHED — the single most common reason a merchant reports "the look did not change" or
+     * "my colours were not applied". The builder turns this into a visible checklist with the
+     * matching one-click action instead of leaving it to the documentation.
+     *
+     * @return array{active:bool, published:bool, live:bool, sections:int}
+     */
+    private function goLiveState(ThemeVersion $version): array
+    {
+        $publishedId = $version->theme?->versions()->where('status', ThemeVersion::STATUS_PUBLISHED)->value('id');
+
+        return [
+            'active'    => (bool) $version->theme?->is_active,
+            'published' => $publishedId !== null,
+            'live'      => (bool) $version->theme?->is_active && $publishedId !== null,
+            'sections'  => ThemeSection::where('theme_version_id', $version->id)->count(),
+        ];
     }
 
     /**

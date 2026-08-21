@@ -7,7 +7,7 @@
 @endphp
 
 @if (count($cards))
-    <div class="ml-mosaic" style="grid-auto-rows:{{ $rowHeight }}px;gap:{{ $gap }}px">
+    <div class="ml-mosaic" style="grid-auto-rows:var(--tb-h,{{ $rowHeight }}px);gap:{{ $gap }}px">
         @foreach ($cards as $card)
             @php
                 $span = in_array($card['span'] ?? 'small', ['small', 'wide', 'tall', 'large'], true) ? $card['span'] : 'small';

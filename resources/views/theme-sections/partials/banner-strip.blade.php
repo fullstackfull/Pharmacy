@@ -10,7 +10,7 @@
 
 @if (!empty($image) || !empty($card['title']))
     <div class="ml-strip ml-reveal {{ $parallax ? 'is-parallax' : '' }}"
-         style="min-height:{{ $height }}px;color:{{ $textColor }}">
+         style="min-height:var(--tb-h,{{ $height }}px);color:{{ $textColor }}">
         <div class="ml-strip__bg" style="background-image:url('{{ $image ?: $placeholder }}')"></div>
         <div class="ml-strip__scrim" style="opacity:{{ $overlay }}"></div>
         <div class="ml-strip__body">

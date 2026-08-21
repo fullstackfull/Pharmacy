@@ -14,7 +14,10 @@ namespace App\Services\Theme;
 class SectionRegistry
 {
     /** Field types the builder UI knows how to render. */
-    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source', 'banner'];
+    public const FIELD_TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'color', 'image', 'link', 'source', 'banner', 'resource'];
+
+    /** How many records one hand-picked list may hold, so a section cannot be made to query the whole catalogue. */
+    public const MAX_PICKED_RESOURCES = 24;
 
     /** Block types whose cards can be backed by a row in Promotion -> Banners (see ThemeBannerLink). */
     public const BANNER_BACKED_BLOCK_TYPES = ['slide', 'banner', 'mosaic_tile', 'split'];
@@ -66,7 +69,7 @@ class SectionRegistry
     {
         return [
             'announcement_bar' => [
-                'label' => 'announcement_bar', 'pages' => ['header'], 'hint' => 'a_thin_message_bar_above_the_header',
+                'preview' => 'bar', 'label' => 'announcement_bar', 'pages' => ['header'], 'hint' => 'a_thin_message_bar_above_the_header',
                 'schema' => [
                     'text'      => ['type' => 'text', 'label' => 'text', 'default' => ''],
                     'link'      => ['type' => 'link', 'label' => 'link', 'default' => null],
@@ -74,7 +77,7 @@ class SectionRegistry
                 ],
             ],
             'hero_banner' => [
-                'label' => 'hero_banner', 'pages' => ['home'], 'blocks' => ['slide'], 'hint' => 'full_width_slideshow_add_a_slide_per_campaign',
+                'preview' => 'hero', 'label' => 'hero_banner', 'pages' => ['home'], 'blocks' => ['slide'], 'hint' => 'full_width_slideshow_add_a_slide_per_campaign',
                 'schema' => [
                     'autoplay'  => ['type' => 'boolean', 'label' => 'autoplay', 'default' => true],
                     'interval'  => ['type' => 'number',  'label' => 'interval_ms', 'default' => 5000],
@@ -83,35 +86,48 @@ class SectionRegistry
                 ],
             ],
             'category_grid' => [
-                'label' => 'category_grid', 'pages' => ['home'], 'hint' => 'round_category_shortcuts_pulled_from_your_categories',
+                'preview' => 'circles', 'label' => 'category_grid', 'pages' => ['home'], 'hint' => 'round_category_shortcuts_pulled_from_your_categories',
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    // Hand-pick the categories, in the order you pick them. Empty = the top-level
+                    // categories by priority, which is what the section did before.
+                    'category_ids' => ['type' => 'resource', 'label' => 'choose_categories', 'default' => null,
+                                       'resource' => 'category', 'multiple' => true],
                     'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 12],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 6, 'responsive' => true],
                 ],
             ],
             'product_slider' => [
-                'label' => 'product_slider', 'pages' => ['home'], 'hint' => 'a_row_of_products_choose_the_source_new_best_selling_category',
+                'preview' => 'rail', 'label' => 'product_slider', 'pages' => ['home'], 'hint' => 'a_row_of_products_choose_the_source_new_best_selling_category',
                 'schema' => [
                     'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle'    => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'featured',
                                       'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
-                    'source_id'   => ['type' => 'number', 'label' => 'source_reference', 'default' => null],
+                    // Which category / brand, picked by name. The picker follows the source above:
+                    // choose "category" and it lists categories, "brand" and it lists brands.
+                    'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
+                                      'resource_from' => 'source', 'depends_on' => ['source' => ['category', 'brand']]],
+                    // Source "manual" means: exactly these products, in this order.
+                    'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
+                                      'resource' => 'product', 'multiple' => true,
+                                      'depends_on' => ['source' => ['manual']]],
                     'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
                                       'options' => ['rail', 'grid']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
                     'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
                     'autoplay'    => ['type' => 'boolean','label' => 'autoplay', 'default' => false],
+                    'interval'    => ['type' => 'number', 'label' => 'interval_ms', 'default' => 4000],
                     'arrows'      => ['type' => 'boolean','label' => 'navigation_arrows', 'default' => true],
-                    'pagination'  => ['type' => 'boolean','label' => 'pagination', 'default' => false],
+                    'pagination'  => ['type' => 'boolean','label' => 'pagination_dots', 'default' => false],
                     'view_all'    => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
             'promotional_banner' => [
-                'label' => 'promotional_banner', 'pages' => ['home'], 'blocks' => ['banner'], 'hint' => 'equal_banner_tiles_side_by_side',
+                'preview' => 'tiles', 'label' => 'promotional_banner', 'pages' => ['home'], 'blocks' => ['banner'], 'hint' => 'equal_banner_tiles_side_by_side',
                 'schema' => [
                     'columns'  => ['type' => 'number',  'label' => 'columns', 'default' => 2, 'responsive' => true],
                     'gap'      => ['type' => 'number',  'label' => 'gap', 'default' => 24],
@@ -122,21 +138,21 @@ class SectionRegistry
             ],
             // --- banner presentations beyond the plain rectangle -------------------------------
             'split_banner' => [
-                'label' => 'split_banner', 'pages' => ['home'], 'blocks' => ['split'], 'hint' => 'image_on_one_side_text_on_the_other_editorial_look',
+                'preview' => 'split', 'label' => 'split_banner', 'pages' => ['home'], 'blocks' => ['split'], 'hint' => 'image_on_one_side_text_on_the_other_editorial_look',
                 'schema' => [
                     'height' => ['type' => 'number',  'label' => 'media_height', 'default' => 460, 'responsive' => true],
                     'gap'    => ['type' => 'number',  'label' => 'gap', 'default' => 0],
                 ],
             ],
             'banner_mosaic' => [
-                'label' => 'banner_mosaic', 'pages' => ['home'], 'blocks' => ['mosaic_tile'], 'hint' => 'asymmetric_grid_one_large_tile_beside_smaller_ones',
+                'preview' => 'mosaic', 'label' => 'banner_mosaic', 'pages' => ['home'], 'blocks' => ['mosaic_tile'], 'hint' => 'asymmetric_grid_one_large_tile_beside_smaller_ones',
                 'schema' => [
                     'height' => ['type' => 'number', 'label' => 'row_height', 'default' => 240, 'responsive' => true],
                     'gap'    => ['type' => 'number', 'label' => 'gap', 'default' => 16],
                 ],
             ],
             'banner_strip' => [
-                'label' => 'banner_strip', 'pages' => ['home'], 'hint' => 'full_width_campaign_strip_with_parallax_background',
+                'preview' => 'strip', 'label' => 'banner_strip', 'pages' => ['home'], 'hint' => 'full_width_campaign_strip_with_parallax_background',
                 'schema' => [
                     'image'       => ['type' => 'image',   'label' => 'background_image', 'default' => ''],
                     'eyebrow'     => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
@@ -154,7 +170,7 @@ class SectionRegistry
             // chosen banner type renders here, in the layout the merchant picks. Adding a banner in
             // Promotion -> Banners is therefore immediately visible on the themed home page.
             'store_banner' => [
-                'label' => 'banners_from_dashboard', 'pages' => ['home'], 'hint' => 'shows_banners_you_created_in_promotion_banners',
+                'preview' => 'hero', 'label' => 'banners_from_dashboard', 'pages' => ['home'], 'hint' => 'shows_banners_you_created_in_promotion_banners',
                 'schema' => [
                     'banner_type' => ['type' => 'select', 'label' => 'banner_type', 'default' => 'Main Banner',
                                       'options' => self::STORE_BANNER_TYPES],
@@ -169,35 +185,61 @@ class SectionRegistry
                 ],
             ],
             'usp_strip' => [
-                'label' => 'service_highlights', 'pages' => ['home'], 'blocks' => ['usp'], 'hint' => 'trust_badges_such_as_free_shipping_and_authentic_products',
+                'preview' => 'usp', 'label' => 'service_highlights', 'pages' => ['home'], 'blocks' => ['usp'], 'hint' => 'trust_badges_such_as_free_shipping_and_authentic_products',
                 'schema' => [
                     'columns' => ['type' => 'number',  'label' => 'columns', 'default' => 4, 'responsive' => true],
                     'style'   => ['type' => 'select',  'label' => 'display_style', 'default' => 'boxed',
-                                  'options' => ['boxed', 'dark']],
-                    'boxed'   => ['type' => 'boolean', 'label' => 'boxed_cards', 'default' => true],
+                                  'options' => ['boxed', 'plain', 'dark']],
                 ],
             ],
             'brand_slider' => [
-                'label' => 'brand_slider', 'pages' => ['home'], 'hint' => 'brands_as_marquee_grid_or_story_cards',
+                'preview' => 'marquee', 'label' => 'brand_slider', 'pages' => ['home'], 'hint' => 'brands_as_marquee_grid_or_story_cards',
                 'schema' => [
                     'eyebrow' => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',    'label' => 'title', 'default' => ''],
                     'style'   => ['type' => 'select',  'label' => 'display_style', 'default' => 'marquee',
                                   'options' => ['marquee', 'grid', 'story']],
                     'limit'   => ['type' => 'number',  'label' => 'max_items', 'default' => 12],
-                    'marquee' => ['type' => 'boolean', 'label' => 'continuous_scroll', 'default' => true],
                 ],
             ],
             'flash_deal' => [
-                'label' => 'flash_deals', 'pages' => ['home'], 'hint' => 'gradient_strip_with_a_live_countdown_from_your_running_flash_deal',
+                'preview' => 'flash', 'label' => 'flash_deals', 'pages' => ['home'], 'hint' => 'gradient_strip_with_a_live_countdown_from_your_running_flash_deal',
                 'schema' => [
                     'title'     => ['type' => 'text',    'label' => 'title', 'default' => ''],
                     'subtitle'  => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
+                    // Which deal to feature. Empty = whichever deal is running now, so the section
+                    // keeps working after a campaign ends without a theme edit.
+                    'deal_id'   => ['type' => 'resource', 'label' => 'choose_flash_deal', 'default' => null,
+                                    'resource' => 'flash_deal'],
                     'countdown' => ['type' => 'boolean', 'label' => 'show_countdown', 'default' => true],
+                    'products'  => ['type' => 'boolean', 'label' => 'show_the_deals_products', 'default' => true],
+                    'limit'     => ['type' => 'number',  'label' => 'max_products', 'default' => 10],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            // One chosen category, presented as its own storefront block: its page banner on top,
+            // its sub-categories as entry chips, then its products — the "show me this category
+            // with its banner" arrangement, composable anywhere on the home page.
+            'category_showcase' => [
+                'preview' => 'showcase', 'label' => 'category_showcase', 'pages' => ['home'],
+                'hint' => 'one_category_with_its_banner_its_sub_categories_and_its_products',
+                'schema' => [
+                    'category_id'  => ['type' => 'resource', 'label' => 'choose_category', 'default' => null,
+                                       'resource' => 'category'],
+                    'eyebrow'      => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'        => ['type' => 'text',   'label' => 'title_leave_empty_for_the_category_name', 'default' => ''],
+                    'banner'       => ['type' => 'boolean','label' => 'show_the_category_banner', 'default' => true],
+                    'sub_categories' => ['type' => 'boolean', 'label' => 'show_sub_category_chips', 'default' => true],
+                    'style'        => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                       'options' => ['rail', 'grid']],
+                    'limit'        => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'      => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'view_all'     => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                    'add_to_cart'  => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
             'testimonials' => [
-                'label' => 'customer_voices', 'pages' => ['home'], 'hint' => 'real_product_reviews_from_your_customers',
+                'preview' => 'quotes', 'label' => 'customer_voices', 'pages' => ['home'], 'hint' => 'real_product_reviews_from_your_customers',
                 'schema' => [
                     'eyebrow'    => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'      => ['type' => 'text',   'label' => 'title', 'default' => ''],
@@ -206,7 +248,7 @@ class SectionRegistry
                 ],
             ],
             'faq' => [
-                'label' => 'faq', 'pages' => ['home'], 'blocks' => ['qa'], 'hint' => 'questions_and_answers_with_a_help_panel',
+                'preview' => 'faq', 'label' => 'faq', 'pages' => ['home'], 'blocks' => ['qa'], 'hint' => 'questions_and_answers_with_a_help_panel',
                 'schema' => [
                     'eyebrow'     => ['type' => 'text', 'label' => 'eyebrow', 'default' => ''],
                     'title'       => ['type' => 'text', 'label' => 'title', 'default' => ''],
@@ -216,22 +258,22 @@ class SectionRegistry
                 ],
             ],
             'custom_html' => [
-                'label' => 'custom_content', 'pages' => ['home', 'footer'], 'hint' => 'your_own_text_block',
+                'preview' => 'text', 'label' => 'custom_content', 'pages' => ['home', 'footer'], 'hint' => 'your_own_text_block',
                 'schema' => ['content' => ['type' => 'textarea', 'label' => 'content', 'default' => '']],
             ],
             'newsletter' => [
-                'label' => 'newsletter', 'pages' => ['home', 'footer'], 'hint' => 'email_signup_panel',
+                'preview' => 'form', 'label' => 'newsletter', 'pages' => ['home', 'footer'], 'hint' => 'email_signup_panel',
                 'schema' => [
                     'title'    => ['type' => 'text', 'label' => 'title', 'default' => ''],
                     'subtitle' => ['type' => 'text', 'label' => 'subtitle', 'default' => ''],
                 ],
             ],
             'spacer' => [
-                'label' => 'spacer', 'pages' => ['home'], 'hint' => 'empty_vertical_space_between_sections',
+                'preview' => 'spacer', 'label' => 'spacer', 'pages' => ['home'], 'hint' => 'empty_vertical_space_between_sections',
                 'schema' => ['height' => ['type' => 'number', 'label' => 'height', 'default' => 40, 'responsive' => true]],
             ],
             'footer_columns' => [
-                'label' => 'footer_columns', 'pages' => ['footer'], 'blocks' => ['menu', 'text', 'contact', 'social', 'apps'], 'hint' => 'link_and_contact_columns_in_the_footer',
+                'preview' => 'columns', 'label' => 'footer_columns', 'pages' => ['footer'], 'blocks' => ['menu', 'text', 'contact', 'social', 'apps'], 'hint' => 'link_and_contact_columns_in_the_footer',
                 'schema' => ['columns' => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true]],
             ],
         ];
@@ -504,7 +546,27 @@ class SectionRegistry
             'banner'  => (is_numeric($value) && (int) $value > 0) ? (int) $value : null,
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
             'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
+            'resource' => $this->coerceResource($value, !empty($field['multiple'])),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
         };
+    }
+
+    /**
+     * A picked catalogue record (a category, brand, product or flash deal).
+     *
+     * Stored as an id, or as a comma-separated list of ids for a multi-picker — a list keeps the
+     * merchant's own order, which is the point of hand-picking. Everything that is not a positive
+     * integer is dropped, so a settings payload can never carry anything else into a query.
+     */
+    private function coerceResource(mixed $value, bool $multiple): int|string|null
+    {
+        $ids = is_array($value) ? $value : explode(',', (string) (is_scalar($value) ? $value : ''));
+        $ids = array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
+
+        if (!$multiple) {
+            return $ids[0] ?? null;
+        }
+
+        return implode(',', array_slice(array_unique($ids), 0, self::MAX_PICKED_RESOURCES));
     }
 }

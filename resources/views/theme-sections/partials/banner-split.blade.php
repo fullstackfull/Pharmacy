@@ -11,7 +11,7 @@
         @foreach ($cards as $card)
             @php $reversed = ($card['media_side'] ?? 'start') === 'end'; @endphp
             <div class="ml-split ml-reveal {{ $reversed ? 'is-reversed' : '' }}" data-delay="{{ $loop->index % 6 }}">
-                <div class="ml-split__media" style="min-height:{{ $height }}px">
+                <div class="ml-split__media" style="min-height:var(--tb-h,{{ $height }}px)">
                     <img src="{{ ($card['image'] ?? null) ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
                 </div>
                 <div class="ml-split__body" @if (!empty($card['background'])) style="background:{{ $card['background'] }}" @endif>

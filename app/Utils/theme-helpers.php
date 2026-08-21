@@ -19,6 +19,48 @@ if (!function_exists('theme_root_path')) {
     }
 }
 
+if (!function_exists('theme_section_breakpoint_css')) {
+    /**
+     * CSS for a themed section's tablet/mobile overrides, which the Theme Builder saves as
+     * `key_tablet` / `key_mobile` beside the desktop value.
+     *
+     * The desktop values ride on the section's own inline style; this emits a rule only for the
+     * breakpoints a merchant actually filled in, so an untouched section adds no CSS at all.
+     * Columns and heights travel as custom properties (--tb-cols / --tb-h) that the section's
+     * markup already reads, which keeps one mechanism for every section type.
+     */
+    function theme_section_breakpoint_css(array $settings, string $selector): string
+    {
+        $formats = [
+            'padding_top'    => fn ($value) => 'padding-top:' . max(0, (int) $value) . 'px;',
+            'padding_bottom' => fn ($value) => 'padding-bottom:' . max(0, (int) $value) . 'px;',
+            // --tb-cols-sm carries the phone count, which the grid prefers over the desktop one.
+            'columns'        => fn ($value) => '--tb-cols:' . max(1, (int) $value) . ';--tb-cols-sm:' . max(1, (int) $value) . ';',
+            'height'         => fn ($value) => '--tb-h:' . max(0, (int) $value) . 'px;',
+        ];
+        $css = '';
+
+        foreach (['tablet' => 'max-width:991.98px', 'mobile' => 'max-width:767.98px'] as $breakpoint => $query) {
+            $rules = '';
+            foreach ($formats as $key => $format) {
+                $value = $settings[$key . '_' . $breakpoint] ?? null;
+                if ($value === null || $value === '') {
+                    continue;
+                }
+                $rules .= $format($value);
+            }
+            if (array_key_exists('visible_' . $breakpoint, $settings) && !$settings['visible_' . $breakpoint]) {
+                $rules .= 'display:none;';
+            }
+            if ($rules !== '') {
+                $css .= '@media (' . $query . '){' . $selector . '{' . $rules . '}}';
+            }
+        }
+
+        return $css;
+    }
+}
+
 if (!function_exists('getHexToRGBColorCode')) {
     function getHexToRGBColorCode($hex): ?string
     {
