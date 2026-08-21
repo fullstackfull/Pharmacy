@@ -265,3 +265,443 @@
 .k-store .product-search-input {
     border-radius: var(--rf-pill);
 }
+
+/* ---------------------------------------------------------------------------
+   Product page: the block above the add-to-cart button.
+   Brand first (who makes it), then the trust and urgency badges, the title,
+   the price with what it saves, the live-viewers line the admin switches on,
+   and a short pitch before the full description.
+   ------------------------------------------------------------------------ */
+.k-store .pd-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.k-store .pd-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px 6px 6px;
+    border: 1px solid var(--rf-line);
+    border-radius: var(--rf-pill);
+    text-decoration: none;
+    color: var(--rf-ink);
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.k-store .pd-brand:hover {
+    border-color: rgba(var(--rf-accent-rgb), .45);
+    box-shadow: var(--rf-lift);
+    text-decoration: none;
+}
+
+.k-store .pd-brand img {
+    inline-size: 34px;
+    block-size: 34px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: var(--rf-sunk);
+}
+
+.k-store .pd-brand span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.k-store .pd-brand b {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.k-store .pd-brand small {
+    font-size: 11px;
+    color: var(--rf-muted);
+    text-decoration: underline;
+}
+
+.k-store .pd-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #12855b;
+}
+
+.k-store .pd-stock i {
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgba(18, 133, 91, .16);
+}
+
+.k-store .pd-stock.is-out {
+    color: #c0392b;
+}
+
+.k-store .pd-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.k-store .pd-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.k-store .pd-badge--trust {
+    color: #12855b;
+    background: rgba(18, 133, 91, .09);
+    border: 1px solid rgba(18, 133, 91, .22);
+}
+
+.k-store .pd-badge--deal {
+    color: #b3541e;
+    background: rgba(240, 150, 60, .12);
+}
+
+.k-store .pd-save {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #d13b3b;
+    background: rgba(209, 59, 59, .1);
+}
+
+.k-store .pd-viewers,
+.k-store .pd-short {
+    margin: 10px 0 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--rf-muted);
+}
+
+.k-store .pd-viewers {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.k-store .pd-viewers b {
+    color: var(--rf-ink);
+    font-weight: 700;
+}
+
+.k-store .pd-short {
+    color: var(--rf-ink);
+}
+
+.k-store .pd-readmore {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rf-accent);
+    text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer — one dark band, four columns, and a quiet legal bar.
+   Built on logical properties so the Arabic (RTL) reading order is the design,
+   not a mirrored afterthought. Every block hides itself when the merchant has
+   not filled it in, so the footer never shows an empty column.
+   ------------------------------------------------------------------------ */
+.k-foot {
+    --foot-ink: #0f1b32;
+    --foot-ink-2: #16233d;
+    --foot-text: #c7cfdd;
+    --foot-heading: #ffffff;
+    --foot-line: rgba(255, 255, 255, .09);
+
+    margin-block-start: 48px;
+    background: var(--foot-ink);
+    color: var(--foot-text);
+    font-size: 14px;
+}
+
+.k-foot .container {
+    max-width: 1320px;
+}
+
+.k-foot__grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.4fr;
+    gap: 40px 32px;
+    padding-block: 56px 40px;
+}
+
+@media (max-width: 991.98px) {
+    .k-foot__grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 32px 24px;
+        padding-block: 40px 28px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .k-foot__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.k-foot__logo img {
+    max-block-size: 54px;
+    inline-size: auto;
+    object-fit: contain;
+}
+
+.k-foot__about {
+    margin-block: 18px 0;
+    max-inline-size: 46ch;
+    line-height: 1.9;
+    color: var(--foot-text);
+    opacity: .85;
+}
+
+.k-foot__legal {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-block: 22px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.k-foot__legal li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.k-foot__legal i {
+    display: grid;
+    place-items: center;
+    inline-size: 34px;
+    block-size: 34px;
+    flex: 0 0 auto;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .06);
+    color: #7fd1a8;
+    font-size: 15px;
+}
+
+.k-foot__legal span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+}
+
+.k-foot__legal small {
+    font-size: 11px;
+    opacity: .7;
+}
+
+.k-foot__legal b {
+    font-size: 13px;
+    color: var(--foot-heading);
+    font-weight: 600;
+}
+
+.k-foot__col h6 {
+    margin-block-end: 18px;
+    color: var(--foot-heading);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+.k-foot__col ul {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.k-foot__col a {
+    color: var(--foot-text);
+    text-decoration: none;
+    transition: color .18s ease, padding-inline-start .18s ease;
+}
+
+.k-foot__col a:hover {
+    color: var(--foot-heading);
+    text-decoration: none;
+    padding-inline-start: 4px;
+}
+
+.k-foot__contact-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-block-end: 12px;
+    color: var(--foot-text);
+    text-decoration: none;
+}
+
+.k-foot__contact-line i {
+    margin-block-start: 2px;
+    color: var(--foot-heading);
+    opacity: .75;
+}
+
+.k-foot__social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-block: 18px;
+}
+
+.k-foot__social a {
+    display: grid;
+    place-items: center;
+    inline-size: 40px;
+    block-size: 40px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 50%;
+    color: var(--foot-heading);
+    font-size: 15px;
+    text-decoration: none;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.k-foot__social a:hover {
+    background: var(--rf-accent);
+    border-color: transparent;
+    transform: translateY(-2px);
+    color: #fff;
+}
+
+.k-foot__news {
+    display: flex;
+    gap: 8px;
+    margin-block-end: 16px;
+    max-inline-size: 360px;
+}
+
+.k-foot__news input {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding: 11px 16px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: var(--rf-pill);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.k-foot__news input::placeholder {
+    color: rgba(255, 255, 255, .5);
+}
+
+.k-foot__news input:focus {
+    outline: none;
+    border-color: rgba(var(--rf-accent-rgb), .8);
+}
+
+.k-foot__news button {
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--rf-pill);
+    background: var(--rf-accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.k-foot__apps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.k-foot__apps img {
+    block-size: 38px;
+    inline-size: auto;
+}
+
+.k-foot__bar {
+    border-block-start: 1px solid var(--foot-line);
+    background: var(--foot-ink-2);
+}
+
+.k-foot__bar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 24px;
+    padding-block: 16px;
+}
+
+.k-foot__copy {
+    margin: 0;
+    font-size: 13px;
+    opacity: .8;
+}
+
+.k-foot__pay,
+.k-foot__mini {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.k-foot__pay li {
+    display: grid;
+    place-items: center;
+    min-inline-size: 52px;
+    block-size: 30px;
+    padding-inline: 8px;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.k-foot__pay img {
+    max-block-size: 20px;
+    max-inline-size: 46px;
+    object-fit: contain;
+}
+
+.k-foot__pay span {
+    color: #1d2739;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.k-foot__mini a {
+    color: var(--foot-text);
+    font-size: 12px;
+    text-decoration: none;
+    opacity: .8;
+}
+
+.k-foot__mini a:hover {
+    color: var(--foot-heading);
+    opacity: 1;
+}

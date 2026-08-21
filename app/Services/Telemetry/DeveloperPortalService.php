@@ -261,6 +261,23 @@ class DeveloperPortalService
                     . "# levels: category_id, sub_category_id, sub_sub_category_id.\n"
                     . "curl '{$baseUrl}/api/v1/categories/products/{category_id}?brand_id=3'",
             ],
+            [
+                'title' => translate('product_page_signals'),
+                'body' => translate('the_viewers_line_is_a_merchandising_widget_driven_by_config_not_analytics'),
+                'snippet' => "# config keys (business settings):\n"
+                    . "#   product_live_viewers_status   0|1   the viewers line on the product page\n"
+                    . "#   product_live_viewers_min/max        the range the number is drawn from\n"
+                    . "#   product_authenticity_badge_status   the '100% authentic' badge\n"
+                    . "#   product_authenticity_badge_text     its wording\n"
+                    . "#   company_registration_no | company_vat_no | company_platform_no\n"
+                    . "#                                       legal ids shown in the web footer\n\n"
+                    . "# The viewers number is derived from the product id and a 10-minute window,\n"
+                    . "# so it is stable across reloads and is NOT real traffic — never report it\n"
+                    . "# as analytics. It is not exposed on the product API; an app that wants the\n"
+                    . "# same treatment should generate it the same way from the product id.\n"
+                    . "# The short description under the title falls back to meta_description and\n"
+                    . "# then to the stripped details, both of which the API already returns.",
+            ],
         ];
     }
 }

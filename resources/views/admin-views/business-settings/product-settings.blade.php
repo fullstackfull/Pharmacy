@@ -207,6 +207,90 @@
                     </div>
                 </div>
             </div>
+            {{-- Product page signals: what the storefront shows above the fold besides the price. --}}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div class="mb-3 mb-sm-20">
+                        <h3 class="text-capitalize">{{ translate('product_page_signals') }}</h3>
+                        <p class="mb-0 fs-12">
+                            {{ translate('trust_and_urgency_elements_shown_on_the_product_page_above_the_add_to_cart_button') }}
+                        </p>
+                    </div>
+                    @php($liveViewersStatus = getWebConfig(name: 'product_live_viewers_status'))
+                    @php($liveViewersMin = getWebConfig(name: 'product_live_viewers_min'))
+                    @php($liveViewersMax = getWebConfig(name: 'product_live_viewers_max'))
+                    @php($authenticityStatus = getWebConfig(name: 'product_authenticity_badge_status'))
+                    @php($authenticityText = getWebConfig(name: 'product_authenticity_badge_text'))
+                    <div class="bg-section-sm">
+                        <div class="row g-4">
+                            <div class="col-xl-6 col-md-6">
+                                <div class="border rounded p-3 h-100 bg-white d-flex flex-column gap-3">
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <div class="fw-medium text-dark fs-14 mb-1 text-capitalize">
+                                                {{ translate('people_viewing_this_product_now') }}
+                                            </div>
+                                            <p class="mb-0 fs-12">
+                                                {{ translate('shows_a_live_viewers_line_on_the_product_page_the_number_is_generated_within_the_range_below_and_is_not_real_traffic') }}
+                                            </p>
+                                        </div>
+                                        <label class="switcher" for="product-live-viewers">
+                                            <input class="switcher_input" type="checkbox" value="1"
+                                                   name="product_live_viewers_status" id="product-live-viewers"
+                                                   {{ $liveViewersStatus ? 'checked' : '' }}>
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <label class="form-label fs-12" for="product-live-viewers-min">{{ translate('minimum') }}</label>
+                                            <input type="number" min="2" class="form-control" id="product-live-viewers-min"
+                                                   name="product_live_viewers_min" value="{{ $liveViewersMin ?: 8 }}">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fs-12" for="product-live-viewers-max">{{ translate('maximum') }}</label>
+                                            <input type="number" min="3" class="form-control" id="product-live-viewers-max"
+                                                   name="product_live_viewers_max" value="{{ $liveViewersMax ?: 60 }}">
+                                        </div>
+                                    </div>
+                                    <div class="bg-info bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center">
+                                        <i class="fi fi-sr-bulb text-info fs-16"></i>
+                                        <span>{{ translate('the_number_stays_steady_for_a_few_minutes_per_product_instead_of_changing_on_every_refresh') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-6 col-md-6">
+                                <div class="border rounded p-3 h-100 bg-white d-flex flex-column gap-3">
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <div class="fw-medium text-dark fs-14 mb-1 text-capitalize">
+                                                {{ translate('authenticity_badge') }}
+                                            </div>
+                                            <p class="mb-0 fs-12">
+                                                {{ translate('a_short_trust_badge_beside_the_product_title_such_as_100_percent_authentic') }}
+                                            </p>
+                                        </div>
+                                        <label class="switcher" for="product-authenticity-badge">
+                                            <input class="switcher_input" type="checkbox" value="1"
+                                                   name="product_authenticity_badge_status" id="product-authenticity-badge"
+                                                   {{ $authenticityStatus ? 'checked' : '' }}>
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="form-label fs-12" for="product-authenticity-text">{{ translate('badge_text') }}</label>
+                                        <input type="text" class="form-control" id="product-authenticity-text"
+                                               name="product_authenticity_badge_text" maxlength="40"
+                                               value="{{ $authenticityText }}"
+                                               placeholder="{{ translate('100_percent_authentic') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="d-flex justify-content-end trans3 mt-4 action-btn-wrapper-container">
                 <div class="d-flex justify-content-sm-end justify-content-center gap-3 flex-grow-1 flex-grow-sm-0 bg-white action-btn-wrapper trans3">
                     <button type="reset" class="btn btn-secondary px-3 px-sm-4 w-120">

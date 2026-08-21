@@ -137,7 +137,54 @@
 
                                 <div class="col-lg-7 col-md-8 mt-md-0 mt-sm-3 web-direction">
                                     <div class="details __h-100 product-cart-option-container p-0">
-                                        <h2 class="mb-4 __inline-24">{{ $product->name }}</h2>
+                                        {{-- Above the title: who makes it, whether it is in stock, and the
+                                             two signals that decide a beauty purchase — authenticity and how
+                                             much this price saves. Everything here is real store data except
+                                             the viewer line, which the admin switches on in
+                                             Business settings -> Product settings. --}}
+                                        @php
+                                            $__signals = app(\App\Services\Storefront\ProductPageSignalsService::class);
+                                            $__brand = getWebConfig(name: 'product_brand') ? $product->brand : null;
+                                            $__inStock = $product['product_type'] !== 'physical' || $product->current_stock > 0;
+                                            $__off = $__signals->discountPercentage($product);
+                                            $__authenticity = $__signals->authenticityBadge();
+                                            $__viewers = $__signals->liveViewers($product);
+                                            $__shortDescription = $__signals->shortDescription($product);
+                                        @endphp
+
+                                        <div class="pd-head">
+                                            @if ($__brand)
+                                                <a class="pd-brand" href="{{ \Illuminate\Support\Facades\Route::has('brand-products') && $__brand->slug
+                                                        ? route('brand-products', ['slug' => $__brand->slug])
+                                                        : route('products', ['brand_id' => $__brand->id]) }}">
+                                                    @if ($__brand->image)
+                                                        <img src="{{ getStorageImages(path: $__brand->image_full_url, type: 'brand') }}" alt="{{ $__brand->name }}">
+                                                    @endif
+                                                    <span>
+                                                        <b>{{ $__brand->name }}</b>
+                                                        <small>{{ translate('view_more') }}</small>
+                                                    </span>
+                                                </a>
+                                            @endif
+                                            <span class="pd-stock {{ $__inStock ? '' : 'is-out' }}">
+                                                <i></i>{{ $__inStock ? translate('available_now') : translate('out_of_stock') }}
+                                            </span>
+                                        </div>
+
+                                        @if ($__authenticity || $__off > 0)
+                                            <div class="pd-badges">
+                                                @if ($__authenticity)
+                                                    <span class="pd-badge pd-badge--trust">{{ $__authenticity }}</span>
+                                                @endif
+                                                @if ($__off > 0)
+                                                    <span class="pd-badge pd-badge--deal">
+                                                        <i class="fi fi-sr-bolt"></i>{{ translate('limited_time_discount_do_not_miss_it') }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        <h2 class="mb-3 __inline-24">{{ $product->name }}</h2>
                                         <div class="d-flex flex-wrap align-items-center gap-3 mb-4 pro">
                                             @if($overallRating[0] !=0)
                                             <div class="star-rating me-2">
@@ -221,7 +268,23 @@
                                                     <span class="discounted-unit-price fs-24 font-bold">
                                                         {{ getProductPriceByType(product: $product, type: 'discounted_unit_price', result: 'string') }}
                                                     </span>
+                                                    @if ($__off > 0)
+                                                        <span class="pd-save">{{ translate('you_save') }} {{ $__off }}%</span>
+                                                    @endif
                                                 </h3>
+
+                                                @if ($__viewers)
+                                                    <p class="pd-viewers">
+                                                        <i class="fi fi-rr-eye"></i>
+                                                        {{ translate('there_are') }} <b>{{ $__viewers }}</b>
+                                                        {{ translate('people_viewing_this_product_right_now') }}
+                                                    </p>
+                                                @endif
+
+                                                @if ($__shortDescription)
+                                                    <p class="pd-short">{{ $__shortDescription }}</p>
+                                                    <a href="#overview" class="pd-readmore" data-toggle="tab" role="tab">{{ translate('read_more') }}</a>
+                                                @endif
 
                                                 {{-- B2B wholesale price: shown to a logged-in customer whose group offers a lower
                                                      price, so wholesale buyers see their price on the page — not only in the cart. --}}

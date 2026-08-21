@@ -12,436 +12,197 @@
     echo $__themedFooter;
 @endphp
 @if ($__themedFooter === '')
-<div class="__inline-9 rtl">
-    <div class="text-center pb-4">
-        <div class="max-w-1160px mx-auto footer-slider-container">
-            <div class="container">
-                <div class="row g-2" data-item="{{ Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status') ? 4 : 3 }}">
-                    @if($web_config['business_pages']?->firstWhere('slug', 'about-us'))
-                   <div class="{{ Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status') ? 'col-6 col-md-3' : 'col-6 col-md-4' }}">
-                       <div class="footer-slide-item bg-white">
-                           <div>
-                               <a href="{{ route('business-page.view', ['slug' => 'about-us']) }}">
-                                   <div class="text-center text-primary mb-lg-3 mb-2">
-                                       <img class="object-contain svg" width="36" height="36"
-                                            src="{{ theme_asset(path: "public/assets/front-end/img/icons/about-us.svg")}}"
-                                            alt="{{ translate('about_us') }}">
-                                   </div>
-                                   <div class="text-center">
-                                       <h2 class="m-0 mt-2 heading">
-                                           {{ translate('about_us') }}
-                                       </h2>
-                                       <p class="d-none d-sm-block des mb-0">{{ translate('Know_about_our_company_more.') }}</p>
-                                   </div>
-                               </a>
-                           </div>
-                       </div>
-                   </div>
-                   @endif
+@php
+    // Everything below is drawn from what the merchant already fills in: company info and legal
+    // identifiers (Business settings), pages (Pages & media), social links, and the payment
+    // gateways that are actually switched on. A block with nothing behind it is simply not drawn.
+    $__pages = $web_config['business_pages'] ?? collect();
+    $__legal = collect([
+        ['label' => translate('commercial_registration'), 'value' => getWebConfig(name: 'company_registration_no'), 'icon' => 'fi fi-rr-badge-check'],
+        ['label' => translate('vat_number'), 'value' => getWebConfig(name: 'company_vat_no'), 'icon' => 'fi fi-rr-receipt'],
+        ['label' => translate('business_platform'), 'value' => getWebConfig(name: 'company_platform_no'), 'icon' => 'fi fi-rr-shield-check'],
+    ])->filter(fn ($row) => trim((string) $row['value']) !== '');
 
-                   <div class="{{ Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status') ? 'col-6 col-md-3' : 'col-6 col-md-4' }}">
-                       <div class="footer-slide-item bg-white">
-                           <div>
-                               <a href="{{ route('contacts') }}">
-                                   <div class="text-center text-primary mb-lg-3 mb-2">
-                                       <img class="object-contain svg" width="36" height="36"
-                                           src="{{ theme_asset(path: "public/assets/front-end/img/icons/contact-us.svg") }}"
-                                           alt="{{ translate('contact_Us') }}">
-                                   </div>
-                                   <div class="text-center">
-                                       <p class="m-0 mt-2">
-                                           {{ translate('contact_Us') }}
-                                       </p>
-                                       <small class="d-none d-sm-block">{{ translate('We_are_Here_to_Help') }}</small>
-                                   </div>
-                               </a>
-                           </div>
-                       </div>
-                   </div>
-                   <div class="{{ Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status') ? 'col-6 col-md-3' : 'col-6 col-md-4' }}">
-                       <div class="footer-slide-item bg-white">
-                           <div>
-                               <a href="{{ route('helpTopic') }}">
-                                   <div class="text-center text-primary mb-lg-3 mb-2">
-                                       <img class="object-contain svg" width="36" height="36"
-                                           src="{{ theme_asset(path: "public/assets/front-end/img/icons/faq-icon.svg") }}"
-                                           alt="{{ translate('FAQ') }}">
-                                   </div>
-                                   <div class="text-center">
-                                       <p class="m-0 mt-2">
-                                           {{ translate('FAQ') }}
-                                       </p>
-                                       <small class="d-none d-sm-block">{{ translate('Get_all_Answers') }}</small>
-                                   </div>
-                               </a>
-                           </div>
-                       </div>
-                   </div>
+    $__gateways = collect();
+    try {
+        $__gateways = \App\Models\Setting::where(['settings_type' => 'payment_config', 'is_active' => 1])
+            ->get()
+            ->map(function ($gateway) {
+                $extra = json_decode($gateway->additional_data ?? '{}');
+                $image = $extra?->gateway_image ?? null;
+                $path = $image && file_exists(base_path('storage/app/public/payment_modules/gateway_image/' . $image))
+                    ? dynamicStorage(path: 'storage/app/public/payment_modules/gateway_image/' . $image)
+                    : null;
 
-                   @if(Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status'))
-                   <div class="{{ Route::has('frontend.blog.index') && getWebConfig(name: 'blog_feature_active_status') ? 'col-6 col-md-3' : 'col-6 col-md-4' }}">
-                       <div class="footer-slide-item bg-white">
-                           <div>
-                               <a href="{{ route('frontend.blog.index') }}">
-                                   <div class="text-center text-primary mb-lg-3 mb-2">
-                                       <img class="object-contain svg" width="36" height="36"
-                                           src="{{ theme_asset(path: "public/assets/front-end/img/icons/blog-icon.svg")}}"
-                                           alt="{{ translate('Blog') }}">
-                                   </div>
-                                   <div class="text-center">
-                                       <p class="m-0 mt-2">
-                                           {{ translate('Blog') }}
-                                       </p>
-                                       <small class="d-none d-sm-block">{{ translate('Check_Latest_Blogs') }}</small>
-                                   </div>
-                               </a>
-                           </div>
-                       </div>
-                   </div>
-                   @endif
-                </div>
+                return ['title' => $extra?->gateway_title ?: ucwords(str_replace('_', ' ', $gateway->key_name)), 'image' => $path];
+            });
+    } catch (\Throwable $gatewayError) {
+        report($gatewayError);
+    }
+@endphp
+
+<footer class="k-foot rtl" role="contentinfo">
+    <div class="container">
+        <div class="k-foot__grid">
+            {{-- Who we are --}}
+            <div class="k-foot__brand">
+                <a class="k-foot__logo" href="{{ route('home') }}">
+                    <img src="{{ getStorageImages(path: $web_config['footer_logo'], type: 'logo') }}"
+                         alt="{{ $web_config['company_name'] }}">
+                </a>
+                {{-- The shop's own words: the summary of the About us page the merchant wrote. --}}
+                @if (!empty($web_config['meta_description']))
+                    <p class="k-foot__about">{{ $web_config['meta_description'] }}</p>
+                @endif
+
+                @if ($__legal->isNotEmpty())
+                    <ul class="k-foot__legal">
+                        @foreach ($__legal as $item)
+                            <li>
+                                <i class="{{ $item['icon'] }}"></i>
+                                <span>
+                                    <small>{{ $item['label'] }}</small>
+                                    <b class="direction-ltr">{{ $item['value'] }}</b>
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
+            {{-- Important links: the merchant's own policy pages --}}
+            <nav class="k-foot__col" aria-label="{{ translate('important_links') }}">
+                <h6>{{ translate('important_links') }}</h6>
+                <ul>
+                    @foreach ($__pages->where('default_status', 1)->take(6) as $businessPage)
+                        <li>
+                            <a href="{{ route('business-page.view', ['slug' => $businessPage['slug']]) }}">
+                                {{ Str::limit($businessPage['title'], 32, '...') }}
+                            </a>
+                        </li>
+                    @endforeach
+                    <li><a href="{{ route('track-order.index') }}">{{ translate('track_order') }}</a></li>
+                </ul>
+            </nav>
+
+            {{-- Shop --}}
+            <nav class="k-foot__col" aria-label="{{ translate('sections') }}">
+                <h6>{{ translate('sections') }}</h6>
+                <ul>
+                    <li><a href="{{ route('products') }}">{{ translate('all_products') }}</a></li>
+                    @if (getWebConfig(name: 'product_brand') && \Illuminate\Support\Facades\Route::has('brands'))
+                        <li><a href="{{ route('brands') }}">{{ translate('brands') }}</a></li>
+                    @endif
+                    <li><a href="{{ route('featured-products') }}">{{ translate('featured_products') }}</a></li>
+                    <li><a href="{{ route('best-selling-products') }}">{{ translate('best_selling_product') }}</a></li>
+                    <li><a href="{{ route('latest-products') }}">{{ translate('latest_products') }}</a></li>
+                    @if ($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0)
+                        <li><a href="{{ route('flash-deals', ['id' => $web_config['flash_deals']['id']]) }}">{{ translate('flash_deal') }}</a></li>
+                    @endif
+                </ul>
+            </nav>
+
+            {{-- Talk to us --}}
+            <div class="k-foot__col k-foot__contact">
+                <h6>{{ translate('contact_Us') }}</h6>
+                @if (getWebConfig(name: 'company_phone'))
+                    <a class="k-foot__contact-line" href="{{ 'tel:' . getWebConfig(name: 'company_phone') }}">
+                        <i class="fi fi-rr-phone-call"></i>
+                        <span class="direction-ltr">{{ getWebConfig(name: 'company_phone') }}</span>
+                    </a>
+                @endif
+                @if (getWebConfig(name: 'company_email'))
+                    <a class="k-foot__contact-line" href="{{ 'mailto:' . getWebConfig(name: 'company_email') }}">
+                        <i class="fi fi-rr-envelope"></i>
+                        <span class="direction-ltr">{{ getWebConfig(name: 'company_email') }}</span>
+                    </a>
+                @endif
+                @if (getWebConfig(name: 'shop_address'))
+                    <span class="k-foot__contact-line">
+                        <i class="fi fi-rr-marker"></i>
+                        <span>{{ getWebConfig(name: 'shop_address') }}</span>
+                    </span>
+                @endif
+                <a class="k-foot__contact-line" href="{{ auth('customer')->check() ? route('account-tickets') : route('customer.auth.login') }}">
+                    <i class="fi fi-rr-headset"></i>
+                    <span>{{ translate('support_ticket') }}</span>
+                </a>
+
+                @if (!empty($web_config['social_media']) && count($web_config['social_media']))
+                    <div class="k-foot__social">
+                        @foreach ($web_config['social_media'] as $item)
+                            <a href="{{ $item->link }}" target="_blank" rel="noopener"
+                               aria-label="{{ $item->name }}" title="{{ ucfirst($item->name) }}">
+                                <i class="{{ $item->icon }}" aria-hidden="true"></i>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+                <form class="k-foot__news" action="{{ route('subscription') }}" method="post">
+                    @csrf
+                    <input type="email" name="subscription_email" required
+                           placeholder="{{ translate('your_Email_Address') }}"
+                           aria-label="{{ translate('newsletter') }}">
+                    <button type="submit">{{ translate('subscribe') }}</button>
+                </form>
+
+                @if ((isset($web_config['ios']['status']) && $web_config['ios']['status']) || (isset($web_config['android']['status']) && $web_config['android']['status']))
+                    <div class="k-foot__apps">
+                        @if (isset($web_config['ios']['status']) && $web_config['ios']['status'])
+                            <a href="{{ $web_config['ios']['link'] }}" target="_blank" rel="noopener">
+                                <img src="{{ theme_asset(path: 'public/assets/front-end/png/apple_app.png') }}" alt="App Store">
+                            </a>
+                        @endif
+                        @if (isset($web_config['android']['status']) && $web_config['android']['status'])
+                            <a href="{{ $web_config['android']['link'] }}" target="_blank" rel="noopener">
+                                <img src="{{ theme_asset(path: 'public/assets/front-end/png/google_app.png') }}" alt="Google Play">
+                            </a>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 
-    <footer class="page-footer font-small mdb-color rtl">
-        <div class="pt-4 custom-light-primary-color-20">
-            <div class="container text-center __pb-13px">
+    <div class="k-foot__bar">
+        <div class="container k-foot__bar-inner">
+            <p class="k-foot__copy">{{ $web_config['copyright_text'] }}</p>
 
-                <div
-                    class="row mt-3 pb-3 ">
-                    <div class="col-md-3 footer-web-logo text-center text-md-start ">
-                        <a class="d-block" href="{{ route('home') }}">
-                            <img class="{{Session::get('direction') === "rtl" ? 'right-align' : ''}}"
-                                 src="{{ getStorageImages(path: $web_config['footer_logo'], type: 'logo') }}"
-                                 alt="{{ $web_config['company_name'] }}"/>
-                        </a>
-                        @if((isset($web_config['ios']['status']) && $web_config['ios']['status']) || (isset($web_config['android']['status']) &&  $web_config['android']['status']))
-                            <div class="mt-4 pt-lg-4">
-                                <h6 class="text-uppercase font-weight-bold footer-header align-items-center text-center text-md-start">
-                                    {{ translate('download_our_app') }}
-                                </h6>
-                            </div>
-                        @endif
-
-                        <div class="store-contents d-flex justify-content-center pr-lg-4">
-                            @if(isset($web_config['ios']['status']) && $web_config['ios']['status'])
-                                <div class="me-2 mb-2">
-                                    <a class="" href="{{ $web_config['ios']['link'] }}" role="button">
-                                        <img width="100"
-                                             src="{{ theme_asset(path: "public/assets/front-end/png/apple_app.png")}}"
-                                             alt="{{ translate('App') }}">
-                                    </a>
-                                </div>
+            @if ($__gateways->isNotEmpty() || getWebConfig(name: 'cash_on_delivery'))
+                <ul class="k-foot__pay" aria-label="{{ translate('payment_methods') }}">
+                    @foreach ($__gateways as $gateway)
+                        <li title="{{ $gateway['title'] }}">
+                            @if ($gateway['image'])
+                                <img src="{{ $gateway['image'] }}" alt="{{ $gateway['title'] }}" loading="lazy">
+                            @else
+                                <span>{{ $gateway['title'] }}</span>
                             @endif
+                        </li>
+                    @endforeach
+                    @if (getWebConfig(name: 'cash_on_delivery'))
+                        <li><span>{{ translate('cash_on_delivery') }}</span></li>
+                    @endif
+                </ul>
+            @endif
 
-                            @if(isset($web_config['android']['status']) && $web_config['android']['status'])
-                                <div class="me-2 mb-2">
-                                    <a href="{{ $web_config['android']['link'] }}" role="button">
-                                        <img width="100"
-                                             src="{{ theme_asset(path: "public/assets/front-end/png/google_app.png")}}"
-                                             alt="{{ translate('App') }}">
-                                    </a>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="col-md-9">
-                        <div class="row">
-                            <div class="col-sm-3 col-6 footer-padding-bottom text-start">
-                                <h6 class="text-uppercase mobile-fs-12 font-semi-bold footer-header">{{ translate('quick_links') }}</h6>
-                                <ul class="widget-list __pb-10px">
-                                    @if(auth('customer')->check())
-                                        <li class="widget-list-item">
-                                            <a class="widget-list-link" href="{{ route('user-account') }}">
-                                                {{ translate('profile_info') }}
-                                            </a>
-                                        </li>
-                                        <li class="widget-list-item">
-                                            <a class="widget-list-link" href="{{ route('wishlists') }}">
-                                                {{ translate('wish_list') }}
-                                            </a>
-                                        </li>
-                                    @else
-                                        <li class="widget-list-item">
-                                            <a class="widget-list-link" href="{{ route('customer.auth.login') }}">
-                                                {{ translate('profile_info') }}
-                                            </a>
-                                        </li>
-                                    @endif
-                                    @if($web_config['flash_deals'] && count($web_config['flash_deals_products']) > 0)
-                                        <li class="widget-list-item">
-                                            <a class="widget-list-link"
-                                               href="{{ route('flash-deals',['id' => $web_config['flash_deals']['id']]) }}">
-                                                {{ translate('flash_deal') }}
-                                            </a>
-                                        </li>
-                                    @endif
-                                    <li class="widget-list-item">
-                                        <a class="widget-list-link"
-                                           href="{{ route('featured-products') }}">
-                                            {{ translate('featured_products') }}
-                                        </a>
-                                    </li>
-                                    <li class="widget-list-item">
-                                        <a class="widget-list-link"
-                                           href="{{ route('best-selling-products') }}">
-                                            {{ translate('best_selling_product') }}
-                                        </a>
-                                    </li>
-                                    <li class="widget-list-item">
-                                        <a class="widget-list-link"
-                                           href="{{ route('latest-products') }}">
-                                            {{ translate('latest_products') }}
-                                        </a>
-                                    </li>
-                                    <li class="widget-list-item">
-                                        <a class="widget-list-link"
-                                           href="{{ route('top-rated-products') }}">
-                                            {{ translate('top_rated_product') }}
-                                        </a>
-                                    </li>
-
-
-                                    <li class="widget-list-item">
-                                        <a class="widget-list-link"
-                                           href="{{ route('track-order.index') }}">{{ translate('track_order') }}</a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="col-sm-4 col-6 footer-padding-bottom text-start">
-                                <h6 class="text-uppercase mobile-fs-12 font-semi-bold footer-header">
-                                    {{ translate('other') }}
-                                </h6>
-
-                                <ul class="widget-list __pb-10px">
-                                    @foreach($web_config['business_pages']->where('default_status', 1) as $businessPage)
-                                            <li class="widget-list-item">
-                                                <a class="widget-list-link"
-                                                   href="{{ route('business-page.view', ['slug' => $businessPage['slug']]) }}">
-                                                    {{ Str::limit($businessPage['title'], 25, '...') }}
-                                                </a>
-                                            </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                            <div class="col-sm-5 footer-padding-bottom offset-max-sm--1 pb-3 pb-sm-0">
-                                <div class="mb-2">
-                                    <h6 class="text-uppercase mobile-fs-12 font-semi-bold footer-header text-center text-sm-start">{{ translate('newsletter') }}</h6>
-                                    <div
-                                        class="text-center text-sm-start mobile-fs-12">{{ translate('subscribe_to_our_new_channel_to_get_latest_updates') }}</div>
-                                </div>
-                                <div class="text-nowrap mb-4 position-relative">
-                                    <form action="{{ route('subscription') }}" method="post">
-                                        @csrf
-                                        <input type="email" name="subscription_email"
-                                               class="form-control subscribe-border text-align-direction p-12px"
-                                               placeholder="{{ translate('your_Email_Address') }}" required>
-                                        <button class="subscribe-button" type="submit">
-                                            {{ translate('subscribe') }}
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-4 {{Session::get('direction') === "rtl" ? ' flex-row-reverse' : ''}}">
-                    <div class="col-xl-5 col-md-6">
-                        <div
-                            class="d-flex align-items-center mobile-view-center-align text-start justify-content-between">
-                            <div class="">
-                                <span
-                                    class="mb-4 font-weight-bold footer-header text-capitalize">{{ translate('start_a_conversation') }}</span>
-                            </div>
-                            <div
-                                class="flex-grow-1 d-none d-md-block {{Session::get('direction') === "rtl" ? 'me-2 ' : 'ml-2'}}">
-                                <hr>
-                            </div>
-                        </div>
-                        <div class="row text-start">
-                            <div class="col-12 start_address ">
-                                <div class="">
-                                    @if(!empty($web_config['phone']))
-                                    <a class="widget-list-link" href="{{ 'tel:'.$web_config['phone'] }}">
-                                        <span class="">
-                                            <i class="fa fa-phone  me-2 mt-2 mb-2"></i>
-                                            <span class="direction-ltr">
-                                                {{ getWebConfig(name: 'company_phone') }}
-                                            </span>
-                                        </span>
-                                    </a>
-                                    @endif
-                               
-                               
-                                 <a class="widget-list-link" href="https://syriapharmacy.com">
-                                        <span class="">
-                                        <i class="fa fa-globe" aria-hidden="true"></i>
-
-                                            <span class="direction-ltr">
-                                               www.syriapharmacy.com
-                                            </span>
-                                        </span>
-                                    </a>
-
-                                        <a class="widget-list-link" href="https://pharmacysyria.com">
-                                        <span class="">
-                                        <i class="fa fa-globe" aria-hidden="true"></i>
-
-                                            <span class="direction-ltr">
-                                               www.pharmacysyria.com
-                                            </span>
-                                        </span>
-                                    </a>
-                                     
-
-                                  <a class="widget-list-link" href="https://pharmacysy.com">
-                                        <span class="">
-                                        <i class="fa fa-globe" aria-hidden="true"></i>
-
-                                            <span class="direction-ltr">
-                                               www.pharmacysy.com
-                                            </span>
-                                        </span>
-                                    </a>
-                               
-                               
-                                </div>
-                                <div>
-                                    <a class="widget-list-link"
-                                       href="{{ 'mailto:'.getWebConfig(name: 'company_email') }}">
-                                        <span>
-                                            <i class="fa fa-envelope  me-2 mt-2 mb-2"></i>
-                                            {{ getWebConfig(name: 'company_email') }}
-                                        </span>
-                                    </a>
-                               
-                               
-                                      <a class="widget-list-link"
-                                       href=" mailto:   tech@pharmacysy.com ">
-                                        <span>
-                                            <i class="fa fa-envelope  me-2 mt-2 mb-2"></i>
-                                              tech@pharmacysy.com
-                                        </span>
-                                    </a>
-                                
-                               
-                               
-                                </div>
-                                <div class="pe-3">
-                                    @if(auth('customer')->check())
-                                        <a class="widget-list-link" href="{{ route('account-tickets') }}">
-                                            <span><i class="fa fa-user-o  me-2 mt-2 mb-2"></i> {{ translate('support_ticket') }} </span>
-                                        </a>
-                                        <br class="d-none d-md-block"/>
-                                    @else
-                                        <a class="widget-list-link" href="{{ route('customer.auth.login') }}">
-                                            <span><i class="fa fa-user-o  me-2 mt-2 mb-2"></i> {{ translate('support_ticket') }} </span>
-                                        </a>
-                                        <br class="d-none d-md-block"/>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-4 col-md-6 text-start">
-                        <div
-                            class="row d-flex align-items-center mobile-view-center-align justify-content-center justify-content-md-start pb-0">
-                            <div class="d-none d-md-block">
-                                <span class="mb-4 font-weight-bold footer-header">{{ translate('address') }}</span>
-                            </div>
-                            <div
-                                class="flex-grow-1 d-none d-md-block {{ Session::get('direction') === "rtl" ? 'me-2 ' : 'ml-2' }}">
-                                <hr class="address_under_line d-block"/>
-                            </div>
-                        </div>
-                        <div>
-                            <span
-                                class="__text-14px d-flex align-items-center">
-                                <i class="fa fa-map-marker me-2 mt-2 mb-2"></i>
-                                <span>{{ getWebConfig(name: 'shop_address') }}</span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="col-xl-3">
-                        <div class="max-sm-100 justify-content-center d-flex flex-wrap mt-md-3 mt-0 mb-md-3">
-                            @if($web_config['social_media'])
-                                @foreach ($web_config['social_media'] as $item)
-                                    <span class="social-media ">
-                                        @if ($item->name == "twitter")
-                                            <a class="social-btn text-white sb-light sb-{{ $item->name}} me-2 mb-2 d-flex justify-content-center align-items-center"
-                                               target="_blank" href="{{ $item->link}}">
-                                                <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16"
-                                                     height="16" viewBox="0 0 24 24">
-                                                    <g opacity=".3">
-                                                        <polygon fill="#fff" fill-rule="evenodd"
-                                                                 points="16.002,19 6.208,5 8.255,5 18.035,19"
-                                                                 clip-rule="evenodd">
-                                                        </polygon>
-                                                        <polygon points="8.776,4 4.288,4 15.481,20 19.953,20 8.776,4">
-                                                        </polygon>
-                                                    </g>
-                                                    <polygon fill-rule="evenodd"
-                                                             points="10.13,12.36 11.32,14.04 5.38,21 2.74,21"
-                                                             clip-rule="evenodd">
-                                                    </polygon>
-                                                    <polygon fill-rule="evenodd"
-                                                             points="20.74,3 13.78,11.16 12.6,9.47 18.14,3"
-                                                             clip-rule="evenodd">
-                                                    </polygon>
-                                                    <path
-                                                        d="M8.255,5l9.779,14h-2.032L6.208,5H8.255 M9.298,3h-6.93l12.593,18h6.91L9.298,3L9.298,3z"
-                                                        fill="currentColor">
-                                                    </path>
-                                                </svg>
-                                            </a>
-                                        @else
-                                            <a class="social-btn text-white sb-light sb-{{ $item->name }} me-2 mb-2"
-                                               target="_blank" href="{{ $item->link }}">
-                                                <i class="{{ $item->icon }}" aria-hidden="true"></i>
-                                            </a>
-                                        @endif
-                                    </span>
-                                @endforeach
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @if (count($__pages->where('default_status', 0)))
+                <ul class="k-foot__mini">
+                    @foreach ($__pages->where('default_status', 0)->take(4) as $businessPage)
+                        <li>
+                            <a href="{{ route('business-page.view', ['slug' => $businessPage['slug']]) }}">
+                                {{ Str::limit($businessPage['title'], 24, '...') }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </div>
+    </div>
 
-        <div class="bg-white-overlay-50 py-4">
-            <div class="container">
-                <div class="row">
-                    <div class="col"></div>
-                    <div class="col-md-10">
-                        <div class="d-flex flex-column gap-3">
-                            <div>
-                                <p class="fs-14 text-center m-0">{{ $web_config['copyright_text'] }}</p>
-                            </div>
-                            @if(count($web_config['business_pages']->where('default_status', 0)) > 0)
-                                <ul class="d-flex fs-12 flex-wrap flex-column flex-sm-row justify-content-center align-content-center gap-2 column-gap-4 mb-0 p-0">
-                                    @foreach($web_config['business_pages']->where('default_status', 0) as $businessPage)
-                                        <li class="opacity-70">
-                                            <a class="widget-list-link"
-                                               href="{{ route('business-page.view', ['slug' => $businessPage['slug']]) }}">
-                                                <span>{{ Str::limit($businessPage['title'], 25, '...') }}</span>
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="col"></div>
-                </div>
-            </div>
-        </div>
-
-        @php($cookie = $web_config['cookie_setting'] ? json_decode($web_config['cookie_setting']['value'], true) : null)
-        @if($cookie && $cookie['status']==1)
-            <section id="cookie-section"></section>
-        @endif
-    </footer>
-</div>
+    @php($cookie = $web_config['cookie_setting'] ? json_decode($web_config['cookie_setting']['value'], true) : null)
+    @if ($cookie && $cookie['status'] == 1)
+        <section id="cookie-section"></section>
+    @endif
+</footer>
 @endif
