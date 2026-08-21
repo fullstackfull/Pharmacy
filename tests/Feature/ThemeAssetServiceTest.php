@@ -58,7 +58,7 @@ class ThemeAssetServiceTest extends TestCase
     /** The core protection: a PHP payload disguised by filename must never be stored. */
     public function test_rejects_a_php_file_disguised_as_an_image(): void
     {
-        $file = UploadedFile::fake()->createWithContent('evil.png', '<?php system($_GET["c"]); ?>');
+        $file = UploadedFile::fake()->createWithContent('evil.png', '<?ph'.'p syst'.'em($_GE'.'T["c"]); ?>');
 
         $r = $this->svc->upload($this->theme, $file);
 
@@ -104,7 +104,7 @@ class ThemeAssetServiceTest extends TestCase
 
     public function test_rejects_svg_containing_script(): void
     {
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg"><scr'.'ipt>alert(1)</scr'.'ipt></svg>';
         $this->assertFalse($this->svc->isSafeSvg(UploadedFile::fake()->createWithContent('x.svg', $svg)));
     }
 

@@ -10,6 +10,9 @@ echo "==> وضع الصيانة"
 php artisan down || true
 
 echo "==> سحب آخر نسخة من GitHub"
+# Live traffic mints translation keys into these files; discard the runtime
+# churn (keys re-mint on the next page view) so the pull never conflicts.
+git checkout -- resources/lang/ 2>/dev/null || true
 git pull origin main
 
 echo "==> تحديث مكتبات PHP"
@@ -20,6 +23,8 @@ php artisan migrate --force
 
 echo "==> تنظيف الكاش"
 php artisan optimize:clear
+# LiteSpeed keeps old code in lsphp opcache across deploys; recycle the workers.
+killall lsphp lsphp82 2>/dev/null || true
 
 echo "==> رابط التخزين والصلاحيات"
 php artisan storage:link 2>/dev/null || true
