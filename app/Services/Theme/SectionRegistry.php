@@ -209,8 +209,11 @@ class SectionRegistry
                     'subtitle'  => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
                     // Which deal to feature. Empty = whichever deal is running now, so the section
                     // keeps working after a campaign ends without a theme edit.
+                    // Only one flash deal can be ACTIVE at a time (the dashboard deactivates the
+                    // rest), so picking a deal here is how a second section shows a different one.
                     'deal_id'   => ['type' => 'resource', 'label' => 'choose_flash_deal', 'default' => null,
-                                    'resource' => 'flash_deal'],
+                                    'resource' => 'flash_deal',
+                                    'hint' => 'only_one_deal_can_be_active_at_a_time_pick_a_deal_here_to_show_a_different_one'],
                     'countdown' => ['type' => 'boolean', 'label' => 'show_countdown', 'default' => true],
                     'products'  => ['type' => 'boolean', 'label' => 'show_the_deals_products', 'default' => true],
                     'limit'     => ['type' => 'number',  'label' => 'max_products', 'default' => 10],

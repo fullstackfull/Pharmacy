@@ -1020,6 +1020,13 @@
                         wrapper.dataset.dependsOn = JSON.stringify(field.depends_on);
                     }
 
+                    if (field.hint) {
+                        var fieldHint = document.createElement('p');
+                        fieldHint.className = 'tb-hint mb-0';
+                        fieldHint.textContent = field.hint;
+                        wrapper.appendChild(fieldHint);
+                    }
+
                     if (field.type === 'banner' && field.manage_url) {
                         var manage = document.createElement('a');
                         manage.href = field.manage_url;

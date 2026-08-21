@@ -178,8 +178,17 @@
     .ml-cat-name{ font-size:.78rem; font-weight:600; color:var(--ml-ink2); margin-top:.55rem; min-height:0; }
 
     /* ---- category showcase --------------------------------------------------------------- */
-    .ml-showcase__banner{ display:block; aspect-ratio:21/6; margin-bottom:1.2rem; }
-    @media (max-width:767.98px){ .ml-showcase__banner{ aspect-ratio:16/9; } }
+    .ml-showcase__banner{ display:block; margin-bottom:1.2rem; }
+    .ml-showcase__banner picture{ display:block; }
+    .ml-sections .ml-showcase__banner img{ width:100%; height:auto; object-fit:contain; }
+    /* The caption is a light touch over artwork that usually carries its own text: it sits in the
+       bottom corner and shrinks on a phone instead of covering the banner. */
+    .ml-showcase__banner .ml-tile__scrim{ background:linear-gradient(180deg,rgba(20,8,46,0) 45%,rgba(20,8,46,.55)); }
+    .ml-showcase__banner .ml-tile__body{ padding:clamp(.7rem,1.8vw,1.4rem); }
+    @media (max-width:767.98px){
+        .ml-showcase__banner .ml-tile__body h4{ font-size:1rem; }
+        .ml-showcase__banner .ml-tile__body p{ display:none; }
+    }
     .ml-chips{ display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
     .ml-chips a{ display:inline-flex; align-items:center; min-height:32px; padding:0 .8rem; border-radius:99px;
         background:var(--ml-sand); border:1px solid var(--ml-line); color:var(--ml-ink2);
@@ -342,6 +351,12 @@
     }
 </style>
 
+@php
+    // Flash deals already rendered on this page. Only one deal can be active at a time (the
+    // dashboard deactivates the rest), so a second automatic section would otherwise repeat the
+    // first one instead of moving on to the next deal.
+    $__shownDeals = [];
+@endphp
 <div class="theme-builder-sections ml-sections">
     @foreach ($__sections as $__section)
         @php
@@ -361,9 +376,20 @@
                 . ($height !== null ? "--tb-h:{$height}px;" : '')
                 . ($bg ? "background:{$bg};" : '');
             $breakpointCss = theme_section_breakpoint_css(settings: $s, selector: '#' . $sectionKey);
+
+            // Sections whose whole content comes from the catalogue are resolved BEFORE the
+            // wrapper is opened: with nothing to draw they must not leave a padded empty band on
+            // the page, which reads as a broken gap rather than an absent section.
+            $deal = $type === 'flash_deal'
+                ? $__data->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
+                : null;
+            if ($deal) { $__shownDeals[] = $deal['id']; }
+            $showcase = $type === 'category_showcase' ? $__data->categoryShowcase($s) : null;
         @endphp
 
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
+        @continue($type === 'flash_deal' && !$deal)
+        @continue($type === 'category_showcase' && !$showcase)
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
@@ -461,7 +487,6 @@
                          with no deal at all the section renders nothing rather than a dead timer. --}}
                     @case('flash_deal')
                         @php
-                            $deal = $__data->flashDeal((int) ($s['deal_id'] ?? 0) ?: null);
                             $dealProducts = ($deal && ($s['products'] ?? true))
                                 ? $__data->flashDealProducts($deal['id'], (int) ($s['limit'] ?? 10))
                                 : collect();
@@ -503,7 +528,6 @@
                          on the category form updates both. --}}
                     @case('category_showcase')
                         @php
-                            $showcase = $__data->categoryShowcase($s);
                             $cardCart = (bool) ($s['add_to_cart'] ?? true);
                             $showcaseRail = ($s['style'] ?? 'rail') === 'rail';
                             $showcaseId = 'ml-showcase-' . ($__section['id'] ?? $loop->index);
@@ -514,8 +538,17 @@
                             @if ($showcase['banner'])
                                 <a class="ml-tile ml-showcase__banner ml-reveal"
                                    href="{{ $showcase['banner']['link'] ?: $categoryUrl }}">
-                                    <img src="{{ $showcase['banner']['image'] ?: $__placeholder }}"
-                                         alt="{{ $showcase['banner']['title'] ?? $showcase['category']->name }}" loading="lazy">
+                                    {{-- Shown whole, at the artwork's own proportions: a banner is
+                                         designed art, and cropping it to a fixed band cuts the
+                                         merchant's own text off. A phone image is used when the
+                                         banner carries one. --}}
+                                    <picture>
+                                        @if (!empty($showcase['banner']['image_mobile']))
+                                            <source media="(max-width:767.98px)" srcset="{{ $showcase['banner']['image_mobile'] }}">
+                                        @endif
+                                        <img src="{{ $showcase['banner']['image'] ?: $__placeholder }}"
+                                             alt="{{ $showcase['banner']['title'] ?? $showcase['category']->name }}" loading="lazy">
+                                    </picture>
                                     @if (!empty($showcase['banner']['title']) || !empty($showcase['banner']['subtitle']))
                                         <span class="ml-tile__scrim"></span>
                                         <span class="ml-tile__body">
