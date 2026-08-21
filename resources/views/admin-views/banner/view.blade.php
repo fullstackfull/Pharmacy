@@ -293,7 +293,25 @@
                                          loading="lazy"
                                          src="{{ getStorageImages(path: $banner->photo_full_url , type: 'backend-banner') }}">
                                 </td>
-                                <td>{{ translate(str_replace('_',' ',$banner->banner_type)) }}</td>
+                                <td>
+                                    {{ translate(str_replace('_',' ',$banner->banner_type)) }}
+                                    @php
+                                        $__themePlaces = array_merge(
+                                            ($themeUsage['ids'][$banner->id] ?? []),
+                                            ($themeUsage['types'][$banner->banner_type] ?? [])
+                                        );
+                                    @endphp
+                                    @if (count($__themePlaces))
+                                        <div>
+                                            <a href="{{ route('admin.theme.builder.index') }}"
+                                               class="badge badge-soft-info text-decoration-none"
+                                               title="{{ implode(' · ', array_unique($__themePlaces)) }}">
+                                                <i class="fi fi-rr-brush"></i>
+                                                {{ translate('shown_by_the_theme') }}
+                                            </a>
+                                        </div>
+                                    @endif
+                                </td>
                                 <td>{{ translate(str_replace('_',' ',$banner->resource_type)) }}</td>
                                 <td>
                                 <form action="{{ route('admin.banner.status') }}" method="post"

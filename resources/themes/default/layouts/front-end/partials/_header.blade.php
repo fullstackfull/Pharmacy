@@ -1,3 +1,12 @@
+{{-- Themed announcement bar(s) from the Theme Builder's "header" page. Additive: the built-in
+     header below always renders; a broken section logs and the bar is simply absent. --}}
+@php
+    try {
+        echo view('theme-sections.header')->render();
+    } catch (\Throwable $themeHeaderError) {
+        report($themeHeaderError);
+    }
+@endphp
 @php($announcement=getWebConfig(name: 'announcement'))
 
 @if (isset($announcement) && $announcement['status']==1)

@@ -94,6 +94,9 @@ class BannerService
             "Home Promo Banner" => translate('home_Promo_Banner'),
             // Heads the page of the brand named by its brand resource.
             "Brand Banner" => translate('brand_Banner'),
+            // Rendered only where the Theme Builder places it (a linked block or a
+            // banners-from-dashboard section) — it has no built-in slot of its own.
+            "Theme Banner" => translate('theme_Banner'),
         ];
     }
 

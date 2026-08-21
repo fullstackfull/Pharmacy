@@ -129,8 +129,29 @@ class SectionDataResolver
     {
         $cards = [];
 
+        // Banner-backed blocks render their linked Promotion -> Banners row LIVE: the banner's
+        // image/link/text win over the block's own copies, so an edit in Banner Setup shows on the
+        // storefront without touching the theme. An unpublished linked banner hides its card, the
+        // same way unpublishing hides a banner from its built-in slot.
+        $overrides = app(ThemeBannerLink::class)->cardOverrides(
+            array_map(fn ($block) => (int) (($block['settings']['banner_id'] ?? 0)), $blocks)
+        );
+
         foreach ($blocks as $block) {
             $settings = $block['settings'] ?? [];
+
+            $linked = $overrides[(int) ($settings['banner_id'] ?? 0)] ?? null;
+            if ($linked !== null) {
+                if (!$linked['published']) {
+                    continue;
+                }
+                foreach (['image', 'image_mobile', 'link', 'title', 'subtitle', 'button_text', 'background'] as $key) {
+                    if (!empty($linked[$key])) {
+                        $settings[$key] = $linked[$key];
+                    }
+                }
+            }
+
             $cards[] = [
                 'image'        => $settings['image'] ?? null,
                 'image_mobile' => $settings['image_mobile'] ?? null,

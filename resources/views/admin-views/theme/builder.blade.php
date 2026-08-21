@@ -365,6 +365,8 @@
                 clear: @json(translate('clear')),
                 uploading: @json(translate('uploading')),
                 emptyLibrary: @json(translate('no_images_uploaded_yet')),
+                noLinkedBanner: @json(translate('no_linked_banner_use_the_image_below')),
+                manageBanners: @json(translate('manage_banners_in_banner_setup')),
                 readOnly: @json(translate('this_version_is_published_and_read_only_duplicate_it_to_a_draft_to_edit'))
             };
 
@@ -542,6 +544,21 @@
                         if (String(option) === String(resolved)) node.selected = true;
                         input.appendChild(node);
                     });
+                } else if (field.type === 'banner') {
+                    // Live picker over Promotion -> Banners rows: linking one makes the block render
+                    // that banner's image/link/text, so edits in Banner Setup show up here too.
+                    input = document.createElement('select');
+                    var none = document.createElement('option');
+                    none.value = '';
+                    none.textContent = T.noLinkedBanner;
+                    input.appendChild(none);
+                    (field.choices || []).forEach(function (choice) {
+                        var node = document.createElement('option');
+                        node.value = choice.value;
+                        node.textContent = choice.label;
+                        if (String(choice.value) === String(resolved || '')) node.selected = true;
+                        input.appendChild(node);
+                    });
                 } else if (field.type === 'textarea') {
                     input = document.createElement('textarea');
                     input.rows = 3;
@@ -642,6 +659,16 @@
                     wrapper.appendChild(field.type === 'image'
                         ? buildImageField(field, key, settings[key])
                         : buildInput(field, key, settings[key]));
+
+                    if (field.type === 'banner' && field.manage_url) {
+                        var manage = document.createElement('a');
+                        manage.href = field.manage_url;
+                        manage.target = '_blank';
+                        manage.rel = 'noopener';
+                        manage.className = 'tb-hint';
+                        manage.textContent = T.manageBanners;
+                        wrapper.appendChild(manage);
+                    }
 
                     if (field.responsive) {
                         var group = document.createElement('div');

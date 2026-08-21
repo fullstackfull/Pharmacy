@@ -191,7 +191,7 @@ class ThemeBuilderController extends BaseController
         }
 
         return $this->ok([
-            'schema'       => $this->registry->schemaFor($type),
+            'schema'       => app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->schemaFor($type)),
             'settings'     => $settings,
             // The builder splits the form into Content / Design tabs; the registry decides which
             // fields belong where, so a new section type needs no UI change.
@@ -212,7 +212,7 @@ class ThemeBuilderController extends BaseController
         }
 
         return $this->ok([
-            'schema'   => $this->registry->blockSchemaFor($block->type),
+            'schema'   => app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->blockSchemaFor($block->type)),
             'settings' => $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
             'type'     => $block->type,
             'label'    => $this->registry->blockLabel($block->type, $block->settings ?? []),

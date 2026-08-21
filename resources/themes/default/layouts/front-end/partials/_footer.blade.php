@@ -1,3 +1,17 @@
+{{-- Themed footer (Theme Builder "footer" page): when the published version composes footer
+     sections they replace this built-in footer wholesale — same replace-not-stack contract as the
+     themed home. Guarded: a broken section logs and the built-in footer renders as the fallback. --}}
+@php
+    $__themedFooter = '';
+    try {
+        $__themedFooter = trim(view('theme-sections.footer')->render());
+    } catch (\Throwable $themeFooterError) {
+        report($themeFooterError);
+        $__themedFooter = '';
+    }
+    echo $__themedFooter;
+@endphp
+@if ($__themedFooter === '')
 <div class="__inline-9 rtl">
     <div class="text-center pb-4">
         <div class="max-w-1160px mx-auto footer-slider-container">
@@ -430,3 +444,4 @@
         @endif
     </footer>
 </div>
+@endif
