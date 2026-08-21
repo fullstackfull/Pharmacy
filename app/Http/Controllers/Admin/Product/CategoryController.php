@@ -95,10 +95,22 @@ class CategoryController extends BaseController
         $category = $this->categoryRepo->getFirstWhere(params: ['id' => $request['id']], relations: ['translations']);
         $languages = getWebConfig(name: 'pnc_language') ?? null;
         $defaultLanguage = $languages[0];
+
         return view('admin-views.category.category-edit', [
             'category' => $category,
             'languages' => $languages,
             'defaultLanguage' => $defaultLanguage,
+            // A sub-category's form offers the main category it sits under, so it can be moved.
+            // The view has always looped over this list; the controller never passed it, which
+            // fatal'd ("Undefined variable $parentCategories") on every sub-category edit.
+            'parentCategories' => $category && $category['position'] > 0
+                ? $this->categoryRepo->getListWhere(
+                    orderBy: ['name' => 'asc'],
+                    filters: ['position' => 0],
+                    relations: ['translations'],
+                    dataLimit: 'all',
+                )
+                : collect(),
         ]);
     }
 
