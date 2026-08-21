@@ -1,4 +1,5 @@
 @extends('layouts.front-end.app')
+@php($zipFieldStatus = getWebConfig(name: 'zip_code_field_status') || $zip_restrict_status)
 
 @section('title', translate('my_Address'))
 
@@ -85,10 +86,10 @@
                                             <input class="form-control" type="text" id="address-city" name="city"
                                                    required>
                                         </div>
-                                        <div class="form-group col-md-6">
+                                        <div class="form-group col-md-6 {{ $zipFieldStatus ? '' : 'd-none' }}">
                                             <label for="zip">
                                                 {{translate('zip_code')}}
-                                                <span class="text-danger">*</span>
+                                                @if($zip_restrict_status)<span class="text-danger">*</span>@endif
                                             </label>
                                             @if($zip_restrict_status)
                                                 <select name="zip" id="" class="form-control selectpicker"
@@ -99,7 +100,7 @@
                                                     @endforeach
                                                 </select>
                                             @else
-                                                <input class="form-control" type="text" id="zip" name="zip" required>
+                                                <input class="form-control" type="text" id="zip" name="zip">
                                             @endif
                                         </div>
                                     </div>

@@ -19,6 +19,7 @@ class DeveloperPortalController extends BaseController
         return view('admin-views.telemetry.developer', [
             'reference' => $this->portal->apiReference(),
             'guides' => $this->portal->guides($baseUrl),
+            'releases' => $this->portal->releaseNotes(),
             'baseUrl' => $baseUrl,
             'version' => getAppVersion(),
         ]);

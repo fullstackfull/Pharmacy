@@ -25,11 +25,14 @@ class ThemeManager
                 'logo' => null, 'mobile_logo' => null, 'favicon' => null,
                 'logo_width' => 140, 'logo_height' => 40,
             ],
+            // The storefront's design language: a violet -> blue gradient on a light, tinted
+            // canvas. Every one of these is editable in Theme Settings; they are only the
+            // starting point a fresh theme publishes with.
             'colors' => [
-                'primary' => '#0f766e', 'secondary' => '#334155', 'accent' => '#f59e0b',
-                'background' => '#ffffff', 'surface' => '#f8fafc', 'text' => '#0f172a',
-                'muted_text' => '#64748b', 'border' => '#e2e8f0',
-                'success' => '#16a34a', 'warning' => '#d97706', 'error' => '#dc2626',
+                'primary' => '#7B3FE4', 'secondary' => '#26ABF2', 'accent' => '#BF23CD',
+                'background' => '#ffffff', 'surface' => '#F7F5FD', 'text' => '#14082E',
+                'muted_text' => '#8B84A3', 'border' => '#E4DFF2',
+                'success' => '#1E9E5A', 'warning' => '#d97706', 'error' => '#E23A3A',
             ],
             'typography' => [
                 'heading_font' => 'inherit', 'body_font' => 'inherit',

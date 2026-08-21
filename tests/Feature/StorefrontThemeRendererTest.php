@@ -223,9 +223,10 @@ class StorefrontThemeRendererTest extends TestCase
 
     public function test_global_settings_fall_back_to_defaults_without_a_published_version(): void
     {
-        $settings = $this->renderer->globalSettings(new ThemeManager());
+        $manager = new ThemeManager();
+        $settings = $this->renderer->globalSettings($manager);
 
-        $this->assertSame('#0f766e', $settings['colors']['primary']);
+        $this->assertSame($manager->defaultSettings()['colors']['primary'], $settings['colors']['primary']);
     }
 
     // ---- draft preview (admin-only) ----

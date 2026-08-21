@@ -23,14 +23,36 @@ function applyStoredTheme() {
     try {
         stored = window.localStorage.getItem(THEME_KEY);
     } catch (error) {
-        return;                       // private mode / storage disabled — follow the OS
+        stored = null;                // private mode / storage disabled — fall back to light
     }
 
-    if (stored === 'dark' || stored === 'light') {
-        document.documentElement.setAttribute('data-k-theme', stored);
+    const isConsole = document.body && document.body.classList.contains('k-console');
+    const root = document.documentElement;
+
+    // The console never follows the OS silently (see the pre-paint note in the admin layout):
+    // anything that is not an explicit 'dark' resolves to light there. The storefront keeps the
+    // three-state behaviour, where 'system' means "let the OS decide".
+    const theme = isConsole
+        ? (stored === 'dark' ? 'dark' : 'light')
+        : (stored === 'dark' || stored === 'light' ? stored : null);
+
+    if (theme) {
+        root.setAttribute('data-k-theme', theme);
     } else {
-        document.documentElement.removeAttribute('data-k-theme');
+        root.removeAttribute('data-k-theme');
     }
+
+    if (!isConsole) {
+        return;
+    }
+
+    // Dark has to be stamped on all three layers or the page comes out half-dark: Bootstrap 5.3
+    // themes its own components off data-bs-theme, and the v2 shell (rail, header, context panel)
+    // off its own class.
+    root.setAttribute('data-bs-theme', theme);
+    document.querySelectorAll('.app-v2').forEach((shell) => {
+        shell.classList.toggle('v2-theme-dark', theme === 'dark');
+    });
 }
 
 function setTheme(value) {

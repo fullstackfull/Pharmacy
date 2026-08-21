@@ -408,7 +408,14 @@ class OrderManager
             if (!is_null($id) && !session()->has('billing_address_id')) {
                 $addressId = $id;
             }
-            $addressId = getWebConfig('billing_input_by_customer') ? $addressId : null;
+
+            // The customer's own address IS the billing address unless they entered a different
+            // one. Storing null here (which is what happened whenever billing input is off, or
+            // the customer left "same as shipping" checked) left invoices with no billing block
+            // at all.
+            if (empty($addressId)) {
+                $addressId = session('address_id') ?: null;
+            }
         }
         return $addressId;
     }
@@ -1009,8 +1016,9 @@ class OrderManager
             'admin_commission' => $adminCommission,
             'shipping_address' => $cartData['shipping_address_id'],
             'shipping_address_data' => ShippingAddress::find($cartData['shipping_address_id']),
-            'billing_address' => getWebConfig('billing_input_by_customer') ? $cartData['billing_address_id'] : null,
-            'billing_address_data' => getWebConfig('billing_input_by_customer') ? ShippingAddress::find($cartData['billing_address_id']) : null,
+            // Falls back to the shipping address so every order carries a billing address.
+            'billing_address' => $cartData['billing_address_id'] ?: $cartData['shipping_address_id'],
+            'billing_address_data' => ShippingAddress::find($cartData['billing_address_id'] ?: $cartData['shipping_address_id']),
             'shipping_responsibility' => getWebConfig(name: 'shipping_method'),
             'shipping_cost' => $cartData['shipping_cost'],
             'extra_discount' => $cartData['free_delivery_discount'],

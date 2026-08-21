@@ -285,6 +285,7 @@
                         <tr>
                             <th>{{ translate('image') }}</th>
                             <th>{{ translate('banner_type') }}</th>
+                            <th>{{ translate('where_it_appears') }}</th>
                             <th>{{ translate('resource_type') }}</th>
                             <th>{{ translate('published') }}</th>
                             <th></th>
@@ -298,8 +299,23 @@
                                          loading="lazy"
                                          src="{{ getStorageImages(path: $banner->photo_full_url , type: 'backend-banner') }}">
                                 </td>
+                                <td>{{ translate(str_replace('_',' ',$banner->banner_type)) }}</td>
                                 <td>
-                                    {{ translate(str_replace('_',' ',$banner->banner_type)) }}
+                                    @php
+                                        $__placement = app(\App\Services\BannerService::class)->getPlacementTag($banner->banner_type);
+                                        $__resourceName = null;
+                                        if ($banner->resource_type === 'category' && $banner->resource_id) {
+                                            $__resourceName = $resourceNames['category'][$banner->resource_id] ?? null;
+                                        } elseif ($banner->resource_type === 'brand' && $banner->resource_id) {
+                                            $__resourceName = $resourceNames['brand'][$banner->resource_id] ?? null;
+                                        }
+                                    @endphp
+                                    @if ($__placement)
+                                        <span class="badge badge-soft-primary text-wrap text-start">
+                                            <i class="fi fi-rr-marker"></i>
+                                            {{ $__placement }}@if ($__resourceName) — {{ $__resourceName }}@endif
+                                        </span>
+                                    @endif
                                     @php
                                         $__themePlaces = array_merge(
                                             ($themeUsage['ids'][$banner->id] ?? []),

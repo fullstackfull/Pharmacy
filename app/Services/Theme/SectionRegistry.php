@@ -100,6 +100,8 @@ class SectionRegistry
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'featured',
                                       'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
                     'source_id'   => ['type' => 'number', 'label' => 'source_reference', 'default' => null],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
                     'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
                     'autoplay'    => ['type' => 'boolean','label' => 'autoplay', 'default' => false],
@@ -170,23 +172,47 @@ class SectionRegistry
                 'label' => 'service_highlights', 'pages' => ['home'], 'blocks' => ['usp'], 'hint' => 'trust_badges_such_as_free_shipping_and_authentic_products',
                 'schema' => [
                     'columns' => ['type' => 'number',  'label' => 'columns', 'default' => 4, 'responsive' => true],
+                    'style'   => ['type' => 'select',  'label' => 'display_style', 'default' => 'boxed',
+                                  'options' => ['boxed', 'dark']],
                     'boxed'   => ['type' => 'boolean', 'label' => 'boxed_cards', 'default' => true],
                 ],
             ],
             'brand_slider' => [
-                'label' => 'brand_slider', 'pages' => ['home'], 'hint' => 'brand_logos_in_a_continuous_marquee',
+                'label' => 'brand_slider', 'pages' => ['home'], 'hint' => 'brands_as_marquee_grid_or_story_cards',
                 'schema' => [
                     'eyebrow' => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',    'label' => 'title', 'default' => ''],
+                    'style'   => ['type' => 'select',  'label' => 'display_style', 'default' => 'marquee',
+                                  'options' => ['marquee', 'grid', 'story']],
                     'limit'   => ['type' => 'number',  'label' => 'max_items', 'default' => 12],
                     'marquee' => ['type' => 'boolean', 'label' => 'continuous_scroll', 'default' => true],
                 ],
             ],
             'flash_deal' => [
-                'label' => 'flash_deals', 'pages' => ['home'], 'hint' => 'time_limited_offers_with_a_countdown',
+                'label' => 'flash_deals', 'pages' => ['home'], 'hint' => 'gradient_strip_with_a_live_countdown_from_your_running_flash_deal',
                 'schema' => [
                     'title'     => ['type' => 'text',    'label' => 'title', 'default' => ''],
+                    'subtitle'  => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
                     'countdown' => ['type' => 'boolean', 'label' => 'show_countdown', 'default' => true],
+                ],
+            ],
+            'testimonials' => [
+                'label' => 'customer_voices', 'pages' => ['home'], 'hint' => 'real_product_reviews_from_your_customers',
+                'schema' => [
+                    'eyebrow'    => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'      => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'limit'      => ['type' => 'number', 'label' => 'max_items', 'default' => 3],
+                    'min_rating' => ['type' => 'number', 'label' => 'minimum_rating', 'default' => 4],
+                ],
+            ],
+            'faq' => [
+                'label' => 'faq', 'pages' => ['home'], 'blocks' => ['qa'], 'hint' => 'questions_and_answers_with_a_help_panel',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text', 'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text', 'label' => 'title', 'default' => ''],
+                    'subtitle'    => ['type' => 'text', 'label' => 'subtitle', 'default' => ''],
+                    'button_text' => ['type' => 'text', 'label' => 'button_text', 'default' => ''],
+                    'link'        => ['type' => 'link', 'label' => 'link', 'default' => ''],
                 ],
             ],
             'custom_html' => [
@@ -291,6 +317,13 @@ class SectionRegistry
                     'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle' => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'link'     => ['type' => 'link',   'label' => 'link', 'default' => ''],
+                ],
+            ],
+            'qa' => [
+                'label' => 'faq_item', 'title_key' => 'question',
+                'schema' => [
+                    'question' => ['type' => 'text',     'label' => 'question', 'default' => ''],
+                    'answer'   => ['type' => 'textarea', 'label' => 'answer', 'default' => ''],
                 ],
             ],
             'menu' => [

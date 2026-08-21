@@ -93,7 +93,7 @@ class ThemeManagerTest extends TestCase
     public function test_resolve_settings_returns_defaults_for_null_version(): void
     {
         $s = $this->mgr->resolveSettings(null);
-        $this->assertSame('#0f766e', $s['colors']['primary']);
+        $this->assertSame($this->mgr->defaultSettings()['colors']['primary'], $s['colors']['primary']);
         $this->assertSame(1200, $s['layout']['container_width']);
     }
 
@@ -103,7 +103,7 @@ class ThemeManagerTest extends TestCase
         $s = $this->mgr->resolveSettings($version);
 
         $this->assertSame('#000000', $s['colors']['primary']);   // overridden
-        $this->assertSame('#334155', $s['colors']['secondary']); // sibling default intact
+        $this->assertSame($this->mgr->defaultSettings()['colors']['secondary'], $s['colors']['secondary']); // sibling default intact
         $this->assertSame(16, $s['typography']['base_font_size']); // untouched group intact
     }
 

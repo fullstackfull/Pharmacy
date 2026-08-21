@@ -63,9 +63,10 @@ class DeliveryRestrictionController extends BaseController
 
         $countryRestrictionStatus = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'delivery_country_restriction']);
         $zipCodeAreaRestrictionStatus = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'delivery_zip_code_area_restriction']);
+        $zipCodeFieldStatus = getWebConfig(name: 'zip_code_field_status');
         $storedCountryCode = $storedCountries->pluck('country_code')->toArray();
         $storedZip = $this->deliveryZipCodeRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request->search_zip_code, dataLimit: getWebConfig(name: 'pagination_limit'));
-        return view('admin-views.business-settings.delivery-restriction', compact('countries', 'storedCountries', 'storedCountryCode', 'storedZip', 'countryRestrictionStatus', 'zipCodeAreaRestrictionStatus'));
+        return view('admin-views.business-settings.delivery-restriction', compact('countries', 'storedCountries', 'storedCountryCode', 'storedZip', 'countryRestrictionStatus', 'zipCodeAreaRestrictionStatus', 'zipCodeFieldStatus'));
     }
 
     public function add(DeliveryCountryCodeAddRequest $request): RedirectResponse
@@ -116,6 +117,28 @@ class DeliveryRestrictionController extends BaseController
                 'status' => true
             ]);
         }
+        return back();
+    }
+
+    /**
+     * Show or hide the ZIP field on customer address forms.
+     *
+     * Separate from the delivery restriction above: that one limits WHERE you deliver, this one
+     * decides whether customers are asked for a postcode at all. Off by default — many markets
+     * (Syria among them) do not use postcodes, and a mandatory empty field only blocked checkout.
+     */
+    public function zipcodeFieldStatusChange(Request $request): JsonResponse|RedirectResponse
+    {
+        $this->businessSettingRepo->updateOrInsert(type: 'zip_code_field_status', value: $request->get('status', 0));
+
+        if ($request->ajax()) {
+            return response()->json([
+                'message' => translate('zip_code_field_status_changed_successfully'),
+                'status' => true,
+            ]);
+        }
+
+        ToastMagic::success(translate('zip_code_field_status_changed_successfully'));
         return back();
     }
 

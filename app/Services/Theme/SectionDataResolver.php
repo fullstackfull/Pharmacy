@@ -176,6 +176,63 @@ class SectionDataResolver
         return $cards;
     }
 
+    /**
+     * The running flash deal, for the countdown strip: real title and REAL end date, so the
+     * storefront counts down to the moment the deal actually ends (never a hardcoded timer).
+     */
+    public function flashDeal(): ?array
+    {
+        try {
+            $deal = \App\Models\FlashDeal::where(['deal_type' => 'flash_deal', 'status' => 1])
+                ->whereDate('start_date', '<=', date('Y-m-d'))
+                ->whereDate('end_date', '>=', date('Y-m-d'))
+                ->withCount('products')
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$deal) {
+                return null;
+            }
+
+            return [
+                'id'             => $deal->id,
+                'title'          => $deal->title,
+                // end_date is cast to a Carbon date (midnight): the deal runs to the END of that
+                // day, so the countdown targets 23:59:59. Concatenating the Carbon into a string
+                // produced "…00:00:00 23:59:59", which strtotime rejects — hence the explicit copy.
+                'end_timestamp'  => $deal->end_date
+                    ? $deal->end_date->copy()->endOfDay()->getTimestamp()
+                    : null,
+                'products_count' => (int) ($deal->products_count ?? 0),
+                'url'            => \Illuminate\Support\Facades\Route::has('flash-deals')
+                    ? route('flash-deals', ['id' => $deal->id])
+                    : null,
+            ];
+        } catch (\Throwable $exception) {
+            report($exception);
+            return null;
+        }
+    }
+
+    /**
+     * Real customer voices: approved product reviews with a comment, best rated first.
+     * Nothing invented — every card on the storefront is a review a customer actually left.
+     */
+    public function testimonials(int $limit, int $minRating = 4): Collection
+    {
+        return $this->safely(fn () => \App\Models\Review::query()
+            ->where('status', 1)
+            ->whereNull('delivery_man_id')
+            ->where('rating', '>=', max(1, min(5, $minRating)))
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->with(['customer:id,f_name,l_name', 'product:id,name,slug'])
+            ->orderByDesc('rating')
+            ->orderByDesc('id')
+            ->take($this->bounded($limit, 12))
+            ->get());
+    }
+
     /** Clamp a merchant-supplied count so a stray value cannot fetch the whole catalogue. */
     private function bounded(int $value, int $max): int
     {

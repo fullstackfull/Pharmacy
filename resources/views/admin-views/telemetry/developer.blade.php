@@ -12,6 +12,29 @@
             </x-slot:actions>
         </x-k.page-header>
 
+        {{-- What shipped, read from the repo's own changelog so this panel updates itself. --}}
+        @if (!empty($releases))
+            <x-k.card :title="translate('what_is_new')" style="margin-block-end:16px">
+                <div class="row g-3">
+                    @foreach ($releases as $release)
+                        <div class="col-lg-4 col-md-6">
+                            <div class="k-dev-group" open style="border:0">
+                                <span class="k-badge k-badge--info">{{ $release['version'] }}</span>
+                                <p class="k-text-subtle" style="margin-block:6px 4px">{{ $release['title'] }}</p>
+                                @if (!empty($release['points']))
+                                    <ul class="k-text-subtle" style="padding-inline-start:18px;margin:0">
+                                        @foreach ($release['points'] as $point)
+                                            <li>{{ $point }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </x-k.card>
+        @endif
+
         <div class="row g-3" style="margin-block-end:16px">
             @foreach ($guides as $guide)
                 <div class="col-lg-4 col-md-6">

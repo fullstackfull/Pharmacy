@@ -9,6 +9,9 @@
 
 @section('content')
     @php($billingInputByCustomer=getWebConfig(name: 'billing_input_by_customer'))
+{{-- Whether customers are asked for a postcode at all (Delivery restriction settings). When the
+     zip allow-list restriction is on the field is always shown — deliveries depend on it. --}}
+@php($zipFieldStatus = getWebConfig(name: 'zip_code_field_status') || $zip_restrict_status)
     <div class="container py-4 pt-3 rtl __inline-56 px-0 px-md-3 text-align-direction">
         <div class="row mx-max-md-0">
             <section class="col-lg-8 px-max-md-0">
@@ -119,10 +122,10 @@
                                                                 <input type="text" class="form-control" name="city" id="city" {{$shippingAddresses->count()==0?'required':''}}>
                                                             </div>
                                                         </div>
-                                                        <div class="col-6">
+                                                        <div class="col-6 {{ $zipFieldStatus ? '' : 'd-none' }}">
                                                             <div class="form-group">
                                                                 <label>{{ translate('zip_code')}}
-                                                                    <span class="text-danger">*</span></label>
+                                                                    @if($zip_restrict_status == 1)<span class="text-danger">*</span>@endif</label>
                                                                 @if($zip_restrict_status == 1)
                                                                     <select name="zip" class="form-control selectpicker" data-live-search="true" id="select2-zip-container" required>
                                                                         @forelse($zip_codes as $code)
@@ -133,7 +136,7 @@
                                                                     </select>
                                                                 @else
                                                                     <input type="text" class="form-control"
-                                                                           name="zip" id="zip" {{$shippingAddresses->count()==0?'required':''}}>
+                                                                           name="zip" id="zip">
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -349,10 +352,10 @@
                                                                            name="billing_city" {{$billingAddresses->count()==0?'required':''}}>
                                                                 </div>
                                                             </div>
-                                                            <div class="col-6">
+                                                            <div class="col-6 {{ $zipFieldStatus ? '' : 'd-none' }}">
                                                                 <div class="form-group">
                                                                     <label>{{ translate('zip_code')}}
-                                                                        <span class="text-danger">*</span></label>
+                                                                        @if($zip_restrict_status)<span class="text-danger">*</span>@endif</label>
                                                                     @if($zip_restrict_status)
                                                                         <select name="billing_zip" class="form-control selectpicker" data-live-search="true" id="billing_zip">
                                                                             @foreach($zip_codes as $code)
@@ -361,7 +364,7 @@
                                                                         </select>
                                                                     @else
                                                                         <input type="text" class="form-control" id="billing_zip"
-                                                                               name="billing_zip" {{ $billingAddresses->count()==0 ? 'required' : '' }}>
+                                                                               name="billing_zip">
                                                                     @endif
                                                                 </div>
                                                             </div>
