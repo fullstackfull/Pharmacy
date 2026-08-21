@@ -803,4 +803,7 @@ return [
 	'a_composed_home_replaces_the_built_in_page_add_a_banners_from_dashboard_section_for_each_type_you_still_want' => 'الصفحة المركّبة تستبدل الصفحة المدمجة بالكامل. نقرة واحدة تضيف قسم «بانرات من لوحة التحكم» لكل نوع ما زلت تريده:',
 	'hidden_by_the_composed_home_page' => 'مخفي — الصفحة الرئيسية المركّبة استبدلت موضعه',
 	'add_its_section_in_the_builder' => 'أضف قسمه في المحرر',
+	'page_banner' => 'بانر الصفحة',
+	'shown_at_the_top_of_this_page_on_the_storefront' => 'يظهر أعلى هذه الصفحة في واجهة المتجر',
+	'also_editable_in_banner_setup' => 'يمكن تعديله أيضاً من شاشة البانرات',
 ];

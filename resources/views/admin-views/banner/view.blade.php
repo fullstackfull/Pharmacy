@@ -410,9 +410,30 @@
             $('#theme_ratio').text(get_ratio);
         }
 
+        {{-- Category/Brand banners MUST point at their resource or the save is rejected — which
+             read as "the brand banner does not work". Lock the resource select to the required
+             value the moment such a type is picked, so the mistake cannot be made. --}}
+        let requiredResourceByType = {!! json_encode(\App\Services\BannerService::REQUIRED_RESOURCE_TYPES) !!};
+
+        function lockResourceForBannerType() {
+            let required = requiredResourceByType[elementBannerTypeSelect.val()] || null;
+            let resourceSelect = $('select[name="resource_type"]');
+            resourceSelect.find('option').prop('disabled', false);
+            if (required) {
+                resourceSelect.val(required).trigger('change');
+                resourceSelect.find('option').each(function () {
+                    if ($(this).val() !== required) $(this).prop('disabled', true);
+                });
+            }
+        }
+
         elementBannerTypeSelect.on('change', function () {
             getThemeWiseRatio();
+            lockResourceForBannerType();
+        });
 
+        $(document).on('ready', function () {
+            lockResourceForBannerType();
         });
     </script>
 @endpush

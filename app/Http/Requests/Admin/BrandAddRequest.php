@@ -29,7 +29,11 @@ class BrandAddRequest extends FormRequest
                 rules: ['required', 'image'],
                 skipMimes: ['.svg', '.gif'],
             ),
-        ];
+
+            'page_banner' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg', '.gif'],
+            ),        ];
     }
 
     public function messages(): array

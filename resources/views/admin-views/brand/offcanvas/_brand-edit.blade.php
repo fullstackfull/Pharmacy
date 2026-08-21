@@ -33,6 +33,7 @@
                         class="d-flex justify-content-between align-items-center gap-2 border rounded px-3 py-10 bg-white user-select-none flex-grow-1">
                         <span class="fw-medium text-dark">{{ translate('status') }}</span>
                         <label class="switcher">
+                            <input type="hidden" name="status" value="0">
                             <input type="checkbox" class="switcher_input" value="1" id="" name="status"  {{ $brand['status'] == 1 ? 'checked' : '' }}>
                             <span class="switcher_control"></span>
                         </label>
@@ -219,6 +220,7 @@
         </div>
 
         <div class="offcanvas-footer shadow-popup">
+    @include('admin-views.partials._page-banner-field', ['currentBanner' => app(\App\Services\EntityPageBannerService::class)->current('brand', (int) ($brand['id'] ?? 0))])
             <div class="d-flex justify-content-center flex-wrap gap-3 bg-white px-3 py-2">
                 <button type="reset" id="reset" class="btn btn-secondary flex-grow-1">
                     {{ translate('reset') }}

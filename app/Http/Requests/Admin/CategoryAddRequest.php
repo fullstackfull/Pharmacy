@@ -39,6 +39,10 @@ class CategoryAddRequest extends FormRequest
                 maxSize: getFileUploadMaxSize(unit: 'kb'),
                 isDisallowed: true
             ),
+            'page_banner' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg', '.gif'],
+            ),
             'priority' => 'required'
         ];
     }

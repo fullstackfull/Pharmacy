@@ -122,6 +122,8 @@ class CategoryController extends BaseController
             );
         }
 
+        app(\App\Services\EntityPageBannerService::class)->sync(entity: 'category', resourceId: (int) $savedCategory->id, image: $request->file('page_banner'));
+
         updateSetupGuideCacheKey(key: 'category_setup', panel: 'admin');
 
         if ($request->ajax()) {
@@ -173,6 +175,8 @@ class CategoryController extends BaseController
             taxIds: $request['tax_ids'] ?? [],
             oldTaxIds: $taxVatIds
         );
+
+        app(\App\Services\EntityPageBannerService::class)->sync(entity: 'category', resourceId: (int) $category->id, image: $request->file('page_banner'));
 
         updateSetupGuideCacheKey(key: 'category_setup', panel: 'admin');
 

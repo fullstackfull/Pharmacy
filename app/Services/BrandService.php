@@ -31,7 +31,9 @@ class BrandService
         return  [
             'name' => $name,
             'slug' => $this->generateModelUniqueSlug(name: $name, type: 'brand', id: $data['id']),
-            'status' => $request['status'],
+            // The full edit page carries no status field; writing the absent value deactivated the
+            // brand on every save (its page then redirects home and its banner "never shows").
+            'status' => $request->has('status') ? $request['status'] : $data['status'],
             'image' => $image,
             'image_storage_type' => $request->file('image') ? $storage : $data['image_storage_type'],
             'image_alt_text' => $request['image_alt_text']?? $data['image_alt_text' ],

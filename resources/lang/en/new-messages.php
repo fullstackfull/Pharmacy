@@ -3573,4 +3573,10 @@ ____________________________________________________on_search_engines_and_see_th
 	"full_width_campaign_strip_with_parallax_background" => "Full width campaign strip with parallax background",
 	"banner_strip" => "Banner strip",
 	"asymmetric_grid_one_large_tile_beside_smaller_ones" => "Asymmetric grid one large tile beside smaller ones",
+	"page_banner" => "Page banner",
+	"optional" => "Optional",
+	"shown_at_the_top_of_this_page_on_the_storefront" => "Shown at the top of this page on the storefront",
+	"also_editable_in_banner_setup" => "Also editable in Banner Setup",
+	"Brand_Update" => "Brand Update",
+	"brand_image_must_be_jpg_jpeg_png" => "Brand image must be jpg jpeg png",
 ];
