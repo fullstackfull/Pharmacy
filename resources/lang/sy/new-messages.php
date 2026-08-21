@@ -752,4 +752,5 @@ return [
 	'Category_Section_Banner' => 'بانر قسم الفئة',
 	'Home_Promo_Banner' => 'بانر ترويجي بالرئيسية',
 	'Brand_Banner' => 'بانر الماركة',
+	'download_example_theme' => 'تنزيل الثيم النموذجي',
 ];
