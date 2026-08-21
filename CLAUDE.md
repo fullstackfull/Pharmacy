@@ -41,3 +41,5 @@
 
 **Frontend:** Vue 2 + Bootstrap 4 + Laravel Mix 5 — intentionally legacy, be conservative.
 
+**Theme:** single built-in theme (`resources/themes/default`); managed from Admin → Theme Management (`/admin/theme`). New storefront styling goes in `resources/css/kohl/store.scss` (loads last). Full guide: `docs/theme-guide.md`.
+
