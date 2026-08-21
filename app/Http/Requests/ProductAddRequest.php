@@ -43,6 +43,9 @@ class ProductAddRequest extends Request
             'discount' => 'required' . '|' . 'gt' . ':-1',
             'shipping_cost' => 'required_if' . ':' . 'product_type' . ',==,' . 'physical' . '|' . 'gt' . ':-1',
             'code' => 'required' . '|' . 'regex:/^[a-zA-Z0-9]+$/' . '|' . 'min' . ':6|' . 'max' . ':20|' . 'unique' . ':products',
+            // The barcode comes off a box, not from us: optional, and unique so two products can
+            // never answer the same scan.
+            'barcode' => 'nullable|regex:/^[a-zA-Z0-9\-]+$/|max:64|unique:products,barcode',
             'minimum_order_qty' => 'required' . '|' . 'numeric' . '|' . 'min' . ':1',
             'video_url' => 'nullable|url',
         ];

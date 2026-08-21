@@ -22,6 +22,7 @@ use Modules\TaxModule\app\Models\Taxable;
  * @property string $added_by
  * @property string $name
  * @property string $code
+ * @property string|null $barcode
  * @property string $slug
  * @property int $category_id
  * @property int $sub_category_id
@@ -73,6 +74,7 @@ class Product extends Model
         'added_by',
         'name',
         'code',
+        'barcode',
         'slug',
         'category_ids',
         'bought_together_ids',
@@ -132,6 +134,7 @@ class Product extends Model
         'added_by' => 'string',
         'name' => 'string',
         'code' => 'string',
+        'barcode' => 'string',
         'slug' => 'string',
         'category_id' => 'integer',
         'sub_category_id' => 'integer',
@@ -178,7 +181,19 @@ class Product extends Model
         'digital_file_ready_storage_type' => 'string',
     ];
 
-    protected $appends = ['is_shop_temporary_close', 'thumbnail_full_url', 'preview_file_full_url', 'color_images_full_url', 'meta_image_full_url', 'images_full_url', 'digital_file_ready_full_url'];
+    protected $appends = ['scan_code', 'is_shop_temporary_close', 'thumbnail_full_url', 'preview_file_full_url', 'color_images_full_url', 'meta_image_full_url', 'images_full_url', 'digital_file_ready_full_url'];
+
+    /**
+     * What a scanner should read for this product: the printed barcode when the supplier gave one,
+     * otherwise the store's own SKU.
+     *
+     * Labels, invoices and the POS all print ONE number; without this they would each have to pick,
+     * and a product with a barcode would still print its SKU on the shelf tag.
+     */
+    public function getScanCodeAttribute(): ?string
+    {
+        return $this->barcode ?: $this->code;
+    }
 
     public function translations(): MorphMany
     {

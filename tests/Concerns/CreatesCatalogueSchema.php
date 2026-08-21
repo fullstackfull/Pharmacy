@@ -87,6 +87,9 @@ trait CreatesCatalogueSchema
             // The companions a merchant picks for the "frequently bought together" panel.
             $table->text('bought_together_ids')->nullable();
             $table->text('details')->nullable();
+            // The store's own SKU, and the barcode printed on the box.
+            $table->string('code')->nullable();
+            $table->string('barcode', 64)->nullable();
             $table->timestamps();
         });
 

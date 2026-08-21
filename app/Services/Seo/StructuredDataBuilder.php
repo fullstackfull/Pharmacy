@@ -126,6 +126,7 @@ class StructuredDataBuilder
 
         $this->setIfPresent($graph, 'description', $data['description'] ?? null);
         $this->setIfPresent($graph, 'sku', $data['sku'] ?? null);
+        $this->setIfPresent($graph, 'gtin', $data['gtin'] ?? null);
         $this->setIfPresent($graph, 'url', $data['url'] ?? null);
 
         $images = array_values(array_filter($data['images'] ?? [], fn ($v) => is_string($v) && $v !== ''));

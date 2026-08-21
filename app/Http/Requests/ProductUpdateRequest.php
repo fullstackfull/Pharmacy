@@ -61,6 +61,14 @@ class ProductUpdateRequest extends FormRequest
                 'max:20',
                 Rule::unique('products', 'code')->ignore($product->id, 'id'),
             ],
+            // The barcode comes off a box, not from us: optional, and unique so two products can
+            // never answer the same scan.
+            'barcode' => [
+                'nullable',
+                'regex:/^[a-zA-Z0-9\-]+$/',
+                'max:64',
+                Rule::unique('products', 'barcode')->ignore($product->id, 'id'),
+            ],
             'video_url' => 'nullable|url',
         ];
     }

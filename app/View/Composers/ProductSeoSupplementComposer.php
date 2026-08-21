@@ -96,6 +96,9 @@ class ProductSeoSupplementComposer
             'name'        => (string) $product->name,
             'description' => trim(strip_tags((string) ($product->details ?? ''))) ?: null,
             'sku'         => $product->code ?? null,
+            // Google reads a real GTIN (EAN/UPC) differently from a shop's own SKU: it matches the
+            // product across the web, so it travels beside the SKU rather than replacing it.
+            'gtin'        => $product->barcode ?: null,
             'url'         => route('product', [$product->slug]),
             'images'      => $this->imageUrls($product),
             'brand'       => $product->brand?->name,

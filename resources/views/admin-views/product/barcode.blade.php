@@ -50,8 +50,8 @@
                                 <tbody>
                                 <tr>
                                     <th>
-                                        @if ($product->code)
-                                            <span>{{$product->code}}</span>
+                                        @if ($product->scan_code)
+                                            <span class="direction-ltr">{{ $product->scan_code }}</span>
                                         @else
                                             <a class="title-color hover-c1"
                                                href="{{route('admin.products.update', [$product['id']]) }}">
@@ -129,12 +129,14 @@
                             {{ setCurrencySymbol(amount: usdToDefaultCurrency(amount: $product->unit_price), currencyCode: getCurrencyCode()) }}
                         </div>
 
-                        @if ($product->code !== null)
+                        {{-- The label prints the product's OWN barcode when it has one, so a scan at the
+                             counter reads the same number the supplier printed; the SKU is the fallback. --}}
+                        @if ($product->scan_code !== null)
                             <div class="barcode_image d-flex justify-content-center overflow-hidden">
-                                {!! DNS1D::getBarcodeHTML($product->code, 'C128') !!}
+                                {!! DNS1D::getBarcodeHTML($product->scan_code, 'C128') !!}
                             </div>
-                            <div class="barcode_code text-capitalize">
-                                {{ translate('code') }} : {{ $product->code }}
+                            <div class="barcode_code text-capitalize direction-ltr">
+                                {{ $product->barcode ? translate('barcode') : translate('code') }} : {{ $product->scan_code }}
                             </div>
                         @else
                             <p class="text-danger">

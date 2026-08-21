@@ -163,6 +163,14 @@
                             {{ $product->code }}
                         </td>
                     </tr>
+                    @if ($product->barcode)
+                        <tr>
+                            <td class="py-1 text-nowrap min-w-120">{{ translate('product_barcode') }}</td>
+                            <td class="py-1 px-2">:</td>
+                            <td class="py-1 text-dark fw-medium overflow-wrap-anywhere direction-ltr">
+                                {{ $product->barcode }}
+                            </td>
+                        </tr>
 
                     </tbody>
                 </table>

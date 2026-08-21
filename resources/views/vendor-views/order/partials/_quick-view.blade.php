@@ -74,6 +74,13 @@
                     <div class="fs-12">{{ $product->code }}</div>
                 </div>
 
+                @if ($product->barcode)
+                    <div class="d-flex align-items-center gap-1 flex-grow-1">
+                        <div class="fw-semibold text-dark">{{ translate('barcode') }}:</div>
+                        <div class="fs-12 direction-ltr">{{ $product->barcode }}</div>
+                    </div>
+                @endif
+
                 <div class="d-flex align-items-center gap-1 flex-grow-1">
                     <div class="fw-semibold text-dark">{{ translate('categories') }}: </div>
                     <div class="fs-12">{{ $product->category->name ?? translate('not_found') }}</div>
