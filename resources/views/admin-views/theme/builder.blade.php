@@ -461,7 +461,13 @@
 
                 try {
                     var restore = parseInt(frame.dataset.scroll || '0', 10);
-                    if (restore > 0) frame.contentWindow.scrollTo(0, restore);
+                    if (restore > 0) {
+                        frame.contentWindow.scrollTo(0, restore);
+                    } else if (page === 'footer') {
+                        // Editing the footer: land the preview ON the footer instead of asking the
+                        // merchant to scroll a whole home page to find their change.
+                        frame.contentWindow.scrollTo(0, doc.body.scrollHeight);
+                    }
                 } catch (e) { /* ignore */ }
 
                 var style = doc.createElement('style');

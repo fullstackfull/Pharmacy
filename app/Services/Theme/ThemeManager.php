@@ -97,6 +97,10 @@ class ThemeManager
             $version->published_at = now();
             $version->save();
 
+            // Whatever goes live is registered in Promotion -> Banners (blocks composed before the
+            // smart link included), so Banner Setup always lists what the storefront shows.
+            app(ThemeBannerLink::class)->syncVersion($version);
+
             // The storefront caches the published structure; drop it so the change is live at once.
             app(StorefrontThemeRenderer::class)->flush();
 

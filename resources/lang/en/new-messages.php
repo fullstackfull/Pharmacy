@@ -3529,4 +3529,11 @@ ____________________________________________________on_search_engines_and_see_th
 	"contact_column" => "Contact column",
 	"social_links" => "Social links",
 	"app_links" => "App links",
+	"footer_columns" => "Footer columns",
+	"section_not_found" => "Section not found",
+	"your_own_text_block" => "Your own text block",
+	"theme_version_published_successfully" => "Theme version published successfully",
+	"time_limited_offers_with_a_countdown" => "Time limited offers with a countdown",
+	"Theme_Banner" => "Theme Banner",
+	"brand_logos_in_a_continuous_marquee" => "Brand logos in a continuous marquee",
 ];

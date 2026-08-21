@@ -6,6 +6,7 @@ use App\Models\Banner;
 use App\Models\Theme;
 use App\Models\ThemeBlock;
 use App\Models\ThemeSection;
+use App\Models\ThemeVersion;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -193,7 +194,37 @@ class ThemeBannerLink
         return $usage;
     }
 
-    /** Resolve a builder image URL to its path on the public disk, or null for foreign URLs. */
+    /**
+     * Register every not-yet-linked banner-backed block of a version.
+     *
+     * The per-save hook only sees blocks edited AFTER the smart link shipped; this sweep catches
+     * everything else — mosaics and slides composed earlier register the moment the builder opens
+     * or the version is published, so Banner Setup can never be behind the theme.
+     */
+    public function syncVersion(ThemeVersion $version): void
+    {
+        try {
+            $sections = ThemeSection::with('blocks')
+                ->where('theme_version_id', $version->id)
+                ->get();
+
+            foreach ($sections as $section) {
+                foreach ($section->blocks as $block) {
+                    $this->syncBlock($block);
+                }
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /**
+     * Resolve a builder image URL to its path on the public disk, or null for foreign URLs.
+     *
+     * Matching is host-insensitive (an APP_URL/https/www mismatch must not silently break the
+     * sync) and accepts both public-disk URL shapes this app produces: the storage symlink
+     * (`/storage/<path>`) and the direct form (`/storage/app/public/<path>`).
+     */
     private function publicDiskPathFromUrl(string $url): ?string
     {
         $url = trim($url);
@@ -201,18 +232,17 @@ class ThemeBannerLink
             return null;
         }
 
-        $base = rtrim(Storage::disk('public')->url(''), '/') . '/';
-        $candidates = [$base];
+        $urlPath = parse_url($url, PHP_URL_PATH) ?: $url;
 
-        // The same base as a root-relative path (the builder stores whichever form it was given).
-        $parsedBase = parse_url($base, PHP_URL_PATH);
-        if ($parsedBase) {
-            $candidates[] = $parsedBase;
+        $prefixes = ['/storage/app/public/'];
+        $basePath = parse_url(rtrim(Storage::disk('public')->url(''), '/') . '/', PHP_URL_PATH);
+        if ($basePath) {
+            $prefixes[] = $basePath;
         }
 
-        foreach ($candidates as $prefix) {
-            if (str_starts_with($url, $prefix)) {
-                return rawurldecode(substr($url, strlen($prefix)));
+        foreach ($prefixes as $prefix) {
+            if (str_starts_with($urlPath, $prefix)) {
+                return rawurldecode(substr($urlPath, strlen($prefix)));
             }
         }
 

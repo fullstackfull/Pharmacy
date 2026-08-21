@@ -140,11 +140,13 @@ class SectionDataResolver
         foreach ($blocks as $block) {
             $settings = $block['settings'] ?? [];
 
-            $linked = $overrides[(int) ($settings['banner_id'] ?? 0)] ?? null;
+            $linkedId = (int) ($settings['banner_id'] ?? 0);
+            $linked = $overrides[$linkedId] ?? null;
+            if ($linkedId > 0 && ($linked === null || !$linked['published'])) {
+                // Deleted or unpublished in Banner Setup -> gone from the theme too.
+                continue;
+            }
             if ($linked !== null) {
-                if (!$linked['published']) {
-                    continue;
-                }
                 foreach (['image', 'image_mobile', 'link', 'title', 'subtitle', 'button_text', 'background'] as $key) {
                     if (!empty($linked[$key])) {
                         $settings[$key] = $linked[$key];

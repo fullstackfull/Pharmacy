@@ -768,4 +768,11 @@ return [
 	'no_linked_banner_use_the_image_below' => 'بدون ربط ببانر — استخدم الصورة أدناه',
 	'manage_banners_in_banner_setup' => 'إدارة البانرات من شاشة البانرات',
 	'shown_by_the_theme' => 'معروض عبر الثيم',
+	'footer_columns' => 'أعمدة الفوتر',
+	'section_not_found' => 'القسم غير موجود',
+	'your_own_text_block' => 'كتلة نص خاصة بك',
+	'theme_version_published_successfully' => 'تم نشر نسخة الثيم بنجاح',
+	'time_limited_offers_with_a_countdown' => 'عروض محدودة الوقت مع عدّاد تنازلي',
+	'Theme_Banner' => 'بانر الثيم',
+	'brand_logos_in_a_continuous_marquee' => 'شعارات الماركات في شريط متحرك',
 ];
