@@ -3821,6 +3821,10 @@ ____________________________________________________on_search_engines_and_see_th
 	"vertical_story_cards_that_open_full_screen_and_link_to_a_product" => "Vertical story cards that open full screen and link to a product",
 	"the_newest_published_posts_from_your_blog" => "The newest published posts from your blog",
 	"addresses_opening_hours_and_a_map_link_for_each_branch" => "Addresses, opening hours and a map link for each branch",
-	"order_within_x_to_have_it_shipped_today_counts_down_to_your_cut_off_time" => "\"Order within X to have it shipped today\" — counts down to your cut-off time",
+	"order_within_x_to_have_it_shipped_today_counts_down_to_your_cut_off_time" => ""Order within X to have it shipped today" — counts down to your cut-off time",
 	"a_slider_the_customer_drags_to_compare_two_photos" => "A slider the customer drags to compare two photos",
+	"product_barcode" => "Product barcode",
+	"the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU" => "The barcode printed on the product box (EAN or UPC). Leave it empty to print the SKU instead.",
+	"this_barcode_belongs_to_another_product" => "This barcode belongs to another product",
+	"add_your_first_product_to_see_it_here" => "Add your first product to see it here",
 ];

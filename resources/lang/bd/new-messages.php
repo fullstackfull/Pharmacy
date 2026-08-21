@@ -372,4 +372,7 @@ return [
 	"email_signup_panel" => "Email signup panel",
 	"empty_vertical_space_between_sections" => "Empty vertical space between sections",
 	"link_and_contact_columns_in_the_footer" => "Link and contact columns in the footer",
+	"product_barcode" => "Product barcode",
+	"the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU" => "The barcode printed on the product box (EAN or UPC). Leave it empty to print the SKU instead.",
+	"this_barcode_belongs_to_another_product" => "This barcode belongs to another product",
 ];

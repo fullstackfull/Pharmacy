@@ -471,6 +471,13 @@
                                             <span>:</span>
                                             <span class="value">{{ $product->code }}</span>
                                         </div>
+                                        @if ($product->barcode)
+                                            <div>
+                                                <span class="key">{{ translate('product_barcode') }}</span>
+                                                <span>:</span>
+                                                <span class="value direction-ltr">{{ $product->barcode }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="col-sm-6 col-xl-4">

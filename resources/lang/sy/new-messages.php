@@ -1067,4 +1067,7 @@ return [
 	"email_signup_panel" => "لوحة الاشتراك بالبريد",
 	"empty_vertical_space_between_sections" => "مساحة رأسية فارغة بين الأقسام",
 	"link_and_contact_columns_in_the_footer" => "أعمدة روابط وتواصل في التذييل",
+	"product_barcode" => "باركود المنتج",
+	"the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU" => "الباركود المطبوع على علبة المنتج (EAN أو UPC). اتركه فارغًا ليُطبع رمز SKU بدلاً منه.",
+	"this_barcode_belongs_to_another_product" => "هذا الباركود مسجَّل لمنتج آخر",
 ];

@@ -300,6 +300,19 @@ class ProductService
         return $ids === [] ? null : implode(',', array_slice($ids, 0, 12));
     }
 
+    /**
+     * The barcode as typed, digits and dashes only.
+     *
+     * A scanner types what it reads, spaces included, and a stray space makes the stored value miss
+     * every later lookup. An empty box stores NULL rather than '' so "has no barcode" is one value.
+     */
+    private function getBarcode(object $request): ?string
+    {
+        $barcode = preg_replace('/[^0-9A-Za-z\-]/', '', (string) $request['barcode']);
+
+        return $barcode !== '' ? mb_substr($barcode, 0, 64) : null;
+    }
+
     public function getCategoriesArray(object $request): array
     {
         $category = [];
@@ -577,6 +590,7 @@ class ProductService
             'shop_id' => $shopId,
             'name' => $request['name'][array_search('en', $request['lang'])],
             'code' => $request['code'],
+            'barcode' => $this->getBarcode(request: $request),
             'slug' => $this->getSlug($request),
             'category_ids' => json_encode($this->getCategoriesArray(request: $request)),
             // Companion products the merchant picked for the "frequently bought together" panel,
@@ -661,6 +675,7 @@ class ProductService
         $dataArray = [
             'name' => $request['name'][array_search('en', $request['lang'])],
             'code' => $request['code'],
+            'barcode' => $this->getBarcode(request: $request),
             'product_type' => $request['product_type'],
             'category_ids' => json_encode($this->getCategoriesArray(request: $request)),
             'category_id' => $request['category_id'],

@@ -170,7 +170,8 @@ class ProductRepository implements ProductRepositoryInterface
             return $query->where('name', 'like', "%{$searchValue}%")
                 ->orWhere(function ($query) use ($filters) {
                     if (isset($filters['code'])) {
-                        $query->where('code', 'like', "%{$filters['code']}%");
+                        $query->where('code', 'like', "%{$filters['code']}%")
+                            ->orWhere('barcode', 'like', "%{$filters['code']}%");
                     }
                 })
                 ->when(isset($filters['added_by']) && !$this->isAddedByInHouse($filters['added_by']), function ($query) use ($filters, $product_ids) {
@@ -208,7 +209,11 @@ class ProductRepository implements ProductRepositoryInterface
         })->when(isset($filters['product_type']), function ($query) use ($filters) {
             return $query->where(['product_type' => $filters['product_type']]);
         })->when(isset($filters['code']), function ($query) use ($filters) {
-            return $query->where(['code' => $filters['code']]);
+            // A scanned number is looked up by exactly the field the merchant filled in.
+            return $query->where(function ($query) use ($filters) {
+                return $query->where(['code' => $filters['code']])
+                    ->orWhere(['barcode' => $filters['code']]);
+            });
         })->when(isset($filters['productIds']), function ($query) use ($filters) {
             return $query->whereIn('id', $filters['productIds']);
         })->when(!empty($orderBy), function ($query) use ($orderBy) {
@@ -248,6 +253,7 @@ class ProductRepository implements ProductRepositoryInterface
                 return $query->where(function ($query) use ($searchValue, $product_ids) {
                     return $query->where('name', 'like', "%{$searchValue}%")
                         ->orWhere('code', 'like', "%{$searchValue}%")
+                        ->orWhere('barcode', 'like', "%{$searchValue}%")
                         ->orWhereIn('id', $product_ids);
                 });
             })
@@ -255,6 +261,7 @@ class ProductRepository implements ProductRepositoryInterface
                 $searchKeyword = str_ireplace(['\'', '"', ',', ';', '<', '>', '?', '\\'], ' ', preg_replace('/\s\s+/', ' ', $filters['keywords']));
                 return $query->where(function ($query) use ($filters) {
                     return $query->where('code', 'like', "%{$filters['keywords']}%")
+                        ->orWhere('barcode', 'like', "%{$filters['keywords']}%")
                         ->orWhere('name', 'like', "%{$filters['keywords']}%");
                 })
                     ->orderByRaw("CASE WHEN name LIKE ? THEN 1 ELSE 2 END, LOCATE(?, name), name", ["%{$searchKeyword}%", $searchKeyword]);
@@ -371,6 +378,7 @@ class ProductRepository implements ProductRepositoryInterface
                 return $query->where(function ($q) use ($searchValue, $product_ids) {
                     $q->where('name', 'like', "%{$searchValue}%")
                         ->orWhere('code', 'like', "%{$searchValue}%")
+                        ->orWhere('barcode', 'like', "%{$searchValue}%")
                         ->when(is_numeric($searchValue), function ($query) use ($searchValue) {
                             return $query->orWhere('id', 'like', "%{$searchValue}%");
                         })
@@ -605,6 +613,7 @@ class ProductRepository implements ProductRepositoryInterface
                 return $query->where(function ($query) use ($searchValue, $product_ids) {
                     $query->where('name', 'like', "%{$searchValue}%")
                         ->orWhere('code', 'like', "%{$searchValue}%")
+                        ->orWhere('barcode', 'like', "%{$searchValue}%")
                         ->orWhereIn('id', $product_ids);
                 });
             })

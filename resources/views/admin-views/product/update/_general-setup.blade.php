@@ -207,6 +207,22 @@
                                        placeholder="{{ translate('ex'). ': YU62TN' }}" required>
                             </div>
                         </div>
+
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-group">
+                                <label class="form-label d-flex align-items-center gap-2">
+                                    {{ translate('product_barcode') }}
+                                    <span class="tooltip-icon cursor-pointer" data-bs-toggle="tooltip"
+                                          aria-label="{{ translate('the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU') }}"
+                                          data-bs-title="{{ translate('the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU') }}">
+                                        <i class="fi fi-sr-info"></i>
+                                    </span>
+                                </label>
+                                <input type="text" name="barcode" class="form-control direction-ltr"
+                                       value="{{ request('product-gallery') ? '' : old('barcode', $product->barcode) }}" maxlength="64"
+                                       placeholder="{{ translate('ex').': 6291234567890'}}">
+                            </div>
+                        </div>
                         <div class="col-md-6 col-lg-4 show-for-physical-product">
                             <div class="form-group">
                                 <label class="form-label">
