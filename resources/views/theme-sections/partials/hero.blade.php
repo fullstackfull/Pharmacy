@@ -16,11 +16,11 @@
                 @php
                     $overlay = max(0, min(90, (int) ($slide['overlay'] ?? 35))) / 100;
                     $align = in_array($slide['align'] ?? 'start', ['center', 'end'], true) ? $slide['align'] : 'start';
-                    $textColor = $slide['text_color'] ?: '#ffffff';
+                    $textColor = ($slide['text_color'] ?? null) ?: '#ffffff';
                 @endphp
                 <div class="ml-hero__slide {{ $loop->first ? 'is-active' : '' }}" style="height:{{ $height }}px">
                     <div class="ml-hero__media">
-                        <img src="{{ $slide['image'] ?: $placeholder }}" alt="{{ $slide['title'] ?? '' }}"
+                        <img src="{{ ($slide['image'] ?? null) ?: $placeholder }}" alt="{{ $slide['title'] ?? '' }}"
                              loading="{{ $loop->first ? 'eager' : 'lazy' }}">
                     </div>
                     <div class="ml-hero__scrim" style="background:linear-gradient(90deg,rgba(0,0,0,{{ $overlay }}) 0%,rgba(0,0,0,{{ $overlay / 3 }}) 55%,rgba(0,0,0,0) 100%)"></div>
@@ -30,7 +30,7 @@
                             @if (!empty($slide['title']))<h3>{{ $slide['title'] }}</h3>@endif
                             @if (!empty($slide['subtitle']))<p>{{ $slide['subtitle'] }}</p>@endif
                             @if (!empty($slide['link']))
-                                <a href="{{ $slide['link'] }}" class="ml-btn ml-btn-light">{{ $slide['button_text'] ?: translate('shop_now') }}</a>
+                                <a href="{{ $slide['link'] }}" class="ml-btn ml-btn-light">{{ ($slide['button_text'] ?? null) ?: translate('shop_now') }}</a>
                             @endif
                         </div>
                     @endif

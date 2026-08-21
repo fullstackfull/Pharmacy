@@ -12,14 +12,14 @@
             @php $reversed = ($card['media_side'] ?? 'start') === 'end'; @endphp
             <div class="ml-split ml-reveal {{ $reversed ? 'is-reversed' : '' }}" data-delay="{{ $loop->index % 6 }}">
                 <div class="ml-split__media" style="min-height:{{ $height }}px">
-                    <img src="{{ $card['image'] ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
+                    <img src="{{ ($card['image'] ?? null) ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
                 </div>
                 <div class="ml-split__body" @if (!empty($card['background'])) style="background:{{ $card['background'] }}" @endif>
                     @if (!empty($card['eyebrow']))<span class="ml-eyebrow">{{ $card['eyebrow'] }}</span>@endif
                     @if (!empty($card['title']))<h3>{{ $card['title'] }}</h3>@endif
                     @if (!empty($card['subtitle']))<p>{{ $card['subtitle'] }}</p>@endif
                     @if (!empty($card['link']))
-                        <a href="{{ $card['link'] }}" class="ml-btn">{{ $card['button_text'] ?: translate('discover') }}</a>
+                        <a href="{{ $card['link'] }}" class="ml-btn">{{ ($card['button_text'] ?? null) ?: translate('discover') }}</a>
                     @endif
                 </div>
             </div>

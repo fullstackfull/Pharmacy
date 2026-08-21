@@ -17,9 +17,9 @@
     <div class="ml-mosaic" style="grid-template-columns:repeat({{ $columns }},1fr);gap:{{ $gap }}px">
         @foreach ($cards as $card)
             <a class="ml-tile ml-reveal" data-delay="{{ $loop->index % 6 }}"
-               href="{{ $card['link'] ?: 'javascript:void(0)' }}"
+               href="{{ ($card['link'] ?? null) ?: 'javascript:void(0)' }}"
                style="{{ $aspect !== 'auto' ? 'aspect-ratio:' . $aspect . ';' : '' }}">
-                <img src="{{ $card['image'] ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
+                <img src="{{ ($card['image'] ?? null) ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
                 @if (!empty($card['badge']))<span class="ml-tile__badge">{{ $card['badge'] }}</span>@endif
                 @if ($showText && (!empty($card['title']) || !empty($card['subtitle'])))
                     <span class="ml-tile__scrim"></span>

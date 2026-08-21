@@ -109,6 +109,12 @@ class SectionDataResolver
             'button_text' => $banner->button_text,
             'background'  => $banner->background_color,
             'badge'       => null,
+            // Keys the slide-shaped renderers read; a dashboard banner has no per-slide styling,
+            // so these carry the renderer defaults instead of being absent and fataling the view.
+            'eyebrow'     => null,
+            'text_color'  => null,
+            'align'       => 'start',
+            'overlay'     => null,
             // A grid banner already carries how wide it wants to sit; a mosaic honours it so the
             // arrangement is the same whether the banners render in their built-in slot or here.
             'span'        => ($banner->layout ?? 'full') === 'full' ? 'wide' : 'small',

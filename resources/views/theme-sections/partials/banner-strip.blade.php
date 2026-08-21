@@ -18,7 +18,7 @@
             @if (!empty($card['title']))<h3>{{ $card['title'] }}</h3>@endif
             @if (!empty($card['subtitle']))<p>{{ $card['subtitle'] }}</p>@endif
             @if (!empty($card['link']))
-                <a href="{{ $card['link'] }}" class="ml-btn ml-btn-light">{{ $card['button_text'] ?: translate('shop_now') }}</a>
+                <a href="{{ $card['link'] }}" class="ml-btn ml-btn-light">{{ ($card['button_text'] ?? null) ?: translate('shop_now') }}</a>
             @endif
         </div>
     </div>

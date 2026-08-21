@@ -14,8 +14,8 @@
                 $overlay = max(0, min(90, (int) ($card['overlay'] ?? 30))) / 100;
             @endphp
             <a class="ml-tile ml-tile--{{ $span }} ml-reveal" data-delay="{{ $loop->index % 6 }}"
-               href="{{ $card['link'] ?: 'javascript:void(0)' }}"
-               style="color:{{ $card['text_color'] ?: '#ffffff' }}">
+               href="{{ ($card['link'] ?? null) ?: 'javascript:void(0)' }}"
+               style="color:{{ ($card['text_color'] ?? null) ?: '#ffffff' }}">
                 <img src="{{ $card['image'] ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
                 <span class="ml-tile__scrim" style="background:linear-gradient(180deg,rgba(0,0,0,{{ $overlay / 3 }}),rgba(0,0,0,{{ $overlay }}))"></span>
                 <span class="ml-tile__body">
