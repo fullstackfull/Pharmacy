@@ -36,10 +36,15 @@
             <nav class="category-header__subs" aria-label="{{ translate('sub_categories') }}">
                 @foreach ($categorySubCategories as $subCategory)
                     <a class="category-header__sub" href="{{ route('category-products', ['slug' => $subCategory['slug']]) }}">
-                        <span class="category-header__sub-img">
-                            <img loading="lazy"
-                                 src="{{ getStorageImages(path: $subCategory->icon_full_url, type: 'category') }}"
-                                 alt="{{ $subCategory['name'] }}">
+                        {{-- Sub-categories often carry no artwork of their own; a row of identical
+                             grey placeholders reads as broken, so those show a letter chip. --}}
+                        @php($subCategoryIcon = category_icon_url($subCategory))
+                        <span class="category-header__sub-img {{ $subCategoryIcon ? '' : 'is-letter' }}">
+                            @if ($subCategoryIcon)
+                                <img loading="lazy" src="{{ $subCategoryIcon }}" alt="{{ $subCategory['name'] }}">
+                            @else
+                                <span aria-hidden="true">{{ mb_substr(trim((string) $subCategory['name']), 0, 1) }}</span>
+                            @endif
                         </span>
                         <span class="category-header__sub-name">{{ $subCategory['name'] }}</span>
                     </a>

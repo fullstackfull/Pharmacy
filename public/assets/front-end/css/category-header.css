@@ -268,3 +268,18 @@
         flex-wrap: nowrap;
     }
 }
+
+/* A sub-category with no artwork of its own gets a letter chip rather than a grey
+   placeholder: a row of identical placeholders reads as "the icons are broken". */
+.category-header__sub-img.is-letter {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(140deg, var(--web-primary, #673ab7), var(--web-secondary, #26abf2));
+}
+
+.category-header__sub-img.is-letter span {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
