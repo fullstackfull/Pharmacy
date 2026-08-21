@@ -247,7 +247,7 @@
                                         <a href="{{ route('products', ['category_id' => $cat->id]) }}" class="ml-cat">
                                             <span class="ml-cat-ring">
                                                 @if ($cat->icon)
-                                                    <img src="{{ getStorageImages(path: $cat->icon, type: 'category') }}" alt="{{ $cat->name }}" loading="lazy">
+                                                    <img src="{{ getStorageImages(path: $cat->icon_full_url, type: 'category') }}" alt="{{ $cat->name }}" loading="lazy">
                                                 @endif
                                             </span>
                                             <span class="ml-name ml-cat-name">{{ $cat->name }}</span>
@@ -272,7 +272,7 @@
                                     <div class="col-6 col-md-{{ max(2, (int) floor(12 / $cols)) }} ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                         <a href="{{ route('product', $product->slug) }}" class="ml-card">
                                             <span class="ml-thumb">
-                                                <img src="{{ getStorageImages(path: $product->thumbnail, type: 'product') }}" alt="{{ $product->name }}" loading="lazy">
+                                                <img src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}" alt="{{ $product->name }}" loading="lazy">
                                             </span>
                                             <span class="ml-name text-truncate">{{ $product->name }}</span>
                                             <span class="ml-price">{{ webCurrencyConverter(amount: $product->unit_price) }}</span>
@@ -301,7 +301,7 @@
                                     <div class="ml-marquee__track">
                                         @foreach ($brands->concat($brands) as $brand)
                                             <a href="{{ route('products', ['brand_id' => $brand->id]) }}" class="ml-brand" aria-hidden="{{ $loop->index >= $brands->count() ? 'true' : 'false' }}">
-                                                <img src="{{ getStorageImages(path: $brand->image, type: 'brand') }}" alt="{{ $brand->name }}" loading="lazy">
+                                                <img src="{{ getStorageImages(path: $brand->image_full_url, type: 'brand') }}" alt="{{ $brand->name }}" loading="lazy">
                                             </a>
                                         @endforeach
                                     </div>
@@ -311,7 +311,7 @@
                                     @foreach ($brands as $brand)
                                         <div class="col-4 col-md-2 text-center ml-brand ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                             <a href="{{ route('products', ['brand_id' => $brand->id]) }}">
-                                                <img src="{{ getStorageImages(path: $brand->image, type: 'brand') }}" alt="{{ $brand->name }}" loading="lazy">
+                                                <img src="{{ getStorageImages(path: $brand->image_full_url, type: 'brand') }}" alt="{{ $brand->name }}" loading="lazy">
                                             </a>
                                         </div>
                                     @endforeach
