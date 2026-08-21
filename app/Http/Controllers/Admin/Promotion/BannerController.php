@@ -117,6 +117,12 @@ class BannerController extends BaseController
         $categoryNames = \App\Models\Category::pluck('name', 'id');
         $brandNames = \App\Models\Brand::pluck('name', 'id');
 
+        // A published composed home replaces the built-in page, so its banner slots stand down
+        // unless a "banners from dashboard" section covers the type — flag the ones that dropped.
+        $renderer = app(\App\Services\Theme\StorefrontThemeRenderer::class);
+        $themedHomeLive = $renderer->sectionsFor('home') !== null;
+        $homeSlotTypes = ['Main Banner', 'Main Section Banner', 'Home Promo Banner', 'Category Section Banner'];
+
         $groups = [];
         foreach ($banners->groupBy('banner_type') as $type => $rows) {
             $definition = $definitions[$type];
@@ -125,6 +131,9 @@ class BannerController extends BaseController
                 'label' => $definition['label'],
                 'where' => $definition['where'],
                 'shape' => $definition['shape'],
+                'dropped_by_theme' => $themedHomeLive
+                    && in_array($type, $homeSlotTypes, true)
+                    && !$renderer->pageSectionsRenderBannerType(page: 'home', bannerType: $type),
                 'cards' => $rows->map(function ($banner) use ($categoryNames, $brandNames) {
                     $place = null;
                     if ($banner->resource_type === 'category' && $banner->resource_id) {

@@ -69,6 +69,11 @@
         .tb-stage[data-device="tablet"] { max-width: 834px; }
         .tb-stage[data-device="mobile"] { max-width: 414px; }
         .tb-frame { width: 100%; height: 100%; min-height: 480px; border: 0; display: block; background: #fff; }
+        .tb-gap-note { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin: 0; padding: .65rem 1rem; background: #fff8e6; border-block-end: 1px solid #f1e3b8; color: #7a5b00; font-size: .82rem; }
+        .tb-gap-note i { font-size: 1rem; }
+        .tb-gap-note__body { display: flex; flex-direction: column; gap: .1rem; }
+        .tb-gap-note__actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-inline-start: auto; }
+        .tb-gap-note__actions .k-btn { padding-block: .3rem; font-size: .78rem; }
         .tb-loader { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
             gap: .5rem; background: rgba(14,17,22,.55); color: #e8eaed; font-size: .8rem; transition: opacity .25s; }
         .tb-loader.is-hidden { opacity: 0; pointer-events: none; }
@@ -225,6 +230,26 @@
                     <a href="{{ route('admin.theme.index') }}" class="tb-icon-btn tb-icon-btn--primary">{{ translate('publish') }}</a>
                 </div>
             </header>
+
+            @if (!empty($bannerGaps) && $editable)
+                <div class="tb-gap-note" id="tb-gap-note">
+                    <i class="fi fi-rr-triangle-warning"></i>
+                    <div class="tb-gap-note__body">
+                        <strong>{{ translate('some_of_your_published_banners_will_not_show_on_this_composed_home_page') }}</strong>
+                        <span>{{ translate('a_composed_home_replaces_the_built_in_page_add_a_banners_from_dashboard_section_for_each_type_you_still_want') }}</span>
+                    </div>
+                    <div class="tb-gap-note__actions">
+                        @foreach ($bannerGaps as $gap)
+                            <button type="button" class="k-btn k-btn--secondary tb-gap-add"
+                                    data-banner-type="{{ $gap['type'] }}"
+                                    data-layout="{{ $gap['type'] === 'Main Banner' ? 'carousel' : 'grid' }}">
+                                <i class="fi fi-rr-plus"></i>
+                                {{ $gap['label'] }} ({{ $gap['count'] }})
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             <div class="tb-body">
                 {{-- LEFT: page structure --}}
@@ -507,6 +532,34 @@
                 frame.addEventListener('load', decorateFrame);
                 setTimeout(function () { if (loader) loader.classList.add('is-hidden'); }, 6000);
             }
+
+            document.querySelectorAll('.tb-gap-add').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    button.disabled = true;
+                    post(root.dataset.urlAdd, {version_id: versionId, page: page, type: 'store_banner'})
+                        .then(function (added) {
+                            var list = (added.body && added.body.section) || [];
+                            var created = list[list.length - 1];
+                            if (!created) throw new Error('add failed');
+                            return post(root.dataset.urlUpdate, {
+                                section_id: created.id,
+                                settings: Object.assign({}, created.settings, {
+                                    banner_type: button.dataset.bannerType,
+                                    layout: button.dataset.layout
+                                })
+                            }).then(function () {
+                                // Main Banner belongs at the very top; other slots keep their appended spot.
+                                if (button.dataset.bannerType !== 'Main Banner') return null;
+                                var ids = [created.id].concat(list
+                                    .filter(function (x) { return x.id !== created.id; })
+                                    .map(function (x) { return x.id; }));
+                                return post(root.dataset.urlReorder, {version_id: versionId, page: page, order: ids});
+                            });
+                        })
+                        .then(function () { window.location.reload(); })
+                        .catch(function () { button.disabled = false; });
+                });
+            });
 
             var refreshButton = document.getElementById('tb-refresh');
             if (refreshButton) refreshButton.addEventListener('click', refreshPreview);

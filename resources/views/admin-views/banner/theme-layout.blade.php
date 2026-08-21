@@ -154,6 +154,16 @@
                 <div class="tl-head">
                     <h5>{{ $group['label'] }}</h5>
                     <span class="badge badge-soft-info">{{ $group['where'] }}</span>
+                    @if (!empty($group['dropped_by_theme']))
+                        <span class="badge badge-soft-danger">
+                            {{ translate('hidden_by_the_composed_home_page') }}
+                        </span>
+                        @if (Route::has('admin.theme.builder.index'))
+                            <a class="fs-12" href="{{ route('admin.theme.builder.index', ['page' => 'home']) }}">
+                                {{ translate('add_its_section_in_the_builder') }}
+                            </a>
+                        @endif
+                    @endif
                 </div>
                 <div class="tl-body">
                     <div class="{{ $group['shape'] === 'hero' ? 'tl-hero' : ($group['shape'] === 'grid' ? 'tl-grid' : 'tl-strip-stack') }}"
