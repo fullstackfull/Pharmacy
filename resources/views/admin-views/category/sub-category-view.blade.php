@@ -68,9 +68,6 @@
                                 <thead>
                                 <tr>
                                     <th>{{ translate('SL') }}</th>
-                                    @if (theme_root_path() == 'theme_aster')
-                                        <th>{{ translate('sub_category_Image') }}</th>
-                                    @endif
                                     <th>{{ translate('Sub_Category_Name') }}</th>
                                     <th>{{ translate('Main_Category_Name') }}</th>
                                     <th class="text-center">{{ translate('priority') }}</th>
@@ -81,15 +78,6 @@
                                 @foreach($categories as $key => $category)
                                     <tr>
                                         <td>{{ $categories->firstItem() + $key }}</td>
-                                        @if (theme_root_path() == 'theme_aster')
-                                            <td class="text-center">
-                                                <div
-                                                    class="avatar-60 d-flex align-items-center rounded overflow-hidden">
-                                                    <img class="w-100 h-100 object-fit-cover" alt=""
-                                                         src="{{ getStorageImages(path: $category->icon_full_url , type: 'backend-basic') }}">
-                                                </div>
-                                            </td>
-                                        @endif
                                         <td>
                                             <h6 class="fs-14">{{ $category['defaultname'] }}</h6>
                                             <span class="fs-12">{{ translate('ID') }}  #{{ $category['id'] }}</span>

@@ -109,10 +109,6 @@ class ConfigController extends Controller
         ];
 
         $themeComfortablePanelVersion = '';
-        if (is_file(base_path('resources/themes/' . theme_root_path() . '/public/addon/theme_routes.php'))) {
-            $themeRoutes = include(base_path('resources/themes/' . theme_root_path() . '/public/addon/theme_routes.php'));
-            $themeComfortablePanelVersion = $themeRoutes['comfortable_panel_version'] ?? '';
-        }
 
         $systemTax = null;
         if (getCheckAddonPublishedStatus(moduleName: 'TaxModule')) {

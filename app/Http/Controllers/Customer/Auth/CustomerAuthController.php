@@ -40,14 +40,11 @@ class CustomerAuthController extends Controller
 
     public function loginView(): View|RedirectResponse
     {
-        if (theme_root_path() == 'default') {
-            $this->customerAuthService->storeCustomerAuthReturnURL();
-            $keepCustomerLoginRedirectUrl = session('keep_customer_login_redirect_url');
-            return view('web-views.customer-views.auth.login', [
-                'keepCustomerLoginRedirectUrl' => $keepCustomerLoginRedirectUrl,
-            ]);
-        }
-        return redirect($this->customerAuthService->getCustomerAuthReturnURL());
+        $this->customerAuthService->storeCustomerAuthReturnURL();
+        $keepCustomerLoginRedirectUrl = session('keep_customer_login_redirect_url');
+        return view('web-views.customer-views.auth.login', [
+            'keepCustomerLoginRedirectUrl' => $keepCustomerLoginRedirectUrl,
+        ]);
     }
 
     public function loginSubmit(Request $request): JsonResponse|RedirectResponse

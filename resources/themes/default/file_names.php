@@ -3,7 +3,6 @@
 return [
     'home' => 'web-views.home',
     'product_search_result' => 'web-views.partials._search-result',
-    'user_profile' => '',
     'account_address_add' => '',
     'account_address_edit' => 'web-views.users-profile.account-address-edit',
     'account_orders' => 'web-views.users-profile.account-orders',

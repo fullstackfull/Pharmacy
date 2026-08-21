@@ -30,7 +30,6 @@ use App\Http\Controllers\Admin\EmailTemplatesController;
 use App\Http\Controllers\Admin\Product\ReviewController;
 use App\Http\Controllers\Admin\Settings\AddonController;
 use App\Http\Controllers\Admin\Settings\PagesController;
-use App\Http\Controllers\Admin\Settings\ThemeController;
 use App\Http\Controllers\Admin\Product\ProductController;
 use App\Http\Controllers\Admin\ThirdParty\MailController;
 use App\Http\Controllers\Admin\Product\CategoryController;
@@ -1002,16 +1001,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     Route::group(['prefix' => 'system-setup', 'as' => 'system-setup.'], function () {
 
         Route::group(['middleware' => ['module:themes_and_addons']], function () {
-            Route::group(['prefix' => 'theme', 'as' => 'theme.'], function () {
-                Route::controller(ThemeController::class)->group(function () {
-                    Route::get('setup', 'index')->name('setup');
-                    Route::post('install', 'upload')->name('install');
-                    Route::post('activation', 'activation')->name('activation');
-                    Route::post('publish', 'publish')->name('publish');
-                    Route::post('delete', 'delete')->name('delete');
-                    Route::post('notify-all-the-vendors', 'notifyAllTheVendors')->name('notify-all-the-vendors');
-                });
-            });
+            // The legacy theme installer (zip upload + licence check + WEB_THEME switching) is
+            // retired: the storefront runs one built-in theme, managed under admin/theme.
+            // The old bookmark keeps working via this redirect.
+            Route::redirect('theme/setup', '/admin/theme')->name('theme.setup');
 
             Route::group(['prefix' => 'addon', 'as' => 'addon.'], function () {
                 Route::controller(AddonController::class)->group(function () {
@@ -1357,8 +1350,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     /*
-     * Theme System management (Phase 1.1). Distinct from the legacy theme installer at
-     * admin.system-setup.theme.* — this manages themes, versions (draft/publish) and activation.
+     * Theme Management — the single admin surface for the storefront's look: themes, versions
+     * (draft/publish/restore), the section builder, and the colour/typography settings.
      */
     Route::group(['prefix' => 'theme', 'as' => 'theme.', 'middleware' => ['module:themes_and_addons']], function () {
         Route::controller(ThemeManagementController::class)->group(function () {

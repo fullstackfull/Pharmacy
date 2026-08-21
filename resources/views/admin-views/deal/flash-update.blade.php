@@ -115,7 +115,7 @@
                         <div class="col-lg-4">
                             <div class="p-12 p-sm-20 bg-section rounded h-100">
                                 <div class="d-flex justify-content-center align-items-center bg-section rounded-8 p-20 w-100 h-100
-                                    {{ theme_root_path() == 'theme_aster' ? 'aster-flash-deal-disable-overlay' : '' }}">
+                                    ">
                                     <div class="flash-deal-disable-overlay">
                                         {{ translate('Please_active_Default_Theme_to_use_flash_deals_banner.') }}
                                     </div>

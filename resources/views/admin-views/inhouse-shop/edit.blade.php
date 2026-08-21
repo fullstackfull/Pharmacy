@@ -95,16 +95,6 @@
                                 <div class="col-lg-6">
                                     @include('admin-views.inhouse-shop.partials._shop_cover')
                                 </div>
-                                @if (theme_root_path() == 'theme_aster')
-                                <div class="col-12">
-                                    @include('admin-views.inhouse-shop.partials._bottom_banner')
-                                </div>
-                                @endif
-                                <div class="col-12">
-                                    @if (theme_root_path() == 'theme_fashion')
-                                        @include('admin-views.inhouse-shop.partials._offer_banner')
-                                    @endif
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,9 @@
 # Theme System (Phase 1.1 → 1.2)
 
+> **Superseded (2026-08):** the storefront now runs a single built-in theme and this system is the
+> ONLY theme surface — the legacy installer/`WEB_THEME` mechanism described below was removed.
+> Current reference: [`docs/theme-guide.md`](../theme-guide.md).
+
 Status: **data foundation built and tested.** Admin management + storefront consumption + the visual
 builder are the next slices.
 

@@ -3511,4 +3511,9 @@ ____________________________________________________on_search_engines_and_see_th
 	"the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes" => "The store is under a short maintenance break and will be back within minutes.",
 	"curated_for_you" => "Curated for you",
 	"discover" => "Discover",
+	"this_is_the_only_theme_surface" => "This is the only theme surface",
+	"everything_about_the_storefront_look_lives_here_the_active_theme_its_versions_the_section_builder_and_the_colour_and_typography_settings" => "Everything about the storefront look lives here: the active theme, its versions, the section builder, and the colour and typography settings.",
+	"images_uploaded_from_any_image_field_appear_here" => "Images uploaded from any image field appear here",
+	"minimal_luxury_beauty" => "Minimal luxury beauty",
+	"choose_an_image" => "Choose an image",
 ];

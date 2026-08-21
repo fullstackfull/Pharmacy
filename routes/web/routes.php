@@ -231,7 +231,7 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
     });
 
     Route::controller(UserProfileController::class)->group(function () {
-        Route::get('user-profile', 'user_profile')->name('user-profile')->middleware('customer'); //theme_aster
+        Route::redirect('user-profile', '/user-account')->name('user-profile');
         Route::get('user-account', 'user_account')->name('user-account')->middleware('customer');
         Route::post('user-account-update', 'getUserProfileUpdate')->name('user-update')->middleware('customer');
         Route::get('account-address-add', 'account_address_add')->name('account-address-add');

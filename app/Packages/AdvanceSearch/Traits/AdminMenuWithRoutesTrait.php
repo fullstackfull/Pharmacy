@@ -1020,12 +1020,12 @@ trait  AdminMenuWithRoutesTrait
                 "page_title_value" => 'Other_Configuration',
             ],
             [
-                "page_title" => 'Theme_Setup',
-                "uri" => 'admin/system-setup/theme/setup',
-                "key" => 'ZGJzZWFyY2hhZG1pbi9zeXN0ZW0tc2V0dXAvdGhlbWUvc2V0dXA=',
-                "uri_count" => '4',
+                "page_title" => 'Theme_Management',
+                "uri" => 'admin/theme',
+                "key" => 'ZGJzZWFyY2hhZG1pbi90aGVtZQ==',
+                "uri_count" => '2',
                 "method" => 'GET',
-                "keywords" => 'Theme Setup',
+                "keywords" => 'Theme Setup, Theme Management, Theme Builder',
                 "type" => 'menu',
                 "module" => 'themes_and_addons',
                 "priority" => '1',
@@ -1102,38 +1102,6 @@ trait  AdminMenuWithRoutesTrait
                 "page_title_value" => 'Vendor Vat Report',
             ]
         ];
-
-        if (theme_root_path() == 'theme_aster') {
-            $asterThemeRoutes = [
-                [
-                    "page_title" => 'Promotional_banners',
-                    "uri" => 'admin/banner/list',
-                    "key" => "YWRtaW4vYmFubmVyL2xpc3Q=",
-                    "uri_count" => '2',
-                    "method" => 'GET',
-                    "keywords" => 'Promotional banners, Promotional',
-                    "type" => 'menu',
-                    "module" => 'aster_menu',
-                    "priority" => '1',
-                    "page_title_value" => 'Promotional_banners',
-                ],
-                [
-                    "page_title" => 'In_house_store_banner',
-                    "uri" => 'admin/business-settings/inhouse-shop?action=edit',
-                    "key" => 'YWRtaW4vYnVzaW5lc3Mtc2V0dGluZ3MvaW5ob3VzZS1zaG9wP2FjdGlvbj1lZGl0',
-                    "uri_count" => '2',
-                    "method" => 'GET',
-                    "keywords" => 'in house store banner , store banner',
-                    "type" => 'menu',
-                    "module" => 'aster_menu',
-                    "priority" => '1',
-                    "page_title_value" => 'Promotional_banners',
-                ],
-            ];
-            if (!empty($asterThemeRoutes)) {
-                $result = array_merge($result, $asterThemeRoutes);
-            }
-        }
 
         $result = array_merge($result, $this->getAuctionAdminMenuRoutes());
 

@@ -32,9 +32,6 @@ class SubCategoryAddRequest extends FormRequest
             'priority' => 'required',
             'parent_id' => 'required'
         ];
-        if (theme_root_path() == 'theme_aster' && $this['position'] == 1) {
-            $rules['image'] = 'required|mimes:jpeg,jpg,png,gif|max:'. getFileUploadMaxSize(unit: 'kb');
-        }
         return $rules;
     }
 

@@ -140,42 +140,6 @@
                                                    placeholder="{{ translate('enter_url') }}" value="{{ $banner['url'] }}">
                                         </div>
 
-                                        @if(theme_root_path() == 'theme_fashion')
-                                            <div
-                                                class="form-group mt-4 input-field-for-main-banner {{ $banner['banner_type'] !='Main Banner'?'d-none':''}}">
-                                                <label for="title"
-                                                    class="form-label">{{ translate('Title') }}</label>
-                                                <input type="text" name="title" class="form-control" id="title"
-                                                    placeholder="{{ translate('Enter_banner_title') }}"
-                                                    value="{{ $banner['title'] }}">
-                                            </div>
-                                            <div
-                                                class="form-group mb-0 input-field-for-main-banner {{ $banner['banner_type'] !='Main Banner'?'d-none':''}}">
-                                                <label for="sub_title" class="form-label">
-                                                    {{ translate('Sub_Title') }}
-                                                </label>
-                                                <input type="text" name="sub_title" class="form-control"
-                                                    id="sub_title"
-                                                    placeholder="{{ translate('Enter_banner_sub_title') }}"
-                                                    value="{{ $banner['sub_title'] }}">
-                                            </div>
-                                            <div
-                                                class="form-group mt-4 input-field-for-main-banner {{ $banner['banner_type'] !='Main Banner'?'d-none':''}}">
-                                                <label for="button_text"
-                                                       class="form-label">{{ translate('Button_Text') }}</label>
-                                                <input type="text" name="button_text" class="form-control" id="button_text"
-                                                       placeholder="{{ translate('Enter_button_text') }}"
-                                                       value="{{ $banner['button_text'] }}">
-                                            </div>
-                                            <div
-                                                class="form-group mt-4 mb-0 input-field-for-main-banner {{ $banner['banner_type'] !='Main Banner'?'d-none':''}}">
-                                                <label for="background_color"
-                                                       class="form-label">{{ translate('background_color') }}</label>
-                                                <input type="color" name="background_color"
-                                                       class="form-control h-80px px-2 py-2"
-                                                       id="background_color" value="{{ $banner['background_color'] }}">
-                                            </div>
-                                        @endif
                                     </div>
                                 </div>
                                 <div class="col-md-6 d-flex flex-column justify-content-center">

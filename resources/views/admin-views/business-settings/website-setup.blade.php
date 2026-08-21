@@ -319,19 +319,6 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            @if(theme_root_path() == 'theme_aster')
-                                                <div class="col-lg-3">
-                                                    <div class="form-group">
-                                                        <label class="form-label text-capitalize" for="">
-                                                            {{ translate('primary_light_color') }}
-                                                        </label>
-                                                        <div class="d-flex align-items-center gap-10 bg-white border rounded py-2 px-10">
-                                                            <input type="color" name="primary_light" value="{{ $businessSetting['primary_color_light'] }}" class="form-control form-control_color color-code-preview">
-                                                            <span class="fs-14 fw-medium text-dark color-code color-code-selection">#073B74</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
                                         </div>
                                     </div>
                                 </div>

@@ -36,68 +36,22 @@ if (!function_exists('getStorageImages')) {
             'backend-profile' => 'back-end/img/placeholder/user.png',
             'backend-payment' => 'back-end/img/placeholder/placeholder-4-1.png',
             'backend-placeholder' => 'back-end/img/placeholder/placeholder-8-1.png',
-            'product' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-1-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-1-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'avatar' => [
-                'theme_aster' => 'assets/img/placeholder/user.png',
-                'theme_fashion' => 'assets/img/placeholder/user.png',
-                'default' => 'public/assets/front-end/img/placeholder/user.png',
-            ],
-            'banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-2-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-2-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-2-1.png',
-            ],
-            'wide-banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
-            ],
-            'brand' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-1-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-2-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'category' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-1-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-1-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'logo' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
-            ],
-            'shop' => [
-                'theme_aster' => 'assets/img/placeholder/shop.png',
-                'theme_fashion' => 'assets/img/placeholder/shop.png',
-                'default' => 'public/assets/front-end/img/placeholder/shop.png',
-            ],
-            'shop-banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/seller-banner.png',
-            ],
-            'business-page' => [
-                'theme_aster' => 'assets/img/placeholder/business-page.png',
-                'theme_fashion' => 'assets/img/placeholder/business-page.png',
-                'default' => 'public/assets/front-end/img/placeholder/business-page.png',
-            ],
+            'product' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'avatar' => 'public/assets/front-end/img/placeholder/user.png',
+            'banner' => 'public/assets/front-end/img/placeholder/placeholder-2-1.png',
+            'wide-banner' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
+            'brand' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'category' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'logo' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
+            'shop' => 'public/assets/front-end/img/placeholder/shop.png',
+            'shop-banner' => 'public/assets/front-end/img/placeholder/seller-banner.png',
+            'business-page' => 'public/assets/front-end/img/placeholder/business-page.png',
         ];
         if (isset($placeholderMap[$type])) {
-            if (is_array($placeholderMap[$type])) {
-                $theme = theme_root_path();
-                $placeholderPath = theme_asset(path: $placeholderMap[$type][$theme]);
-                if ($theme == 'default') {
-                    $placeholderPath = theme_asset(path: $placeholderMap[$type][$theme]);
-                }
-                return (!empty($path) && $path['status'] == 200) ? $path['path'] : $placeholderPath;
-            } else {
-                return (!empty($path) && isset($path['status']) && $path['status'] == 200) ? $path['path'] : dynamicAsset(path: 'public/assets/' . $placeholderMap[$type]);
-            }
+            $placeholderPath = str_starts_with($placeholderMap[$type], 'public/')
+                ? theme_asset(path: $placeholderMap[$type])
+                : dynamicAsset(path: 'public/assets/' . $placeholderMap[$type]);
+            return (!empty($path) && isset($path['status']) && $path['status'] == 200) ? $path['path'] : $placeholderPath;
         }
 
         return (!empty($path) && $path['status'] == 200) ? $path['path'] : dynamicStorage(path: 'public/assets/front-end/img/placeholder/placeholder-2-1.png');
@@ -163,65 +117,23 @@ if (!function_exists('getValidImage')) {
             'backend-product' => 'back-end/img/placeholder/product.png',
             'backend-profile' => 'back-end/img/placeholder/user.png',
             'backend-payment' => 'back-end/img/placeholder/placeholder-4-1.png',
-            'product' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-1-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-1-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'avatar' => [
-                'theme_aster' => 'assets/img/placeholder/user.png',
-                'theme_fashion' => 'assets/img/placeholder/user.png',
-                'default' => 'public/assets/front-end/img/placeholder/user.png',
-            ],
-            'banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-2-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-2-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-2-1.png',
-            ],
-            'wide-banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
-            ],
-            'brand' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-2-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-2-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'category' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-1-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-1-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
-            ],
-            'logo' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
-            ],
-            'shop' => [
-                'theme_aster' => 'assets/img/placeholder/shop.png',
-                'theme_fashion' => 'assets/img/placeholder/shop.png',
-                'default' => 'public/assets/front-end/img/placeholder/shop.png',
-            ],
-            'shop-banner' => [
-                'theme_aster' => 'assets/img/placeholder/placeholder-4-1.png',
-                'theme_fashion' => 'assets/img/placeholder/placeholder-4-1.png',
-                'default' => 'public/assets/front-end/img/placeholder/seller-banner.png',
-            ],
+            'product' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'avatar' => 'public/assets/front-end/img/placeholder/user.png',
+            'banner' => 'public/assets/front-end/img/placeholder/placeholder-2-1.png',
+            'wide-banner' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
+            'brand' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'category' => 'public/assets/front-end/img/placeholder/placeholder-1-1.png',
+            'logo' => 'public/assets/front-end/img/placeholder/placeholder-4-1.png',
+            'shop' => 'public/assets/front-end/img/placeholder/shop.png',
+            'shop-banner' => 'public/assets/front-end/img/placeholder/seller-banner.png',
         ];
 
         if (isset($placeholderMap[$type])) {
-            if (is_array($placeholderMap[$type])) {
-                $theme = theme_root_path();
-                $placeholderPath = theme_asset(path: $placeholderMap[$type][$theme]);
-                if ($theme == 'default') {
-                    $placeholderPath = theme_asset(path: $placeholderMap[$type][$theme]);
-                }
+            $placeholderPath = str_starts_with($placeholderMap[$type], 'public/')
+                ? theme_asset(path: $placeholderMap[$type])
+                : dynamicAsset(path: 'public/assets/' . $placeholderMap[$type]);
 
-                return is_file($path) ? $givenPath : $placeholderPath;
-            } else {
-                return is_file($path) ? $givenPath : dynamicAsset(path: 'public/assets/' . $placeholderMap[$type]);
-            }
+            return is_file($path) ? $givenPath : $placeholderPath;
         }
 
         return is_file($path) ? $givenPath : dynamicStorage(path: 'public/assets/front-end/img/placeholder/placeholder-2-1.png');

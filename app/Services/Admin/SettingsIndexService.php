@@ -108,7 +108,6 @@ class SettingsIndexService
                     ['admin.theme.index', translate('Theme_Management'), translate('design_the_pages_of_the_installed_storefront'), 'theme design pages sections builder'],
                     ['admin.theme.builder.index', translate('Theme_Builder'), translate('arrange_the_sections_of_your_home_page'), 'builder sections drag banner'],
                     ['admin.theme.settings.index', translate('Theme_Settings'), translate('colours_typography_and_layout_tokens'), 'colours colors typography layout'],
-                    ['admin.system-setup.theme.setup', translate('Theme_Setup'), translate('install_a_different_storefront_template_entirely'), 'theme setup install available themes template'],
                 ],
             ],
             [

@@ -26,9 +26,7 @@
             @include('admin-views.business-settings.priority-setup.partial.category')
             @include('admin-views.business-settings.priority-setup.partial.vendor-list')
             @include('admin-views.business-settings.priority-setup.partial.featured-product')
-            @if (theme_root_path() == 'default')
-                @include('admin-views.business-settings.priority-setup.partial.new-arrival-product')
-            @endif
+            @include('admin-views.business-settings.priority-setup.partial.new-arrival-product')
             @include('admin-views.business-settings.priority-setup.partial.top-vendor')
             @include('admin-views.business-settings.priority-setup.partial.category-wise-product')
             @include('admin-views.business-settings.priority-setup.partial.top-rated-product')

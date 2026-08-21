@@ -225,7 +225,7 @@ class ForgotPasswordController extends Controller
     {
         $max_otp_hit = getWebConfig(name: 'maximum_otp_hit') ?? 5;
         $temp_block_time = getWebConfig(name: 'temporary_block_time') ?? 5; // minute
-        $id = theme_root_path() == 'default' ? session('forgot_password_identity') : $request['identity'];
+        $id = session('forgot_password_identity');
 
         $password_reset_token = PasswordReset::where(['token' => $request['otp'], 'user_type' => 'customer'])
             ->where('identity', 'like', "%{$id}%")

@@ -37,17 +37,9 @@ class MostDemandedController extends BaseController
 
     public function getListView(Request $request): View|RedirectResponse
     {
-        if (theme_root_path() != 'theme_fashion') {
-            return redirect('admin/dashboard');
-        }
-        $products = $this->productRepo->getListWhere(orderBy: ['name' => 'asc'], dataLimit: 'all');
-        $mostDemandedProducts = $this->mostDemandedRepo->getListWhere(
-            orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
-            relations: ['product'],
-            dataLimit: getWebConfig(name: 'pagination_limit'),
-        );
-        return view('admin-views.theme-features.most-demanded.view', compact('products', 'mostDemandedProducts'));
+        // Most Demanded management belonged to the retired fashion theme; the data still feeds the
+        // mobile API, but the admin screens stay off.
+        return redirect('admin/dashboard');
     }
 
     public function add(MostDemandedRequest $request, MostDemandedService $mostDemandedService): RedirectResponse
@@ -67,12 +59,7 @@ class MostDemandedController extends BaseController
 
     public function getUpdateView($id): View|RedirectResponse
     {
-        if (theme_root_path() != 'theme_fashion') {
-            return redirect('admin/dashboard');
-        }
-        $products = $this->productRepo->getListWhere(orderBy: ['name' => 'asc'], dataLimit: 'all');
-        $mostDemandedProduct = $this->mostDemandedRepo->getFirstWhere(params: ['id' => $id]);
-        return view('admin-views.theme-features.most-demanded.edit', compact('products', 'mostDemandedProduct'));
+        return redirect('admin/dashboard');
     }
 
     public function update(Request $request, $id, MostDemandedService $mostDemandedService): RedirectResponse

@@ -17,14 +17,12 @@
             </li>
         @endif
 
-        @if(theme_root_path() == 'default')
-            <li class="nav-item">
-                <a class="nav-link {{ Request::is('admin/pages-and-media/company-reliability') ? 'active':'' }}"
-                   href="{{route('admin.pages-and-media.company-reliability') }}">
-                    {{ translate('Our_Commitments') }}
-                </a>
-            </li>
-        @endif
+        <li class="nav-item">
+            <a class="nav-link {{ Request::is('admin/pages-and-media/company-reliability') ? 'active':'' }}"
+               href="{{route('admin.pages-and-media.company-reliability') }}">
+                {{ translate('Our_Commitments') }}
+            </a>
+        </li>
 
         @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
             <li class="nav-item">

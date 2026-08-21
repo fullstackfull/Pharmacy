@@ -761,4 +761,6 @@ return [
 	'the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes' => 'المتجر في استراحة صيانة قصيرة وسيعود خلال دقائق.',
 	'curated_for_you' => 'مختار لك بعناية',
 	'discover' => 'اكتشف',
+	'this_is_the_only_theme_surface' => 'هذه هي الواجهة الوحيدة لإدارة الثيم',
+	'everything_about_the_storefront_look_lives_here_the_active_theme_its_versions_the_section_builder_and_the_colour_and_typography_settings' => 'كل ما يخص مظهر المتجر موجود هنا: الثيم المفعّل ونسخه، ومحرر الأقسام، وإعدادات الألوان والخطوط.',
 ];

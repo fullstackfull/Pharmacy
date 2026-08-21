@@ -65,29 +65,10 @@ class AdvanceSearch
 
     public function getThemeWiseSkipRoutesList(): array
     {
-        if (theme_root_path() == 'default') {
-            return [
-                'admin/pages-and-media/features-section',
-                'admin/brand/add-new',
-            ];
-        }
-
-        if (theme_root_path() == 'theme_aster') {
-            return [
-                'admin/brand/add-new',
-                'admin/pages-and-media/company-reliability',
-            ];
-        }
-
-        if (theme_root_path() == 'theme_fashion') {
-            return [
-                'admin/brand/add-new',
-                'admin/pages-and-media/company-reliability',
-                'admin/pages-and-media/features-section',
-            ];
-        }
-
-        return [];
+        return [
+            'admin/pages-and-media/features-section',
+            'admin/brand/add-new',
+        ];
     }
     public function searchMenuList()
     {
