@@ -135,13 +135,6 @@ class CartController extends Controller
 
         $deliveryInfo = [];
         $stock_limit = getWebConfig(name: 'stock_limit');
-        if (theme_root_path() == 'theme_fashion') {
-            $deliveryInfo = ProductManager::get_products_delivery_charge($product, $requestQuantity);
-            if ($product['added_by'] != 'admin') {
-                $stock_limit = $product?->seller?->stock_limit ?? 0;
-                $stock_limit = $stock_limit <= 0 ? getWebConfig(name: 'stock_limit') : $stock_limit;
-            }
-        }
 
         if ($request->has('color')) {
             $color_name = Color::where(['code' => $request->color])->first()?->name ?? '';

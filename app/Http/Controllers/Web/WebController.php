@@ -111,11 +111,6 @@ class WebController extends Controller
 
     public function getAllCategoriesView(Request $request): View|RedirectResponse
     {
-        if (theme_root_path() == 'theme_fashion' || theme_root_path() == 'theme_aster') {
-            Toastr::warning(translate('Page_not_found'));
-            return back();
-        }
-
         $robotsMetaContentData = $this->robotsMetaContentRepo->getFirstWhere(params: ['page_name' => 'categories']);
         if (!$robotsMetaContentData) {
             $robotsMetaContentData = $this->robotsMetaContentRepo->getFirstWhere(params: ['page_name' => 'default']);
@@ -174,13 +169,7 @@ class WebController extends Controller
 
     function getPriorityWiseBrandProductsQuery($request, $query)
     {
-        if (theme_root_path() == 'theme_aster') {
-            $paginateLimit = 12;
-        } elseif (theme_root_path() == 'theme_fashion') {
-            $paginateLimit = 10;
-        } else {
-            $paginateLimit = 18;
-        }
+        $paginateLimit = 18;
         $brandProductSortBy = getWebConfig(name: 'brand_list_priority');
         $orderBy = $request->get('order_by', 'desc');
 
@@ -340,7 +329,7 @@ class WebController extends Controller
             && (!getWebConfig(name: 'guest_checkout') || !session()->has('guest_id') || !session('guest_id'))
         ) {
             Toastr::error(translate('please_login_your_account'));
-            return theme_root_path() == 'default' ? redirect('customer/auth/login') : redirect('/');
+            return redirect('customer/auth/login');
         }
         ProductManager::updateProductPriceInCartList(request: $request);
 
@@ -399,11 +388,7 @@ class WebController extends Controller
             || (getWebConfig(name: 'guest_checkout') && session()->has('guest_id') && session('guest_id')))
         ) {
             Toastr::warning(translate('please_login_your_account'));
-            if (theme_root_path() == 'default') {
-                return redirect('customer/auth/login');
-            } else {
-                return redirect('/');
-            }
+            return redirect('customer/auth/login');
         }
 
         $response = OrderManager::checkValidationForCheckoutPages($request);
@@ -883,42 +868,10 @@ class WebController extends Controller
             $topRatedShops = [];
             $newSellers = [];
             $currentDate = date('Y-m-d H:i:s');
-            if (theme_root_path() === "theme_fashion") {
-
-                $sellerList = $this->seller->approved()->with(['shop', 'product.reviews'])
-                    ->withCount(['product' => function ($query) {
-                        $query->active();
-                    }])->get();
-                $sellerList?->map(function ($seller) {
-                    $rating = 0;
-                    $count = 0;
-                    foreach ($seller->product as $item) {
-                        foreach ($item->reviews as $review) {
-                            $rating += $review->rating;
-                            $count++;
-                        }
-                    }
-                    $averageRating = $rating / ($count == 0 ? 1 : $count);
-                    $ratingCount = $count;
-                    $seller['average_rating'] = $averageRating;
-                    $seller['rating_count'] = $ratingCount;
-
-                    $productCount = $seller->product->count();
-                    $randomProduct = Arr::random($seller->product->toArray(), $productCount < 3 ? $productCount : 3);
-                    $seller['product'] = $randomProduct;
-                    return $seller;
-                });
-                $newSellers = $sellerList->sortByDesc('id')->take(12);
-                $topRatedShops = $sellerList->where('rating_count', '!=', 0)->sortByDesc('average_rating')->take(12);
-            }
             return view(VIEW_FILE_NAMES['cart_list'], compact('topRatedShops', 'newSellers', 'currentDate', 'request'));
         }
         Toastr::warning(translate('please_login_your_account'));
-        if (theme_root_path() == 'default') {
-            return redirect('customer/auth/login');
-        } else {
-            return redirect('/');
-        }
+        return redirect('customer/auth/login');
     }
 
     public function seller_shop_product(Request $request, $id): View|JsonResponse

@@ -100,7 +100,7 @@
                         <div class="col-lg-4">
                             <div class="p-12 p-sm-20 bg-section rounded h-100">
                                 <div class="d-flex justify-content-center align-items-center bg-section rounded-8 p-20 w-100 h-100
-                                    {{ theme_root_path() == 'theme_aster' ? 'aster-flash-deal-disable-overlay' : '' }}">
+                                    ">
                                     <div class="flash-deal-disable-overlay">
                                         {{ translate('Please_active_Default_Theme_to_use_flash_deals_banner.') }}
                                     </div>
@@ -116,7 +116,7 @@
                                             <input type="file" name="image" id="custom-file-upload"
                                                    class="upload-file__input single_file_input" data-required-msg="{{ translate('image_field_is_required') }}"
                                                    accept="{{ getFileUploadFormats(skip: '.svg') }}"  data-max-size="{{ getFileUploadMaxSize() }}"
-                                                   value="" {{ theme_root_path() == 'theme_aster' ? '' : 'required' }}>
+                                                   value="" required>
                                             <label class="upload-file__wrapper ratio-5-1">
                                                 <div class="upload-file-textbox text-center">
                                                     <img width="34" height="34" class="svg"

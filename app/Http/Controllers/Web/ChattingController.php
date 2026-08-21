@@ -288,7 +288,7 @@ class ChattingController extends BaseController
     private function getMessage($requestColumn, $requestId, $whereNotNull, $relation): Collection
     {
         $customerId = auth('customer')->id();
-        $orderBy = theme_root_path() == 'default' ? ['id' => 'DESC'] : ['id' => 'ASC'];
+        $orderBy = ['id' => 'DESC'];
         return $this->chattingRepo->getListWhereNotNull(
             orderBy: $orderBy,
             filters: ['user_id' => $customerId, $requestColumn => $requestId],

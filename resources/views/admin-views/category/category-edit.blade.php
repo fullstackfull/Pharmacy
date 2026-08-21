@@ -141,7 +141,7 @@
                                     </div>
                                 </div>
 
-                                @if ($category['parent_id'] == 0 || ($category['position'] == 1 && theme_root_path() == 'theme_aster'))
+                                @if ($category['parent_id'] == 0)
                                 <div class="col-lg-6 mt-4 mt-lg-0 from_part_2">
                                     <div
                                         class="d-flex justify-content-center align-items-center bg-section rounded-8 p-20 w-100 h-100">
@@ -199,7 +199,7 @@
                                     </div>
                                 </div>
                                 @endif
-                                @if ($category['position'] == 2 || ($category['position'] == 1 && theme_root_path() != 'theme_aster'))
+                                @if ($category['position'] == 2 || $category['position'] == 1)
                                     <div class="d-flex flex-wrap gap-3 justify-content-end mt-4">
                                         <button type="reset" id="reset" class="btn btn-secondary min-w-120">
                                             {{ translate('reset') }}
@@ -211,7 +211,7 @@
                                 @endif
                             </div>
 
-                            @if ($category['parent_id'] == 0 || ($category['position'] == 1 && theme_root_path() == 'theme_aster'))
+                            @if ($category['parent_id'] == 0)
                                 <div class="d-flex flex-wrap gap-3 justify-content-end mt-4">
                                     <button type="reset" id="reset"
                                         class="btn btn-secondary min-w-120">{{ translate('reset') }}</button>

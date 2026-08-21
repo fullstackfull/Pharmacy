@@ -304,16 +304,14 @@
                             <input type="hidden" name="id" value="{{ $reply['id'] }}">
                             <input type="hidden" name="adminId" value="1">
                             <div class="position-relative d-flex">
-                                @if (theme_root_path() == 'default')
-                                    <label
-                                        class="d-flex align-items-center m-0 position-absolute top-3 px-3 gap-2">
-                                        <img width="20" class="cursor-pointer" src="{{dynamicAsset('/public/assets/back-end/img/chatting-image-icon.svg')}}" alt="">
-                                        <input type="file" id="select-media" class="h-100 position-absolute w-100 "
-                                            hidden multiple accept="{{ getFileUploadFormats(skip: '.svg,.gif') }}">
-                                    </label>
-                                @endif
+                                <label
+                                    class="d-flex align-items-center m-0 position-absolute top-3 px-3 gap-2">
+                                    <img width="20" class="cursor-pointer" src="{{dynamicAsset('/public/assets/back-end/img/chatting-image-icon.svg')}}" alt="">
+                                    <input type="file" id="select-media" class="h-100 position-absolute w-100 "
+                                        hidden multiple accept="{{ getFileUploadFormats(skip: '.svg,.gif') }}">
+                                </label>
                                 <label class="w-0 flex-grow-1 uploaded-file-container">
-                                    <textarea class="form-control resize-none pt-3 radius-left-button border-0 {{ theme_root_path() == 'default' ? 'pl-60px' : '' }}" id="msgInputValue" name="replay" data-required-msg="{{ translate('type_something') }}"
+                                    <textarea class="form-control resize-none pt-3 radius-left-button border-0 pl-60px" id="msgInputValue" name="replay" data-required-msg="{{ translate('type_something') }}"
                                         type="text" data-maxlength="189" placeholder="{{ translate('Send_a_Message...') }}" required></textarea>
                                     <div class="d-flex justify-content-between items-container">
                                         <div class="overflow-x-auto pt-3 pb-2">

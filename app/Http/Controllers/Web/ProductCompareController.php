@@ -56,11 +56,6 @@ class ProductCompareController extends BaseController
             dataLimit: 'all'
         );
         $attributes = [];
-        if (theme_root_path() == 'theme_fashion') {
-            $attributes = $this->attributeRepo->getList(
-                orderBy: ['id' => 'desc'], dataLimit: 'all',
-            );
-        }
         CustomerManager::onlyUpdateCustomerCompareAndWishListSession(userId: auth('customer')->id());
 
         return view(VIEW_FILE_NAMES['account_compare_list'], compact('compareLists','attributes'));

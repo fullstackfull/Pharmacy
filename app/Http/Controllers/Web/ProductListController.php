@@ -47,10 +47,7 @@ class ProductListController extends Controller
             $pageTitle = Author::firstWhere('id', $request['author_id'])?->name .' '.translate('Products');
         }
 
-        return match (theme_root_path()) {
-            'default' => self::default_theme(request: $request, pageType: 'default', pageTitle: $pageTitle),
-            'theme_aster' => self::theme_aster(request: $request, pageType: 'default', pageTitle: $pageTitle),
-        };
+        return self::default_theme(request: $request, pageType: 'default', pageTitle: $pageTitle);
     }
 
     public function getBrandProductsView(Request $request, $slug)
@@ -193,10 +190,7 @@ class ProductListController extends Controller
 
     public function getProductsListPage(object|array $request, string $pageType = 'default', string $offerType = '', string $pageTitle = '', object|array|null $metaData = null, ?Brand $brand = null)
     {
-        return match (theme_root_path()) {
-            'default' => self::default_theme(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData, brand: $brand),
-            'theme_aster' => self::theme_aster(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData),
-        };
+        return self::default_theme(request: $request, pageType: $pageType, pageTitle: $pageTitle, metaData: $metaData, brand: $brand);
     }
 
     public function default_theme(object|array $request, string $pageType = 'default', string $pageTitle = '', object|array|null $metaData = null, ?Brand $brand = null): View|JsonResponse|Redirector|RedirectResponse
@@ -240,76 +234,6 @@ class ProductListController extends Controller
             'robotsMetaContentData' => $metaData,
             'categoryPageHeader' => $categoryPageHeader,
             'brandPageHeader' => $brandPageHeader,
-        ]);
-    }
-
-
-    public function theme_aster(object|array $request, string $pageType = 'default', string $pageTitle = '', object|array|null $metaData = null): View|JsonResponse|Redirector|RedirectResponse
-    {
-        if ($request->has('min_price') && $request['min_price'] != '' && $request->has('max_price') && $request['max_price'] != '' && $request['min_price'] > $request['max_price']) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => 0,
-                    'message' => translate('Minimum_price_should_be_less_than_or_equal_to_maximum_price.'),
-                ]);
-            }
-            Toastr::error(translate('Minimum_price_should_be_less_than_or_equal_to_maximum_price.'));
-            redirect()->back();
-        }
-
-        $categories = CategoryManager::getCategoriesWithCountingAndPriorityWiseSorting();
-        $activeBrands = BrandManager::getActiveBrandWithCountingAndPriorityWiseSorting();
-        $singlePageProductCount = 20;
-
-        $data = self::getProductListRequestData(request: $request);
-        $productListData = ProductManager::getProductListData(request: $request);
-        $ratings = self::getProductsRatingOneToFiveAsArray(productQuery: $productListData);
-        $products = $productListData->paginate(20)->appends($data);
-        $getProductIds = $products->pluck('id')->toArray();
-
-        $category = $request['category_ids'] ? Category::whereIn('id', $request['category_ids'])->get() : [];
-        $brands = $request['brand_ids'] ? Brand::whereIn('id', $request['brand_ids'])->get() : [];
-        $publishingHouse = $request['publishing_house_ids'] ? PublishingHouse::whereIn('id', $request['publishing_house_ids'])->select('id', 'name')->get() : [];
-        $productAuthors = $request['author_ids'] ? Author::whereIn('id', $request['author_ids'])->select('id', 'name')->get() : [];
-        $selectedRatings = $request['rating'] ?? [];
-
-        if ($request->ajax()) {
-            return response()->json([
-                'total_product' => $products->total(),
-                'html_products' => view(VIEW_FILE_NAMES['products__ajax_partials'], [
-                    'products' => $products,
-                    'product_ids' => $getProductIds,
-                    'singlePageProductCount' => $singlePageProductCount,
-                    'page' => $request['page'] ?? 1,
-                ])->render(),
-                'html_tags' => view('theme-views.product._selected_filter_tags', [
-                    'tags_category' => $category,
-                    'tags_brands' => $brands,
-                    'selectedRatings' => $selectedRatings,
-                    'publishingHouse' => $publishingHouse,
-                    'productAuthors' => $productAuthors,
-                    'sort_by' => $request['sort_by'],
-                ])->render(),
-            ], 200);
-        }
-
-        return view(VIEW_FILE_NAMES['products_view_page'], [
-            'pageTitleContent' => $pageTitle ?? translate('Products'),
-            'products' => $products,
-            'data' => $data,
-            'ratings' => $ratings,
-            'selectedRatings' => $selectedRatings,
-            'product_ids' => $getProductIds,
-            'activeBrands' => $activeBrands,
-            'categories' => $categories,
-            'singlePageProductCount' => $singlePageProductCount,
-            'page' => $request['page'] ?? 1,
-            'tags_category' => $category,
-            'tags_brands' => $brands,
-            'publishingHouse' => $publishingHouse,
-            'productAuthors' => $productAuthors,
-            'sort_by' => $request['sort_by'],
-            'robotsMetaContentData' => $metaData,
         ]);
     }
 

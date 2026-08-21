@@ -16,20 +16,11 @@
             </div>
         </div>
 
-        {{-- Two theme systems exist side by side and are constantly confused for each other, so the
-             difference is stated here rather than left for support to explain: "Theme Setup" installs
-             a whole storefront template (a folder of blades); this screen designs the pages OF the
-             installed template. A theme created here will never appear in the Available Themes list. --}}
         <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
             <span>
-                <strong>{{ translate('this_is_the_page_designer') }}.</strong>
-                {{ translate('themes_created_here_design_the_pages_of_the_installed_storefront_template_they_do_not_appear_under_theme_setup_available_themes_which_installs_a_different_storefront_template_altogether') }}
+                <strong>{{ translate('this_is_the_only_theme_surface') }}.</strong>
+                {{ translate('everything_about_the_storefront_look_lives_here_the_active_theme_its_versions_the_section_builder_and_the_colour_and_typography_settings') }}
             </span>
-            @if (Route::has('admin.system-setup.theme.setup'))
-                <a href="{{ route('admin.system-setup.theme.setup') }}" class="btn btn-sm btn-outline-primary text-nowrap">
-                    {{ translate('Theme_Setup') }}
-                </a>
-            @endif
         </div>
 
         <div class="row g-3">

@@ -78,49 +78,23 @@ class BannerService
 
     public function getBannerTypes(): array
     {
-        $bannerTypes = [];
-        if (theme_root_path() == 'default') {
-            $bannerTypes = [
-                "Main Banner" => translate('main_Banner'),
-                "Popup Banner" => translate('popup_Banner'),
-                "Footer Banner" => translate('footer_Banner'),
-                "Main Section Banner" => translate('main_Section_Banner'),
-                // Placed on the category page named by its category resource, and
-                // inherited by that category's sub-categories.
-                "Category Banner" => translate('category_Banner'),
-                // Placed above its category's product row on the home page; the apps
-                // render it inside that same row using the banner's mobile image.
-                "Category Section Banner" => translate('category_Section_Banner'),
-                // A home-page promo grid that belongs to no category: each banner
-                // takes a full row, half a row, or joins the rotating slider.
-                "Home Promo Banner" => translate('home_Promo_Banner'),
-                // Heads the page of the brand named by its brand resource.
-                "Brand Banner" => translate('brand_Banner'),
-            ];
-
-        }elseif (theme_root_path() == 'theme_aster') {
-            $bannerTypes = [
-                "Main Banner" => translate('main_Banner'),
-                "Popup Banner" => translate('popup_Banner'),
-                "Footer Banner" => translate('footer_Banner'),
-                "Main Section Banner" => translate('main_Section_Banner'),
-                "Header Banner" => translate('header_Banner'),
-                "Sidebar Banner" => translate('sidebar_Banner'),
-                "Top Side Banner" => translate('top_Side_Banner'),
-            ];
-        }elseif (theme_root_path() == 'theme_fashion') {
-            $bannerTypes = [
-                "Main Banner" => translate('main_Banner'),
-                "Popup Banner" => translate('popup_Banner'),
-                "Promo Banner Left" => translate('promo_banner_left'),
-                "Promo Banner Middle Top" => translate('promo_banner_middle_top'),
-                "Promo Banner Middle Bottom" => translate('promo_banner_middle_bottom'),
-                "Promo Banner Right" => translate('promo_banner_right'),
-                "Promo Banner Bottom" => translate('promo_banner_bottom'),
-            ];
-        }
-
-        return $bannerTypes;
+        return [
+            "Main Banner" => translate('main_Banner'),
+            "Popup Banner" => translate('popup_Banner'),
+            "Footer Banner" => translate('footer_Banner'),
+            "Main Section Banner" => translate('main_Section_Banner'),
+            // Placed on the category page named by its category resource, and
+            // inherited by that category's sub-categories.
+            "Category Banner" => translate('category_Banner'),
+            // Placed above its category's product row on the home page; the apps
+            // render it inside that same row using the banner's mobile image.
+            "Category Section Banner" => translate('category_Section_Banner'),
+            // A home-page promo grid that belongs to no category: each banner
+            // takes a full row, half a row, or joins the rotating slider.
+            "Home Promo Banner" => translate('home_Promo_Banner'),
+            // Heads the page of the brand named by its brand resource.
+            "Brand Banner" => translate('brand_Banner'),
+        ];
     }
 
 }

@@ -21,7 +21,7 @@ const ADMIN_PAGES = [
     '/admin/business-settings/shipping-method/index',
     '/admin/system-setup/currency/view',
     '/admin/system-setup/language/translate/en',
-    '/admin/system-setup/theme/setup',
+    '/admin/theme',
     '/admin/third-party/delivery-syria',
     '/admin/third-party/offline-payment-method/index',
     '/admin/transaction/wallet-bonus',

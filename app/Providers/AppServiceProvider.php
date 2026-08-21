@@ -209,21 +209,6 @@ class AppServiceProvider extends ServiceProvider
                             'business_pages' => $this->cacheBusinessPagesTable(),
                         ];
 
-                        if (theme_root_path() == "theme_fashion") {
-                            $featuresSection = [
-                                'features_section_top' => getWebConfig(name: 'features_section_top') ?? [],
-                                'features_section_middle' => getWebConfig(name: 'features_section_middle') ?? [],
-                                'features_section_bottom' => getWebConfig(name: 'features_section_bottom') ?? [],
-                            ];
-
-                            $tags = $this->cacheTagTable();
-
-                            $web_config += [
-                                'tags' => $tags,
-                                'features_section' => $featuresSection,
-                                'total_discount_products' => $totalDiscountProducts,
-                            ];
-                        }
                     }
 
                     // Language

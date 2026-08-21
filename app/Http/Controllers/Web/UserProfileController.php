@@ -71,21 +71,6 @@ class UserProfileController extends Controller
 
     }
 
-    public function user_profile(Request $request)
-    {
-
-        $wishlists = $this->wishlist->whereHas('wishlistProduct', function ($q) {
-            return $q;
-        })->where('customer_id', auth('customer')->id())->count();
-        $total_order = $this->order->where('customer_id', auth('customer')->id())->count();
-        $total_loyalty_point = auth('customer')->user()->loyalty_point;
-        $totalWalletBalance = auth('customer')->user()->wallet_balance;
-        $addresses = ShippingAddress::where('customer_id', auth('customer')->id())->latest()->get();
-        $customer_detail = User::where('id', auth('customer')->id())->first();
-
-        return view(VIEW_FILE_NAMES['user_profile'], compact('customer_detail', 'addresses', 'wishlists', 'total_order', 'total_loyalty_point', 'totalWalletBalance'));
-    }
-
     public function user_account(Request $request)
     {
         $country_restrict_status = getWebConfig(name: 'delivery_country_restriction');
@@ -240,11 +225,7 @@ class UserProfileController extends Controller
 
         Toastr::success(translate('address_added_successfully!'));
 
-        if (theme_root_path() == 'default') {
-            return back();
-        } else {
-            return redirect()->route('user-profile');
-        }
+        return back();
     }
 
     public function address_edit(Request $request, $id)
@@ -337,7 +318,7 @@ class UserProfileController extends Controller
         } else {
             Toastr::error(translate('Insufficient_permission!'));
         }
-        return theme_root_path() == 'default' ? redirect()->route('account-address') : redirect()->route('user-profile');
+        return redirect()->route('account-address');
     }
 
     public function address_delete(Request $request)
@@ -373,30 +354,11 @@ class UserProfileController extends Controller
         $offlinePaymentMethods = OfflinePaymentMethod::where('status', 1)->get();
         $offlinePaymentStatus = getWebConfig(name: 'offline_payment');
         $cashOnDeliveryStatus = getWebConfig(name: 'cash_on_delivery');
-        if (theme_root_path() == 'theme_fashion') {
-            $show_order = $request->show_order ?? 'ongoing';
-
-            $array = ['pending', 'confirmed', 'out_for_delivery', 'processing'];
-            $orders = $this->order->withSum('orderDetails', 'qty')
-                ->with('orderEditHistory', 'details', 'seller.shop')
-                ->where(['customer_id' => auth('customer')->id(), 'is_guest' => '0'])
-                ->when($show_order == 'ongoing', function ($query) use ($array) {
-                    $query->whereIn('order_status', $array);
-                })
-                ->when($show_order == 'previous', function ($query) use ($array) {
-                    $query->whereNotIn('order_status', $array);
-                })
-                ->when($request['search'], function ($query) use ($request) {
-                    $query->where('id', 'like', "%{$request['search']}%");
-                })
-                ->orderBy('id', $order_by)->paginate(10)->appends(['show_order' => $show_order, 'search' => $request->search]);
-        } else {
-            $orders = $this->order->with('orderEditHistory', 'details', 'seller.shop')
-                ->withSum('orderDetails', 'qty')
-                ->where(['customer_id' => auth('customer')->id(), 'is_guest' => '0'])
-                ->orderBy('id', $order_by)
-                ->paginate(10)->appends($request->all());
-        }
+        $orders = $this->order->with('orderEditHistory', 'details', 'seller.shop')
+            ->withSum('orderDetails', 'qty')
+            ->where(['customer_id' => auth('customer')->id(), 'is_guest' => '0'])
+            ->orderBy('id', $order_by)
+            ->paginate(10)->appends($request->all());
         return view(VIEW_FILE_NAMES['account_orders'], compact(
             'orders',
             'order_by',
@@ -512,15 +474,11 @@ class UserProfileController extends Controller
             return redirect()->route('account-oder');
         }
 
-        if (theme_root_path() == 'theme_fashion' || theme_root_path() == 'default') {
-            foreach ($order->details as $details) {
-                if ($details->product) {
-                    if ($details->product->product_type == 'physical') {
-                        $order['product_type_check'] = $details->product->product_type;
-                        break;
-                    } else {
-                        $order['product_type_check'] = $details->product->product_type;
-                    }
+        foreach ($order->details as $details) {
+            if ($details->product) {
+                $order['product_type_check'] = $details->product->product_type;
+                if ($details->product->product_type == 'physical') {
+                    break;
                 }
             }
         }
@@ -633,9 +591,7 @@ class UserProfileController extends Controller
     public function single_ticket(Request $request)
     {
         $ticket = SupportTicket::with(['conversations' => function ($query) {
-            $query->when(theme_root_path() == 'default', function ($sub_query) {
-                $sub_query->orderBy('id', 'desc');
-            });
+            $query->orderBy('id', 'desc');
         }])->where('id', $request->id)->where('customer_id', auth()->guard('customer')->id())->first();
         if (!$ticket) {
             Toastr::warning(translate('Invalid_ticket'));

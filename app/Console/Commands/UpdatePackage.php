@@ -45,7 +45,7 @@ class UpdatePackage extends Command
         $directories = glob($folder . '/*', GLOB_ONLYDIR);
         foreach ($directories as $directory) {
             $array = explode('/', $directory);
-            if (File::isDirectory($directory) && !in_array(end($array), ["default", "theme_aster"])) {
+            if (File::isDirectory($directory) && !in_array(end($array), ["default"])) {
                 File::deleteDirectory($directory);
             }
         }
