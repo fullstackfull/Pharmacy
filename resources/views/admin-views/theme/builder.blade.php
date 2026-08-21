@@ -75,6 +75,12 @@
         .tb-gap-note__body { display: flex; flex-direction: column; gap: .1rem; }
         .tb-gap-note__actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-inline-start: auto; }
         .tb-gap-note__actions .k-btn { padding-block: .3rem; font-size: .78rem; }
+        .tb-golive { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; padding: .65rem 1rem;
+            background: #eaf3ff; border-block-end: 1px solid #c9dcf5; color: #14406e; font-size: .82rem; }
+        .tb-golive i { font-size: 1rem; }
+        .tb-golive__body { display: flex; flex-direction: column; gap: .1rem; }
+        .tb-golive__actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-inline-start: auto; }
+        .tb-golive__actions .k-btn { padding-block: .3rem; font-size: .78rem; }
         .tb-loader { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
             gap: .5rem; background: rgba(14,17,22,.55); color: #e8eaed; font-size: .8rem; transition: opacity .25s; }
         .tb-loader.is-hidden { opacity: 0; pointer-events: none; }
@@ -102,6 +108,8 @@
         .tb-group-title { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: #6f7885;
             margin: 1rem 0 .5rem; padding-top: .75rem; border-top: 1px solid #212832; }
         .tb-hint { font-size: .72rem; color: #7d8794; line-height: 1.5; }
+        .tb-data-note { margin: 0 .75rem .5rem; padding: .5rem .6rem; border-radius: .4rem; font-size: .72rem;
+            line-height: 1.5; background: #2a2413; border: 1px solid #4a3f1c; color: #e0c877; }
 
         /* image field */
         .tb-image { display: flex; gap: .5rem; align-items: center; }
@@ -142,6 +150,61 @@
         .tb-card:hover { border-color: #3d8b7a; background: #1b2229; transform: translateY(-2px); }
         .tb-card strong { display: block; font-size: .85rem; margin-bottom: .2rem; text-transform: capitalize; }
         .tb-card span { font-size: .72rem; color: #8d95a1; line-height: 1.45; }
+        .tb-cards { grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); }
+
+        /* Wireframe preview of the shape each section takes on the storefront. Pure CSS so the
+           picker stays instant — no screenshots to keep in sync with the theme. */
+        .tb-thumb { display: block; height: 62px; margin-bottom: .55rem; border-radius: .4rem;
+            background: #10151b; border: 1px solid #262c36; overflow: hidden; position: relative; }
+        .tb-thumb::before, .tb-thumb::after { content: ""; position: absolute; }
+        .tb-thumb[data-shape="hero"]::before { inset: 8px; border-radius: 4px;
+            background: linear-gradient(120deg,#5b46a8,#2f7fae); }
+        .tb-thumb[data-shape="hero"]::after { left: 16px; bottom: 16px; width: 42%; height: 6px;
+            border-radius: 3px; background: rgba(255,255,255,.75); }
+        .tb-thumb[data-shape="rail"]::before { inset: 14px 8px 8px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 24%,transparent 24% 28%); }
+        .tb-thumb[data-shape="rail"]::after { left: 8px; top: 6px; width: 34%; height: 5px; border-radius: 3px; background: #4a5563; }
+        .tb-thumb[data-shape="tiles"]::before { inset: 10px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 46%,transparent 46% 54%); }
+        .tb-thumb[data-shape="mosaic"]::before { inset: 8px; border-radius: 3px;
+            background: linear-gradient(90deg,#39434f 0 54%,transparent 54%),
+                        repeating-linear-gradient(90deg,transparent 0 56%,#39434f 56% 76%,transparent 76% 80%,#39434f 80% 100%); }
+        .tb-thumb[data-shape="split"]::before { inset: 8px; border-radius: 3px;
+            background: linear-gradient(90deg,#39434f 0 48%,#232a33 48% 100%); }
+        .tb-thumb[data-shape="strip"]::before { inset: 14px 0; background: linear-gradient(120deg,#5b46a8,#2f7fae); }
+        .tb-thumb[data-shape="strip"]::after { left: 50%; top: 50%; transform: translate(-50%,-50%);
+            width: 40%; height: 6px; border-radius: 3px; background: rgba(255,255,255,.8); }
+        .tb-thumb[data-shape="circles"]::before { inset: 18px 8px;
+            background-image: radial-gradient(circle,#39434f 46%,transparent 48%);
+            background-size: 20% 100%; background-repeat: repeat-x; }
+        .tb-thumb[data-shape="usp"]::before { inset: 20px 8px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 21%,transparent 21% 26%); }
+        .tb-thumb[data-shape="marquee"]::before { inset: 24px 6px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 14%,transparent 14% 20%); }
+        .tb-thumb[data-shape="flash"]::before { inset: 12px 8px; border-radius: 4px;
+            background: linear-gradient(120deg,#7b3fe4,#26abf2); }
+        .tb-thumb[data-shape="flash"]::after { inset-inline-end: 14px; top: 50%; transform: translateY(-50%);
+            width: 38%; height: 12px; border-radius: 2px;
+            background: repeating-linear-gradient(90deg,#fff 0 20%,transparent 20% 26%); }
+        .tb-thumb[data-shape="quotes"]::before { inset: 12px 8px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 30%,transparent 30% 35%); }
+        .tb-thumb[data-shape="faq"]::before { inset: 10px 8px; border-radius: 3px;
+            background: linear-gradient(90deg,#39434f 0 34%,transparent 34%),
+                        repeating-linear-gradient(180deg,transparent 0 2px,#2c343f 2px 10px,transparent 10px 14px); }
+        .tb-thumb[data-shape="text"]::before { inset: 14px 10px; border-radius: 2px;
+            background: repeating-linear-gradient(180deg,#39434f 0 5px,transparent 5px 12px); }
+        .tb-thumb[data-shape="form"]::before { inset: 22px 14px; border-radius: 100px; background: #39434f; }
+        .tb-thumb[data-shape="bar"]::before { inset: 6px 8px auto; height: 10px; border-radius: 3px;
+            background: linear-gradient(120deg,#5b46a8,#2f7fae); }
+        .tb-thumb[data-shape="spacer"]::before { inset: 18px 10px; border: 1px dashed #39434f; border-radius: 3px; }
+        .tb-thumb[data-shape="columns"]::before { inset: 10px 8px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 18%,transparent 18% 27%); }
+        .tb-thumb[data-shape="block"]::before { inset: 12px; border-radius: 3px; background: #39434f; }
+
+        .tb-chips { display: flex !important; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
+        .tb-chip { font-size: .62rem; line-height: 1; padding: .28rem .4rem; border-radius: .3rem;
+            background: #1f262f; color: #97a1ad; text-transform: capitalize; }
+        .tb-chip--block { background: #23342f; color: #7fc3ae; }
         .tb-media-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap: .55rem; }
         .tb-media-item { position: relative; border: 1px solid #262c36; border-radius: .45rem; overflow: hidden;
             background: #171c24; aspect-ratio: 1/1; }
@@ -237,6 +300,36 @@
                     <a href="{{ route('admin.theme.index') }}" class="tb-icon-btn tb-icon-btn--primary">{{ translate('publish') }}</a>
                 </div>
             </header>
+
+            {{-- Go-live checklist: composing sections changes nothing for customers until the theme
+                 is active AND a version is published. Both fixes are one click, right here. --}}
+            @if ($goLive && !$goLive['live'])
+                <div class="tb-golive">
+                    <i class="fi fi-rr-rocket-lunch"></i>
+                    <div class="tb-golive__body">
+                        <strong>{{ translate('this_theme_is_not_live_yet_the_storefront_still_shows_the_built_in_design') }}</strong>
+                        <span>{{ translate('activate_the_theme_and_publish_this_version_to_apply_its_sections_and_colors_to_the_store') }}</span>
+                    </div>
+                    <div class="tb-golive__actions">
+                        @if (!$goLive['active'])
+                            <form method="post" action="{{ route('admin.theme.activate') }}">
+                                @csrf
+                                <input type="hidden" name="id" value="{{ $theme->id }}">
+                                <input type="hidden" name="return_to_builder" value="{{ $page }}">
+                                <button type="submit" class="k-btn k-btn--secondary">{{ translate('activate_theme') }}</button>
+                            </form>
+                        @endif
+                        @if ($editable)
+                            <form method="post" action="{{ route('admin.theme.version.publish') }}">
+                                @csrf
+                                <input type="hidden" name="version_id" value="{{ $version->id }}">
+                                <input type="hidden" name="return_to_builder" value="{{ $page }}">
+                                <button type="submit" class="k-btn k-btn--primary">{{ translate('publish_this_version') }}</button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             @if (!empty($bannerGaps) && $editable)
                 <div class="tb-gap-note" id="tb-gap-note">
@@ -346,11 +439,25 @@
                         <button type="button" class="tb-icon-btn" data-close><i class="fi fi-rr-cross-small"></i></button>
                     </div>
                     <div class="tb-dialog__body">
+                        {{-- Every card shows the shape the section takes on the page and the options it
+                             brings, so a merchant knows what they are adding before they add it. --}}
                         <div class="tb-cards">
                             @foreach ($sectionTypes as $key => $definition)
                                 <button type="button" class="tb-card" data-type="{{ $key }}">
+                                    <span class="tb-thumb" data-shape="{{ $definition['preview'] ?? 'block' }}" aria-hidden="true"></span>
                                     <strong>{{ translate($definition['label']) }}</strong>
                                     <span>{{ translate($definition['hint'] ?? $definition['label']) }}</span>
+                                    <span class="tb-chips">
+                                        @foreach ($definition['blocks'] ?? [] as $blockType)
+                                            <span class="tb-chip tb-chip--block">+ {{ translate($blockLabels[$blockType] ?? $blockType) }}</span>
+                                        @endforeach
+                                        @foreach (array_slice($definition['schema'], 0, 5, true) as $optionKey => $option)
+                                            <span class="tb-chip">{{ translate($option['label'] ?? $optionKey) }}</span>
+                                        @endforeach
+                                        @if (count($definition['schema']) > 5)
+                                            <span class="tb-chip">+{{ count($definition['schema']) - 5 }}</span>
+                                        @endif
+                                    </span>
                                 </button>
                             @endforeach
                         </div>
@@ -429,6 +536,7 @@
                 accepts: [],
                 blockLabels: {},
                 blocks: [],
+                dataNote: null,
                 dirty: false
             };
 
@@ -793,6 +901,15 @@
                 actionsBar.hidden = !state.sectionId;
                 inspectorTitle.textContent = state.sectionLabel || T.settings;
 
+                // A data-driven section with nothing to draw renders nothing at all; say so here
+                // rather than letting it look like a broken option.
+                if (state.dataNote) {
+                    var dataNote = document.createElement('p');
+                    dataNote.className = 'tb-data-note';
+                    dataNote.textContent = state.dataNote;
+                    inspector.appendChild(dataNote);
+                }
+
                 var keys = state.tab === 'style' ? state.styleKeys : state.contentKeys;
                 renderFields(inspector, state.schema, state.settings, keys);
 
@@ -1036,6 +1153,7 @@
                     state.accepts = data.accepts || [];
                     state.blockLabels = data.blockLabels || {};
                     state.blocks = data.blocks || [];
+                    state.dataNote = data.dataNote || null;
                     renderInspector();
                     markSelectedInFrame(scrollPreview);
                 });

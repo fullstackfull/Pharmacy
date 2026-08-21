@@ -233,6 +233,19 @@ class DeveloperPortalService
                     . "# Orders now always carry a billing address: it falls back to the\n"
                     . "# shipping address when the customer does not enter a separate one.",
             ],
+            [
+                'title' => translate('a_theme_reaches_the_store_only_once_published'),
+                'body' => translate('sections_colors_and_typography_all_travel_with_the_published_version_a_draft_changes_nothing'),
+                'snippet' => "# The storefront reads the ACTIVE theme's PUBLISHED version only:\n"
+                    . "#   themes.is_active = 1  AND  theme_versions.status = 'published'\n"
+                    . "# Until both hold, the built-in home renders and Theme Settings colours\n"
+                    . "# are not injected — this is the usual cause of 'the look did not change'.\n"
+                    . "# The builder shows an activate + publish bar whenever that is the case.\n\n"
+                    . "# Section settings carry breakpoint overrides beside the desktop value:\n"
+                    . "#   padding_top | padding_top_tablet | padding_top_mobile\n"
+                    . "#   columns     | columns_tablet     | columns_mobile\n"
+                    . "#   height, visible — same pattern; an absent key means 'inherit'.",
+            ],
         ];
     }
 }

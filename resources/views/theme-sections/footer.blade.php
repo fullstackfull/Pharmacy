@@ -31,6 +31,12 @@
     .tb-footer a:hover{ color:#fff; text-decoration:none; }
     .tb-footer h5{ color:#fff; font-size:.95rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-bottom:1rem; }
     .tb-footer .tb-footer__section{ padding-block:2.25rem; }
+    .tb-footer .tb-footer__grid{ display:grid; gap:1.5rem; grid-template-columns:repeat(var(--tb-cols,4),minmax(0,1fr)); }
+    @media (max-width:767.98px){ .tb-footer .tb-footer__grid{ grid-template-columns:repeat(var(--tb-cols-sm,2),minmax(0,1fr)); } }
+    .tb-footer .tbf-align-center{ text-align:center; }
+    .tb-footer .tbf-align-center .tb-footer__social,.tb-footer .tbf-align-center .tb-news-form{ justify-content:center; margin-inline:auto; }
+    .tb-footer .tbf-align-end{ text-align:end; }
+    .tb-footer .tbf-align-end .tb-footer__social{ justify-content:flex-end; }
     .tb-footer .tb-footer__section + .tb-footer__section{ border-top:1px solid rgba(255,255,255,.08); }
     .tb-footer ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.55rem; }
     .tb-footer .tb-footer__contact li{ display:flex; gap:.5rem; align-items:baseline; }
@@ -54,19 +60,28 @@
             $type = $__section['type'] ?? null;
             $s = $__section['settings'] ?? [];
             $blocks = collect($__section['blocks'] ?? [])->map(fn ($b) => ['type' => $b['type'], 's' => $b['settings'] ?? []]);
+            $sectionKey = 'tbf-' . ($__section['id'] ?? $loop->index);
+            $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
+            $cols = max(1, min(6, (int) ($s['columns'] ?? 4)));
+            $sectionStyle = '--tb-cols:' . $cols . ';'
+                . (isset($s['padding_top']) ? 'padding-top:' . max(0, (int) $s['padding_top']) . 'px;' : '')
+                . (isset($s['padding_bottom']) ? 'padding-bottom:' . max(0, (int) $s['padding_bottom']) . 'px;' : '')
+                . (!empty($s['background']) ? 'background:' . $s['background'] . ';' : '');
+            $breakpointCss = theme_section_breakpoint_css(settings: $s, selector: '#' . $sectionKey);
         @endphp
         @continue(($s['visible'] ?? true) === false)
 
-        <div class="tb-footer__section" data-tb-section="{{ $__section['id'] ?? '' }}" @if(!empty($s['background'])) style="background: {{ $s['background'] }}" @endif>
-            <div class="container">
+        @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
+        <div id="{{ $sectionKey }}" class="tb-footer__section tbf-align-{{ $align }}"
+             data-tb-section="{{ $__section['id'] ?? '' }}" style="{{ $sectionStyle }}">
+            <div class="{{ ($s['width'] ?? 'container') === 'full' ? 'container-fluid' : 'container' }}">
                 @switch($type)
 
                     @case('footer_columns')
-                        @php $cols = max(1, min(6, (int) ($s['columns'] ?? 4))); @endphp
-                        <div class="row g-4">
+                        <div class="tb-footer__grid">
                             @foreach ($blocks as $block)
                                 @php $b = $block['s']; @endphp
-                                <div class="col-6 col-md-{{ max(2, (int) floor(12 / $cols)) }}">
+                                <div>
                                     @if (!empty($b['title']))<h5>{{ $b['title'] }}</h5>@endif
 
                                     @switch($block['type'])

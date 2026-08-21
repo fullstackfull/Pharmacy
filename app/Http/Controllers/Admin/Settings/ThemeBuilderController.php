@@ -68,6 +68,8 @@ class ThemeBuilderController extends BaseController
             'previewUrl'    => $this->builderPreviewUrl($page),
             'structure'     => $version ? $this->builder->getPageStructure($version, $page) : [],
             'sectionTypes'  => $version ? $this->registry->forPage($page) : [],
+            'blockLabels'   => array_map(fn ($block) => $block['label'], $this->registry->blockTypes()),
+            'goLive'        => $version ? $this->goLiveState($version) : null,
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
@@ -206,7 +208,34 @@ class ThemeBuilderController extends BaseController
             'accepts'      => $this->registry->blockTypesFor($type),
             'blockLabels'  => $this->blockLabelMap($type),
             'blocks'       => $blocks,
+            'dataNote'     => $this->dataNote($type, $settings),
         ]);
+    }
+
+    /**
+     * Warning for a section that draws its content from the catalogue and would currently render
+     * nothing — a flash-deal countdown with no running deal, a review wall with no reviews.
+     *
+     * These sections deliberately output nothing rather than an empty frame, which looks to a
+     * merchant like a broken option ("the timer is not working"). Naming the missing data, and
+     * where to create it, is the difference between a bug report and a two-minute fix.
+     */
+    private function dataNote(string $type, array $settings): ?string
+    {
+        $resolver = app(\App\Services\Theme\SectionDataResolver::class);
+
+        return match ($type) {
+            'flash_deal' => $resolver->flashDeal()
+                ? null
+                : translate('no_flash_deal_is_running_right_now_so_this_section_stays_hidden_create_one_under_promotion_flash_deals'),
+            'testimonials' => $resolver->testimonials((int) ($settings['limit'] ?? 3), (int) ($settings['min_rating'] ?? 4))->isNotEmpty()
+                ? null
+                : translate('no_approved_reviews_match_this_rating_yet_so_this_section_stays_hidden'),
+            'store_banner' => count($resolver->dashboardBanners((string) ($settings['banner_type'] ?? 'Main Banner'), (int) ($settings['limit'] ?? 6)))
+                ? null
+                : translate('no_published_banners_of_this_type_yet_add_one_under_promotion_banners'),
+            default => null,
+        };
     }
 
     /** Schema + saved settings for one block, so the inspector can render its form. */
@@ -395,6 +424,28 @@ class ThemeBuilderController extends BaseController
         }
 
         return Theme::where('is_active', true)->first();
+    }
+
+    /**
+     * What still stands between this draft and the live storefront.
+     *
+     * Composing sections changes nothing for customers until the theme is ACTIVE and a version is
+     * PUBLISHED — the single most common reason a merchant reports "the look did not change" or
+     * "my colours were not applied". The builder turns this into a visible checklist with the
+     * matching one-click action instead of leaving it to the documentation.
+     *
+     * @return array{active:bool, published:bool, live:bool, sections:int}
+     */
+    private function goLiveState(ThemeVersion $version): array
+    {
+        $publishedId = $version->theme?->versions()->where('status', ThemeVersion::STATUS_PUBLISHED)->value('id');
+
+        return [
+            'active'    => (bool) $version->theme?->is_active,
+            'published' => $publishedId !== null,
+            'live'      => (bool) $version->theme?->is_active && $publishedId !== null,
+            'sections'  => ThemeSection::where('theme_version_id', $version->id)->count(),
+        ];
     }
 
     /**

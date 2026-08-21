@@ -10,7 +10,7 @@
 @php
     $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('home');
     $__data = app(\App\Services\Theme\SectionDataResolver::class);
-    $__placeholder = asset('public/assets/front-end/img/image-place-holder.png');
+    $__placeholder = dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png');
     // Types this file can draw. A section whose type has no renderer here is skipped entirely
     // rather than emitting an empty padded <section>, which reads on the page as a broken gap.
     $__renderable = ['hero_banner', 'category_grid', 'product_slider', 'brand_slider', 'promotional_banner',
@@ -39,9 +39,28 @@
         font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;
     }
     .ml-sections *{ box-sizing:border-box; }
+    /* The legacy storefront sets a flat colour on every h1..h6, and an element rule beats
+       inheritance — which turned white-on-image headings dark. Opt these back into inheriting,
+       so a slide's text colour actually applies. */
+    .ml-sections h1,.ml-sections h2,.ml-sections h3,.ml-sections h4,.ml-sections h5,.ml-sections h6{ color:inherit; }
     .ml-sections .tbs{ position:relative; overflow:hidden; }
     .ml-sections .tbs > .container,.ml-sections .tbs > .container-fluid{ max-width:1380px; position:relative; z-index:1; }
     .ml-sections .tbs:nth-child(even){ background:var(--ml-sand); }
+
+    /* ---- builder-driven layout: columns, gap and content alignment --------------------- */
+    /* One grid honours the section's "columns" setting (and its tablet/mobile overrides,
+       which arrive as --tb-cols in a per-section media rule). Mobile stays at two columns
+       unless the merchant says otherwise, so a 6-column desktop row is still readable. */
+    .ml-grid{ display:grid; gap:var(--tb-gap,20px); grid-template-columns:repeat(var(--tb-cols,4),minmax(0,1fr)); }
+    @media (max-width:767.98px){ .ml-grid{ grid-template-columns:repeat(var(--tb-cols-sm,2),minmax(0,1fr)); } }
+    .tbs-category_grid .ml-grid{ --tb-cols-sm:3; justify-items:center; }
+
+    .tbs-align-center{ text-align:center; }
+    .tbs-align-center .ml-sec-head{ flex-direction:column; align-items:center; text-align:center; }
+    .tbs-align-center .ml-sec-head .ml-rule{ display:block; margin-inline:auto; }
+    .tbs-align-center .ml-usp,.tbs-align-center .ml-card__body{ justify-content:center; text-align:center; }
+    .tbs-align-end{ text-align:end; }
+    .tbs-align-end .ml-sec-head{ flex-direction:column; align-items:flex-end; text-align:end; }
 
     /* ---- scroll reveal ---------------------------------------------------------------- */
     .ml-reveal{ opacity:0; transform:translateY(22px); transition:opacity .7s var(--ml-ease), transform .7s var(--ml-ease); }
@@ -77,6 +96,7 @@
     .ml-hero__slide{ position:absolute; inset:0; opacity:0; transition:opacity .8s var(--ml-ease); pointer-events:none; }
     .ml-hero__slide.is-active{ position:relative; opacity:1; pointer-events:auto; }
     .ml-hero__media{ position:absolute; inset:0; overflow:hidden; }
+    .ml-hero__media picture{ display:block; width:100%; height:100%; }
     .ml-hero__media img{ width:100%; height:100%; object-fit:cover; display:block; }
     .ml-hero.is-zoom .ml-hero__slide.is-active .ml-hero__media img{ animation:mlKenBurns 14s ease-out forwards; }
     @keyframes mlKenBurns{ from{ transform:scale(1) } to{ transform:scale(1.08) } }
@@ -127,6 +147,10 @@
     .ml-rail-btn{ width:34px; height:34px; border-radius:50%; background:#fff; border:1px solid var(--ml-line);
         display:grid; place-items:center; color:var(--ml-ink2); cursor:pointer; transition:.2s; }
     .ml-rail-btn:hover{ background:var(--ml-grad); color:#fff; border-color:transparent; }
+    .ml-rail-dots{ display:flex; gap:.4rem; justify-content:center; margin-top:.35rem; }
+    .ml-rail-dots button{ width:7px; height:7px; padding:0; border:0; border-radius:99px; cursor:pointer;
+        background:var(--ml-line); transition:.25s var(--ml-ease); }
+    .ml-rail-dots button.is-active{ width:22px; background:var(--ml-grad); }
     .ml-viewall{ font-size:.75rem; color:var(--ml-primary); font-weight:700; text-decoration:none; }
     .ml-viewall:hover{ text-decoration:underline; color:var(--ml-primary); }
 
@@ -308,13 +332,22 @@
             $pb = (int) ($s['padding_bottom'] ?? 56);
             $bg = $s['background'] ?? null;
             $full = ($s['width'] ?? 'container') === 'full';
-            $wrapStyle = "padding-top:{$pt}px;padding-bottom:{$pb}px;" . ($bg ? "background:{$bg};" : '');
             $gap = (int) ($s['gap'] ?? 16);
+            $cols = max(1, (int) ($s['columns'] ?? 4));
+            $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
+            $sectionKey = 'tbs-' . ($__section['id'] ?? $loop->index);
+            $height = isset($s['height']) && $s['height'] !== '' && $s['height'] !== null ? (int) $s['height'] : null;
+            $wrapStyle = "padding-top:{$pt}px;padding-bottom:{$pb}px;--tb-cols:{$cols};--tb-gap:{$gap}px;"
+                . ($height !== null ? "--tb-h:{$height}px;" : '')
+                . ($bg ? "background:{$bg};" : '');
+            $breakpointCss = theme_section_breakpoint_css(settings: $s, selector: '#' . $sectionKey);
         @endphp
 
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
 
-        <section class="tbs tbs-{{ $type }}" style="{{ $wrapStyle }}" data-tb-section="{{ $__section['id'] ?? '' }}">
+        @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
+        <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
+                 data-tb-section="{{ $__section['id'] ?? '' }}">
             <div class="{{ $full ? 'container-fluid px-0' : 'container' }}">
                 @switch($type)
 
@@ -323,16 +356,16 @@
                         @break
 
                     @case('category_grid')
-                        @php $cats = $__data->categories((int) ($s['limit'] ?? 12)); $cols = max(2, (int) ($s['columns'] ?? 6)); @endphp
+                        @php $cats = $__data->categories((int) ($s['limit'] ?? 12)); @endphp
                         @if ($cats->isNotEmpty())
                             <div class="ml-sec-head ml-reveal">
                                 <span class="ml-eyebrow">{{ $s['eyebrow'] ?: translate('shop_by_category') }}</span>
                                 @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
                                 <div class="ml-rule"></div>
                             </div>
-                            <div class="row g-4 justify-content-center">
+                            <div class="ml-grid">
                                 @foreach ($cats as $cat)
-                                    <div class="col-4 col-md-{{ max(2, (int) floor(12 / $cols)) }} ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                    <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                         <a href="{{ route('products', ['category_id' => $cat->id]) }}" class="ml-cat">
                                             <span class="ml-cat-ring">
                                                 @if ($cat->icon)
@@ -353,9 +386,11 @@
                     @case('product_slider')
                         @php
                             $products = $__data->products($s);
-                            $cols = max(2, (int) ($s['columns'] ?? 4));
                             $isRail = ($s['style'] ?? 'rail') === 'rail';
                             $railId = 'ml-rail-' . ($__section['id'] ?? $loop->index);
+                            $railAutoplay = $isRail && ($s['autoplay'] ?? false);
+                            $railInterval = max(2000, (int) ($s['interval'] ?? 4000));
+                            $showDots = $isRail && ($s['pagination'] ?? false);
                         @endphp
                         @if ($products->isNotEmpty())
                             <div class="ml-sec-head ml-reveal">
@@ -378,15 +413,19 @@
                             </div>
 
                             @if ($isRail)
-                                <div class="ml-rail ml-reveal" id="{{ $railId }}">
+                                <div class="ml-rail ml-reveal" id="{{ $railId }}"
+                                     @if ($railAutoplay) data-ml-rail-auto="{{ $railInterval }}" @endif>
                                     @foreach ($products as $product)
                                         @include('theme-sections.partials.product-card', ['product' => $product])
                                     @endforeach
                                 </div>
+                                @if ($showDots)
+                                    <div class="ml-rail-dots" data-ml-rail-dots="{{ $railId }}"></div>
+                                @endif
                             @else
-                                <div class="row g-3">
+                                <div class="ml-grid">
                                     @foreach ($products as $product)
-                                        <div class="col-6 col-md-{{ max(2, (int) floor(12 / $cols)) }} ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                        <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                             @include('theme-sections.partials.product-card', ['product' => $product])
                                         </div>
                                     @endforeach
@@ -488,7 +527,7 @@
                     @case('brand_slider')
                         @php
                             $brands = $__data->brands((int) ($s['limit'] ?? 12));
-                            $brandStyle = $s['style'] ?? (($s['marquee'] ?? true) ? 'marquee' : 'grid');
+                            $brandStyle = $s['style'] ?? 'marquee';
                             $brandUrl = fn ($brand) => \Illuminate\Support\Facades\Route::has('brand-products') && $brand->slug
                                 ? route('brand-products', ['slug' => $brand->slug])
                                 : route('products', ['brand_id' => $brand->id]);
@@ -604,14 +643,13 @@
                          mockup ("display style" in the builder). --}}
                     @case('usp_strip')
                         @php
-                            $cols = max(1, (int) ($s['columns'] ?? 4));
-                            $uspStyle = $s['style'] ?? (($s['boxed'] ?? true) ? 'boxed' : 'plain');
+                            $uspStyle = $s['style'] ?? 'boxed';
                             $boxed = $uspStyle !== 'plain';
                         @endphp
                         @if (count($blocks))
-                            <div class="row g-3 {{ $uspStyle === 'dark' ? 'ml-usp-dark mx-0' : '' }}">
+                            <div class="ml-grid {{ $uspStyle === 'dark' ? 'ml-usp-dark' : '' }}">
                                 @foreach ($blocks as $card)
-                                    <div class="col-6 col-md-{{ max(2, (int) floor(12 / $cols)) }} ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                    <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                         <a class="ml-usp {{ $boxed ? 'is-boxed' : '' }}" href="{{ $card['link'] ?: 'javascript:void(0)' }}">
                                             <span class="ml-usp__icon">
                                                 @if (!empty($card['image']))
@@ -647,7 +685,7 @@
                         @break
 
                     @case('spacer')
-                        <div style="height:{{ (int) ($s['height'] ?? 40) }}px"></div>
+                        <div style="height:var(--tb-h,{{ (int) ($s['height'] ?? 40) }}px)"></div>
                         @break
 
                 @endswitch
@@ -723,14 +761,90 @@
 
         // Product rails: the arrow controls scroll one "page" of cards, direction-aware so the
         // buttons feel right in Arabic (RTL) too.
+        function railStep(rail) { return Math.max(240, rail.clientWidth * 0.8); }
+        function railScroll(rail, direction) {
+            var rtl = getComputedStyle(rail).direction === 'rtl';
+            var step = railStep(rail) * direction;
+            rail.scrollBy({left: rtl ? -step : step, behavior: 'smooth'});
+        }
+
         root.querySelectorAll('[data-ml-rail]').forEach(function (button) {
             button.addEventListener('click', function () {
                 var rail = document.getElementById(button.dataset.mlRail);
-                if (!rail) return;
-                var rtl = getComputedStyle(rail).direction === 'rtl';
-                var step = Math.max(240, rail.clientWidth * 0.8) * parseInt(button.dataset.dir, 10);
-                rail.scrollBy({left: rtl ? -step : step, behavior: 'smooth'});
+                if (rail) railScroll(rail, parseInt(button.dataset.dir, 10));
             });
+        });
+
+        // Pagination dots for a rail: one dot per scrolled "page", kept in sync while the
+        // customer scrolls by hand, and clickable to jump. Only drawn when the builder's
+        // "pagination" option is on for that section.
+        root.querySelectorAll('[data-ml-rail-dots]').forEach(function (host) {
+            var rail = document.getElementById(host.dataset.mlRailDots);
+            if (!rail) return;
+
+            var dots = [];
+            function pages() { return Math.max(1, Math.ceil(rail.scrollWidth / Math.max(1, rail.clientWidth))); }
+            function currentPage() {
+                return Math.round(Math.abs(rail.scrollLeft) / Math.max(1, rail.clientWidth));
+            }
+            function paint() {
+                var active = currentPage();
+                dots.forEach(function (dot, i) { dot.classList.toggle('is-active', i === active); });
+            }
+            function build() {
+                var total = pages();
+                host.innerHTML = '';
+                dots = [];
+                if (total < 2) return;
+                for (var i = 0; i < total; i++) {
+                    (function (index) {
+                        var dot = document.createElement('button');
+                        dot.type = 'button';
+                        dot.setAttribute('aria-label', String(index + 1));
+                        dot.addEventListener('click', function () {
+                            var rtl = getComputedStyle(rail).direction === 'rtl';
+                            var target = index * rail.clientWidth;
+                            rail.scrollTo({left: rtl ? -target : target, behavior: 'smooth'});
+                        });
+                        host.appendChild(dot);
+                        dots.push(dot);
+                    })(i);
+                }
+                paint();
+            }
+
+            rail.addEventListener('scroll', function () { window.requestAnimationFrame(paint); }, {passive: true});
+            window.addEventListener('resize', build);
+            build();
+        });
+
+        // Rail autoplay: advances a page at the builder's interval, pauses on hover/touch and
+        // whenever the tab is hidden, and wraps back to the start at the end.
+        root.querySelectorAll('[data-ml-rail-auto]').forEach(function (rail) {
+            if (calm) return;
+            var every = Math.max(2000, parseInt(rail.dataset.mlRailAuto, 10) || 4000);
+            var timer = null;
+
+            function atEnd() {
+                return Math.abs(rail.scrollLeft) + rail.clientWidth >= rail.scrollWidth - 8;
+            }
+            function advance() {
+                if (atEnd()) {
+                    rail.scrollTo({left: 0, behavior: 'smooth'});
+                    return;
+                }
+                railScroll(rail, 1);
+            }
+            function play() { stop(); timer = setInterval(advance, every); }
+            function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+            rail.addEventListener('mouseenter', stop);
+            rail.addEventListener('mouseleave', play);
+            rail.addEventListener('touchstart', stop, {passive: true});
+            document.addEventListener('visibilitychange', function () {
+                document.hidden ? stop() : play();
+            });
+            play();
         });
 
         // Flash-deal countdown: ticks against the REAL end date of the running deal (a unix

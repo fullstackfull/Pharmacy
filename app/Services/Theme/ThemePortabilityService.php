@@ -258,15 +258,17 @@ class ThemePortabilityService
                 'label'   => 'minimal_luxury_beauty',
                 'payload' => [
                     'format_version' => self::FORMAT_VERSION,
-                    'theme'    => ['name' => 'Minimal Luxury', 'description' => 'An elegant, editorial storefront for beauty & cosmetics.'],
+                    'theme'    => ['name' => 'Glossy Beauty', 'description' => 'A glossy, gradient-led storefront for beauty & cosmetics.'],
                     'settings' => [
+                        // The palette the glossy renderer was designed around; it reaches the
+                        // storefront as --web-primary / --web-secondary once the version is published.
                         'colors' => [
-                            'primary' => '#1c1917', 'secondary' => '#8a8079', 'accent' => '#b08d57',
-                            'background' => '#ffffff', 'surface' => '#f7f3ee', 'text' => '#1c1917',
-                            'muted_text' => '#8a8079', 'border' => '#e7e1d8',
+                            'primary' => '#7B3FE4', 'secondary' => '#26ABF2', 'accent' => '#BF23CD',
+                            'background' => '#ffffff', 'surface' => '#F7F5FD', 'text' => '#14082E',
+                            'muted_text' => '#8B84A3', 'border' => '#E4DFF2',
                         ],
                         'typography' => ['base_font_size' => 16, 'line_height' => 1.7],
-                        'layout' => ['container_width' => 1240, 'page_spacing' => 32, 'border_radius' => 2, 'button_style' => 'square', 'card_style' => 'flat'],
+                        'layout' => ['container_width' => 1380, 'page_spacing' => 32, 'border_radius' => 12, 'button_style' => 'rounded', 'card_style' => 'shadow'],
                     ],
                     'sections' => $this->minimalLuxurySections(),
                 ],
@@ -314,7 +316,7 @@ class ThemePortabilityService
                      'button_text' => 'Explore gifts', 'align' => 'end', 'overlay' => 40]],
              ]],
             ['page' => 'home', 'type' => 'usp_strip', 'sort_order' => 2, 'is_visible' => true,
-             'settings' => ['columns' => 4, 'boxed' => true, 'padding_top' => 36, 'padding_bottom' => 36],
+             'settings' => ['columns' => 4, 'style' => 'boxed', 'padding_top' => 36, 'padding_bottom' => 36],
              'blocks' => [
                  ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'shipping', 'title' => 'Free delivery', 'subtitle' => 'On orders over the free-shipping threshold']],
                  ['type' => 'usp', 'is_visible' => true, 'settings' => ['icon' => 'authentic', 'title' => '100% authentic', 'subtitle' => 'Sourced from authorised suppliers']],
@@ -327,7 +329,11 @@ class ThemePortabilityService
             ['page' => 'home', 'type' => 'product_slider', 'sort_order' => 4, 'is_visible' => true,
              'settings' => ['eyebrow' => 'Just In', 'title' => 'New Arrivals', 'source' => 'new_arrival',
                             'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 48]],
-            ['page' => 'home', 'type' => 'split_banner', 'sort_order' => 5, 'is_visible' => true,
+            // A live countdown to the running flash deal (Promotion -> Flash deals). Renders nothing
+            // when no deal is running, so the preset is safe on a store without one.
+            ['page' => 'home', 'type' => 'flash_deal', 'sort_order' => 5, 'is_visible' => true,
+             'settings' => ['countdown' => true, 'width' => 'container', 'padding_top' => 8, 'padding_bottom' => 40]],
+            ['page' => 'home', 'type' => 'split_banner', 'sort_order' => 6, 'is_visible' => true,
              'settings' => ['height' => 480, 'gap' => 0, 'padding_top' => 8, 'padding_bottom' => 48],
              'blocks' => [
                  ['type' => 'split', 'is_visible' => true, 'settings' => [
@@ -336,7 +342,7 @@ class ThemePortabilityService
                      'body' => 'Cleanse, treat, protect. A short routine built from formulas that respect the skin barrier.',
                      'button_text' => 'Build your routine']],
              ]],
-            ['page' => 'home', 'type' => 'banner_mosaic', 'sort_order' => 6, 'is_visible' => true,
+            ['page' => 'home', 'type' => 'banner_mosaic', 'sort_order' => 7, 'is_visible' => true,
              'settings' => ['height' => 240, 'gap' => 16, 'padding_top' => 8, 'padding_bottom' => 48],
              'blocks' => [
                  ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'large', 'eyebrow' => 'Skincare', 'title' => 'Serums & Essences', 'button_text' => 'Shop']],
@@ -344,19 +350,31 @@ class ThemePortabilityService
                  ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'small', 'title' => 'Fragrance']],
                  ['type' => 'mosaic_tile', 'is_visible' => true, 'settings' => ['span' => 'wide', 'title' => 'Hair care', 'button_text' => 'Shop']],
              ]],
-            ['page' => 'home', 'type' => 'product_slider', 'sort_order' => 7, 'is_visible' => true,
+            ['page' => 'home', 'type' => 'product_slider', 'sort_order' => 8, 'is_visible' => true,
              'settings' => ['eyebrow' => 'Loved by many', 'title' => 'Bestsellers', 'source' => 'best_selling',
                             'limit' => 8, 'columns' => 4, 'padding_top' => 40, 'padding_bottom' => 48,
                             'background' => '#f8f4ef']],
             // Proof that the dashboard's Banners screen feeds the theme: whatever is published as a
             // "Main Banner" appears here as a full-width strip, no theme edit needed.
-            ['page' => 'home', 'type' => 'store_banner', 'sort_order' => 8, 'is_visible' => true,
+            ['page' => 'home', 'type' => 'store_banner', 'sort_order' => 9, 'is_visible' => true,
              'settings' => ['banner_type' => 'Main Banner', 'layout' => 'strip', 'limit' => 1, 'height' => 360,
                             'width' => 'full', 'padding_top' => 0, 'padding_bottom' => 0]],
-            ['page' => 'home', 'type' => 'brand_slider', 'sort_order' => 9, 'is_visible' => true,
+            ['page' => 'home', 'type' => 'brand_slider', 'sort_order' => 10, 'is_visible' => true,
              'settings' => ['eyebrow' => 'Houses we carry', 'title' => 'Our Brands', 'limit' => 12,
-                            'marquee' => true, 'padding_top' => 56, 'padding_bottom' => 56]],
-            ['page' => 'home', 'type' => 'newsletter', 'sort_order' => 10, 'is_visible' => true,
+                            'style' => 'marquee', 'padding_top' => 56, 'padding_bottom' => 56]],
+            ['page' => 'home', 'type' => 'testimonials', 'sort_order' => 11, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Customer voices', 'title' => 'What shoppers say', 'limit' => 3,
+                            'min_rating' => 4, 'alignment' => 'center', 'padding_top' => 56, 'padding_bottom' => 56]],
+            ['page' => 'home', 'type' => 'faq', 'sort_order' => 12, 'is_visible' => true,
+             'settings' => ['eyebrow' => 'Help center', 'title' => 'Frequently asked questions',
+                            'subtitle' => 'Delivery, returns and authenticity - answered.',
+                            'button_text' => 'Contact us', 'padding_top' => 8, 'padding_bottom' => 64],
+             'blocks' => [
+                 ['type' => 'qa', 'is_visible' => true, 'settings' => ['question' => 'How long does delivery take?', 'answer' => 'Orders are prepared within one working day and delivered by the courier you choose at checkout.']],
+                 ['type' => 'qa', 'is_visible' => true, 'settings' => ['question' => 'Are the products original?', 'answer' => 'Every item is sourced from authorised suppliers and stored under the conditions the manufacturer requires.']],
+                 ['type' => 'qa', 'is_visible' => true, 'settings' => ['question' => 'Can I return an item?', 'answer' => 'Unopened items can be returned within the return window shown on the product page.']],
+             ]],
+            ['page' => 'home', 'type' => 'newsletter', 'sort_order' => 13, 'is_visible' => true,
              'settings' => ['title' => 'Join the List', 'subtitle' => 'Be first to know about new arrivals and exclusive offers.',
                             'width' => 'full', 'padding_top' => 0, 'padding_bottom' => 0]],
         ];
