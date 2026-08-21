@@ -255,6 +255,7 @@
                 </div>
             </div>
 
+    @include('admin-views.partials._page-banner-field', ['currentBanner' => app(\App\Services\EntityPageBannerService::class)->current('brand', (int) ($brand['id'] ?? 0))])
             <div class="d-flex flex-wrap justify-content-end gap-3 my-4">
                 <button type="reset" class="btn btn-secondary px-4 w-120">{{translate('reset')}}</button>
                 <button type="submit" class="btn btn-primary px-4 w-120">{{translate('save')}}</button>

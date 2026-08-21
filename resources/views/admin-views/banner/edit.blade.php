@@ -272,8 +272,26 @@
             getThemeWiseRatio();
         });
         let elementBannerTypeSelect = $('#banner_type_select');
+        let requiredResourceByType = {!! json_encode(\App\Services\BannerService::REQUIRED_RESOURCE_TYPES) !!};
+
+        function lockResourceForBannerType() {
+            let required = requiredResourceByType[elementBannerTypeSelect.val()] || null;
+            let resourceSelect = $('select[name="resource_type"]');
+            resourceSelect.find('option').prop('disabled', false);
+            if (required) {
+                if (resourceSelect.val() !== required) resourceSelect.val(required).trigger('change');
+                resourceSelect.find('option').each(function () {
+                    if ($(this).val() !== required) $(this).prop('disabled', true);
+                });
+            }
+        }
+
         elementBannerTypeSelect.on('change', function () {
             getThemeWiseRatio();
+            lockResourceForBannerType();
+        });
+        $(document).on('ready', function () {
+            lockResourceForBannerType();
         });
         function getThemeWiseRatio() {
             let bannerType = elementBannerTypeSelect.val();

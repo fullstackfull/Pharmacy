@@ -60,6 +60,7 @@ class ThemeBuilderController extends BaseController
         }
 
         return view('admin-views.theme.builder', [
+            'bannerGaps'    => $version ? $this->bannerGaps($version, $page) : [],
             'version'       => $version,
             'theme'         => $version?->theme,
             'page'          => $page,
@@ -366,6 +367,73 @@ class ThemeBuilderController extends BaseController
         }
 
         return Theme::where('is_active', true)->first();
+    }
+
+    /**
+     * Published dashboard banners a COMPOSED home would silently drop.
+     *
+     * A themed home replaces the built-in page wholesale — including the Main Banner slider and
+     * the other built-in banner slots. When the draft has home sections but none renders a banner
+     * type that has published rows, the merchant's banners vanish without explanation ('they do
+     * not show as a slider'). This names each dropped type so the builder can warn and offer the
+     * one-click fix.
+     *
+     * @return array<int, array{type:string,label:string,count:int}>
+     */
+    private function bannerGaps(ThemeVersion $version, string $page): array
+    {
+        if ($page !== 'home') {
+            return [];
+        }
+
+        try {
+            $sections = \App\Models\ThemeSection::where('theme_version_id', $version->id)
+                ->where('page', 'home')->where('is_visible', true)->get();
+
+            if ($sections->isEmpty()) {
+                return []; // built-in home renders — every slot still works
+            }
+
+            $covered = function (string $type) use ($sections): bool {
+                foreach ($sections as $section) {
+                    if ($section->type === 'store_banner' && ($section->settings['banner_type'] ?? null) === $type) {
+                        return true;
+                    }
+                    // A hero section fills the top-slider role, so no nagging about Main Banner.
+                    if ($type === 'Main Banner' && $section->type === 'hero_banner') {
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            $homeSlotTypes = [
+                'Main Banner'             => translate('main_Banner'),
+                'Main Section Banner'     => translate('main_Section_Banner'),
+                'Home Promo Banner'       => translate('home_Promo_Banner'),
+                'Category Section Banner' => translate('category_Section_Banner'),
+            ];
+
+            $counts = \App\Models\Banner::query()
+                ->where('theme', theme_root_path())
+                ->where('published', 1)
+                ->whereIn('banner_type', array_keys($homeSlotTypes))
+                ->selectRaw('banner_type, COUNT(*) AS total')
+                ->groupBy('banner_type')
+                ->pluck('total', 'banner_type');
+
+            $gaps = [];
+            foreach ($homeSlotTypes as $type => $label) {
+                $count = (int) ($counts[$type] ?? 0);
+                if ($count > 0 && !$covered($type)) {
+                    $gaps[] = ['type' => $type, 'label' => $label, 'count' => $count];
+                }
+            }
+            return $gaps;
+        } catch (\Throwable $exception) {
+            report($exception);
+            return [];
+        }
     }
 
     /** type => translated label, for every block type a section accepts. */

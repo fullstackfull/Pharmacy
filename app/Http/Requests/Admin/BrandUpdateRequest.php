@@ -29,7 +29,11 @@ class BrandUpdateRequest extends FormRequest
                 rules: ['nullable', 'image'],
                 skipMimes: ['.svg', '.gif'],
             ),
-            'name.0' => [
+
+            'page_banner' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg', '.gif'],
+            ),            'name.0' => [
                 'required',Rule::unique('brands', 'name')->ignore($this->route('id')),
             ],
         ];

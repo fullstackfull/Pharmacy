@@ -369,6 +369,7 @@
         </div>
 
         <div class="offcanvas-footer shadow-popup">
+    @include('admin-views.partials._page-banner-field', ['currentBanner' => null])
             <div class="d-flex justify-content-center flex-wrap gap-3 bg-white px-3 py-2">
                 <button type="reset" class="btn btn-secondary flex-grow-1">
                     {{ translate('reset') }}

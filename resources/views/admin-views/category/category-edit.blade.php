@@ -154,9 +154,11 @@
                                                 <p class="fs-12 mb-0"> {{ translate('Upload_image') }}</p>
                                             </div>
                                             <div class="upload-file">
+                                                {{-- Editing: an image already exists, so native `required` must not block the
+                                                     submit (it silently ate every save on this page). --}}
                                                 <input type="file" name="image" id="category-image"
                                                     class="upload-file__input single_file_input" data-existing-file="true"
-                                                    accept=".webp, .jpg, .png, .jpeg, .gif" required>
+                                                    accept=".webp, .jpg, .png, .jpeg, .gif">
 
                                                 <label class="upload-file__wrapper">
                                                     <div class="upload-file-textbox text-center">
@@ -199,6 +201,11 @@
                                     </div>
                                 </div>
                                 @endif
+                            </div>
+
+                            @include('admin-views.partials._page-banner-field', ['currentBanner' => app(\App\Services\EntityPageBannerService::class)->current('category', (int) ($category['id'] ?? 0))])
+
+                            <div>
                                 @if ($category['position'] == 2 || $category['position'] == 1)
                                     <div class="d-flex flex-wrap gap-3 justify-content-end mt-4">
                                         <button type="reset" id="reset" class="btn btn-secondary min-w-120">

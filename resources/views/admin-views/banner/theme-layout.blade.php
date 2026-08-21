@@ -40,6 +40,13 @@
 
         .tl-strip .tl-card { aspect-ratio: 4.5 / 1; min-height: 80px; }
 
+        .tl-card--off { opacity: .55; }
+        .tl-card--off img { filter: grayscale(.6); }
+        .tl-off-flag { position: absolute; top: .45rem; inset-inline-end: .45rem; z-index: 3; padding: .15rem .55rem; border-radius: 999px; background: #dc3545; color: #fff; font-size: .68rem; font-weight: 700; }
+        .tl-part-title { margin: 1.75rem 0 .75rem; font-size: 1.05rem; font-weight: 700; }
+        .tl-strip-stack { display: flex; flex-direction: column; gap: .6rem; }
+        .tl-strip-stack .tl-card { aspect-ratio: 4.5 / 1; min-height: 80px; }
+
         @media (max-width: 767px) {
             .tl-mosaic { grid-template-columns: repeat(2, 1fr); }
             .tl-span--large, .tl-span--wide { grid-column: span 2; }
@@ -128,14 +135,69 @@
             </div>
         @empty
             <div class="card">
-                <div class="card-body text-center py-5">
-                    <h5 class="mb-2">{{ translate('the_theme_shows_no_banners_yet') }}</h5>
-                    <p class="text-muted mb-3">{{ translate('add_a_banner_section_in_the_theme_builder_and_it_will_appear_here_exactly_as_the_storefront_shows_it') }}</p>
+                <div class="card-body text-center py-4">
+                    <p class="text-muted mb-2">{{ translate('the_theme_builder_shows_no_banner_sections_yet') }}</p>
                     @if (Route::has('admin.theme.builder.index'))
-                        <a href="{{ route('admin.theme.builder.index') }}" class="btn btn-primary">{{ translate('Open_Theme_Builder') }}</a>
+                        <a href="{{ route('admin.theme.builder.index') }}" class="btn btn-sm btn-outline-primary">{{ translate('Open_Theme_Builder') }}</a>
                     @endif
                 </div>
             </div>
+        @endforelse
+
+        {{-- The BUILT-IN placements: category/brand page headers, the home promo grid, the main
+             slider… — every banner listed, unpublished ones dimmed with the reason, so "I added it
+             but it does not show" is answered right here. --}}
+        <h4 class="tl-part-title">{{ translate('built_in_placements_outside_the_builder') }}</h4>
+
+        @forelse ($placements as $group)
+            <div class="tl-section">
+                <div class="tl-head">
+                    <h5>{{ $group['label'] }}</h5>
+                    <span class="badge badge-soft-info">{{ $group['where'] }}</span>
+                    @if (!empty($group['dropped_by_theme']))
+                        <span class="badge badge-soft-danger">
+                            {{ translate('hidden_by_the_composed_home_page') }}
+                        </span>
+                        @if (Route::has('admin.theme.builder.index'))
+                            <a class="fs-12" href="{{ route('admin.theme.builder.index', ['page' => 'home']) }}">
+                                {{ translate('add_its_section_in_the_builder') }}
+                            </a>
+                        @endif
+                    @endif
+                </div>
+                <div class="tl-body">
+                    <div class="{{ $group['shape'] === 'hero' ? 'tl-hero' : ($group['shape'] === 'grid' ? 'tl-grid' : 'tl-strip-stack') }}"
+                         @if ($group['shape'] === 'grid') style="grid-template-columns: repeat(3, 1fr)" @endif>
+                        @foreach ($group['cards'] as $index => $card)
+                            <div class="tl-card {{ empty($card['image']) ? 'tl-card--empty' : '' }} {{ $card['published'] ? '' : 'tl-card--off' }}">
+                                @if (!empty($card['image']))
+                                    <img src="{{ $card['image'] }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
+                                @else
+                                    <span>{{ translate('no_image_yet') }}</span>
+                                @endif
+
+                                @if ($group['shape'] === 'hero')
+                                    <span class="tl-card__size">{{ translate('slide') }} {{ $index + 1 }}</span>
+                                @elseif (!empty($card['place']))
+                                    <span class="tl-card__size">{{ $card['place'] }}</span>
+                                @endif
+
+                                @unless ($card['published'])
+                                    <span class="tl-off-flag">{{ translate('unpublished_will_not_show') }}</span>
+                                @endunless
+
+                                <span class="tl-card__meta">
+                                    @if (!empty($card['title']))<span>{{ Str::limit($card['title'], 30) }}</span>@endif
+                                    <span>#{{ $card['banner_id'] }}</span>
+                                    <a href="{{ route('admin.banner.update', ['id' => $card['banner_id']]) }}">{{ translate('edit_banner') }}</a>
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="card"><div class="card-body text-center text-muted py-4">{{ translate('no_banners_created_yet') }}</div></div>
         @endforelse
     </div>
 @endsection
