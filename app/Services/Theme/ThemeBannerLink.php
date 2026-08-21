@@ -151,6 +151,10 @@ class ThemeBannerLink
      * - by id: blocks that link the banner directly (`banner_id`)
      * - by type: store_banner sections that render a whole banner type
      *
+     * Each entry names the section, the page, the version state — and for a directly linked
+     * block, its size/role in that section ("Banner Mosaic — wide tile — home, draft"), so a
+     * merchant can tell WHICH picture in the list is which tile of the theme.
+     *
      * @return array{ids: array<int, array<int, string>>, types: array<string, array<int, string>>}
      */
     public function usage(): array
@@ -158,20 +162,12 @@ class ThemeBannerLink
         $usage = ['ids' => [], 'types' => []];
 
         try {
-            $theme = Theme::query()->where('is_active', true)->first();
-            if (!$theme) {
-                return $usage;
-            }
+            $registry = app(SectionRegistry::class);
 
-            $sections = ThemeSection::with(['blocks', 'version'])
-                ->whereHas('version', fn ($query) => $query->where('theme_id', $theme->id)
-                    ->whereIn('status', ['draft', 'published']))
-                ->get();
-
-            foreach ($sections as $section) {
-                $where = translate($section->page) . ' — ' . ($section->version->status === 'published'
-                    ? translate('published')
-                    : translate('draft'));
+            foreach ($this->activeThemeSections() as $section) {
+                $where = translate($registry->types()[$section->type]['label'] ?? $section->type)
+                    . ' — ' . translate($section->page)
+                    . ' (' . ($section->version->status === 'published' ? translate('published') : translate('draft')) . ')';
 
                 if ($section->type === 'store_banner') {
                     $type = (string) ($section->settings['banner_type'] ?? '');
@@ -183,7 +179,7 @@ class ThemeBannerLink
                 foreach ($section->blocks as $block) {
                     $bannerId = (int) ($block->settings['banner_id'] ?? 0);
                     if ($bannerId > 0) {
-                        $usage['ids'][$bannerId][] = $where;
+                        $usage['ids'][$bannerId][] = $where . $this->blockRoleSuffix($block);
                     }
                 }
             }
@@ -192,6 +188,119 @@ class ThemeBannerLink
         }
 
         return $usage;
+    }
+
+    /**
+     * The active theme's banner-carrying sections, arranged EXACTLY as the storefront lays them
+     * out — what the "theme banners as displayed" screen renders (per the merchant's ask: show
+     * which image is the mosaic, which tile is small, which is square — not a flat table).
+     *
+     * @return array<int, array{page:string,status:string,section_id:int,type:string,label:string,
+     *                          layout:?string,columns:int,cards:array}>
+     */
+    public function themeLayout(): array
+    {
+        try {
+            $registry = app(SectionRegistry::class);
+            $resolver = app(SectionDataResolver::class);
+            $groups = [];
+
+            foreach ($this->activeThemeSections() as $section) {
+                $settings = $section->settings ?? [];
+                $cards = [];
+
+                if ($section->type === 'store_banner') {
+                    $bannerType = (string) ($settings['banner_type'] ?? '');
+                    foreach ($bannerType === '' ? [] : $resolver->dashboardBanners($bannerType, (int) ($settings['limit'] ?? 6)) as $card) {
+                        $cards[] = $card + ['banner_id' => null, 'block_id' => null, 'linked' => false];
+                    }
+                } elseif ($section->type === 'banner_strip') {
+                    $cards[] = [
+                        'image' => $settings['image'] ?? null, 'title' => $settings['title'] ?? null,
+                        'span' => 'wide', 'banner_id' => null, 'block_id' => null, 'linked' => false,
+                    ];
+                } else {
+                    $blocks = $section->blocks->where('is_visible', true)->values();
+                    $overrides = $this->cardOverrides(
+                        $blocks->map(fn ($block) => (int) ($block->settings['banner_id'] ?? 0))->all()
+                    );
+
+                    foreach ($blocks as $block) {
+                        $blockSettings = $block->settings ?? [];
+                        $bannerId = (int) ($blockSettings['banner_id'] ?? 0);
+                        $linked = $overrides[$bannerId] ?? null;
+
+                        $cards[] = [
+                            'image'     => $linked['image'] ?? ($blockSettings['image'] ?? null),
+                            'title'     => ($linked['title'] ?? null) ?: ($blockSettings['title'] ?? null),
+                            'span'      => $blockSettings['span'] ?? null,
+                            'banner_id' => $bannerId > 0 ? $bannerId : null,
+                            'block_id'  => $block->id,
+                            'linked'    => $linked !== null,
+                            'published' => $linked['published'] ?? true,
+                        ];
+                    }
+                }
+
+                if ($cards === []) {
+                    continue;
+                }
+
+                $groups[] = [
+                    'page'       => $section->page,
+                    'status'     => $section->version->status,
+                    'section_id' => $section->id,
+                    'type'       => $section->type,
+                    'label'      => translate($registry->types()[$section->type]['label'] ?? $section->type),
+                    'layout'     => $settings['layout'] ?? null,
+                    'columns'    => max(1, (int) ($settings['columns'] ?? 2)),
+                    'cards'      => $cards,
+                ];
+            }
+
+            return $groups;
+        } catch (\Throwable $exception) {
+            report($exception);
+            return [];
+        }
+    }
+
+    /** Banner-carrying sections of the active theme, published version first, then drafts. */
+    private function activeThemeSections()
+    {
+        $theme = Theme::query()->where('is_active', true)->first();
+        if (!$theme) {
+            return collect();
+        }
+
+        $bannerSections = ['hero_banner', 'promotional_banner', 'banner_mosaic', 'split_banner', 'banner_strip', 'store_banner'];
+
+        return ThemeSection::with(['blocks', 'version'])
+            ->whereHas('version', fn ($query) => $query->where('theme_id', $theme->id)
+                ->whereIn('status', ['published', 'draft']))
+            ->where('is_visible', true)
+            ->get()
+            ->filter(fn (ThemeSection $section) => in_array($section->type, $bannerSections, true)
+                || $section->blocks->isNotEmpty())
+            ->sortBy(fn (ThemeSection $section) => [
+                $section->version->status === 'published' ? 0 : 1,
+                $section->page,
+                $section->sort_order,
+            ])
+            ->values();
+    }
+
+    /** " — wide tile" style suffix describing a block's role inside its section. */
+    private function blockRoleSuffix(ThemeBlock $block): string
+    {
+        $span = $block->settings['span'] ?? null;
+        if ($block->type === 'mosaic_tile' && $span) {
+            return ' — ' . translate($span . '_tile');
+        }
+        if ($block->type === 'slide') {
+            return ' — ' . translate('slide') . ' ' . $block->sort_order;
+        }
+        return '';
     }
 
     /**
