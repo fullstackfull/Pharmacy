@@ -56,7 +56,9 @@ class SectionDataResolver
         }
 
         return $this->safely(function () use ($limit, $source, $reference) {
-            $query = Product::active();
+            // The card shows the brand under the image; loading it here keeps a rail of ten
+            // products at one query instead of eleven.
+            $query = Product::active()->with('brand:id,name,slug');
 
             $query = match ($source) {
                 'best_selling' => $query->withCount('orderDetails')->orderByDesc('order_details_count'),
@@ -71,6 +73,22 @@ class SectionDataResolver
         });
     }
 
+    /**
+     * Product ids the signed-in customer has wishlisted, so every card on the page can draw a
+     * filled or empty heart from ONE query instead of one per card.
+     */
+    public function wishlistedProductIds(): array
+    {
+        $customerId = auth('customer')->id();
+        if (!$customerId) {
+            return [];
+        }
+
+        return $this->safely(fn () => \App\Models\Wishlist::where('customer_id', $customerId)->pluck('product_id'))
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     /** Exactly these products, in the order the merchant picked them. */
     public function pickedProducts(string|array|null $picked, int $limit): Collection
     {
@@ -80,6 +98,7 @@ class SectionDataResolver
         }
 
         return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
             ->whereIn('id', array_slice($ids, 0, $this->bounded($limit, 24)))
             ->get()
             ->sortBy(fn ($product) => array_search($product->id, $ids, true))
@@ -299,6 +318,7 @@ class SectionDataResolver
     public function flashDealProducts(int $dealId, int $limit): Collection
     {
         return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
             ->whereIn('id', \App\Models\FlashDealProduct::where('flash_deal_id', $dealId)->pluck('product_id'))
             ->take($this->bounded($limit, 24))
             ->get());

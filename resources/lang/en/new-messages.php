@@ -3688,4 +3688,7 @@ ____________________________________________________on_search_engines_and_see_th
 	"width" => "Width",
 	"alignment" => "Alignment",
 	"slow_zoom_animation" => "Slow zoom animation",
+	"mosaic_tile" => "Mosaic tile",
+	"media_height" => "Media height",
+	"split_panel" => "Split panel",
 ];

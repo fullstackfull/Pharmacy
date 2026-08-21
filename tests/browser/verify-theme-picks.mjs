@@ -42,6 +42,36 @@ manual && manual.cards === 3
     ? ok('the hand-picked slider shows exactly the 3 picked products')
     : note('the hand-picked slider does not show exactly the picked products: ' + JSON.stringify(manual));
 
+// ---- the card is a real product card ------------------------------------------------------------
+const anatomy = await page.$$eval('.tbs-product_slider .ml-card', nodes => nodes.map(node => {
+    const name = node.querySelector('.ml-name');
+    // A long name is allowed to end in an ellipsis, but the box must stop on a LINE boundary:
+    // the old card cut glyphs in half at a fixed pixel height.
+    const line = name ? parseFloat(getComputedStyle(name).lineHeight) : 0;
+    const lines = name ? name.clientHeight / line : 0;
+    return {
+        brand: !!node.querySelector('.ml-brandline'),
+        clipped: name ? Math.abs(lines - Math.round(lines)) > 0.08 : true,
+        fav: !!node.querySelector('.ml-fav.product-action-add-wishlist'),
+        price: !!node.querySelector('.ml-price b'),
+        was: !!node.querySelector('.ml-price del'),
+        off: (node.querySelector('.ml-off') || {}).textContent || null,
+    };
+}));
+
+anatomy.length && anatomy.every(card => card.fav) ? ok('every card carries the wishlist heart') : note('a card has no wishlist heart');
+anatomy.every(card => card.price) ? ok('every card shows its price') : note('a card shows no price');
+anatomy.every(card => !card.clipped) ? ok('no card cuts its product name mid-line') : note('a product name box does not end on a line boundary');
+anatomy.some(card => card.brand) ? ok('the brand line renders under the image') : note('no card shows a brand line');
+
+const discounted = anatomy.find(card => card.off);
+discounted && discounted.was && /^-\d+%$/.test(discounted.off.trim())
+    ? ok(`a discounted card shows the old price and ${discounted.off.trim()}`)
+    : note('a discounted card does not show both the old price and a percentage: ' + JSON.stringify(discounted));
+
+const rated = await page.$$eval('.ml-card .ml-stars', nodes => nodes.length);
+rated ? ok(`rated products show their stars (${rated} card(s))`) : console.log('  · no reviewed product on the page');
+
 // ---- add to cart --------------------------------------------------------------------------------
 const cartButton = await page.$('.ml-cart-btn.product-add-to-cart-button');
 if (!cartButton) {
