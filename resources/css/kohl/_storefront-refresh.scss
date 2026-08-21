@@ -705,3 +705,108 @@
     color: var(--foot-heading);
     opacity: 1;
 }
+
+/* ---------------------------------------------------------------------------
+   "Alive" pass — the difference between a classic catalogue and a store that
+   feels like a modern phone UI: rounder surfaces, layered depth instead of a
+   flat grey blur, a spring curve on anything that reacts to touch, and a press
+   state so a tap answers back. Motion is opt-out: it stops entirely under
+   prefers-reduced-motion.
+   ------------------------------------------------------------------------ */
+.k-store {
+    --rf-radius: 22px;
+    --rf-radius-sm: 16px;
+    --rf-spring: cubic-bezier(.34, 1.4, .64, 1);
+    --rf-lift: 0 2px 6px rgba(20, 22, 28, .04), 0 14px 34px -14px rgba(20, 22, 28, .2);
+    --rf-lift-lg: 0 4px 12px rgba(20, 22, 28, .05), 0 30px 64px -22px rgba(20, 22, 28, .28);
+    --rf-glow: 0 12px 32px -14px rgba(var(--rf-accent-rgb), .65);
+}
+
+/* Cards and panels breathe and lift. */
+.k-store .card,
+.k-store .product-single-hover,
+.k-store .style--card {
+    border-radius: var(--rf-radius);
+    transition: transform .45s var(--rf-spring), box-shadow .4s ease, border-color .3s ease;
+}
+
+.k-store .product-single-hover:hover,
+.k-store .style--card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--rf-lift-lg);
+}
+
+/* Every button answers a press. */
+.k-store .btn,
+.k-store .btn--primary,
+.k-store .product-add-to-cart-button,
+.k-store .product-buy-now-button {
+    border-radius: var(--rf-pill);
+    transition: transform .35s var(--rf-spring), box-shadow .3s ease, background-color .25s ease;
+}
+
+.k-store .btn:hover,
+.k-store .btn--primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--rf-lift);
+}
+
+.k-store .btn:active,
+.k-store .btn--primary:active,
+.k-store .product-add-to-cart-button:active,
+.k-store .product-buy-now-button:active {
+    transform: scale(.97);
+}
+
+.k-store .btn--primary:hover {
+    box-shadow: var(--rf-glow);
+}
+
+/* Product page: the chips and badges get the same softness, and the gallery
+   image floats on its own light rather than sitting in a hard box. */
+.k-store .pd-brand {
+    border-radius: var(--rf-pill);
+    backdrop-filter: blur(10px);
+    transition: transform .4s var(--rf-spring), border-color .2s ease, box-shadow .3s ease;
+}
+
+.k-store .pd-brand:hover {
+    transform: translateY(-2px);
+}
+
+.k-store .pd-badge,
+.k-store .pd-save {
+    border-radius: var(--rf-pill);
+}
+
+.k-store .pd-viewers {
+    display: inline-flex;
+    padding: 7px 14px;
+    border-radius: var(--rf-pill);
+    background: var(--rf-sunk);
+}
+
+.k-store .product-image-thumbnail,
+.k-store .product-details-thumbnail,
+.k-store .swiper-slide img {
+    border-radius: var(--rf-radius-sm);
+}
+
+/* Quantity steppers, inputs and selects match the pill language. */
+.k-store .quantity-input-group,
+.k-store .product-quantity-area,
+.k-store .form-control,
+.k-store .custom-select {
+    border-radius: var(--rf-pill);
+}
+
+.k-store textarea.form-control {
+    border-radius: var(--rf-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .k-store * {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+    }
+}

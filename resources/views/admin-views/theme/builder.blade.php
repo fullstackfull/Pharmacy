@@ -213,6 +213,11 @@
         .tb-thumb[data-shape="spacer"]::before { inset: 18px 10px; border: 1px dashed #39434f; border-radius: 3px; }
         .tb-thumb[data-shape="columns"]::before { inset: 10px 8px; border-radius: 3px;
             background: repeating-linear-gradient(90deg,#39434f 0 18%,transparent 18% 27%); }
+        .tb-thumb[data-shape="vendors"]::before { inset: 10px 8px auto; height: 22px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 22%,transparent 22% 26%); }
+        .tb-thumb[data-shape="vendors"]::after { inset: 36px 8px 10px;
+            background-image: radial-gradient(circle,#4a5563 42%,transparent 44%);
+            background-size: 26% 100%; background-repeat: repeat-x; }
         .tb-thumb[data-shape="showcase"]::before { inset: 6px 8px auto; height: 20px; border-radius: 3px;
             background: linear-gradient(120deg,#5b46a8,#2f7fae); }
         .tb-thumb[data-shape="showcase"]::after { inset: 32px 8px 8px; border-radius: 3px;

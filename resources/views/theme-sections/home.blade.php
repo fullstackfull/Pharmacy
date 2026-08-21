@@ -15,7 +15,8 @@
     // rather than emitting an empty padded <section>, which reads on the page as a broken gap.
     $__renderable = ['hero_banner', 'category_grid', 'product_slider', 'brand_slider', 'promotional_banner',
         'split_banner', 'banner_mosaic', 'banner_strip', 'store_banner', 'usp_strip', 'newsletter',
-        'custom_html', 'spacer', 'flash_deal', 'testimonials', 'faq', 'category_showcase'];
+        'custom_html', 'spacer', 'flash_deal', 'testimonials', 'faq', 'category_showcase',
+        'vendor_slider', 'vendor_showcase'];
 @endphp
 
 @if (!empty($__sections))
@@ -32,9 +33,13 @@
         --ml-line:#E4DFF2; --ml-sand:#F7F5FD; --ml-paper:#fff;
         --ml-gold:var(--ml-primary); --ml-gold-soft:#cdb8f0; --ml-gold-dark:var(--ml-primary);
         --ml-serif:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
-        --ml-shadow:0 12px 42px rgba(20,8,46,.08);
-        --ml-shadow-lg:0 24px 70px rgba(20,8,46,.13);
+        /* Layered shadows read as depth rather than a grey blur, and the spring curve is what
+           makes a hover feel alive instead of mechanical. */
+        --ml-shadow:0 2px 6px rgba(20,8,46,.04), 0 12px 32px -12px rgba(20,8,46,.16);
+        --ml-shadow-lg:0 4px 12px rgba(20,8,46,.05), 0 28px 60px -20px rgba(20,8,46,.26);
+        --ml-glow:0 10px 30px -12px rgba(123,63,228,.55);
         --ml-ease:cubic-bezier(.22,.61,.36,1);
+        --ml-spring:cubic-bezier(.34,1.4,.64,1);
         color:var(--ml-ink); position:relative;
         font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;
     }
@@ -63,7 +68,8 @@
     .tbs-align-end .ml-sec-head{ flex-direction:column; align-items:flex-end; text-align:end; }
 
     /* ---- scroll reveal ---------------------------------------------------------------- */
-    .ml-reveal{ opacity:0; transform:translateY(22px); transition:opacity .7s var(--ml-ease), transform .7s var(--ml-ease); }
+    .ml-reveal{ opacity:0; transform:translateY(26px) scale(.985);
+        transition:opacity .8s var(--ml-ease), transform .8s var(--ml-spring); }
     .ml-reveal.is-in{ opacity:1; transform:none; }
     .ml-reveal[data-delay="1"]{ transition-delay:.07s } .ml-reveal[data-delay="2"]{ transition-delay:.14s }
     .ml-reveal[data-delay="3"]{ transition-delay:.21s } .ml-reveal[data-delay="4"]{ transition-delay:.28s }
@@ -82,10 +88,13 @@
 
     /* ---- buttons ---------------------------------------------------------------------- */
     .ml-btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-        min-height:44px; padding:0 1.4rem; border:0; border-radius:10px;
-        font-weight:700; font-size:.82rem; text-decoration:none; transition:.25s var(--ml-ease);
+        min-height:46px; padding:0 1.5rem; border:0; border-radius:99px;
+        font-weight:700; font-size:.82rem; text-decoration:none;
+        transition:transform .35s var(--ml-spring), box-shadow .3s var(--ml-ease), background .25s;
         background:var(--ml-ink); color:#fff; }
-    .ml-btn:hover{ transform:translateY(-1px); box-shadow:var(--ml-shadow); color:#fff; text-decoration:none; }
+    .ml-btn:hover{ transform:translateY(-2px); box-shadow:var(--ml-shadow-lg); color:#fff; text-decoration:none; }
+    .ml-btn:active{ transform:translateY(0) scale(.97); }
+    .ml-btn-gold:hover{ box-shadow:var(--ml-glow); }
     .ml-btn-gold{ background:var(--ml-grad); color:#fff; }
     .ml-btn-light{ background:#fff; color:var(--ml-ink); }
     .ml-btn-light:hover{ color:var(--ml-primary); }
@@ -125,9 +134,10 @@
 
     /* ---- product cards (grid + rail) --------------------------------------------------- */
     .ml-card{ position:relative; display:flex; flex-direction:column; background:var(--ml-paper);
-        border:1px solid #eeeaf5; border-radius:14px; overflow:hidden;
-        transition:transform .3s var(--ml-ease), box-shadow .3s var(--ml-ease), border-color .3s; }
-    .ml-card:hover{ transform:translateY(-4px); box-shadow:var(--ml-shadow); border-color:#e2daf1; }
+        border:1px solid #f0ecf8; border-radius:20px; overflow:hidden;
+        transition:transform .45s var(--ml-spring), box-shadow .4s var(--ml-ease), border-color .3s; }
+    .ml-card:hover{ transform:translateY(-6px); box-shadow:var(--ml-shadow-lg); border-color:#e2daf1; }
+    .ml-card:active{ transform:translateY(-2px) scale(.995); }
 
     .ml-card__media{ position:relative; }
     .ml-card__thumb{ display:block; overflow:hidden; background:#fbfaff; aspect-ratio:1/1; }
@@ -146,7 +156,9 @@
         display:grid; place-items:center; padding:0; cursor:pointer; border:1px solid var(--ml-line);
         border-radius:50%; background:rgba(255,255,255,.92); color:var(--ml-ink2);
         font-size:.82rem; transition:.22s var(--ml-ease); }
-    .ml-fav:hover{ color:#E23A3A; border-color:#f2c9c9; transform:scale(1.06); }
+    .ml-fav{ backdrop-filter:blur(8px); transition:transform .4s var(--ml-spring), color .2s, border-color .2s; }
+    .ml-fav:hover{ color:#E23A3A; border-color:#f2c9c9; transform:scale(1.14); }
+    .ml-fav:active{ transform:scale(.92); }
     .ml-fav.is-on,.ml-fav .fa-heart{ color:#E23A3A; }
 
     .ml-card__body{ display:flex; flex-direction:column; gap:6px; padding:12px; flex:1 1 auto; }
@@ -164,10 +176,12 @@
     .ml-price b{ font-weight:800; font-size:1rem; line-height:1.3; }
     .ml-price del{ font-size:.7rem; color:#aca4b8; font-weight:500; }
     .ml-cart-btn{ width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
-        min-height:38px; margin-top:4px; padding:0 .7rem; border:1px solid var(--ml-line); border-radius:9px;
-        cursor:pointer; background:var(--ml-sand); color:var(--ml-ink2); font-size:.74rem; font-weight:700;
-        transition:.22s var(--ml-ease); }
-    .ml-cart-btn:hover:not(:disabled){ background:var(--ml-grad); color:#fff; border-color:transparent; }
+        min-height:40px; margin-top:6px; padding:0 .8rem; border:1px solid var(--ml-line); border-radius:99px;
+        cursor:pointer; background:var(--ml-sand); color:var(--ml-ink2); font-size:.75rem; font-weight:700;
+        transition:transform .35s var(--ml-spring), background .25s var(--ml-ease), color .2s, box-shadow .3s; }
+    .ml-cart-btn:hover:not(:disabled){ background:var(--ml-grad); color:#fff; border-color:transparent;
+        box-shadow:var(--ml-glow); transform:translateY(-1px); }
+    .ml-cart-btn:active:not(:disabled){ transform:scale(.97); }
     .ml-cart-btn:disabled{ opacity:.55; cursor:not-allowed; }
 
     .ml-rail{ display:flex; gap:12px; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x proximity;
@@ -193,9 +207,61 @@
         background:var(--ml-sand); border:1px solid #eee8f8; transition:.25s var(--ml-ease); }
     .ml-cat-ring::after{ content:""; position:absolute; width:46px; height:46px; border-radius:50%;
         background:var(--ml-grad); opacity:.08; inset-inline-start:10px; bottom:5px; }
-    .ml-cat:hover .ml-cat-ring{ transform:translateY(-3px); box-shadow:0 10px 28px rgba(123,63,228,.14); border-color:var(--ml-gold-soft); }
+    .ml-cat-ring{ transition:transform .45s var(--ml-spring), box-shadow .35s var(--ml-ease), border-color .3s; }
+    .ml-cat:hover .ml-cat-ring{ transform:translateY(-6px) scale(1.04); box-shadow:var(--ml-glow); border-color:transparent; }
+    .ml-cat:hover .ml-cat-name{ color:var(--ml-primary); }
     .ml-cat-ring img{ position:relative; z-index:1; width:60%; height:60%; object-fit:contain; }
     .ml-cat-name{ font-size:.78rem; font-weight:600; color:var(--ml-ink2); margin-top:.55rem; min-height:0; }
+
+    /* ---- vendors (marketplace) ------------------------------------------------------------ */
+    .ml-vendor{ position:relative; display:flex; flex-direction:column; overflow:hidden;
+        border-radius:20px; background:var(--ml-paper); border:1px solid #eeeaf5; text-decoration:none;
+        color:inherit; transition:transform .45s var(--ml-spring), box-shadow .4s var(--ml-ease), border-color .3s; }
+    .ml-vendor:hover{ transform:translateY(-6px); box-shadow:var(--ml-shadow-lg); border-color:#e2daf1;
+        text-decoration:none; color:inherit; }
+    .ml-vendor__cover{ display:block; aspect-ratio:16/7; overflow:hidden; background:var(--ml-sand); }
+    .ml-vendor__cover img{ width:100%; height:100%; object-fit:cover; transition:transform .8s var(--ml-ease); }
+    .ml-vendor:hover .ml-vendor__cover img{ transform:scale(1.07); }
+    .ml-vendor__body{ display:flex; align-items:center; gap:.7rem; padding:12px 14px 16px; }
+    .ml-vendor__logo{ flex:0 0 auto; width:52px; height:52px; border-radius:50%; overflow:hidden;
+        background:#fff; border:2px solid #fff; box-shadow:0 6px 18px rgba(20,8,46,.14); }
+    .ml-vendor:not(.is-compact) .ml-vendor__logo{ margin-top:-34px; }
+    .ml-vendor__logo img{ width:100%; height:100%; object-fit:cover; }
+    .ml-vendor__id{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .ml-vendor__id b{ font-size:.86rem; font-weight:700; color:var(--ml-ink); line-height:1.35;
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ml-vendor__stats{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem;
+        font-size:.7rem; color:var(--ml-muted); }
+    .ml-vendor__rating{ display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:99px;
+        background:rgba(245,166,35,.13); color:#b57708; font-weight:700; }
+    .ml-vendor__closed{ margin-inline-start:auto; padding:3px 9px; border-radius:99px; font-size:.62rem;
+        font-weight:700; background:rgba(20,8,46,.08); color:var(--ml-ink2); white-space:nowrap; }
+    .ml-vendor.is-compact{ flex-direction:row; align-items:center; padding:10px 12px; }
+    .ml-vendor.is-compact .ml-vendor__body{ padding:0; }
+    .ml-vendor-rail .ml-vendor{ min-width:260px; width:260px; flex:0 0 auto; scroll-snap-align:start; }
+
+    /* one featured shop */
+    .ml-shop{ position:relative; margin-bottom:1.3rem; border-radius:22px; overflow:hidden;
+        background:var(--ml-paper); border:1px solid #eeeaf5; box-shadow:var(--ml-shadow); }
+    .ml-shop__cover{ display:block; aspect-ratio:24/7; overflow:hidden; background:var(--ml-sand); }
+    .ml-shop__cover img{ width:100%; height:100%; object-fit:cover; transition:transform 1s var(--ml-ease); }
+    .ml-shop:hover .ml-shop__cover img{ transform:scale(1.04); }
+    .ml-shop__bar{ display:flex; align-items:center; flex-wrap:wrap; gap:1rem; padding:14px 18px 18px; }
+    .ml-shop__logo{ flex:0 0 auto; width:76px; height:76px; margin-top:-46px; border-radius:22px; overflow:hidden;
+        background:#fff; border:3px solid #fff; box-shadow:0 12px 30px rgba(20,8,46,.18); }
+    .ml-shop__logo img{ width:100%; height:100%; object-fit:cover; }
+    .ml-shop__id{ flex:1 1 220px; min-width:0; }
+    .ml-shop__id h3{ margin:0; font-family:var(--ml-serif); font-weight:800;
+        font-size:clamp(1.1rem,2vw,1.45rem); color:var(--ml-ink); }
+    .ml-shop__stats{ display:flex; flex-wrap:wrap; align-items:center; gap:.9rem; margin-top:.35rem;
+        font-size:.76rem; color:var(--ml-muted); }
+    .ml-shop__stats i{ color:#F5A623; }
+    .ml-shop__closed{ padding:3px 10px; border-radius:99px; background:rgba(20,8,46,.08); color:var(--ml-ink2); font-weight:700; }
+    .ml-shop__visit{ margin-inline-start:auto; }
+    @media (max-width:575.98px){
+        .ml-shop__logo{ width:60px; height:60px; margin-top:-34px; border-radius:18px; }
+        .ml-shop__visit{ width:100%; margin-inline-start:0; }
+    }
 
     /* ---- category showcase --------------------------------------------------------------- */
     .ml-showcase__banner{ display:block; margin-bottom:1.2rem; }
@@ -217,7 +283,9 @@
 
     /* ---- promo tiles / mosaic / split ---------------------------------------------------- */
     .ml-tile{ position:relative; display:block; overflow:hidden; text-decoration:none; color:#fff;
-        border-radius:15px; box-shadow:var(--ml-shadow); background:var(--ml-sand); }
+        border-radius:22px; box-shadow:var(--ml-shadow); background:var(--ml-sand);
+        transition:transform .45s var(--ml-spring), box-shadow .4s var(--ml-ease); }
+    .ml-tile:hover{ transform:translateY(-4px); box-shadow:var(--ml-shadow-lg); }
     .ml-tile:hover{ text-decoration:none; color:#fff; }
     .ml-tile img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .8s var(--ml-ease); }
     .ml-tile:hover img{ transform:scale(1.05); }
@@ -407,11 +475,17 @@
                 : null;
             if ($deal) { $__shownDeals[] = $deal['id']; }
             $showcase = $type === 'category_showcase' ? $__data->categoryShowcase($s) : null;
+            $vendors = $type === 'vendor_slider'
+                ? $__data->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
+                : collect();
+            $vendorShowcase = $type === 'vendor_showcase' ? $__data->vendorShowcase($s) : null;
         @endphp
 
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
         @continue($type === 'flash_deal' && !$deal)
         @continue($type === 'category_showcase' && !$showcase)
+        @continue($type === 'vendor_slider' && $vendors->isEmpty())
+        @continue($type === 'vendor_showcase' && !$vendorShowcase)
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
@@ -618,6 +692,97 @@
                                         @endforeach
                                     </div>
                                 @endif
+                            @endif
+                        @endif
+                        @break
+
+                    {{-- The marketplace's sellers. A shop card carries what a buyer weighs before
+                         entering a store: its cover, its logo, its rating and how much it sells. --}}
+                    @case('vendor_slider')
+                        @php
+                            $vendorStyle = $s['style'] ?? 'cards';
+                            $showStats = (bool) ($s['stats'] ?? true);
+                        @endphp
+                        <div class="ml-sec-head ml-reveal">
+                            <div>
+                                @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                <h2>{{ $s['title'] ?: translate('our_vendors') }}</h2>
+                            </div>
+                            @if (($s['view_all'] ?? true) && \Illuminate\Support\Facades\Route::has('vendors'))
+                                <a class="ml-viewall" href="{{ route('vendors') }}">{{ translate('view_all') }}</a>
+                            @endif
+                        </div>
+
+                        <div class="{{ $vendorStyle === 'rail' ? 'ml-rail ml-vendor-rail' : 'ml-grid' }} ml-reveal">
+                            @foreach ($vendors as $shop)
+                                @include('theme-sections.partials.vendor-card', [
+                                    'shop' => $shop, 'compact' => $vendorStyle === 'compact', 'stats' => $showStats,
+                                ])
+                            @endforeach
+                        </div>
+                        @break
+
+                    {{-- One shop, featured: its cover and logo, what its buyers rate it, and the
+                         products it is selling right now. --}}
+                    @case('vendor_showcase')
+                        @php
+                            $shop = $vendorShowcase['shop'];
+                            $shopProducts = $vendorShowcase['products'];
+                            $cardCart = (bool) ($s['add_to_cart'] ?? true);
+                            $shopRail = ($s['style'] ?? 'rail') === 'rail';
+                            $shopUrl = \Illuminate\Support\Facades\Route::has('vendor-shop') && $shop->slug
+                                ? route('vendor-shop', ['slug' => $shop->slug])
+                                : route('products', ['seller_id' => $shop->seller_id]);
+                        @endphp
+
+                        <div class="ml-shop ml-reveal">
+                            @if ($s['cover'] ?? true)
+                                <a class="ml-shop__cover" href="{{ $shopUrl }}">
+                                    <img src="{{ getStorageImages(path: $shop->banner_full_url, type: 'shop-banner') }}"
+                                         alt="{{ $shop->name }}" loading="lazy">
+                                </a>
+                            @endif
+                            <div class="ml-shop__bar">
+                                <a class="ml-shop__logo" href="{{ $shopUrl }}">
+                                    <img src="{{ getStorageImages(path: $shop->image_full_url, type: 'shop') }}" alt="{{ $shop->name }}">
+                                </a>
+                                <div class="ml-shop__id">
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    <h3>{{ $s['title'] ?: $shop->name }}</h3>
+                                    @if ($s['stats'] ?? true)
+                                        <div class="ml-shop__stats">
+                                            @if ($shop->average_rating > 0)
+                                                <span><i class="fa fa-star"></i> {{ number_format($shop->average_rating, 1) }}
+                                                    <small>({{ $shop->review_count }})</small></span>
+                                            @endif
+                                            <span>{{ $shop->products_count }} {{ translate('products') }}</span>
+                                            @if ($shop->is_vacation_mode_now ?? false)
+                                                <span class="ml-shop__closed">{{ translate('closed_now') }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                                @if ($s['view_all'] ?? true)
+                                    <a class="ml-btn ml-btn-gold ml-shop__visit" href="{{ $shopUrl }}">{{ translate('visit_store') }}</a>
+                                @endif
+                            </div>
+                        </div>
+
+                        @if ($shopProducts->isNotEmpty())
+                            @if ($shopRail)
+                                <div class="ml-rail ml-reveal">
+                                    @foreach ($shopProducts as $product)
+                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="ml-grid">
+                                    @foreach ($shopProducts as $product)
+                                        <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                        </div>
+                                    @endforeach
+                                </div>
                             @endif
                         @endif
                         @break
