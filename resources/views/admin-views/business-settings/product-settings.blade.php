@@ -264,6 +264,51 @@
                                     <div class="d-flex justify-content-between align-items-start gap-3">
                                         <div>
                                             <div class="fw-medium text-dark fs-14 mb-1 text-capitalize">
+                                                {{ translate('frequently_bought_together') }}
+                                            </div>
+                                            <p class="mb-0 fs-12">
+                                                {{ translate('a_panel_of_companion_products_under_the_buy_buttons_pick_them_on_each_product_or_let_the_store_learn_them_from_orders') }}
+                                            </p>
+                                        </div>
+                                        <label class="switcher" for="bought-together-status">
+                                            <input class="switcher_input" type="checkbox" value="1"
+                                                   name="bought_together_status" id="bought-together-status"
+                                                   {{ getWebConfig(name: 'bought_together_status') ? 'checked' : '' }}>
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </div>
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-6">
+                                            <label class="form-label fs-12" for="bought-together-limit">{{ translate('max_items') }}</label>
+                                            <input type="number" min="2" max="12" class="form-control" id="bought-together-limit"
+                                                   name="bought_together_limit" value="{{ getWebConfig(name: 'bought_together_limit') ?: 6 }}">
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-check d-flex gap-2">
+                                                <input class="form-check-input checkbox--input" type="checkbox" value="1"
+                                                       name="bought_together_auto_fill" id="bought-together-auto"
+                                                       {{ getWebConfig(name: 'bought_together_auto_fill') ? 'checked' : '' }}>
+                                                <label class="form-label mb-0 fs-12" for="bought-together-auto">
+                                                    {{ translate('fill_the_rest_from_what_customers_buy_together') }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-info bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center">
+                                        <i class="fi fi-sr-bulb text-info fs-16"></i>
+                                        <span>
+                                            {{ translate('pick_the_companions_on_a_product_from') }}
+                                            <a href="{{ route('admin.products.list', ['in-house']) }}" target="_blank" class="text-decoration-underline fw-semibold">{{ translate('product_List') }}</a>
+                                            — {{ translate('frequently_bought_together') }}.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-6 col-md-6">
+                                <div class="border rounded p-3 h-100 bg-white d-flex flex-column gap-3">
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <div class="fw-medium text-dark fs-14 mb-1 text-capitalize">
                                                 {{ translate('authenticity_badge') }}
                                             </div>
                                             <p class="mb-0 fs-12">

@@ -550,6 +550,10 @@
                                             </div>
 
                                         </form>
+
+                                        {{-- Companions for this product, right under the buy buttons where the
+                                             decision is being made. --}}
+                                        @include('web-views.products._bought-together', ['product' => $product])
                                     </div>
                                 </div>
                             </div>

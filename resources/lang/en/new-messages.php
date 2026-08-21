@@ -3737,4 +3737,10 @@ ____________________________________________________on_search_engines_and_see_th
 	"visit_store" => "Visit store",
 	"no_vendor_chosen_yet_pick_one_so_this_section_can_render" => "No vendor chosen yet - pick one so this section can render.",
 	"no_active_shops_yet_so_this_section_stays_hidden" => "No active shops yet, so this section stays hidden.",
+	"frequently_bought_together" => "Frequently bought together",
+	"recommended_products" => "Recommended products",
+	"these_products_are_suggested_beside_this_one_on_its_page_leave_empty_to_use_what_customers_buy_together" => "These products are suggested beside this one on its page. Leave empty to use what customers actually buy together.",
+	"a_panel_of_companion_products_under_the_buy_buttons_pick_them_on_each_product_or_let_the_store_learn_them_from_orders" => "A panel of companion products under the buy buttons. Pick them on each product, or let the store learn them from real orders.",
+	"fill_the_rest_from_what_customers_buy_together" => "Fill the rest from what customers buy together",
+	"pick_the_companions_on_a_product_from" => "Pick the companions on a product from",
 ];

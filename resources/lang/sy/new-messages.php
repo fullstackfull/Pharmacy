@@ -928,4 +928,10 @@ return [
 	'visit_store' => 'زيارة المتجر',
 	'no_vendor_chosen_yet_pick_one_so_this_section_can_render' => 'لم تختر بائعاً بعد — اختر واحداً ليظهر هذا القسم.',
 	'no_active_shops_yet_so_this_section_stays_hidden' => 'لا توجد متاجر فعّالة بعد، لذلك يبقى هذا القسم مخفياً.',
+	'frequently_bought_together' => 'غالبًا ما يتم شراؤها معًا',
+	'recommended_products' => 'المنتجات الموصى بها',
+	'these_products_are_suggested_beside_this_one_on_its_page_leave_empty_to_use_what_customers_buy_together' => 'تُقترح هذه المنتجات بجانب هذا المنتج في صفحته. اتركه فارغاً ليعتمد على ما يشتريه العملاء معاً فعلياً.',
+	'a_panel_of_companion_products_under_the_buy_buttons_pick_them_on_each_product_or_let_the_store_learn_them_from_orders' => 'لوحة منتجات مرافقة تحت أزرار الشراء. اخترها لكل منتج، أو دع المتجر يتعلّمها من الطلبات الحقيقية.',
+	'fill_the_rest_from_what_customers_buy_together' => 'أكمل الباقي مما يشتريه العملاء معاً',
+	'pick_the_companions_on_a_product_from' => 'اختر المنتجات المرافقة لكل منتج من',
 ];
