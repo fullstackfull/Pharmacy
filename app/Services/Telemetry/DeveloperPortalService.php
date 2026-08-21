@@ -56,6 +56,53 @@ class DeveloperPortalService
         return $versions;
     }
 
+    /**
+     * The newest release notes, read straight from CHANGELOG.md.
+     *
+     * The portal's job is to be current; a hand-maintained "what's new" panel is exactly the
+     * thing that goes stale. This parses the top entries of the repo's own changelog, so shipping
+     * a release updates the portal by itself.
+     *
+     * @return array<int, array{version:string, title:string, points:array<int,string>}>
+     */
+    public function releaseNotes(int $limit = 3): array
+    {
+        try {
+            $path = base_path('CHANGELOG.md');
+            if (!is_file($path)) {
+                return [];
+            }
+
+            $contents = (string) file_get_contents($path);
+            // Entries look like: "## v4.4 — headline" followed by "- bullet" lines.
+            preg_match_all('/^## (v[\d.]+)\s*[—-]\s*(.+)$/m', $contents, $matches, PREG_OFFSET_CAPTURE);
+
+            $notes = [];
+            foreach ($matches[0] as $index => $heading) {
+                if (count($notes) >= max(1, $limit)) {
+                    break;
+                }
+
+                $start = $heading[1] + strlen($heading[0]);
+                $end = $matches[0][$index + 1][1] ?? strlen($contents);
+                $body = substr($contents, $start, $end - $start);
+
+                preg_match_all('/^- \*\*(.+?)\*\*/m', $body, $bullets);
+                $points = array_slice(array_map('trim', $bullets[1] ?? []), 0, 5);
+
+                $notes[] = [
+                    'version' => trim($matches[1][$index][0]),
+                    'title'   => trim($matches[2][$index][0]),
+                    'points'  => $points,
+                ];
+            }
+
+            return $notes;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     /** Copy-paste integration recipes for the app teams. */
     public function guides(string $baseUrl): array
     {
@@ -150,6 +197,41 @@ class DeveloperPortalService
                 'title' => translate('configuration'),
                 'body' => translate('base_config_currencies_languages_and_feature_flags_for_app_bootstrapping'),
                 'snippet' => "curl {$baseUrl}/api/v1/config",
+            ],
+            [
+                'title' => translate('theme_banners'),
+                'body' => translate('the_theme_builder_can_mint_its_own_banner_rows_treat_banner_type_as_an_open_set'),
+                'snippet' => "curl {$baseUrl}/api/v1/banners\n\n"
+                    . "# banner_type is an OPEN set. Types an app may now receive:\n"
+                    . "#   Main Banner | Popup Banner | Footer Banner | Main Section Banner\n"
+                    . "#   Category Banner | Category Section Banner | Home Promo Banner\n"
+                    . "#   Brand Banner | Theme Banner   <-- minted by the Theme Builder\n"
+                    . "# 'Theme Banner' has NO built-in slot: it renders only where the\n"
+                    . "# merchant placed it in the theme. Apps should ignore unknown types\n"
+                    . "# rather than failing on them.",
+            ],
+            [
+                'title' => translate('category_and_brand_page_banners'),
+                'body' => translate('page_banners_are_now_editable_from_the_category_and_brand_forms_and_stay_the_same_banner_rows'),
+                'snippet' => "# A category's / brand's page banner is a normal banner row:\n"
+                    . "#   banner_type    = 'Category Banner' | 'Brand Banner'\n"
+                    . "#   resource_type  = 'category' | 'brand'\n"
+                    . "#   resource_id    = that category's / brand's id\n\n"
+                    . "curl {$baseUrl}/api/v1/categories/page-header/{category_id}\n"
+                    . "curl {$baseUrl}/api/v1/brands/page-header/{brand_id}",
+            ],
+            [
+                'title' => translate('addresses_zip_is_optional'),
+                'body' => translate('zip_is_only_required_when_the_zip_allow_list_restriction_is_on_and_is_billing_is_optional'),
+                'snippet' => "curl -X POST {$baseUrl}/api/v1/customer/address/add \\\n"
+                    . "  -H 'Authorization: Bearer <token>' \\\n"
+                    . "  -H 'Content-Type: application/json' \\\n"
+                    . "  -d '{\"contact_person_name\": \"...\", \"address\": \"...\",\n"
+                    . "       \"city\": \"...\", \"country\": \"...\", \"phone\": \"...\"}'\n\n"
+                    . "# zip: omit it freely — required ONLY when config.delivery_zip_code_area_restriction = 1\n"
+                    . "# is_billing: optional, defaults to 0\n"
+                    . "# Orders now always carry a billing address: it falls back to the\n"
+                    . "# shipping address when the customer does not enter a separate one.",
             ],
         ];
     }

@@ -843,4 +843,11 @@ return [
 	'if_disabled_the_zip_field_is_hidden_everywhere_and_never_required' => 'عند التعطيل يُخفى حقل الرمز البريدي من كل نماذج العناوين ولا يكون مطلوباً أبداً.',
 	'want_to_Turn_ON_Zip_Code_Field' => 'تفعيل حقل الرمز البريدي؟',
 	'want_to_Turn_OFF_Zip_Code_Field' => 'تعطيل حقل الرمز البريدي؟',
+	'theme_banners' => 'بانرات الثيم',
+	'the_theme_builder_can_mint_its_own_banner_rows_treat_banner_type_as_an_open_set' => 'محرر الثيم قد يُنشئ بانرات خاصة به — تعامل مع banner_type كقائمة مفتوحة وتجاهل القيم غير المعروفة.',
+	'category_and_brand_page_banners' => 'بانرات صفحات الفئات والماركات',
+	'page_banners_are_now_editable_from_the_category_and_brand_forms_and_stay_the_same_banner_rows' => 'بانر الصفحة صار قابلاً للتعديل من نموذج الفئة أو الماركة، ويبقى صفّ بانر عادياً مربوطاً بالمورد.',
+	'addresses_zip_is_optional' => 'العناوين — الرمز البريدي اختياري',
+	'zip_is_only_required_when_the_zip_allow_list_restriction_is_on_and_is_billing_is_optional' => 'الرمز البريدي مطلوب فقط عند تفعيل تقييد التوصيل بقائمة الرموز؛ وis_billing اختياري، وكل طلب يحمل عنوان فوترة.',
+	'what_is_new' => 'ما الجديد',
 ];

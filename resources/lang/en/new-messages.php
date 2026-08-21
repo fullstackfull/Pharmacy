@@ -3616,4 +3616,13 @@ ____________________________________________________on_search_engines_and_see_th
 	"if_disabled_the_zip_field_is_hidden_everywhere_and_never_required" => "If disabled, the ZIP field is hidden on every address form and is never required.",
 	"want_to_Turn_ON_Zip_Code_Field" => "Want to turn ON the ZIP code field?",
 	"want_to_Turn_OFF_Zip_Code_Field" => "Want to turn OFF the ZIP code field?",
+	"theme_banners" => "Theme banners",
+	"the_theme_builder_can_mint_its_own_banner_rows_treat_banner_type_as_an_open_set" => "The Theme Builder can mint its own banner rows — treat banner_type as an open set and ignore unknown values.",
+	"category_and_brand_page_banners" => "Category and brand page banners",
+	"page_banners_are_now_editable_from_the_category_and_brand_forms_and_stay_the_same_banner_rows" => "Page banners are editable from the category and brand forms, and remain ordinary resource-linked banner rows.",
+	"addresses_zip_is_optional" => "Addresses — ZIP is optional",
+	"zip_is_only_required_when_the_zip_allow_list_restriction_is_on_and_is_billing_is_optional" => "ZIP is required only when the delivery zip allow-list is on; is_billing is optional and orders always carry a billing address.",
+	"what_is_new" => "What's new",
+	"developer_portal" => "Developer portal",
+	"base_config_currencies_languages_and_feature_flags_for_app_bootstrapping" => "Base config currencies languages and feature flags for app bootstrapping",
 ];
