@@ -82,8 +82,69 @@ class BannerController extends BaseController
     public function getThemeLayoutView(): View
     {
         return view('admin-views.banner.theme-layout', [
-            'groups' => app(\App\Services\Theme\ThemeBannerLink::class)->themeLayout(),
+            'groups'    => app(\App\Services\Theme\ThemeBannerLink::class)->themeLayout(),
+            'placements' => $this->builtInPlacements(),
         ]);
+    }
+
+    /**
+     * Every banner of the BUILT-IN placements (category/brand pages, home promo, main slider…),
+     * unpublished ones included — shown dimmed with the reason, so "I added it but it does not
+     * show" is answered by this screen instead of a support ticket.
+     *
+     * @return array<int, array{type:string,label:string,shape:string,cards:array}>
+     */
+    private function builtInPlacements(): array
+    {
+        $definitions = [
+            'Main Banner'             => ['shape' => 'hero',  'label' => translate('main_Banner'),            'where' => translate('home_page_top_slider')],
+            'Category Banner'         => ['shape' => 'strip', 'label' => translate('category_Banner'),        'where' => translate('heads_the_page_of_its_category')],
+            'Brand Banner'            => ['shape' => 'strip', 'label' => translate('brand_Banner'),           'where' => translate('heads_the_page_of_its_brand')],
+            'Category Section Banner' => ['shape' => 'strip', 'label' => translate('category_Section_Banner'),'where' => translate('above_its_category_row_on_the_home_page')],
+            'Home Promo Banner'       => ['shape' => 'grid',  'label' => translate('home_Promo_Banner'),      'where' => translate('the_home_page_promo_grid')],
+            'Main Section Banner'     => ['shape' => 'strip', 'label' => translate('main_Section_Banner'),    'where' => translate('the_home_page_middle_section')],
+            'Footer Banner'           => ['shape' => 'grid',  'label' => translate('footer_Banner'),          'where' => translate('above_the_footer')],
+            'Popup Banner'            => ['shape' => 'grid',  'label' => translate('popup_Banner'),           'where' => translate('the_welcome_popup')],
+        ];
+
+        $banners = $this->bannerRepo->getListWhereIn(
+            orderBy: ['id' => 'desc'],
+            filters: ['theme' => theme_root_path()],
+            whereInFilters: ['banner_type' => array_keys($definitions)],
+            dataLimit: 'all',
+        );
+
+        $categoryNames = \App\Models\Category::pluck('name', 'id');
+        $brandNames = \App\Models\Brand::pluck('name', 'id');
+
+        $groups = [];
+        foreach ($banners->groupBy('banner_type') as $type => $rows) {
+            $definition = $definitions[$type];
+            $groups[] = [
+                'type'  => $type,
+                'label' => $definition['label'],
+                'where' => $definition['where'],
+                'shape' => $definition['shape'],
+                'cards' => $rows->map(function ($banner) use ($categoryNames, $brandNames) {
+                    $place = null;
+                    if ($banner->resource_type === 'category' && $banner->resource_id) {
+                        $place = translate('category') . ': ' . ($categoryNames[$banner->resource_id] ?? ('#' . $banner->resource_id));
+                    } elseif ($banner->resource_type === 'brand' && $banner->resource_id) {
+                        $place = translate('brand') . ': ' . ($brandNames[$banner->resource_id] ?? ('#' . $banner->resource_id));
+                    }
+
+                    return [
+                        'banner_id' => $banner->id,
+                        'image'     => getStorageImages(path: $banner->photo_full_url, type: 'banner'),
+                        'title'     => $banner->title,
+                        'place'     => $place,
+                        'published' => (int) $banner->published === 1,
+                    ];
+                })->values()->all(),
+            ];
+        }
+
+        return $groups;
     }
 
     /**
