@@ -1,0 +1,11 @@
+# User uploads are data, never code. Deny every script-like file outright so a
+# smuggled shell (.php, .php74, .phtml, .phar ...) can never execute or be read.
+<FilesMatch "\.(?i:ph(?:p[0-9]*|t|tml|ar)|pl|py|cgi|sh|asp|aspx)(?:\.|$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
