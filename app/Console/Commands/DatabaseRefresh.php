@@ -47,6 +47,13 @@ class DatabaseRefresh extends Command
      */
     public function handle(): void
     {
+        // db:wipe on a live store is unrecoverable. This command exists for the demo platform's
+        // periodic reset only; anywhere else it must refuse loudly instead of destroying data.
+        if (env('APP_MODE') !== 'demo') {
+            $this->error('database:refresh wipes the ENTIRE database and reimports demo data. It only runs when APP_MODE=demo.');
+            return;
+        }
+
         $this->demoResetNotification();
         Artisan::call('db:wipe');
         Artisan::call('cache:clear');

@@ -757,4 +757,6 @@ return [
 	'delete_this_theme_and_all_its_versions' => 'حذف هذا الثيم وكل نسخه',
 	'active_and_system_themes_cannot_be_deleted' => 'لا يمكن حذف الثيم المفعّل أو ثيم النظام',
 	'theme_deleted_successfully' => 'تم حذف الثيم بنجاح',
+	'site_under_maintenance' => 'الموقع تحت الصيانة',
+	'the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes' => 'المتجر في استراحة صيانة قصيرة وسيعود خلال دقائق.',
 ];

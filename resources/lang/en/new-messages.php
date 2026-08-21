@@ -3507,4 +3507,6 @@ ____________________________________________________on_search_engines_and_see_th
 	"active_and_system_themes_cannot_be_deleted" => "Active and system themes cannot be deleted",
 	"theme_deleted_successfully" => "Theme deleted successfully",
 	"system" => "System",
+	'site_under_maintenance' => 'Site under maintenance',
+	'the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes' => 'The store is under a short maintenance break and will be back within minutes.',
 ];

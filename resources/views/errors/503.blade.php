@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ translate('database_refreshing') }}</title>
+    <title>{{ translate('site_under_maintenance') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ $web_config['fav_icon']['path'] }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ $web_config['fav_icon']['path'] }}">
@@ -18,7 +18,7 @@
             <div class="text-center">
                 <img class="object-fit-contain height-300px" loading="lazy" src="{{dynamicAsset(path: 'public/assets/front-end/img/maintenance-mode-icon.png')}}" alt="{{ translate('maintenance-mode') }}">
                 <h3 class="mt-3">
-                    {{ 'System database is being refreshed, please keep patience. System will be up in 2 minutes....' }}
+                    {{ translate('the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes') }}
                 </h3>
                 <br>
             </div>
