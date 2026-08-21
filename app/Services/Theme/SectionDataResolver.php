@@ -143,6 +143,93 @@ class SectionDataResolver
         return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
     }
 
+    /**
+     * Shops for a vendor section: the ones the merchant hand-picked, in their order, or the
+     * highest-rated shops when they picked none.
+     *
+     * The in-house shop counts as a vendor here exactly as it does on the storefront's own
+     * /vendors page: it has no seller record, so Shop::active() alone would silently drop the
+     * marketplace's own store from a section called "our vendors".
+     *
+     * Ratings come from ShopService — the same source that page uses — so a shop card in the
+     * theme never disagrees with the shop's own page.
+     */
+    public function vendors(int $limit, string|array|null $picked = null): Collection
+    {
+        $ids = $this->idList($picked);
+
+        return $this->safely(function () use ($limit, $ids) {
+            $shops = \App\Models\Shop::query()
+                ->where(fn ($query) => $query
+                    ->where('author_type', 'admin')
+                    ->orWhereHas('seller', fn ($seller) => $seller->where('status', 'approved')))
+                ->when($ids !== [], fn ($query) => $query->whereIn('id', $ids))
+                ->with(['seller' => fn ($query) => $query->withCount('orders')
+                    ->with(['product.reviews' => fn ($reviews) => $reviews->active()])])
+                ->take($ids !== [] ? count($ids) : $this->bounded($limit, 24))
+                ->get()
+                ->map(fn ($shop) => $this->withShopStats($shop));
+
+            return $ids !== []
+                ? $shops->sortBy(fn ($shop) => array_search($shop->id, $ids, true))->values()
+                : $shops->sortByDesc('average_rating')->values();
+        });
+    }
+
+    /**
+     * One shop presented as its own block: its cover, logo, rating and products — the vendor
+     * equivalent of the category showcase, so a merchant can feature a seller on the home page.
+     */
+    public function vendorShowcase(array $settings): ?array
+    {
+        $shopId = (int) ($settings['shop_id'] ?? 0);
+        if ($shopId <= 0) {
+            return null;
+        }
+
+        $shop = $this->vendors(1, (string) $shopId)->first();
+
+        return $shop
+            ? ['shop' => $shop, 'products' => $this->shopProducts($shop, (int) ($settings['limit'] ?? 10))]
+            : null;
+    }
+
+    /**
+     * What a shop is selling right now.
+     *
+     * A vendor's products are filed under `added_by = seller` with the seller's id, the in-house
+     * shop's under `added_by = admin` — the split 6Valley uses everywhere, and the reason a naive
+     * "products of this shop" query returns nothing for the marketplace's own store.
+     */
+    public function shopProducts($shop, int $limit): Collection
+    {
+        return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
+            ->where('added_by', $shop->author_type === 'admin' ? 'admin' : 'seller')
+            ->when($shop->author_type !== 'admin', fn ($query) => $query->where('user_id', $shop->seller_id))
+            ->latest('id')
+            ->take($this->bounded($limit, 24))
+            ->get());
+    }
+
+    /** Rating, review and product counts for a shop card, from the storefront's own service. */
+    private function withShopStats($shop)
+    {
+        $shop->products_count = $this->shopProducts($shop, 24)->count();
+
+        if ($shop->author_type === 'admin' || !$shop->seller) {
+            $reviews = \App\Models\Review::active()
+                ->whereIn('product_id', Product::active()->where('added_by', 'admin')->pluck('id'));
+            $shop->average_rating = $reviews->avg('rating') ?? 0;
+            $shop->review_count = $reviews->count();
+            $shop->is_vacation_mode_now = (bool) checkVendorAbility(type: 'inhouse', status: 'vacation_status');
+
+            return $shop;
+        }
+
+        return \App\Services\ShopService::calculateReviews($shop);
+    }
+
     public function brands(int $limit): Collection
     {
         return $this->safely(fn () => Brand::where('status', 1)

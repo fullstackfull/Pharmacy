@@ -241,6 +241,44 @@ class SectionRegistry
                     'add_to_cart'  => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
             ],
+            // --- multi-vendor -----------------------------------------------------------------
+            // A marketplace's sellers are as much a browse entry as its categories: one section
+            // lists the shops, the other features a single shop with its products.
+            'vendor_slider' => [
+                'preview' => 'vendors', 'label' => 'our_vendors', 'pages' => ['home'],
+                'hint' => 'the_shops_selling_on_your_marketplace_with_their_rating_and_product_count',
+                'schema' => [
+                    'eyebrow'   => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'     => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'shop_ids'  => ['type' => 'resource', 'label' => 'choose_vendors', 'default' => null,
+                                    'resource' => 'shop', 'multiple' => true,
+                                    'hint' => 'leave_empty_to_show_the_highest_rated_shops_automatically'],
+                    'style'     => ['type' => 'select', 'label' => 'display_style', 'default' => 'cards',
+                                    'options' => ['cards', 'rail', 'compact']],
+                    'limit'     => ['type' => 'number', 'label' => 'max_items', 'default' => 8],
+                    'columns'   => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
+                    'stats'     => ['type' => 'boolean','label' => 'show_rating_and_product_count', 'default' => true],
+                    'view_all'  => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                ],
+            ],
+            'vendor_showcase' => [
+                'preview' => 'showcase', 'label' => 'vendor_showcase', 'pages' => ['home'],
+                'hint' => 'one_shop_with_its_cover_rating_and_products',
+                'schema' => [
+                    'shop_id'     => ['type' => 'resource', 'label' => 'choose_vendor', 'default' => null,
+                                      'resource' => 'shop'],
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title_leave_empty_for_the_shop_name', 'default' => ''],
+                    'cover'       => ['type' => 'boolean','label' => 'show_the_shop_cover', 'default' => true],
+                    'stats'       => ['type' => 'boolean','label' => 'show_rating_and_product_count', 'default' => true],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'view_all'    => ['type' => 'boolean','label' => 'visit_the_shop_button', 'default' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
             'testimonials' => [
                 'preview' => 'quotes', 'label' => 'customer_voices', 'pages' => ['home'], 'hint' => 'real_product_reviews_from_your_customers',
                 'schema' => [

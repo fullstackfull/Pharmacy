@@ -257,7 +257,11 @@ class DeveloperPortalService
                     . "#   flash_deal:        deal_id -> a specific deal (empty = whichever runs now)\n"
                     . "#   category_showcase: category_id -> the category whose banner,\n"
                     . "#                      sub-categories and products the block shows\n\n"
-                    . "# A category pick includes everything filed under it, matched on all three\n"
+                    . "#   vendor_slider:     shop_ids -> the shops to feature (empty = top rated)\n"
+                    . "#   vendor_showcase:   shop_id  -> the shop whose cover, rating and\n"
+                    . "#                      products the block shows. The in-house shop counts\n"
+                    . "#                      as a vendor: its products are added_by = admin,\n"
+                    . "#                      a vendor's are added_by = seller + user_id."                    . "# A category pick includes everything filed under it, matched on all three\n"
                     . "# levels: category_id, sub_category_id, sub_sub_category_id.\n"
                     . "curl '{$baseUrl}/api/v1/categories/products/{category_id}?brand_id=3'",
             ],

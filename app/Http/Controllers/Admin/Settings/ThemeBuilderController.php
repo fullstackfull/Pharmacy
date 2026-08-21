@@ -227,6 +227,12 @@ class ThemeBuilderController extends BaseController
         $resolver = app(\App\Services\Theme\SectionDataResolver::class);
 
         return match ($type) {
+            'vendor_showcase' => (int) ($settings['shop_id'] ?? 0) > 0
+                ? null
+                : translate('no_vendor_chosen_yet_pick_one_so_this_section_can_render'),
+            'vendor_slider' => $resolver->vendors(1)->isNotEmpty()
+                ? null
+                : translate('no_active_shops_yet_so_this_section_stays_hidden'),
             'category_showcase' => (int) ($settings['category_id'] ?? 0) > 0
                 ? null
                 : translate('no_category_chosen_yet_pick_one_so_this_section_can_render'),
@@ -285,6 +291,15 @@ class ThemeBuilderController extends BaseController
                 ->latest('id')
                 ->take($limit)->get(['id', 'name'])
                 ->map(fn ($product) => ['value' => $product->id, 'label' => $product->name]),
+            'shop' => \App\Models\Shop::active()
+                ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                ->withCount(['products' => fn ($query) => $query->active()])
+                ->orderBy('name')
+                ->take($limit)->get()
+                ->map(fn ($shop) => [
+                    'value' => $shop->id,
+                    'label' => $shop->name . ' · ' . $shop->products_count . ' ' . translate('products'),
+                ]),
             'flash_deal' => \App\Models\FlashDeal::where('deal_type', 'flash_deal')
                 ->when($term !== '', fn ($query) => $query->where('title', 'like', $like))
                 ->orderByDesc('id')
@@ -331,6 +346,8 @@ class ThemeBuilderController extends BaseController
             'brand'      => \App\Models\Brand::whereIn('id', $ids)->get(['id', 'name'])
                 ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
             'product'    => \App\Models\Product::whereIn('id', $ids)->get(['id', 'name'])
+                ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
+            'shop'       => \App\Models\Shop::whereIn('id', $ids)->get(['id', 'name'])
                 ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
             'flash_deal' => \App\Models\FlashDeal::whereIn('id', $ids)->get(['id', 'title'])
                 ->map(fn ($row) => ['value' => $row->id, 'label' => $row->title]),
