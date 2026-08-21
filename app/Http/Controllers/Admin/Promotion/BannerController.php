@@ -75,6 +75,18 @@ class BannerController extends BaseController
     }
 
     /**
+     * The theme's banners arranged exactly as the storefront lays them out (mosaic spans, grid
+     * columns, hero slides) — so a merchant can tell which listed image is which tile, and jump
+     * straight to editing either the banner or its section in the builder.
+     */
+    public function getThemeLayoutView(): View
+    {
+        return view('admin-views.banner.theme-layout', [
+            'groups' => app(\App\Services\Theme\ThemeBannerLink::class)->themeLayout(),
+        ]);
+    }
+
+    /**
      * A placement banner that points at the wrong kind of resource names no page and
      * would silently never render, so the save is refused with an explanation.
      */

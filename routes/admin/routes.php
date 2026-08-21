@@ -381,6 +381,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::controller(BannerController::class)->group(function () {
             Route::get('list', 'index')->name('list');
             Route::get('placement-guide', 'getPlacementGuide')->name('placement-guide');
+            Route::get('theme-layout', 'getThemeLayoutView')->name('theme-layout');
             Route::post('add', 'add')->name('store');
             Route::post('delete', 'delete')->name('delete');
             Route::post('status', 'updateStatus')->name('status');

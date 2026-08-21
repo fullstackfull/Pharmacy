@@ -262,6 +262,11 @@
                             </div>
                         </form>
                         <div id="banner-btn" class="d-flex flex-wrap gap-2">
+                            <a href="{{ route('admin.banner.theme-layout') }}"
+                               class="k-btn k-btn--secondary text-nowrap text-capitalize">
+                                <x-k.icon name="grip" :size="15" />
+                                {{ translate('theme_banners_as_displayed') }}
+                            </a>
                             <a href="{{ route('admin.banner.placement-guide') }}"
                                class="k-btn k-btn--secondary text-nowrap text-capitalize">
                                 <x-k.icon name="image" :size="15" />
@@ -302,13 +307,14 @@
                                         );
                                     @endphp
                                     @if (count($__themePlaces))
-                                        <div>
-                                            <a href="{{ route('admin.theme.builder.index') }}"
-                                               class="badge badge-soft-info text-decoration-none"
-                                               title="{{ implode(' · ', array_unique($__themePlaces)) }}">
-                                                <i class="fi fi-rr-brush"></i>
-                                                {{ translate('shown_by_the_theme') }}
-                                            </a>
+                                        <div class="d-flex flex-column gap-1 mt-1">
+                                            @foreach (array_slice(array_unique($__themePlaces), 0, 3) as $__place)
+                                                <a href="{{ route('admin.banner.theme-layout') }}"
+                                                   class="badge badge-soft-info text-decoration-none text-wrap text-start">
+                                                    <i class="fi fi-rr-brush"></i>
+                                                    {{ $__place }}
+                                                </a>
+                                            @endforeach
                                         </div>
                                     @endif
                                 </td>
