@@ -124,36 +124,56 @@
     .ml-hero__dots button.is-active{ background:#fff; width:26px; }
 
     /* ---- product cards (grid + rail) --------------------------------------------------- */
-    .ml-card{ display:flex; flex-direction:column; background:var(--ml-paper);
-        border:1px solid #eeeaf5; border-radius:12px; overflow:hidden;
+    .ml-card{ position:relative; display:flex; flex-direction:column; background:var(--ml-paper);
+        border:1px solid #eeeaf5; border-radius:14px; overflow:hidden;
         transition:transform .3s var(--ml-ease), box-shadow .3s var(--ml-ease), border-color .3s; }
-    .ml-card:hover{ transform:translateY(-3px); box-shadow:var(--ml-shadow); border-color:#e2daf1; }
-    .ml-card__link{ display:block; text-decoration:none; color:inherit; flex:1 1 auto; }
-    .ml-card__link:hover{ text-decoration:none; color:inherit; }
-    .ml-card__cart{ padding:0 12px 12px; }
+    .ml-card:hover{ transform:translateY(-4px); box-shadow:var(--ml-shadow); border-color:#e2daf1; }
+
+    .ml-card__media{ position:relative; }
+    .ml-card__thumb{ display:block; overflow:hidden; background:#fbfaff; aspect-ratio:1/1; }
+    .ml-card__thumb img{ width:100%; height:100%; object-fit:cover; transition:transform .7s var(--ml-ease); }
+    .ml-card:hover .ml-card__thumb img{ transform:scale(1.06); }
+
+    .ml-off{ position:absolute; top:9px; inset-inline-start:9px; z-index:3; border-radius:7px;
+        padding:4px 8px; color:#fff; font-size:.66rem; font-weight:800; letter-spacing:.02em;
+        background:linear-gradient(135deg,#E23A3A,#F0603C); box-shadow:0 4px 12px rgba(226,58,58,.28); }
+    .ml-soldout{ position:absolute; z-index:3; inset-inline-start:50%; transform:translateX(-50%); bottom:10px;
+        border-radius:7px; padding:4px 10px; font-size:.66rem; font-weight:700;
+        background:rgba(20,8,46,.82); color:#fff; white-space:nowrap; }
+
+    /* Wishlist: the storefront's own action, styled as a quiet circle that fills when saved. */
+    .ml-fav{ position:absolute; z-index:3; top:9px; inset-inline-end:9px; width:32px; height:32px;
+        display:grid; place-items:center; padding:0; cursor:pointer; border:1px solid var(--ml-line);
+        border-radius:50%; background:rgba(255,255,255,.92); color:var(--ml-ink2);
+        font-size:.82rem; transition:.22s var(--ml-ease); }
+    .ml-fav:hover{ color:#E23A3A; border-color:#f2c9c9; transform:scale(1.06); }
+    .ml-fav.is-on,.ml-fav .fa-heart{ color:#E23A3A; }
+
+    .ml-card__body{ display:flex; flex-direction:column; gap:6px; padding:12px; flex:1 1 auto; }
+    .ml-brandline{ font-size:.66rem; font-weight:500; letter-spacing:.06em; text-transform:uppercase;
+        color:var(--ml-muted); line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* Two full lines, clipped at a line boundary — a fixed pixel height cut glyphs in half. */
+    .ml-name{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+        color:var(--ml-ink2); font-size:.82rem; font-weight:600; line-height:1.5; min-height:3em;
+        margin:0; text-decoration:none; }
+    .ml-name:hover{ color:var(--ml-primary); text-decoration:none; }
+    .ml-stars{ display:flex; align-items:center; gap:2px; font-size:.66rem; color:#F5A623; line-height:1; }
+    .ml-stars small{ margin-inline-start:4px; color:var(--ml-muted); font-size:.66rem; }
+    .ml-price{ display:flex; align-items:baseline; flex-wrap:wrap; gap:7px; margin-top:auto;
+        font-family:var(--ml-serif); color:var(--ml-ink); }
+    .ml-price b{ font-weight:800; font-size:1rem; line-height:1.3; }
+    .ml-price del{ font-size:.7rem; color:#aca4b8; font-weight:500; }
     .ml-cart-btn{ width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
-        min-height:38px; padding:0 .7rem; border:1px solid var(--ml-line); border-radius:9px; cursor:pointer;
-        background:var(--ml-sand); color:var(--ml-ink2); font-size:.74rem; font-weight:700;
+        min-height:38px; margin-top:4px; padding:0 .7rem; border:1px solid var(--ml-line); border-radius:9px;
+        cursor:pointer; background:var(--ml-sand); color:var(--ml-ink2); font-size:.74rem; font-weight:700;
         transition:.22s var(--ml-ease); }
     .ml-cart-btn:hover:not(:disabled){ background:var(--ml-grad); color:#fff; border-color:transparent; }
     .ml-cart-btn:disabled{ opacity:.55; cursor:not-allowed; }
-    .ml-soldout{ position:absolute; z-index:3; inset-inline-end:8px; top:8px; border-radius:6px;
-        padding:3px 7px; font-size:.62rem; font-weight:700; background:rgba(20,8,46,.78); color:#fff; }
-    .ml-thumb{ position:relative; display:block; overflow:hidden; background:#fbfaff; aspect-ratio:1/1; }
-    .ml-thumb img{ width:100%; height:100%; object-fit:cover; transition:transform .7s var(--ml-ease); }
-    .ml-card:hover .ml-thumb img{ transform:scale(1.06); }
-    .ml-card__body{ padding:12px; }
-    .ml-name{ display:block; color:var(--ml-ink2); font-size:.82rem; font-weight:600; line-height:1.5;
-        margin:0 0 6px; min-height:2.45em; overflow:hidden; }
-    .ml-price{ display:flex; align-items:center; gap:7px; font-family:var(--ml-serif);
-        font-weight:800; font-size:1rem; color:var(--ml-ink); }
-    .ml-price del{ font-size:.68rem; color:#aca4b8; font-weight:500; }
-    .ml-off{ position:absolute; top:8px; inset-inline-start:8px; z-index:3; border-radius:6px;
-        padding:3px 7px; color:#fff; font-size:.62rem; font-weight:700; background:#E23A3A; }
+
     .ml-rail{ display:flex; gap:12px; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x proximity;
         scrollbar-width:none; padding:3px 2px 10px; }
     .ml-rail::-webkit-scrollbar{ display:none; }
-    .ml-rail .ml-card{ min-width:216px; width:216px; flex:0 0 auto; scroll-snap-align:start; }
+    .ml-rail .ml-card{ min-width:224px; width:224px; flex:0 0 auto; scroll-snap-align:start; }
     .ml-rail-btns{ display:flex; gap:6px; }
     .ml-rail-btn{ width:34px; height:34px; border-radius:50%; background:#fff; border:1px solid var(--ml-line);
         display:grid; place-items:center; color:var(--ml-ink2); cursor:pointer; transition:.2s; }
@@ -178,8 +198,17 @@
     .ml-cat-name{ font-size:.78rem; font-weight:600; color:var(--ml-ink2); margin-top:.55rem; min-height:0; }
 
     /* ---- category showcase --------------------------------------------------------------- */
-    .ml-showcase__banner{ display:block; aspect-ratio:21/6; margin-bottom:1.2rem; }
-    @media (max-width:767.98px){ .ml-showcase__banner{ aspect-ratio:16/9; } }
+    .ml-showcase__banner{ display:block; margin-bottom:1.2rem; }
+    .ml-showcase__banner picture{ display:block; }
+    .ml-sections .ml-showcase__banner img{ width:100%; height:auto; object-fit:contain; }
+    /* The caption is a light touch over artwork that usually carries its own text: it sits in the
+       bottom corner and shrinks on a phone instead of covering the banner. */
+    .ml-showcase__banner .ml-tile__scrim{ background:linear-gradient(180deg,rgba(20,8,46,0) 45%,rgba(20,8,46,.55)); }
+    .ml-showcase__banner .ml-tile__body{ padding:clamp(.7rem,1.8vw,1.4rem); }
+    @media (max-width:767.98px){
+        .ml-showcase__banner .ml-tile__body h4{ font-size:1rem; }
+        .ml-showcase__banner .ml-tile__body p{ display:none; }
+    }
     .ml-chips{ display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
     .ml-chips a{ display:inline-flex; align-items:center; min-height:32px; padding:0 .8rem; border-radius:99px;
         background:var(--ml-sand); border:1px solid var(--ml-line); color:var(--ml-ink2);
@@ -342,6 +371,14 @@
     }
 </style>
 
+@php
+    // Flash deals already rendered on this page. Only one deal can be active at a time (the
+    // dashboard deactivates the rest), so a second automatic section would otherwise repeat the
+    // first one instead of moving on to the next deal.
+    $__shownDeals = [];
+    // One query for the whole page: every card draws its heart from this list.
+    $__wishlisted = $__data->wishlistedProductIds();
+@endphp
 <div class="theme-builder-sections ml-sections">
     @foreach ($__sections as $__section)
         @php
@@ -361,9 +398,20 @@
                 . ($height !== null ? "--tb-h:{$height}px;" : '')
                 . ($bg ? "background:{$bg};" : '');
             $breakpointCss = theme_section_breakpoint_css(settings: $s, selector: '#' . $sectionKey);
+
+            // Sections whose whole content comes from the catalogue are resolved BEFORE the
+            // wrapper is opened: with nothing to draw they must not leave a padded empty band on
+            // the page, which reads as a broken gap rather than an absent section.
+            $deal = $type === 'flash_deal'
+                ? $__data->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
+                : null;
+            if ($deal) { $__shownDeals[] = $deal['id']; }
+            $showcase = $type === 'category_showcase' ? $__data->categoryShowcase($s) : null;
         @endphp
 
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
+        @continue($type === 'flash_deal' && !$deal)
+        @continue($type === 'category_showcase' && !$showcase)
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
@@ -437,7 +485,7 @@
                                 <div class="ml-rail ml-reveal" id="{{ $railId }}"
                                      @if ($railAutoplay) data-ml-rail-auto="{{ $railInterval }}" @endif>
                                     @foreach ($products as $product)
-                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart])
+                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
                                     @endforeach
                                 </div>
                                 @if ($showDots)
@@ -447,7 +495,7 @@
                                 <div class="ml-grid">
                                     @foreach ($products as $product)
                                         <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
-                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart])
+                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
                                         </div>
                                     @endforeach
                                 </div>
@@ -461,7 +509,6 @@
                          with no deal at all the section renders nothing rather than a dead timer. --}}
                     @case('flash_deal')
                         @php
-                            $deal = $__data->flashDeal((int) ($s['deal_id'] ?? 0) ?: null);
                             $dealProducts = ($deal && ($s['products'] ?? true))
                                 ? $__data->flashDealProducts($deal['id'], (int) ($s['limit'] ?? 10))
                                 : collect();
@@ -490,7 +537,7 @@
                             @if ($dealProducts->isNotEmpty())
                                 <div class="ml-rail ml-reveal mt-3" id="{{ $dealRailId }}">
                                     @foreach ($dealProducts as $product)
-                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart])
+                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
                                     @endforeach
                                 </div>
                             @endif
@@ -503,7 +550,6 @@
                          on the category form updates both. --}}
                     @case('category_showcase')
                         @php
-                            $showcase = $__data->categoryShowcase($s);
                             $cardCart = (bool) ($s['add_to_cart'] ?? true);
                             $showcaseRail = ($s['style'] ?? 'rail') === 'rail';
                             $showcaseId = 'ml-showcase-' . ($__section['id'] ?? $loop->index);
@@ -514,8 +560,17 @@
                             @if ($showcase['banner'])
                                 <a class="ml-tile ml-showcase__banner ml-reveal"
                                    href="{{ $showcase['banner']['link'] ?: $categoryUrl }}">
-                                    <img src="{{ $showcase['banner']['image'] ?: $__placeholder }}"
-                                         alt="{{ $showcase['banner']['title'] ?? $showcase['category']->name }}" loading="lazy">
+                                    {{-- Shown whole, at the artwork's own proportions: a banner is
+                                         designed art, and cropping it to a fixed band cuts the
+                                         merchant's own text off. A phone image is used when the
+                                         banner carries one. --}}
+                                    <picture>
+                                        @if (!empty($showcase['banner']['image_mobile']))
+                                            <source media="(max-width:767.98px)" srcset="{{ $showcase['banner']['image_mobile'] }}">
+                                        @endif
+                                        <img src="{{ $showcase['banner']['image'] ?: $__placeholder }}"
+                                             alt="{{ $showcase['banner']['title'] ?? $showcase['category']->name }}" loading="lazy">
+                                    </picture>
                                     @if (!empty($showcase['banner']['title']) || !empty($showcase['banner']['subtitle']))
                                         <span class="ml-tile__scrim"></span>
                                         <span class="ml-tile__body">
@@ -551,14 +606,14 @@
                                 @if ($showcaseRail)
                                     <div class="ml-rail ml-reveal" id="{{ $showcaseId }}">
                                         @foreach ($showcase['products'] as $product)
-                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart])
+                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
                                         @endforeach
                                     </div>
                                 @else
                                     <div class="ml-grid">
                                         @foreach ($showcase['products'] as $product)
                                             <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
-                                                @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart])
+                                                @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
                                             </div>
                                         @endforeach
                                     </div>

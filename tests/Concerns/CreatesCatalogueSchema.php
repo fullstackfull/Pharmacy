@@ -78,6 +78,39 @@ trait CreatesCatalogueSchema
             $table->timestamps();
         });
 
+        // Every Product read eager-loads its reviews through a global scope, so any test that
+        // fetches products (not just counts them) needs the table to exist.
+        $this->createTable('reviews', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable();
+            $table->unsignedBigInteger('delivery_man_id')->nullable();
+            $table->integer('rating')->default(5);
+            $table->text('comment')->nullable();
+            $table->integer('status')->default(1);
+            $table->timestamps();
+        });
+
+        // Flash deals: a themed section can feature one, and only one deal is ever ACTIVE
+        // (activating one deactivates the rest), which is what makes picking a deal matter.
+        $this->createTable('flash_deals', function (Blueprint $table) {
+            $table->id();
+            $table->string('title')->nullable();
+            $table->string('slug')->nullable();
+            $table->string('deal_type')->default('flash_deal');
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
+            $table->boolean('status')->default(0);
+            $table->timestamps();
+        });
+
+        $this->createTable('flash_deal_products', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('flash_deal_id');
+            $table->unsignedBigInteger('product_id');
+            $table->timestamps();
+        });
+
         $this->createTable('sellers', function (Blueprint $table) {
             $table->id();
             $table->string('status')->default('approved');

@@ -199,7 +199,9 @@ class ThemeBuilderController extends BaseController
         }
 
         return $this->ok([
-            'schema'       => app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->schemaFor($type)),
+            'schema'       => $this->localizeSchema(
+                app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->schemaFor($type))
+            ),
             'settings'     => $settings,
             // The builder splits the form into Content / Design tabs; the registry decides which
             // fields belong where, so a new section type needs no UI change.
@@ -237,7 +239,9 @@ class ThemeBuilderController extends BaseController
             },
             'flash_deal' => $resolver->flashDeal((int) ($settings['deal_id'] ?? 0) ?: null)
                 ? null
-                : translate('no_flash_deal_is_running_right_now_so_this_section_stays_hidden_create_one_under_promotion_flash_deals'),
+                : ((int) ($settings['deal_id'] ?? 0) > 0
+                    ? translate('the_deal_you_picked_has_ended_so_this_section_stays_hidden_pick_another_one')
+                    : translate('no_flash_deal_is_running_right_now_so_this_section_stays_hidden_create_one_under_promotion_flash_deals')),
             'testimonials' => $resolver->testimonials((int) ($settings['limit'] ?? 3), (int) ($settings['min_rating'] ?? 4))->isNotEmpty()
                 ? null
                 : translate('no_approved_reviews_match_this_rating_yet_so_this_section_stays_hidden'),
@@ -295,6 +299,24 @@ class ThemeBuilderController extends BaseController
         return $this->ok(['options' => $rows->values()->all()]);
     }
 
+    /**
+     * Translate the human-facing parts of a schema before it reaches the inspector.
+     *
+     * The registry stores translation KEYS so it stays a pure catalogue; the form is what a
+     * merchant reads, and an Arabic dashboard should not show English field names.
+     */
+    private function localizeSchema(array $schema): array
+    {
+        foreach ($schema as $key => $field) {
+            $schema[$key]['label'] = translate($field['label'] ?? $key);
+            if (!empty($field['hint'])) {
+                $schema[$key]['hint'] = translate($field['hint']);
+            }
+        }
+
+        return $schema;
+    }
+
     /** Labels for already-picked ids, so the inspector can show names instead of numbers. */
     public function resourceLabels(Request $request): JsonResponse
     {
@@ -330,7 +352,9 @@ class ThemeBuilderController extends BaseController
         }
 
         return $this->ok([
-            'schema'   => app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->blockSchemaFor($block->type)),
+            'schema'   => $this->localizeSchema(
+                app(\App\Services\Theme\ThemeBannerLink::class)->hydrateSchema($this->registry->blockSchemaFor($block->type))
+            ),
             'settings' => $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
             'type'     => $block->type,
             'label'    => $this->registry->blockLabel($block->type, $block->settings ?? []),

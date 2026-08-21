@@ -881,4 +881,6 @@ return [
 	'pick_the_category_or_brand_this_section_should_show' => 'اختر الفئة أو الماركة التي يعرضها هذا القسم.',
 	'theme_sections_choose_real_records' => 'أقسام الثيم تختار سجلات حقيقية',
 	'a_section_stores_the_ids_it_shows_so_an_app_can_mirror_the_same_selection' => 'القسم يخزّن معرّفات ما يعرضه، فيستطيع التطبيق عرض الاختيار نفسه.',
+	'only_one_deal_can_be_active_at_a_time_pick_a_deal_here_to_show_a_different_one' => 'لا يمكن تفعيل أكثر من عرض فلاش واحد في الوقت نفسه. اختر عرضاً هنا ليعرض هذا القسم عرضاً مختلفاً.',
+	'the_deal_you_picked_has_ended_so_this_section_stays_hidden_pick_another_one' => 'العرض الذي اخترته انتهى، لذلك يبقى هذا القسم مخفياً. اختر عرضاً آخر.',
 ];

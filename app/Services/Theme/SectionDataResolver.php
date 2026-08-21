@@ -56,7 +56,9 @@ class SectionDataResolver
         }
 
         return $this->safely(function () use ($limit, $source, $reference) {
-            $query = Product::active();
+            // The card shows the brand under the image; loading it here keeps a rail of ten
+            // products at one query instead of eleven.
+            $query = Product::active()->with('brand:id,name,slug');
 
             $query = match ($source) {
                 'best_selling' => $query->withCount('orderDetails')->orderByDesc('order_details_count'),
@@ -71,6 +73,22 @@ class SectionDataResolver
         });
     }
 
+    /**
+     * Product ids the signed-in customer has wishlisted, so every card on the page can draw a
+     * filled or empty heart from ONE query instead of one per card.
+     */
+    public function wishlistedProductIds(): array
+    {
+        $customerId = auth('customer')->id();
+        if (!$customerId) {
+            return [];
+        }
+
+        return $this->safely(fn () => \App\Models\Wishlist::where('customer_id', $customerId)->pluck('product_id'))
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     /** Exactly these products, in the order the merchant picked them. */
     public function pickedProducts(string|array|null $picked, int $limit): Collection
     {
@@ -80,6 +98,7 @@ class SectionDataResolver
         }
 
         return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
             ->whereIn('id', array_slice($ids, 0, $this->bounded($limit, 24)))
             ->get()
             ->sortBy(fn ($product) => array_search($product->id, $ids, true))
@@ -249,16 +268,24 @@ class SectionDataResolver
      * The running flash deal, for the countdown strip: real title and REAL end date, so the
      * storefront counts down to the moment the deal actually ends (never a hardcoded timer).
      */
-    public function flashDeal(?int $dealId = null): ?array
+    public function flashDeal(?int $dealId = null, array $exclude = []): ?array
     {
         try {
-            // A hand-picked deal wins; otherwise whichever deal is running now, so a section keeps
-            // working after a campaign ends without anyone editing the theme.
-            $deal = \App\Models\FlashDeal::where(['deal_type' => 'flash_deal', 'status' => 1])
+            // A hand-picked deal renders whatever its ACTIVE flag says: the dashboard allows only
+            // one active flash deal at a time (activating one deactivates the rest), so requiring
+            // "active" would collapse every flash-deal section onto that single deal — which is
+            // exactly what picking a deal is meant to avoid. An ENDED deal is still refused: a
+            // countdown that reads zero is worse than no section.
+            //
+            // With nothing picked the section follows whichever deal is running, skipping the ones
+            // already shown higher up the page so two automatic sections never repeat each other.
+            $deal = \App\Models\FlashDeal::where('deal_type', 'flash_deal')
                 ->when($dealId, fn ($query) => $query->where('id', $dealId))
                 ->when(!$dealId, fn ($query) => $query
+                    ->where('status', 1)
                     ->whereDate('start_date', '<=', date('Y-m-d'))
-                    ->whereDate('end_date', '>=', date('Y-m-d')))
+                    ->whereNotIn('id', array_filter(array_map('intval', $exclude))))
+                ->whereDate('end_date', '>=', date('Y-m-d'))
                 ->withCount('products')
                 ->orderByDesc('id')
                 ->first();
@@ -291,6 +318,7 @@ class SectionDataResolver
     public function flashDealProducts(int $dealId, int $limit): Collection
     {
         return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
             ->whereIn('id', \App\Models\FlashDealProduct::where('flash_deal_id', $dealId)->pluck('product_id'))
             ->take($this->bounded($limit, 24))
             ->get());
@@ -319,7 +347,12 @@ class SectionDataResolver
                 $row = app(\App\Services\EntityPageBannerService::class)->current(entity: 'category', resourceId: $categoryId);
                 $banner = $row && $row->published
                     ? [
-                        'image'       => getStorageImages(path: $row->photo_full_url, type: 'banner'),
+                        'image'        => getStorageImages(path: $row->photo_full_url, type: 'banner'),
+                        // The phone artwork the merchant uploaded with the banner, when there is
+                        // one — a wide desktop banner shrunk to a phone is unreadable otherwise.
+                        'image_mobile' => $row->mobile_photo
+                            ? getStorageImages(path: $row->mobile_photo_full_url, type: 'banner')
+                            : null,
                         'title'       => $row->title,
                         'subtitle'    => $row->sub_title,
                         'link'        => $row->url,
