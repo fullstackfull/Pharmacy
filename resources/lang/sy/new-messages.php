@@ -759,4 +759,5 @@ return [
 	'theme_deleted_successfully' => 'تم حذف الثيم بنجاح',
 	'site_under_maintenance' => 'الموقع تحت الصيانة',
 	'the_store_is_under_a_short_maintenance_break_and_will_be_back_within_minutes' => 'المتجر في استراحة صيانة قصيرة وسيعود خلال دقائق.',
+	'curated_for_you' => 'مختار لك بعناية',
 ];
