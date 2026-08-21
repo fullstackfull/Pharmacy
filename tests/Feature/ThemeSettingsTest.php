@@ -132,7 +132,10 @@ class ThemeSettingsTest extends TestCase
         $resolved = (new ThemeManager())->resolveSettings($draft->fresh());
 
         $this->assertSame('#abcdef', $resolved['colors']['primary']);      // override
-        $this->assertSame('#334155', $resolved['colors']['secondary']);    // default preserved
+        $this->assertSame(
+            app(\App\Services\Theme\ThemeManager::class)->defaultSettings()['colors']['secondary'],
+            $resolved['colors']['secondary']
+        ); // default preserved
         $this->assertSame(1200, $resolved['layout']['container_width']);   // untouched group intact
     }
 
