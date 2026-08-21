@@ -53,6 +53,10 @@ class ThemeBuilderController extends BaseController
         // the explicit Preview button — nothing leaks to customers.
         if ($version && $this->builder->isEditable($version)) {
             session([StorefrontThemeRenderer::PREVIEW_SESSION_KEY => $version->id]);
+
+            // Register any banner-backed blocks composed before the smart link existed, so Banner
+            // Setup catches up the moment the builder opens.
+            app(\App\Services\Theme\ThemeBannerLink::class)->syncVersion($version);
         }
 
         return view('admin-views.theme.builder', [

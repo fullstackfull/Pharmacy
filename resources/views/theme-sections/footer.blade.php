@@ -5,6 +5,23 @@
      footer can never drop the legal line. --}}
 @php
     $__footerSections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('footer');
+
+    // Only sections that actually SHOW something count. A footer_columns section without a single
+    // visible block (a merchant added the section but no columns yet) must not replace the built-in
+    // footer with an empty shell — that reads as "the footer broke".
+    $__footerSections = collect($__footerSections ?? [])
+        ->filter(function ($section) {
+            $settings = $section['settings'] ?? [];
+            if (($settings['visible'] ?? true) === false) {
+                return false;
+            }
+            return match ($section['type'] ?? null) {
+                'footer_columns' => count($section['blocks'] ?? []) > 0,
+                'custom_html'    => trim((string) ($settings['content'] ?? '')) !== '',
+                'newsletter'     => true,
+                default          => false,
+            };
+        })->values()->all();
 @endphp
 
 @if (!empty($__footerSections))

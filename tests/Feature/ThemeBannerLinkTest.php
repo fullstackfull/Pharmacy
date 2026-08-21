@@ -124,15 +124,60 @@ class ThemeBannerLinkTest extends TestCase
         $this->assertSame('still-there.png', $cards[0]['image']);
     }
 
-    public function test_a_deleted_linked_banner_falls_back_to_the_blocks_own_image(): void
+    public function test_a_deleted_linked_banner_hides_its_card_too(): void
     {
-        $cards = app(SectionDataResolver::class)->blockCards([[
-            'type' => 'banner',
-            'settings' => ['banner_id' => 424242, 'image' => 'fallback.png'],
-        ]]);
+        // Deleting the banner in Banner Setup IS removing it from the theme — falling back to a
+        // stale copied image would resurrect content the merchant explicitly deleted.
+        $cards = app(SectionDataResolver::class)->blockCards([
+            ['type' => 'banner', 'settings' => ['banner_id' => 424242, 'image' => 'stale-copy.png']],
+            ['type' => 'banner', 'settings' => ['image' => 'unlinked-stays.png']],
+        ]);
 
         $this->assertCount(1, $cards);
-        $this->assertSame('fallback.png', $cards[0]['image']);
+        $this->assertSame('unlinked-stays.png', $cards[0]['image']);
+    }
+
+    public function test_sync_version_registers_blocks_composed_before_the_smart_link(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('theme-assets/1/old-mosaic.webp', 'bytes');
+        $url = Storage::disk('public')->url('theme-assets/1/old-mosaic.webp');
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'draft']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic']);
+        $tile = ThemeBlock::create([
+            'theme_section_id' => $section->id,
+            'type' => 'mosaic_tile',
+            'settings' => ['image' => $url, 'title' => 'قديم'],
+        ]);
+
+        app(ThemeBannerLink::class)->syncVersion($version);
+
+        $banner = Banner::where('banner_type', ThemeBannerLink::THEME_BANNER_TYPE)->first();
+        $this->assertNotNull($banner, 'sweep should register pre-existing mosaic tiles');
+        $this->assertSame($banner->id, (int) $tile->fresh()->settings['banner_id']);
+    }
+
+    public function test_the_url_match_survives_a_host_mismatch(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('theme-assets/1/x.webp', 'bytes');
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'draft']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'promotional_banner']);
+        // Same storage path, but the URL carries a different host (www / APP_URL drift).
+        $block = ThemeBlock::create([
+            'theme_section_id' => $section->id,
+            'type' => 'banner',
+            'settings' => ['image' => 'https://www.some-other-host.example/storage/theme-assets/1/x.webp'],
+        ]);
+
+        app(ThemeBannerLink::class)->syncBlock($block);
+
+        $this->assertSame(1, Banner::where('banner_type', ThemeBannerLink::THEME_BANNER_TYPE)->count());
+        $this->assertNotEmpty($block->fresh()->settings['banner_id'] ?? null);
     }
 
     public function test_banner_id_is_coerced_to_a_positive_int_or_null(): void
