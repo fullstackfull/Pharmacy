@@ -300,6 +300,41 @@ class SectionDataResolver
      * Theme-builder blocks as the same card shape as dashboardBanners(), so both feed the same
      * renderers and a section can be switched between sources without touching the markup.
      */
+    /**
+     * The blocks of a block-driven section that carry the content that section is FOR.
+     *
+     * A story with no cover, a branch with no name, a comparison missing one of its two photos
+     * draws nothing; keeping the empty ones out lets the renderer skip a section that would
+     * otherwise open a padded band with nothing in it.
+     *
+     * @param  array<int, string>  $required  keys the block must all have filled
+     * @param  array<int, string>  $either    keys the block must have at least one of
+     */
+    public function blocksWithContent(array $blocks, array $required = [], array $either = []): array
+    {
+        return array_values(array_filter($blocks, function ($block) use ($required, $either) {
+            $settings = $block['settings'] ?? [];
+
+            foreach ($required as $key) {
+                if (empty($settings[$key])) {
+                    return false;
+                }
+            }
+
+            if (!$either) {
+                return true;
+            }
+
+            foreach ($either as $key) {
+                if (!empty($settings[$key])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
     public function blockCards(array $blocks): array
     {
         $cards = [];
@@ -485,6 +520,151 @@ class SectionDataResolver
             ->orderByDesc('id')
             ->take($this->bounded($limit, 12))
             ->get());
+    }
+
+    // --- Offers & Deals -------------------------------------------------------------------
+    // Each of these mirrors a screen the merchant already works in (Promotion -> ...), so a
+    // section is a window onto that screen rather than a second place to maintain the same data.
+
+    /** The running "deal of the day", with the product it features. */
+    public function dealOfTheDay(): ?array
+    {
+        try {
+            $deal = \App\Models\DealOfTheDay::where('status', 1)->latest('id')->first();
+            $product = $deal ? Product::active()->with('brand:id,name,slug')->find($deal->product_id) : null;
+
+            return $product ? ['deal' => $deal, 'product' => $product] : null;
+        } catch (\Throwable $exception) {
+            report($exception);
+            return null;
+        }
+    }
+
+    /** Products of the running featured deal (Promotion -> Featured deal). */
+    public function featuredDealProducts(int $limit): Collection
+    {
+        return $this->safely(function () use ($limit) {
+            $deal = \App\Models\FlashDeal::where(['deal_type' => 'feature_deal', 'status' => 1])
+                ->whereDate('start_date', '<=', date('Y-m-d'))
+                ->whereDate('end_date', '>=', date('Y-m-d'))
+                ->latest('id')
+                ->first();
+
+            if (!$deal) {
+                return collect();
+            }
+
+            return Product::active()
+                ->with('brand:id,name,slug')
+                ->whereIn('id', \App\Models\FlashDealProduct::where('flash_deal_id', $deal->id)->pluck('product_id'))
+                ->take($this->bounded($limit, 24))
+                ->get();
+        });
+    }
+
+    /** Products currently on clearance (Promotion -> Clearance sale). */
+    public function clearanceProducts(int $limit): Collection
+    {
+        return $this->safely(fn () => Product::active()
+            ->with('brand:id,name,slug')
+            ->whereIn('id', \App\Models\StockClearanceProduct::where('is_active', 1)->pluck('product_id'))
+            ->take($this->bounded($limit, 24))
+            ->get());
+    }
+
+    /**
+     * Coupons a customer can actually use right now: live, not expired, and not tied to one
+     * specific customer — a code nobody else can redeem does not belong on the home page.
+     */
+    public function coupons(int $limit): Collection
+    {
+        return $this->safely(fn () => \App\Models\Coupon::where('status', 1)
+            ->whereDate('start_date', '<=', date('Y-m-d'))
+            ->whereDate('expire_date', '>=', date('Y-m-d'))
+            ->whereIn('coupon_type', ['discount_on_purchase', 'free_delivery'])
+            ->orderBy('expire_date')
+            ->take($this->bounded($limit, 12))
+            ->get());
+    }
+
+    // --- Storytelling & trust -------------------------------------------------------------
+
+    /** Live counts for the store-stats bar; every number is a real row count. */
+    public function storeStats(): array
+    {
+        return $this->safely(fn () => collect([
+            'products'   => Product::active()->count(),
+            'brands'     => Brand::where('status', 1)->count(),
+            'categories' => Category::where('position', 0)->count(),
+            'customers'  => \App\Models\User::count(),
+            'orders'     => \App\Models\Order::count(),
+        ]))->all();
+    }
+
+    /** The newest published blog posts (Blog module), or an empty list when the module is off. */
+    public function blogPosts(int $limit): Collection
+    {
+        return $this->safely(function () use ($limit) {
+            if (!class_exists(\Modules\Blog\app\Models\Blog::class)) {
+                return collect();
+            }
+
+            return \Modules\Blog\app\Models\Blog::active()
+                ->where('is_published', 1)
+                ->whereDate('publish_date', '<=', date('Y-m-d'))
+                ->latest('publish_date')
+                ->take($this->bounded($limit, 12))
+                ->get();
+        });
+    }
+
+    /**
+     * A bundle: the picked products plus what the set costs, before and after the section's
+     * bundle discount. The maths is done here so the button and the label can never disagree.
+     *
+     * @return array{products: Collection, total: float, discounted: float, saved: float, percent: int}|null
+     */
+    public function bundle(array $settings): ?array
+    {
+        $products = $this->pickedProducts($settings['product_ids'] ?? null, 12);
+        if ($products->count() < 2) {
+            return null;
+        }
+
+        $total = $products->sum(fn ($product) => (float) getProductPriceByType(
+            product: $product, type: 'discounted_unit_price', result: 'value',
+        ));
+        $percent = max(0, min(90, (int) ($settings['discount'] ?? 0)));
+        $discounted = round($total * (100 - $percent) / 100, 2);
+
+        return [
+            'products'   => $products,
+            'total'      => $total,
+            'discounted' => $discounted,
+            'saved'      => round($total - $discounted, 2),
+            'percent'    => $percent,
+        ];
+    }
+
+    /**
+     * The seconds left until today's shipping cut-off, or null once it has passed.
+     *
+     * The cut-off is a wall-clock time in the store's own timezone, so "order within 2:14" means
+     * the same thing to the merchant packing the boxes and to the customer reading the page.
+     */
+    public function shippingCutoff(string $time): ?int
+    {
+        try {
+            $now = now();
+            $cutoff = $now->copy()->setTimeFromTimeString($time !== '' ? $time : '16:00');
+            // Carbon counts FROM the receiver: read it the other way round and today's cut-off comes
+            // back negative, which renders as a dead 00:00:00 clock.
+            $seconds = (int) $now->diffInSeconds($cutoff, absolute: false);
+
+            return $seconds > 0 ? $seconds : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /** Clamp a merchant-supplied count so a stray value cannot fetch the whole catalogue. */

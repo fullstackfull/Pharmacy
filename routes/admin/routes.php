@@ -272,6 +272,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('multiple-product-details', 'getMultipleProductDetailsView')->name('multiple-product-details');
             Route::get('search', 'getSearchedProductsView')->name('search-product');
             Route::get('search-all-product', 'getSearchedAllProductsView')->name('search-all-type-product');
+            // Pickers on the product form (frequently bought together): searchable, id-based.
+            Route::get('picker-options', 'getProductPickerOptions')->name('picker-options');
+            Route::get('picker-labels', 'getProductPickerLabels')->name('picker-labels');
         });
     });
 

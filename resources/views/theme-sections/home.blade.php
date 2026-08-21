@@ -16,7 +16,9 @@
     $__renderable = ['hero_banner', 'category_grid', 'product_slider', 'brand_slider', 'promotional_banner',
         'split_banner', 'banner_mosaic', 'banner_strip', 'store_banner', 'usp_strip', 'newsletter',
         'custom_html', 'spacer', 'flash_deal', 'testimonials', 'faq', 'category_showcase',
-        'vendor_slider', 'vendor_showcase'];
+        'vendor_slider', 'vendor_showcase',
+        'deal_of_the_day', 'featured_deal', 'clearance_sale', 'coupon_strip', 'stats_bar', 'bundle',
+        'interest_tiles', 'stories', 'blog_posts', 'branches', 'shipping_cutoff', 'before_after'];
 @endphp
 
 @if (!empty($__sections))
@@ -211,6 +213,9 @@
     .ml-cat:hover .ml-cat-ring{ transform:translateY(-6px) scale(1.04); box-shadow:var(--ml-glow); border-color:transparent; }
     .ml-cat:hover .ml-cat-name{ color:var(--ml-primary); }
     .ml-cat-ring img{ position:relative; z-index:1; width:60%; height:60%; object-fit:contain; }
+    .ml-cat-ring.is-letter{ background:var(--ml-grad); }
+    .ml-cat-ring.is-letter span{ position:relative; z-index:1; font-family:var(--ml-serif); font-weight:800;
+        font-size:2rem; color:#fff; }
     .ml-cat-name{ font-size:.78rem; font-weight:600; color:var(--ml-ink2); margin-top:.55rem; min-height:0; }
 
     /* ---- vendors (marketplace) ------------------------------------------------------------ */
@@ -433,6 +438,171 @@
         border-radius:10px; background:rgba(255,255,255,.07); }
     .ml-news-form input::placeholder{ color:rgba(255,255,255,.55); }
 
+    /* ---- deal of the day ---------------------------------------------------------------------- */
+    .ml-dotd{ display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(1rem,3vw,2.4rem); align-items:center;
+        border-radius:18px; padding:clamp(1.2rem,3vw,2.4rem); background:var(--ml-dark); color:#fff;
+        position:relative; overflow:hidden; }
+    .ml-dotd::before{ content:""; position:absolute; inset:0;
+        background:radial-gradient(circle at 85% 15%,rgba(255,255,255,.16),transparent 55%); }
+    .ml-dotd > *{ position:relative; z-index:1; }
+    .ml-dotd h2{ font-family:var(--ml-serif); font-weight:800; color:#fff;
+        font-size:clamp(1.5rem,3.2vw,2.4rem); margin:.2rem 0 1rem; }
+    .ml-dotd .ml-eyebrow{ color:#ffd9a8; }
+    .ml-dotd .ml-flash__count{ margin-bottom:1.4rem; }
+    .ml-dotd__card{ max-width:320px; width:100%; margin-inline:auto; }
+    @media (max-width:820px){ .ml-dotd{ grid-template-columns:1fr; text-align:center; }
+        .ml-dotd .ml-flash__count{ justify-content:center; } }
+
+    /* ---- coupons ------------------------------------------------------------------------------ */
+    .ml-coupon{ position:relative; display:flex; flex-direction:column; gap:.7rem; padding:1.1rem 1.2rem;
+        border-radius:15px; background:#fff; border:1px dashed var(--ml-primary);
+        box-shadow:var(--ml-shadow); }
+    /* The perforation reads as a coupon without punching holes: two notches drawn INTO the card,
+       so they never have to guess the page colour behind them. */
+    .ml-coupon::before,.ml-coupon::after{ content:""; position:absolute; width:16px; height:16px;
+        border-radius:50%; top:50%; transform:translateY(-50%);
+        background:var(--ml-sand); box-shadow:inset 0 0 0 1px var(--ml-line); }
+    .ml-coupon::before{ inset-inline-start:-8px; } .ml-coupon::after{ inset-inline-end:-8px; }
+    .ml-coupon__value{ font-family:var(--ml-serif); font-weight:800; font-size:1.7rem; line-height:1;
+        color:var(--ml-primary); }
+    .ml-coupon__body b{ display:block; color:var(--ml-ink2); font-size:.86rem; }
+    .ml-coupon__body small{ display:block; color:var(--ml-muted); font-size:.7rem; }
+    .ml-coupon__code{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%;
+        margin-top:auto; padding:.6rem .8rem; border:0; border-radius:10px; cursor:pointer;
+        background:var(--ml-sand); color:var(--ml-ink2); font-weight:700; letter-spacing:.06em;
+        transition:transform .25s var(--ml-spring), background .2s; }
+    .ml-coupon__code:hover{ background:var(--ml-grad); color:#fff; }
+    .ml-coupon__code.is-copied{ background:#1f9d55; color:#fff; transform:scale(1.03); }
+
+    /* ---- stats bar ---------------------------------------------------------------------------- */
+    .ml-stat{ display:flex; flex-direction:column; align-items:center; gap:.45rem; text-align:center;
+        padding:1.4rem 1rem; border-radius:15px; background:#fff; border:1px solid var(--ml-line); }
+    .ml-usp-dark .ml-stat{ background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.1); }
+    .ml-stat__icon{ width:44px; height:44px; border-radius:13px; display:grid; place-items:center;
+        background:var(--ml-sand); color:var(--ml-primary); }
+    .ml-usp-dark .ml-stat__icon{ background:var(--ml-grad); color:#fff; }
+    .ml-stat b{ font-family:var(--ml-serif); font-weight:800; font-size:clamp(1.4rem,3vw,2.1rem);
+        color:var(--ml-ink2); line-height:1; }
+    .ml-usp-dark .ml-stat b{ color:#fff; }
+    .ml-stat__label{ color:var(--ml-muted); font-size:.76rem; }
+    .ml-usp-dark .ml-stat__label{ color:#aaa2bd; }
+
+    /* ---- bundle ------------------------------------------------------------------------------- */
+    .ml-bundle{ border-radius:18px; background:#fff; border:1px solid var(--ml-line);
+        padding:clamp(1.2rem,3vw,2rem); box-shadow:var(--ml-shadow); }
+    .ml-bundle__head h2{ font-family:var(--ml-serif); font-weight:800; margin:.2rem 0 .3rem;
+        font-size:clamp(1.25rem,2.6vw,1.8rem); color:var(--ml-ink2); }
+    .ml-bundle__head p{ color:var(--ml-muted); font-size:.85rem; margin:0; }
+    /* Aligned from the top, with the names clamped to two lines: a three-line name must not push
+       its own tile down and knock the row out of line. */
+    .ml-bundle__items{ display:flex; align-items:flex-start; flex-wrap:wrap; gap:.7rem; margin:1.3rem 0; }
+    .ml-bundle__item{ width:118px; text-align:center; text-decoration:none; }
+    .ml-bundle__item img{ width:100%; aspect-ratio:1; object-fit:contain; border-radius:13px;
+        background:var(--ml-sand); padding:.5rem; transition:transform .35s var(--ml-spring); }
+    .ml-bundle__item:hover img{ transform:translateY(-4px); }
+    .ml-bundle__item span{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+        overflow:hidden; margin-top:.4rem; min-height:2rem; font-size:.72rem; color:var(--ml-muted); line-height:1.35; }
+    .ml-bundle__plus{ font-size:1.3rem; color:var(--ml-primary); font-weight:700; margin-top:48px; }
+    .ml-bundle__foot{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;
+        padding-top:1.1rem; border-top:1px dashed var(--ml-line); }
+    .ml-bundle__price{ display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap; }
+    .ml-bundle__price b{ font-size:1.5rem; font-weight:800; color:var(--ml-ink2); }
+    .ml-bundle__price del{ color:var(--ml-muted); font-size:.9rem; }
+    .ml-bundle .ml-off{ position:static; inset:auto; }
+
+    /* ---- shop by interest --------------------------------------------------------------------- */
+    .ml-interest .ml-tile__body h4{ font-family:var(--ml-serif); font-weight:800; margin:.2rem 0 .25rem;
+        font-size:clamp(1.05rem,2.2vw,1.5rem); color:inherit; }
+    .ml-interest .ml-tile__body p{ margin:0; font-size:.8rem; opacity:.85; }
+
+    /* ---- stories ------------------------------------------------------------------------------ */
+    .ml-stories{ display:flex; gap:14px; overflow-x:auto; padding:.3rem .1rem 1rem; scrollbar-width:none; }
+    .ml-stories::-webkit-scrollbar{ display:none; }
+    .ml-story-dot{ flex:0 0 auto; width:86px; border:0; background:none; padding:0; cursor:pointer; text-align:center; }
+    .ml-story-dot__ring{ display:block; width:86px; height:86px; border-radius:50%; padding:3px;
+        background:var(--ml-grad); transition:transform .35s var(--ml-spring); }
+    .ml-story-dot:hover .ml-story-dot__ring{ transform:scale(1.06); }
+    .ml-story-dot__ring img{ width:100%; height:100%; border-radius:50%; object-fit:cover;
+        border:3px solid #fff; background:#fff; }
+    .ml-story-dot small{ display:block; margin-top:.4rem; font-size:.7rem; color:var(--ml-ink2);
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ml-story-viewer{ position:fixed; inset:0; z-index:1080; background:rgba(12,6,26,.94);
+        display:grid; place-items:center; padding:2vh 1rem; }
+    .ml-story-viewer[hidden]{ display:none; }
+    .ml-story-viewer__close{ position:absolute; top:14px; inset-inline-end:18px; width:40px; height:40px;
+        border:0; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:26px; line-height:1;
+        cursor:pointer; }
+    .ml-story-viewer__stage{ width:min(420px,100%); height:min(88vh,760px); position:relative; }
+    .ml-story-slide{ position:absolute; inset:0; margin:0; border-radius:18px; overflow:hidden; background:#000; }
+    .ml-story-slide[hidden]{ display:none; }
+    .ml-story-slide img,.ml-story-slide video{ width:100%; height:100%; object-fit:cover; }
+    .ml-story-slide figcaption{ position:absolute; inset-inline:0; bottom:0; padding:1.4rem 1.2rem;
+        background:linear-gradient(180deg,transparent,rgba(0,0,0,.82)); color:#fff; text-align:center; }
+    .ml-story-slide figcaption b{ display:block; margin-bottom:.7rem; font-size:1rem; }
+
+    /* ---- blog posts --------------------------------------------------------------------------- */
+    .ml-post{ display:block; text-decoration:none; border-radius:15px; overflow:hidden; background:#fff;
+        border:1px solid var(--ml-line); transition:transform .35s var(--ml-spring), box-shadow .35s; }
+    .ml-post:hover{ transform:translateY(-5px); box-shadow:var(--ml-shadow-lg); text-decoration:none; }
+    .ml-post__thumb{ display:block; aspect-ratio:16/10; background:var(--ml-sand); }
+    .ml-post__thumb img{ width:100%; height:100%; object-fit:cover; }
+    .ml-post__body{ display:block; padding:1rem 1.1rem 1.2rem; }
+    .ml-post__body small{ display:block; color:var(--ml-primary); font-size:.68rem; letter-spacing:.08em;
+        text-transform:uppercase; margin-bottom:.35rem; }
+    .ml-post__body b{ display:block; color:var(--ml-ink2); font-size:.92rem; line-height:1.45; }
+
+    /* ---- branches ----------------------------------------------------------------------------- */
+    .ml-branch{ border-radius:15px; background:#fff; border:1px solid var(--ml-line); padding:1.3rem 1.4rem; }
+    .ml-branch h4{ font-family:var(--ml-serif); font-weight:800; font-size:1.05rem; color:var(--ml-ink2);
+        margin:0 0 .8rem; }
+    .ml-branch p{ display:flex; align-items:flex-start; gap:.55rem; margin:0 0 .5rem;
+        color:var(--ml-muted); font-size:.82rem; line-height:1.55; }
+    .ml-branch p i{ color:var(--ml-primary); margin-top:.15rem; }
+    .ml-branch a{ color:inherit; }
+    .ml-branch .ml-btn{ margin-top:.6rem; border:1px solid var(--ml-line); }
+
+    /* ---- shipping cut-off --------------------------------------------------------------------- */
+    .ml-cutoff{ display:flex; align-items:center; gap:1rem; padding:1rem 1.3rem; border-radius:14px;
+        background:var(--ml-sand); border:1px solid var(--ml-line); }
+    .ml-cutoff.is-card{ background:var(--ml-dark); border-color:transparent; color:#fff; padding:1.5rem; }
+    .ml-cutoff i{ font-size:1.6rem; color:var(--ml-primary); }
+    .ml-cutoff.is-card i{ color:#ffd9a8; }
+    .ml-cutoff b{ display:block; color:var(--ml-ink2); font-size:.95rem; }
+    .ml-cutoff.is-card b{ color:#fff; }
+    .ml-cutoff small{ display:block; color:var(--ml-muted); font-size:.76rem; }
+    .ml-cutoff.is-card small{ color:#d9d2e9; }
+    .ml-cutoff__clock{ display:inline-flex; gap:.15rem; font-variant-numeric:tabular-nums;
+        direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--ml-primary); }
+    .ml-cutoff.is-card .ml-cutoff__clock{ color:#ffd9a8; }
+
+    /* ---- before / after ------------------------------------------------------------------------ */
+    /* The legacy storefront caps every <figure> at 200px with !important; these two are stages, not
+       thumbnails, so they opt out explicitly. */
+    .ml-ba, .ml-story-slide{ max-height:none !important; }
+    /* Physical left/right throughout: a comparison has a left and a right image, not a start and an
+       end, so the reveal reads the same in Arabic as in English. Only the handle is direction-
+       locked, because a range input runs backwards in RTL. */
+    .ml-ba{ position:relative; margin:0; border-radius:15px; overflow:hidden;
+        background:var(--ml-sand); user-select:none; touch-action:pan-y; }
+    .ml-ba img{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+    .ml-ba__after{ position:absolute; top:0; bottom:0; left:0; overflow:hidden; }
+    /* Sized to the FIGURE, not to the clipped strip, so both photos stay in register while the
+       handle moves. The width comes from the script, which knows the rendered box. */
+    .ml-ba__after img{ position:absolute; top:0; left:0; height:100%; max-width:none;
+        width:var(--ml-ba-w,100%); }
+    .ml-ba__range{ position:absolute; inset:0; direction:ltr; width:100%; height:100%; margin:0;
+        opacity:0; cursor:ew-resize; }
+    .ml-ba::after{ content:""; position:absolute; top:0; bottom:0; left:var(--ml-ba,50%);
+        width:2px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); pointer-events:none; }
+    .ml-ba__tag{ position:absolute; top:12px; padding:.25rem .7rem; border-radius:99px; font-size:.68rem;
+        font-weight:700; background:rgba(255,255,255,.9); color:var(--ml-ink2); pointer-events:none; }
+    .ml-ba__tag--after{ left:12px; } .ml-ba__tag--before{ right:12px; }
+    .ml-ba figcaption{ position:absolute; left:0; right:0; bottom:0; padding:1.6rem 1.1rem .9rem; color:#fff;
+        text-align:start;
+        background:linear-gradient(180deg,transparent,rgba(0,0,0,.7)); pointer-events:none; }
+    .ml-ba figcaption b{ display:block; font-size:.92rem; }
+    .ml-ba figcaption span{ font-size:.75rem; opacity:.85; }
+
     @media (prefers-reduced-motion: reduce){
         .ml-sections *{ animation:none !important; transition-duration:.01ms !important; }
         .ml-reveal{ opacity:1; transform:none; }
@@ -479,6 +649,24 @@
                 ? $__data->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
                 : collect();
             $vendorShowcase = $type === 'vendor_showcase' ? $__data->vendorShowcase($s) : null;
+            $dotd = $type === 'deal_of_the_day' ? $__data->dealOfTheDay() : null;
+            $offerProducts = match ($type) {
+                'featured_deal' => $__data->featuredDealProducts((int) ($s['limit'] ?? 10)),
+                'clearance_sale' => $__data->clearanceProducts((int) ($s['limit'] ?? 10)),
+                default => collect(),
+            };
+            $coupons = $type === 'coupon_strip' ? $__data->coupons((int) ($s['limit'] ?? 4)) : collect();
+            $set = $type === 'bundle' ? $__data->bundle($s) : null;
+            $posts = $type === 'blog_posts' ? $__data->blogPosts((int) ($s['limit'] ?? 3)) : collect();
+            $secondsLeft = $type === 'shipping_cutoff' ? $__data->shippingCutoff((string) ($s['cutoff'] ?? '16:00')) : null;
+            // Block-driven sections are nothing but their blocks: one whose blocks carry no
+            // content yet would open a padded band with nothing inside it.
+            $rawBlocks = match ($type) {
+                'stories' => $__data->blocksWithContent($__section['blocks'] ?? [], either: ['image', 'video']),
+                'branches' => $__data->blocksWithContent($__section['blocks'] ?? [], required: ['title']),
+                'before_after' => $__data->blocksWithContent($__section['blocks'] ?? [], required: ['image', 'after']),
+                default => $__section['blocks'] ?? [],
+            };
         @endphp
 
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
@@ -486,6 +674,13 @@
         @continue($type === 'category_showcase' && !$showcase)
         @continue($type === 'vendor_slider' && $vendors->isEmpty())
         @continue($type === 'vendor_showcase' && !$vendorShowcase)
+        @continue($type === 'deal_of_the_day' && !$dotd)
+        @continue(in_array($type, ['featured_deal', 'clearance_sale'], true) && $offerProducts->isEmpty())
+        @continue($type === 'coupon_strip' && $coupons->isEmpty())
+        @continue($type === 'bundle' && !$set)
+        @continue($type === 'blog_posts' && $posts->isEmpty())
+        @continue($type === 'shipping_cutoff' && !$secondsLeft)
+        @continue(in_array($type, ['stats_bar', 'interest_tiles', 'stories', 'branches', 'before_after'], true) && !count($rawBlocks))
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
@@ -509,9 +704,12 @@
                                 @foreach ($cats as $cat)
                                     <div class="ml-reveal" data-delay="{{ $loop->index % 6 }}">
                                         <a href="{{ route('products', ['category_id' => $cat->id]) }}" class="ml-cat">
-                                            <span class="ml-cat-ring">
-                                                @if ($cat->icon)
-                                                    <img src="{{ getStorageImages(path: $cat->icon_full_url, type: 'category') }}" alt="{{ $cat->name }}" loading="lazy">
+                                            @php $catIcon = category_icon_url($cat); @endphp
+                                            <span class="ml-cat-ring {{ $catIcon ? '' : 'is-letter' }}">
+                                                @if ($catIcon)
+                                                    <img src="{{ $catIcon }}" alt="{{ $cat->name }}" loading="lazy">
+                                                @else
+                                                    <span aria-hidden="true">{{ mb_substr(trim((string) $cat->name), 0, 1) }}</span>
                                                 @endif
                                             </span>
                                             <span class="ml-name ml-cat-name">{{ $cat->name }}</span>
@@ -693,6 +891,381 @@
                                     </div>
                                 @endif
                             @endif
+                        @endif
+                        @break
+
+                    {{-- Today's deal: the product the merchant set in Promotion -> Deal of the day,
+                         counting down to midnight because that is when the deal actually ends. --}}
+                    @case('deal_of_the_day')
+                        @php $cardCart = (bool) ($s['add_to_cart'] ?? true); @endphp
+                            <div class="ml-dotd ml-reveal">
+                                <div class="ml-dotd__copy">
+                                    <span class="ml-eyebrow">{{ $s['eyebrow'] ?: translate('deal_of_the_day') }}</span>
+                                    <h2>{{ $s['title'] ?: ($dotd['deal']->title ?: $dotd['product']->name) }}</h2>
+                                    @if ($s['countdown'] ?? true)
+                                        <div class="ml-flash__count" data-ml-countdown="{{ now()->endOfDay()->getTimestamp() }}">
+                                            <div class="ml-time"><b data-unit="hours">00</b><small>{{ translate('hours') }}</small></div>
+                                            <div class="ml-time"><b data-unit="minutes">00</b><small>{{ translate('minutes') }}</small></div>
+                                            <div class="ml-time"><b data-unit="seconds">00</b><small>{{ translate('seconds') }}</small></div>
+                                        </div>
+                                    @endif
+                                    <a class="ml-btn ml-btn-gold" href="{{ route('product', $dotd['product']->slug) }}">{{ translate('shop_the_deal') }}</a>
+                                </div>
+                                <div class="ml-dotd__card">
+                                    @include('theme-sections.partials.product-card', ['product' => $dotd['product'], 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                </div>
+                            </div>
+                        @break
+
+                    {{-- The running featured-deal campaign, and the clearance shelf: both are just
+                         product rows whose source is a dashboard screen. --}}
+                    @case('featured_deal')
+                    @case('clearance_sale')
+                        @php
+                            $cardCart = (bool) ($s['add_to_cart'] ?? true);
+                            $offerRail = ($s['style'] ?? 'rail') === 'rail';
+                        @endphp
+                            <div class="ml-sec-head ml-reveal">
+                                <div>
+                                    <span class="ml-eyebrow">{{ $s['eyebrow'] ?: ($type === 'featured_deal' ? translate('featured_deal') : translate('clearance_sale')) }}</span>
+                                    @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                </div>
+                            </div>
+                            <div class="{{ $offerRail ? 'ml-rail' : 'ml-grid' }} ml-reveal">
+                                @foreach ($offerProducts as $product)
+                                    @if ($offerRail)
+                                        @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                    @else
+                                        <div data-delay="{{ $loop->index % 6 }}">
+                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @break
+
+                    {{-- Live coupons as cards the customer copies with one tap. Only codes anyone
+                         can actually redeem are listed (see SectionDataResolver::coupons). --}}
+                    @case('coupon_strip')
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-reveal">
+                                    <div>
+                                        @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                        @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="ml-grid">
+                                @foreach ($coupons as $coupon)
+                                    <div class="ml-coupon ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                        <div class="ml-coupon__value">
+                                            @if ($coupon->coupon_type === 'free_delivery')
+                                                {{ translate('free_delivery') }}
+                                            @elseif ($coupon->discount_type === 'percent')
+                                                {{ (int) $coupon->discount }}%
+                                            @else
+                                                {{ webCurrencyConverter(amount: $coupon->discount) }}
+                                            @endif
+                                        </div>
+                                        <div class="ml-coupon__body">
+                                            <b>{{ $coupon->title }}</b>
+                                            @if ($coupon->min_purchase > 0)
+                                                <small>{{ translate('minimum_purchase') }}: {{ webCurrencyConverter(amount: $coupon->min_purchase) }}</small>
+                                            @endif
+                                            <small>{{ translate('valid_until') }} {{ \Carbon\Carbon::parse($coupon->expire_date)->translatedFormat('d M Y') }}</small>
+                                        </div>
+                                        <button type="button" class="ml-coupon__code" data-ml-copy="{{ $coupon->code }}"
+                                                title="{{ translate('copy_code') }}">
+                                            <span>{{ $coupon->code }}</span>
+                                            <i class="fi fi-rr-copy"></i>
+                                        </button>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @break
+
+                    {{-- Store stats. Every number is a real row count unless the merchant typed a
+                         custom one, and they count up once when the bar scrolls into view. --}}
+                    @case('stats_bar')
+                        @php
+                            $stats = $__data->storeStats();
+                            $statBlocks = $rawBlocks;
+                            $statsDark = ($s['style'] ?? 'boxed') === 'dark';
+                            $countUp = (bool) ($s['animate'] ?? true);
+                        @endphp
+                        @if (count($statBlocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-sec-head--center ml-reveal">
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    <div class="ml-rule"></div>
+                                </div>
+                            @endif
+                            <div class="ml-grid {{ $statsDark ? 'ml-usp-dark' : '' }}">
+                                @foreach ($statBlocks as $statBlock)
+                                    @php
+                                        $stat = $statBlock['settings'] ?? [];
+                                        $statSource = $stat['source'] ?? 'products';
+                                        $statValue = $statSource === 'custom'
+                                            ? ($stat['value'] ?? '')
+                                            : ($stats[$statSource] ?? 0);
+                                    @endphp
+                                    <div class="ml-stat ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                        <span class="ml-stat__icon">
+                                            @include('theme-sections.partials.usp-icon', ['icon' => $stat['icon'] ?? 'shipping'])
+                                        </span>
+                                        <b @if ($countUp && is_numeric($statValue)) data-ml-count="{{ (int) $statValue }}" @endif>
+                                            {{ is_numeric($statValue) ? number_format((int) $statValue) : $statValue }}{{ $stat['suffix'] ?? '' }}
+                                        </b>
+                                        <span class="ml-stat__label">{{ $stat['label'] ?? '' }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                        @break
+
+                    {{-- Buy the set: the picked products, what the set costs after the bundle
+                         discount, and one button that adds every one of them to the cart. --}}
+                    @case('bundle')
+                            <div class="ml-bundle ml-reveal">
+                                <div class="ml-bundle__head">
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    <h2>{{ $s['title'] ?: translate('buy_the_set') }}</h2>
+                                    @if (!empty($s['subtitle']))<p>{{ $s['subtitle'] }}</p>@endif
+                                </div>
+                                <div class="ml-bundle__items">
+                                    @foreach ($set['products'] as $product)
+                                        {{-- One form per product, shaped exactly like the card's so the bundle
+                                             button can reuse the storefront's own cart endpoint. --}}
+                                        <form class="ml-bundle__form d-none">
+                                            @csrf
+                                            <input type="hidden" name="id" value="{{ $product->id }}">
+                                            <input type="hidden" name="quantity" value="{{ max(1, (int) $product->minimum_order_qty) }}">
+                                        </form>
+                                        <a class="ml-bundle__item" href="{{ route('product', $product->slug) }}">
+                                            <img src="{{ getStorageImages(path: $product->thumbnail_full_url, type: 'product') }}"
+                                                 alt="{{ $product->name }}" loading="lazy">
+                                            <span>{{ Str::limit($product->name, 34) }}</span>
+                                        </a>
+                                        @if (!$loop->last)<span class="ml-bundle__plus">+</span>@endif
+                                    @endforeach
+                                </div>
+                                <div class="ml-bundle__foot">
+                                    <div class="ml-bundle__price">
+                                        <b>{{ webCurrencyConverter(amount: $set['discounted']) }}</b>
+                                        @if ($set['saved'] > 0)
+                                            <del>{{ webCurrencyConverter(amount: $set['total']) }}</del>
+                                            <span class="ml-off">-{{ $set['percent'] }}%</span>
+                                        @endif
+                                    </div>
+                                    <button type="button" class="ml-btn ml-btn-gold" data-ml-bundle
+                                            data-busy="{{ translate('adding') }}...">
+                                        {{ $s['button_text'] ?: translate('add_the_set_to_cart') }}
+                                    </button>
+                                </div>
+                            </div>
+                        @break
+
+                    {{-- Shop by interest: big tiles that land on a ready-made filtered page. --}}
+                    @case('interest_tiles')
+                        @if (count($blocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-reveal">
+                                    <div>
+                                        @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                        @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="ml-grid">
+                                @foreach ($blocks as $tile)
+                                    @php $tileOverlay = max(0, min(90, (int) ($tile['overlay'] ?? 35))) / 100; @endphp
+                                    <a class="ml-tile ml-interest ml-reveal" data-delay="{{ $loop->index % 6 }}"
+                                       href="{{ $tile['link'] ?: 'javascript:void(0)' }}"
+                                       style="color:{{ $tile['text_color'] ?: '#fff' }};min-height:var(--tb-h,260px)">
+                                        <img src="{{ $tile['image'] ?: $__placeholder }}" alt="{{ $tile['title'] ?? '' }}" loading="lazy">
+                                        <span class="ml-tile__scrim" style="background:linear-gradient(180deg,rgba(0,0,0,{{ $tileOverlay / 3 }}),rgba(0,0,0,{{ $tileOverlay }}))"></span>
+                                        <span class="ml-tile__body">
+                                            @if (!empty($tile['eyebrow']))<span class="ml-eyebrow" style="color:inherit;opacity:.85">{{ $tile['eyebrow'] }}</span>@endif
+                                            @if (!empty($tile['title']))<h4>{{ $tile['title'] }}</h4>@endif
+                                            @if (!empty($tile['subtitle']))<p>{{ $tile['subtitle'] }}</p>@endif
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                        @break
+
+                    {{-- Stories: vertical cards that open full screen, each linking somewhere. --}}
+                    @case('stories')
+                        @if (count($blocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-reveal">
+                                    <div>
+                                        @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                        @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="ml-stories ml-reveal">
+                                @foreach ($rawBlocks as $storyIndex => $storyBlock)
+                                    @php $story = $storyBlock['settings'] ?? []; @endphp
+                                    @if (!empty($story['image']) || !empty($story['video']))
+                                        <button type="button" class="ml-story-dot" data-ml-story="{{ $storyIndex }}">
+                                            <span class="ml-story-dot__ring">
+                                                <img src="{{ $story['image'] ?: $__placeholder }}" alt="{{ $story['title'] ?? '' }}" loading="lazy">
+                                            </span>
+                                            <small>{{ Str::limit($story['title'] ?? '', 14) }}</small>
+                                        </button>
+                                    @endif
+                                @endforeach
+                            </div>
+
+                            <div class="ml-story-viewer" hidden>
+                                <button type="button" class="ml-story-viewer__close" aria-label="{{ translate('close') }}">&times;</button>
+                                <div class="ml-story-viewer__stage">
+                                    @foreach ($rawBlocks as $storyIndex => $storyBlock)
+                                        @php $story = $storyBlock['settings'] ?? []; @endphp
+                                        @if (!empty($story['image']) || !empty($story['video']))
+                                            <figure class="ml-story-slide" data-ml-story-slide="{{ $storyIndex }}" hidden>
+                                                @if (!empty($story['video']))
+                                                    <video src="{{ $story['video'] }}" playsinline muted loop controls></video>
+                                                @else
+                                                    <img src="{{ $story['image'] }}" alt="{{ $story['title'] ?? '' }}">
+                                                @endif
+                                                <figcaption>
+                                                    @if (!empty($story['title']))<b>{{ $story['title'] }}</b>@endif
+                                                    @if (!empty($story['link']))
+                                                        <a class="ml-btn ml-btn-gold" href="{{ $story['link'] }}">{{ $story['button_text'] ?: translate('shop_now') }}</a>
+                                                    @endif
+                                                </figcaption>
+                                            </figure>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                        @break
+
+                    {{-- The newest posts from the Blog module; nothing renders when it is off. --}}
+                    @case('blog_posts')
+                            <div class="ml-sec-head ml-reveal">
+                                <div>
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    <h2>{{ $s['title'] ?: translate('from_the_blog') }}</h2>
+                                </div>
+                                @if (($s['view_all'] ?? true) && \Illuminate\Support\Facades\Route::has('frontend.blog.index'))
+                                    <a class="ml-viewall" href="{{ route('frontend.blog.index') }}">{{ translate('view_all') }}</a>
+                                @endif
+                            </div>
+                            <div class="ml-grid">
+                                @foreach ($posts as $post)
+                                    @php
+                                        $postUrl = \Illuminate\Support\Facades\Route::has('frontend.blog.details') && $post->slug
+                                            ? route('frontend.blog.details', ['slug' => $post->slug])
+                                            : url('/');
+                                    @endphp
+                                    <a class="ml-post ml-reveal" data-delay="{{ $loop->index % 6 }}" href="{{ $postUrl }}">
+                                        <span class="ml-post__thumb">
+                                            <img src="{{ getStorageImages(path: $post->thumbnail_full_url, type: 'blog') }}"
+                                                 alt="{{ $post->title }}" loading="lazy">
+                                        </span>
+                                        <span class="ml-post__body">
+                                            <small>{{ \Carbon\Carbon::parse($post->publish_date)->translatedFormat('d M Y') }}</small>
+                                            <b>{{ Str::limit($post->title, 70) }}</b>
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @break
+
+                    {{-- Branches: where the shop physically is, when it opens, how to get there. --}}
+                    @case('branches')
+                        @if (count($rawBlocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-reveal">
+                                    <div>
+                                        @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                        @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="ml-grid">
+                                @foreach ($rawBlocks as $branchBlock)
+                                    @php $branch = $branchBlock['settings'] ?? []; @endphp
+                                    @if (!empty($branch['title']))
+                                        <article class="ml-branch ml-reveal" data-delay="{{ $loop->index % 6 }}">
+                                            <h4>{{ $branch['title'] }}</h4>
+                                            @if (!empty($branch['address']))
+                                                <p><i class="fi fi-rr-marker"></i>{{ $branch['address'] }}</p>
+                                            @endif
+                                            @if (!empty($branch['hours']))
+                                                <p><i class="fi fi-rr-clock"></i>{{ $branch['hours'] }}</p>
+                                            @endif
+                                            @if (!empty($branch['phone']))
+                                                <p><i class="fi fi-rr-phone-call"></i><a class="direction-ltr" href="tel:{{ $branch['phone'] }}">{{ $branch['phone'] }}</a></p>
+                                            @endif
+                                            @if (!empty($branch['link']))
+                                                <a class="ml-btn ml-btn-light" href="{{ $branch['link'] }}" target="_blank" rel="noopener">{{ translate('open_in_maps') }}</a>
+                                            @endif
+                                        </article>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
+                        @break
+
+                    {{-- "Order within X to have it shipped today", counting down to the merchant's
+                         own cut-off time. After the cut-off the section hides itself. --}}
+                    @case('shipping_cutoff')
+                            <div class="ml-cutoff {{ ($s['style'] ?? 'strip') === 'card' ? 'is-card' : '' }} ml-reveal"
+                                 data-ml-countdown="{{ now()->addSeconds($secondsLeft)->getTimestamp() }}">
+                                <i class="fi fi-rr-truck-side"></i>
+                                <div>
+                                    <b>{{ $s['title'] ?: translate('order_within') }}
+                                        <span class="ml-cutoff__clock">
+                                            <span data-unit="hours">00</span>:<span data-unit="minutes">00</span>:<span data-unit="seconds">00</span>
+                                        </span>
+                                    </b>
+                                    <small>{{ $s['subtitle'] ?: translate('to_have_it_shipped_today') }}</small>
+                                </div>
+                            </div>
+                        @break
+
+                    {{-- Before / after: a slider the customer drags across two photos. --}}
+                    @case('before_after')
+                        @if (count($rawBlocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-sec-head--center ml-reveal">
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    <div class="ml-rule"></div>
+                                </div>
+                            @endif
+                            <div class="ml-grid">
+                                @foreach ($rawBlocks as $pairBlock)
+                                    @php $pair = $pairBlock['settings'] ?? []; @endphp
+                                    @if (!empty($pair['image']) && !empty($pair['after']))
+                                        <figure class="ml-ba ml-reveal" data-delay="{{ $loop->index % 6 }}"
+                                                style="height:var(--tb-h,360px)">
+                                            <img class="ml-ba__before" src="{{ $pair['image'] }}" alt="{{ translate('before') }}" loading="lazy">
+                                            <span class="ml-ba__after" style="width:50%">
+                                                <img src="{{ $pair['after'] }}" alt="{{ translate('after') }}" loading="lazy">
+                                            </span>
+                                            <input type="range" min="0" max="100" value="50" class="ml-ba__range"
+                                                   aria-label="{{ translate('before_and_after') }}">
+                                            <span class="ml-ba__tag ml-ba__tag--before">{{ translate('before') }}</span>
+                                            <span class="ml-ba__tag ml-ba__tag--after">{{ translate('after') }}</span>
+                                            @if (!empty($pair['title']) || !empty($pair['caption']))
+                                                <figcaption>
+                                                    @if (!empty($pair['title']))<b>{{ $pair['title'] }}</b>@endif
+                                                    @if (!empty($pair['caption']))<span>{{ $pair['caption'] }}</span>@endif
+                                                </figcaption>
+                                            @endif
+                                        </figure>
+                                    @endif
+                                @endforeach
+                            </div>
                         @endif
                         @break
 
@@ -1217,6 +1790,186 @@
             }, {passive: true});
             move();
         }
+        // Coupon cards: one tap puts the code on the clipboard, and the button says so.
+        root.querySelectorAll('[data-ml-copy]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var code = button.dataset.mlCopy || '';
+                var done = function () {
+                    button.classList.add('is-copied');
+                    setTimeout(function () { button.classList.remove('is-copied'); }, 1600);
+                };
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(code).then(done).catch(done);
+                    return;
+                }
+                // http:// storefronts have no clipboard API — fall back to a hidden field.
+                var field = document.createElement('textarea');
+                field.value = code;
+                field.setAttribute('readonly', 'readonly');
+                field.style.position = 'fixed';
+                field.style.opacity = '0';
+                document.body.appendChild(field);
+                field.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(field);
+                done();
+            });
+        });
+
+        // Store stats count up once, when the bar first scrolls into view.
+        var counters = Array.prototype.slice.call(root.querySelectorAll('[data-ml-count]'));
+        if (counters.length) {
+            var format = function (value) { return value.toLocaleString(); };
+            var run = function (node) {
+                var target = parseInt(node.dataset.mlCount, 10) || 0;
+                // The server prints the value and the merchant's suffix ("+", "K") in one node.
+                var suffix = (node.textContent.trim().match(/[^\d.,\s]+$/) || [''])[0];
+                if (calm || target <= 0) { node.textContent = format(target) + suffix; return; }
+                var started = null;
+                var step = function (now) {
+                    if (started === null) started = now;
+                    var progress = Math.min(1, (now - started) / 1200);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    node.textContent = format(Math.round(target * eased)) + suffix;
+                    if (progress < 1) window.requestAnimationFrame(step);
+                };
+                window.requestAnimationFrame(step);
+            };
+
+            if ('IntersectionObserver' in window) {
+                var countWatcher = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (!entry.isIntersecting) return;
+                        countWatcher.unobserve(entry.target);
+                        run(entry.target);
+                    });
+                }, {threshold: 0.4});
+                counters.forEach(function (node) { countWatcher.observe(node); });
+            } else {
+                counters.forEach(run);
+            }
+        }
+
+        // "Add the set to cart": posts each product through the storefront's own cart endpoint,
+        // one after the other so the cart lines land in order, then refreshes the nav cart once.
+        root.querySelectorAll('[data-ml-bundle]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (button.dataset.pending === '1') return;
+                var bundle = button.closest('.ml-bundle');
+                var forms = bundle ? Array.prototype.slice.call(bundle.querySelectorAll('.ml-bundle__form')) : [];
+                var endpoint = document.querySelector('#route-cart-add');
+                if (!forms.length || !endpoint || typeof window.jQuery === 'undefined') return;
+
+                var $ = window.jQuery;
+                var url = $(endpoint).data('url');
+                var label = button.innerHTML;
+                button.dataset.pending = '1';
+                button.innerHTML = button.dataset.busy || label;
+
+                var addNext = function (index) {
+                    if (index >= forms.length) {
+                        button.dataset.pending = '0';
+                        button.innerHTML = label;
+                        if (typeof window.updateNavCart === 'function') {
+                            window.updateNavCart(function () {
+                                if (typeof window.openCartDrawer === 'function') window.openCartDrawer();
+                            });
+                        }
+                        return;
+                    }
+                    $.post({
+                        url: url,
+                        headers: {'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')},
+                        data: $(forms[index]).serializeArray().concat({name: 'buy_now', value: 0}),
+                        complete: function () { addNext(index + 1); }
+                    });
+                };
+                addNext(0);
+            });
+        });
+
+        // Story viewer: tap a ring to open the story full screen; arrows, swipe and Escape move on.
+        root.querySelectorAll('.ml-story-viewer').forEach(function (viewer) {
+            var section = viewer.closest('.tbs') || root;
+            var dots = Array.prototype.slice.call(section.querySelectorAll('[data-ml-story]'));
+            var slides = Array.prototype.slice.call(viewer.querySelectorAll('[data-ml-story-slide]'));
+            if (!dots.length || !slides.length) return;
+
+            var order = slides.map(function (slide) { return slide.dataset.mlStorySlide; });
+            var current = 0;
+
+            function paint() {
+                slides.forEach(function (slide, i) {
+                    slide.hidden = i !== current;
+                    var video = slide.querySelector('video');
+                    if (!video) return;
+                    if (i === current) { video.play().catch(function () {}); } else { video.pause(); }
+                });
+            }
+            function open(key) {
+                var index = order.indexOf(String(key));
+                current = index < 0 ? 0 : index;
+                viewer.hidden = false;
+                document.body.style.overflow = 'hidden';
+                paint();
+            }
+            function close() {
+                viewer.hidden = true;
+                document.body.style.overflow = '';
+                slides.forEach(function (slide) {
+                    var video = slide.querySelector('video');
+                    if (video) video.pause();
+                });
+            }
+            function move(step) {
+                current += step;
+                if (current < 0 || current >= slides.length) { close(); return; }
+                paint();
+            }
+
+            dots.forEach(function (dot) {
+                dot.addEventListener('click', function () { open(dot.dataset.mlStory); });
+            });
+            viewer.querySelector('.ml-story-viewer__close').addEventListener('click', close);
+            viewer.addEventListener('click', function (event) {
+                if (event.target === viewer) close();
+            });
+            document.addEventListener('keydown', function (event) {
+                if (viewer.hidden) return;
+                if (event.key === 'Escape') close();
+                if (event.key === 'ArrowRight') move(1);
+                if (event.key === 'ArrowLeft') move(-1);
+            });
+
+            var storyStartX = null;
+            viewer.addEventListener('touchstart', function (e) { storyStartX = e.touches[0].clientX; }, {passive: true});
+            viewer.addEventListener('touchend', function (e) {
+                if (storyStartX === null) return;
+                var delta = e.changedTouches[0].clientX - storyStartX;
+                if (Math.abs(delta) > 45) move(delta < 0 ? 1 : -1);
+                storyStartX = null;
+            });
+        });
+
+        // Before / after: the range input IS the handle, so keyboard and pointer both work and the
+        // reveal is a single custom property the CSS reads.
+        root.querySelectorAll('.ml-ba').forEach(function (figure) {
+            var range = figure.querySelector('.ml-ba__range');
+            var after = figure.querySelector('.ml-ba__after');
+            if (!range || !after) return;
+
+            var paint = function () {
+                var value = Math.max(0, Math.min(100, parseFloat(range.value) || 0));
+                after.style.width = value + '%';
+                figure.style.setProperty('--ml-ba', value + '%');
+                // The clipped strip narrows as the handle moves; its photo must not narrow with it.
+                figure.style.setProperty('--ml-ba-w', figure.clientWidth + 'px');
+            };
+            range.addEventListener('input', paint);
+            window.addEventListener('resize', paint);
+            paint();
+        });
+
     })();
 </script>
 @endif

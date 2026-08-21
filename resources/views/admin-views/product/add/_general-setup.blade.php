@@ -225,6 +225,10 @@
                             </div>
                         </div>
 
+                        <div class="col-md-4">
+                            @include('admin-views.partials._bought-together-picker', ['boughtTogetherIds' => ''])
+                        </div>
+
                         <input type="hidden"  id="generated_combinations" name="generated_combinations" value="">
                     </div>
                 </div>

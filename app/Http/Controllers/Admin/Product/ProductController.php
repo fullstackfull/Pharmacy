@@ -976,6 +976,53 @@ class ProductController extends BaseController
         ]);
     }
 
+    /**
+     * Products as {id, name, thumbnail} for the pickers on the product form.
+     *
+     * The existing search endpoint answers with rendered HTML for the flash-deal dropdown; a
+     * picker that keeps a LIST of chosen products needs data it can render as chips, so this
+     * returns the rows themselves. Read-only and admin-scoped, capped like every other search.
+     */
+    public function getProductPickerOptions(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->get('searchValue', ''));
+
+        $products = $this->productRepo->getListWhere(
+            searchValue: $term !== '' ? $term : null,
+            filters: ['status' => 1],
+            dataLimit: 20,
+        );
+
+        return response()->json([
+            'options' => collect($products->items() ?? $products)->map(fn ($product) => [
+                'value' => $product->id,
+                'label' => $product->name,
+                'thumbnail' => getStorageImages(path: $product->thumbnail_full_url, type: 'backend-product'),
+            ])->values(),
+        ]);
+    }
+
+    /** Names and thumbnails for already-picked ids, so a saved list shows products not numbers. */
+    public function getProductPickerLabels(Request $request): JsonResponse
+    {
+        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $request->get('ids'))), fn ($id) => $id > 0));
+        if ($ids === []) {
+            return response()->json(['options' => []]);
+        }
+
+        $products = \App\Models\Product::whereIn('id', $ids)->get(['id', 'name', 'thumbnail', 'thumbnail_storage_type']);
+
+        return response()->json([
+            'options' => $products
+                ->sortBy(fn ($product) => array_search($product->id, $ids, true))
+                ->map(fn ($product) => [
+                    'value' => $product->id,
+                    'label' => $product->name,
+                    'thumbnail' => getStorageImages(path: $product->thumbnail_full_url, type: 'backend-product'),
+                ])->values(),
+        ]);
+    }
+
     public function getSearchedAllProductsView(Request $request): JsonResponse
     {
         $searchValue = $request['searchValue'] ?? null;

@@ -139,4 +139,32 @@ class ThemeSectionSelectionTest extends TestCase
         sort($names);
         $this->assertSame(['Direct', 'Filed under the child'], $names);
     }
+
+    public function test_the_shipping_cut_off_counts_forward_to_the_cut_off_and_hides_once_it_passes(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-05-04 09:30:00'));
+
+        $this->assertSame(6 * 3600 + 30 * 60, $this->resolver->shippingCutoff('16:00'));
+        $this->assertNull($this->resolver->shippingCutoff('09:00'));
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
+    public function test_blocks_without_the_content_the_section_is_for_are_dropped(): void
+    {
+        $blocks = [
+            ['settings' => ['title' => 'Has a cover', 'image' => 'cover.jpg']],
+            ['settings' => ['title' => 'Has a clip', 'video' => 'clip.mp4']],
+            ['settings' => ['title' => 'Nothing to show']],
+        ];
+
+        $withMedia = $this->resolver->blocksWithContent($blocks, either: ['image', 'video']);
+        $this->assertSame(['Has a cover', 'Has a clip'], array_column(array_column($withMedia, 'settings'), 'title'));
+
+        $pairs = $this->resolver->blocksWithContent(
+            [['settings' => ['image' => 'a.jpg', 'after' => 'b.jpg']], ['settings' => ['image' => 'a.jpg']]],
+            required: ['image', 'after'],
+        );
+        $this->assertCount(1, $pairs);
+    }
 }

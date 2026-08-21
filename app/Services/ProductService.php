@@ -280,6 +280,26 @@ class ProductService
         ];
     }
 
+    /**
+     * The "frequently bought together" ids the form posted, sanitised to a comma-separated list of
+     * positive integers. A form that does not carry the field at all (an older or partial form)
+     * must not wipe an existing selection, so the absent case returns null and the caller's array
+     * simply keeps what is stored.
+     */
+    private function getBoughtTogetherIds(object $request): ?string
+    {
+        if (!$request->has('bought_together_ids')) {
+            return null;
+        }
+
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', (string) $request['bought_together_ids'])),
+            fn ($id) => $id > 0,
+        )));
+
+        return $ids === [] ? null : implode(',', array_slice($ids, 0, 12));
+    }
+
     public function getCategoriesArray(object $request): array
     {
         $category = [];
@@ -559,6 +579,9 @@ class ProductService
             'code' => $request['code'],
             'slug' => $this->getSlug($request),
             'category_ids' => json_encode($this->getCategoriesArray(request: $request)),
+            // Companion products the merchant picked for the "frequently bought together" panel,
+            // kept as an ordered id list; empty means "use what customers actually buy together".
+            'bought_together_ids' => $this->getBoughtTogetherIds(request: $request),
             'category_id' => $request['category_id'],
             'sub_category_id' => $request['sub_category_id'],
             'sub_sub_category_id' => $request['sub_sub_category_id'],
@@ -713,6 +736,12 @@ class ProductService
             $dataArray += [
                 'request_status' => 1
             ];
+        }
+
+        // Only written when the form actually carried the field: a partial form (or an older one)
+        // must not silently wipe the companions a merchant picked.
+        if ($request->has('bought_together_ids')) {
+            $dataArray['bought_together_ids'] = $this->getBoughtTogetherIds(request: $request);
         }
 
         return $dataArray;

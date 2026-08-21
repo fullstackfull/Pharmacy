@@ -810,3 +810,165 @@
         animation-duration: .01ms !important;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Frequently bought together — a tinted panel under the buy buttons, holding a
+   scrollable row of companion products with a one-tap add button each.
+   ------------------------------------------------------------------------ */
+.k-store .bt-panel {
+    margin-block-start: 20px;
+    padding: 16px;
+    border-radius: var(--rf-radius);
+    background: color-mix(in srgb, var(--rf-accent) 6%, #fff);
+    border: 1px solid color-mix(in srgb, var(--rf-accent) 14%, #fff);
+}
+
+.k-store .bt-panel__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-block-end: 14px;
+}
+
+.k-store .bt-panel__icon {
+    display: grid;
+    place-items: center;
+    inline-size: 38px;
+    block-size: 38px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--rf-accent);
+    box-shadow: var(--rf-lift);
+}
+
+.k-store .bt-panel__head h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--rf-ink);
+}
+
+.k-store .bt-panel__head p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--rf-muted);
+}
+
+.k-store .bt-panel__rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-block-end: 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+}
+
+.k-store .bt-panel__rail::-webkit-scrollbar {
+    display: none;
+}
+
+.k-store .bt-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    inline-size: min(320px, 82vw);
+    padding: 10px 12px;
+    border-radius: var(--rf-radius-sm);
+    background: #fff;
+    border: 1px solid var(--rf-line);
+    scroll-snap-align: start;
+    transition: transform .4s var(--rf-spring), box-shadow .3s ease;
+}
+
+.k-store .bt-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--rf-lift);
+}
+
+.k-store .bt-item__thumb {
+    inline-size: 56px;
+    block-size: 56px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--rf-sunk);
+}
+
+.k-store .bt-item__thumb img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+}
+
+.k-store .bt-item__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-inline-size: 0;
+    flex: 1 1 auto;
+}
+
+.k-store .bt-item__brand {
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--rf-muted);
+}
+
+.k-store .bt-item__name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--rf-ink);
+    text-decoration: none;
+}
+
+.k-store .bt-item__name:hover {
+    color: var(--rf-accent);
+    text-decoration: none;
+}
+
+.k-store .bt-item__price {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--rf-ink);
+}
+
+.k-store .bt-item__add {
+    display: grid;
+    place-items: center;
+    inline-size: 40px;
+    block-size: 40px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--rf-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--rf-ink);
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform .35s var(--rf-spring), background-color .25s ease, color .2s ease, box-shadow .3s ease;
+}
+
+.k-store .bt-item__add:hover:not(.is-disabled) {
+    background: var(--rf-accent);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: var(--rf-glow);
+}
+
+.k-store .bt-item__add:active:not(.is-disabled) {
+    transform: scale(.92);
+}
+
+.k-store .bt-item__add.is-disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}

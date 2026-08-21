@@ -240,6 +240,10 @@
                                        data-role="tagsinput">
                             </div>
                         </div>
+
+                        <div class="col-md-4">
+                            @include('admin-views.partials._bought-together-picker', ['boughtTogetherIds' => $product->bought_together_ids ?? ''])
+                        </div>
                     </div>
                 </div>
             </div>

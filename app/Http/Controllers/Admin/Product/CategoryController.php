@@ -93,6 +93,15 @@ class CategoryController extends BaseController
     public function getUpdateView(Request $request): View|RedirectResponse
     {
         $category = $this->categoryRepo->getFirstWhere(params: ['id' => $request['id']], relations: ['translations']);
+
+        // Opened without an id, or with one that no longer exists (a deleted category, a stale
+        // bookmark, the bare /category/update URL): the form reads $category['position'] and
+        // fatals on null, so the admin saw a 500 instead of "not found".
+        if (!$category) {
+            ToastMagic::error(translate('category_not_found') . '!');
+            return redirect()->route('admin.category.view');
+        }
+
         $languages = getWebConfig(name: 'pnc_language') ?? null;
         $defaultLanguage = $languages[0];
 

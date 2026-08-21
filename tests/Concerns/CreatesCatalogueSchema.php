@@ -84,6 +84,8 @@ trait CreatesCatalogueSchema
             $table->string('discount_type')->default('flat');
             $table->integer('minimum_order_qty')->default(1);
             $table->text('meta_description')->nullable();
+            // The companions a merchant picks for the "frequently bought together" panel.
+            $table->text('bought_together_ids')->nullable();
             $table->text('details')->nullable();
             $table->timestamps();
         });

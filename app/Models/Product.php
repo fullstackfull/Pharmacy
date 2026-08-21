@@ -75,6 +75,7 @@ class Product extends Model
         'code',
         'slug',
         'category_ids',
+        'bought_together_ids',
         'category_id',
         'sub_category_id',
         'sub_sub_category_id',

@@ -61,6 +61,30 @@ if (!function_exists('theme_section_breakpoint_css')) {
     }
 }
 
+if (!function_exists('category_icon_url')) {
+    /**
+     * A category's icon URL, or NULL when it has no real image.
+     *
+     * Categories carry `def.png` as a placeholder value, and the storage resolver answers a
+     * missing file with a generic grey placeholder — so a strip of sub-categories rendered as a
+     * row of identical grey squares, which reads as "the icons do not show". Returning null lets
+     * the caller draw a letter chip instead: distinguishable, and honest about there being no
+     * artwork.
+     */
+    function category_icon_url(object|array|null $category): ?string
+    {
+        $icon = is_array($category) ? ($category['icon'] ?? null) : ($category->icon ?? null);
+        if (empty($icon) || $icon === 'def.png') {
+            return null;
+        }
+
+        $full = is_array($category) ? ($category['icon_full_url'] ?? null) : ($category->icon_full_url ?? null);
+        $path = is_array($full) ? ($full['path'] ?? null) : $full;
+
+        return $path ?: null;
+    }
+}
+
 if (!function_exists('getHexToRGBColorCode')) {
     function getHexToRGBColorCode($hex): ?string
     {

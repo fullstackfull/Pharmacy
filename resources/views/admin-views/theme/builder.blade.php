@@ -222,6 +222,18 @@
             background: linear-gradient(120deg,#5b46a8,#2f7fae); }
         .tb-thumb[data-shape="showcase"]::after { inset: 32px 8px 8px; border-radius: 3px;
             background: repeating-linear-gradient(90deg,#39434f 0 22%,transparent 22% 26%); }
+        .tb-thumb[data-shape="coupon"]::before { inset: 16px 8px; border-radius: 4px;
+            border: 1px dashed #6b7a8d; background: #39434f; }
+        .tb-thumb[data-shape="coupon"]::after { inset-inline-start: 50%; top: 50%; transform: translate(-50%,-50%);
+            width: 40%; height: 6px; border-radius: 3px; background: #9db0c4; }
+        .tb-thumb[data-shape="stories"]::before { inset: 14px 8px auto; height: 26px;
+            background: repeating-linear-gradient(90deg,#5b46a8 0 26px,transparent 26px 34px); }
+        .tb-thumb[data-shape="stories"]::after { inset: 46px 8px auto; height: 5px; border-radius: 3px;
+            background: repeating-linear-gradient(90deg,#39434f 0 26px,transparent 26px 34px); }
+        .tb-thumb[data-shape="beforeafter"]::before { inset: 10px 8px; border-radius: 3px;
+            background: linear-gradient(90deg,#39434f 0 50%,#6b7a8d 50% 100%); }
+        .tb-thumb[data-shape="beforeafter"]::after { inset-inline-start: 50%; top: 10px; bottom: 10px;
+            width: 2px; background: #e6ecf3; }
         .tb-thumb[data-shape="block"]::before { inset: 12px; border-radius: 3px; background: #39434f; }
 
         .tb-chips { display: flex !important; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
