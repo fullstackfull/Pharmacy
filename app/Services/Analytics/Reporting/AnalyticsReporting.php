@@ -211,7 +211,11 @@ class AnalyticsReporting
             ->selectRaw('SUM(orders) orders')
             ->selectRaw('SUM(revenue) revenue')
             ->groupBy('dimension_key')
-            ->orderByDesc(DB::raw('SUM(sessions) + SUM(events)'))
+            // Ordered on every metric a dimension might populate, not just sessions and events.
+            // The rollup fills a different subset per dimension — `vendor` carries only orders,
+            // visitors and revenue, and `search_term` carries no orders at all — so sorting on
+            // sessions alone returned the vendor list in arbitrary order.
+            ->orderByDesc(DB::raw('SUM(sessions) + SUM(events) + SUM(pageviews) + SUM(orders)'))
             ->limit($limit)
             ->get();
 
@@ -267,7 +271,14 @@ class AnalyticsReporting
         $counted = (int) $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'totals')->where('dimension_key', 'all')->sum('sessions');
 
-        $excluded = (int) $rows->sum('sessions');
+        // The two kinds OVERLAP: a staff member browsing with a crawler-shaped user agent is
+        // counted under both, because each is its own filter rather than a partition. Adding them
+        // would over-report the exclusion, so the honest total is the larger of the two as a floor
+        // and their sum as a ceiling — and the screen is told which it is looking at.
+        $bot = (int) $rows->firstWhere('dimension_key', 'bot')?->sessions;
+        $internal = (int) $rows->firstWhere('dimension_key', 'internal')?->sessions;
+        $atLeast = max($bot, $internal);
+        $atMost = $bot + $internal;
 
         return [
             'rows' => $rows->map(fn ($row) => [
@@ -276,9 +287,11 @@ class AnalyticsReporting
                 'visitors' => (int) $row->visitors,
                 'pageviews' => (int) $row->pageviews,
             ])->all(),
-            'excluded_sessions' => $excluded,
+            'excluded_sessions' => $atLeast,
+            'excluded_sessions_upper' => $atMost,
+            'overlaps' => $atMost > $atLeast,
             'counted_sessions' => $counted,
-            'excluded_share' => ($excluded + $counted) > 0 ? round(100 * $excluded / ($excluded + $counted), 1) : null,
+            'excluded_share' => ($atLeast + $counted) > 0 ? round(100 * $atLeast / ($atLeast + $counted), 1) : null,
         ];
     }
 

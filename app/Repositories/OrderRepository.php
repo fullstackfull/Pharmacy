@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Services\Analytics\Analytics;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Models\AdminWallet;
 use App\Models\Order;
@@ -40,7 +41,40 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function add(array $data): string|object
     {
-        return $this->order->create($data);
+        $order = $this->order->create($data);
+
+        // Analytics. This is the POS funnel: the two point-of-sale screens create orders through
+        // here, while the storefront and both APIs go through OrderManager::generateOrder, which
+        // writes with the query builder and is instrumented separately.
+        //
+        // Deliberately NOT an Order::created model listener. That would fire here AND nowhere for
+        // generateOrder, so it would look like a fix while leaving the same gap — and if
+        // generateOrder ever moved to Eloquent it would then double count every storefront sale.
+        // Instrumenting the two funnels explicitly keeps each order counted exactly once.
+        $this->recordOrderPlaced($order);
+
+        return $order;
+    }
+
+    /**
+     * A counter-sale is a sale. Best-effort: analytics never fails a transaction at the till.
+     */
+    private function recordOrderPlaced(object $order): void
+    {
+        try {
+            app(Analytics::class)->orderPlaced(
+                orderId: (int) $order->id,
+                amount: (float) $order->order_amount,
+                vendorId: ($order->seller_is ?? null) === 'seller' ? (int) $order->seller_id : null,
+                properties: array_filter([
+                    'payment_method' => $order->payment_method ?? null,
+                    'payment_status' => $order->payment_status ?? null,
+                    'channel' => 'pos',
+                ], static fn ($value) => $value !== null && $value !== ''),
+            );
+        } catch (\Throwable) {
+            // A sale that cannot be described is still a sale.
+        }
     }
 
     public function getFirstWhere(array $params, array $relations = []): ?Model
@@ -476,7 +510,31 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function update(string $id, array $data): bool
     {
-        return $this->order->where('id', $id)->update($data);
+        $updated = $this->order->where('id', $id)->update($data);
+
+        // A mass update through the query builder fires no Eloquent event, which is why the
+        // Order::updated listener never saw a status change made from the admin or vendor panel —
+        // this is the path they all take. Recorded here instead, where the change actually happens.
+        if ($updated && isset($data['order_status'])) {
+            $this->recordStatusChange((int) $id, (string) $data['order_status']);
+        }
+
+        return $updated;
+    }
+
+    private function recordStatusChange(int $orderId, string $status): void
+    {
+        try {
+            $amount = $this->order->where('id', $orderId)->value('order_amount');
+
+            app(Analytics::class)->orderStatusChanged(
+                orderId: $orderId,
+                status: $status,
+                amount: $amount !== null ? (float) $amount : null,
+            );
+        } catch (\Throwable) {
+            // Never block an order status change.
+        }
     }
 
     public function updateWhere(array $params, array $data): bool

@@ -725,10 +725,13 @@
 .mon-split__part--4xx { background: var(--mon-degraded); }
 .mon-split__part--5xx { background: var(--mon-critical); }
 
+/* Ordered for separation rather than by taste: the first two are what a two-value split
+   gets, and the console's accent is already violet, so the purple in the waterfall palette
+   cannot be second or desktop and bot arrive as the same bar. */
 .mon-split__part--a { background: var(--k-accent, #3b5bdb); }
-.mon-split__part--b { background: #7048e8; }
-.mon-split__part--c { background: #0c8599; }
-.mon-split__part--d { background: #adb5bd; }
+.mon-split__part--b { background: #0c8599; }
+.mon-split__part--c { background: #adb5bd; }
+.mon-split__part--d { background: #7048e8; }
 .mon-split__part--e { background: #868e96; }
 
 .mon-split__legend {
@@ -819,14 +822,18 @@
     align-items: start;
     padding: 7px var(--k-size-4, 16px);
     border-block-end: 1px solid var(--k-border);
+    /* Carried by every row, transparent until a severity fills it: a border that only exists on
+       error rows would shift those rows two pixels and make the column jog as you scroll. */
+    border-inline-start: 2px solid transparent;
     font-size: var(--k-text-xs, 12px);
 }
 .mon-log__row:last-child { border-block-end: 0; }
 .mon-log__row:hover { background: var(--k-surface-sunk); }
-/* A left rule rather than a tinted row: a hundred tinted rows is a wall, one rule per
-   severity is a scannable edge. */
-.mon-log__row--critical { box-shadow: inset 2px 0 0 var(--mon-critical); }
-.mon-log__row--warning { box-shadow: inset 2px 0 0 var(--mon-degraded); }
+/* A rule on the reading edge rather than a tinted row: a hundred tinted rows is a wall, one rule
+   per severity is an edge the eye can run down. Logical, so it stays beside the level block in
+   Arabic instead of ending up across the row from it. */
+.mon-log__row--critical { border-inline-start-color: var(--mon-critical); }
+.mon-log__row--warning { border-inline-start-color: var(--mon-degraded); }
 
 .mon-log__level {
     text-align: center;

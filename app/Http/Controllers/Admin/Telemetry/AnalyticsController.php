@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
+use App\Services\Analytics\AnalyticsPermissionService;
 use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Reporting\AnalyticsReporting;
 use App\Services\Analytics\Reporting\Window;
@@ -26,6 +27,7 @@ class AnalyticsController extends BaseController
     public function __construct(
         private readonly AnalyticsReporting $reporting,
         private readonly CampaignService $campaigns,
+        private readonly AnalyticsPermissionService $permissions,
     ) {
     }
 
@@ -43,12 +45,20 @@ class AnalyticsController extends BaseController
             $section = 'overview';
         }
 
+        // Checked before any data is fetched, so a section this admin may not open never runs its
+        // queries — the difference between a page they cannot see and data they cannot reach.
+        if (!$this->permissions->can($this->permissions->capabilityForSection($section))) {
+            return redirect()
+                ->route('admin.analytics.section', ['section' => 'overview'])
+                ->with('error', translate('access_Denied') . '!');
+        }
+
         $window = $this->window($request);
 
         return view('admin-views.analytics.index', [
             'section' => $section,
             'meta' => AnalyticsNavigation::meta($section),
-            'navigation' => AnalyticsNavigation::grouped(),
+            'navigation' => AnalyticsNavigation::grouped($this->permissions),
             'window' => $window,
             'ranges' => Window::RANGES,
             'health' => $this->reporting->collectionHealth(),
@@ -64,7 +74,8 @@ class AnalyticsController extends BaseController
      */
     public function export(Request $request, string $dimension): StreamedResponse|RedirectResponse
     {
-        if (!in_array($dimension, AnalyticsReporting::DIMENSIONS, true)) {
+        if (!in_array($dimension, AnalyticsReporting::DIMENSIONS, true)
+            || !$this->permissions->can(AnalyticsPermissionService::EXPORT)) {
             return back();
         }
 
@@ -107,6 +118,10 @@ class AnalyticsController extends BaseController
      */
     public function storeCampaign(Request $request): RedirectResponse
     {
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return back()->with('error', translate('access_Denied') . '!');
+        }
+
         $result = $this->campaigns->create($request->all(), auth('admin')->id());
 
         return redirect()
@@ -119,6 +134,10 @@ class AnalyticsController extends BaseController
 
     public function toggleCampaign(Request $request, int $id): RedirectResponse
     {
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return back()->with('error', translate('access_Denied') . '!');
+        }
+
         $this->campaigns->setActive($id, $request->boolean('active'));
 
         return redirect()->route('admin.analytics.section', ['section' => 'campaigns']);

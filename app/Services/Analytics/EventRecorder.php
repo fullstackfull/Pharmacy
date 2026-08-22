@@ -130,10 +130,23 @@ class EventRecorder
 
             // insertOrIgnore, not insert: the unique index on dedupe_key is the deduplication, and
             // a duplicate must be a no-op rather than an exception on the response path.
+            //
+            // The id watermark is taken first because the counters below must reflect what was
+            // ACTUALLY written. Incrementing them from the in-memory buffer counted every
+            // deduplicated event anyway, which put the session and visitor totals permanently
+            // above the event table they are supposed to summarise — and since the rollup reads
+            // orders and revenue off the session row while reading event counts off the event
+            // table, the same day's figures disagreed with each other depending on which screen
+            // asked.
+            $watermark = (int) ($this->connection()->table('analytics_events')->max('id') ?? 0);
             $written = $this->connection()->table('analytics_events')->insertOrIgnore($queued);
 
+            if ($written < count($queued)) {
+                $delta = $this->deltaOfWrittenRows($watermark);
+            }
+
             $this->applySessionDelta($sessionId, $delta);
-            $this->applyVisitorDelta($queued[0]['visitor_id'] ?? null, $delta, count($queued));
+            $this->applyVisitorDelta($queued[0]['visitor_id'] ?? null, $delta, max(0, $written));
             $this->health('events_written', $written);
 
             if ($this->dropped) {
@@ -205,6 +218,55 @@ class EventRecorder
         $clean = Redactor::make()->array($properties);
 
         return $clean === [] ? null : array_slice($clean, 0, 25, true);
+    }
+
+    /**
+     * Recompute the counters from the rows the insert actually created.
+     *
+     * Only runs when deduplication dropped something, which is rare — a double-clicked button, a
+     * page restored from the back/forward cache, a retried beacon. One indexed read after the
+     * response has already been sent is the right price for totals that agree with the events
+     * they summarise.
+     *
+     * @return array<string, float|int>
+     */
+    private function deltaOfWrittenRows(int $watermark): array
+    {
+        $delta = [];
+
+        try {
+            $rows = $this->connection()->table('analytics_events')
+                ->where('id', '>', $watermark)
+                ->get(['name', 'value']);
+        } catch (\Throwable) {
+            return $delta;
+        }
+
+        foreach ($rows as $row) {
+            $delta['events'] = ($delta['events'] ?? 0) + 1;
+
+            match ($row->name) {
+                AnalyticsEvent::PAGE_VIEWED => $delta['pageviews'] = ($delta['pageviews'] ?? 0) + 1,
+                AnalyticsEvent::CART_ADDED => $delta['cart_adds'] = ($delta['cart_adds'] ?? 0) + 1,
+                AnalyticsEvent::CHECKOUT_STARTED => $delta['checkouts'] = ($delta['checkouts'] ?? 0) + 1,
+                AnalyticsEvent::ORDER_PLACED => $delta = $this->addOrder($delta, (float) ($row->value ?? 0)),
+                default => null,
+            };
+        }
+
+        return $delta;
+    }
+
+    /**
+     * @param  array<string, float|int>  $delta
+     * @return array<string, float|int>
+     */
+    private function addOrder(array $delta, float $value): array
+    {
+        $delta['orders'] = ($delta['orders'] ?? 0) + 1;
+        $delta['revenue'] = ($delta['revenue'] ?? 0) + $value;
+
+        return $delta;
     }
 
     private function accumulate(AnalyticsEvent $event): void

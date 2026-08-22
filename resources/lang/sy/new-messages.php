@@ -1298,4 +1298,10 @@ return [
 	'The_scheduler_last_reported_a_run_108_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 108 minutes ago  the server cron appears to have stopped.',
 	'an_unrotated_log_file_is_the_most_common_way_a_healthy_server_runs_out_of_disk' => 'An unrotated log file is the most common way a healthy server runs out of disk',
 	'The_scheduler_last_reported_a_run_111_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 111 minutes ago  the server cron appears to have stopped.',
+	'the_two_totals_can_differ_and_the_gap_between_them_is_itself_a_reading' => 'The two totals can differ and the gap between them is itself a reading',
+	'files' => 'Files',
+	'being_read' => 'Being read',
+	'The_scheduler_last_reported_a_run_116_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 116 minutes ago  the server cron appears to have stopped.',
+	'folded_per_minute_by_the_scheduled_flush' => 'Folded per minute by the scheduled flush',
+	'written_as_each_response_is_sent' => 'Written as each response is sent',
 ];

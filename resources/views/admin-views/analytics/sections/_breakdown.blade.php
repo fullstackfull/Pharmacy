@@ -14,7 +14,9 @@
                     <th class="ana-num">{{ translate('bounce') }}</th>
                 @endif
                 <th class="ana-num">{{ translate('orders') }}</th>
-                <th class="ana-num">{{ translate('revenue') }}</th>
+                @if ($showRevenue ?? true)
+                    <th class="ana-num">{{ translate('revenue') }}</th>
+                @endif
                 <th class="ana-num">{{ translate('share') }}</th>
             </tr>
             </thead>
@@ -33,7 +35,9 @@
                         <td class="ana-num">{{ $row['bounce_rate'] !== null ? $row['bounce_rate'] . '%' : '—' }}</td>
                     @endif
                     <td class="ana-num">{{ number_format($row['orders']) }}</td>
-                    <td class="ana-num">{{ $row['revenue'] > 0 ? number_format($row['revenue'], 2) : '—' }}</td>
+                    @if ($showRevenue ?? true)
+                        <td class="ana-num">{{ $row['revenue'] > 0 ? number_format($row['revenue'], 2) : '—' }}</td>
+                    @endif
                     <td class="ana-num">
                         <span class="ana-bar"><i style="width: {{ min(100, (float) ($row['share'] ?? 0)) }}%"></i></span>
                         {{ $row['share'] !== null ? $row['share'] . '%' : '—' }}

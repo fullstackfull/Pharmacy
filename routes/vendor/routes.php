@@ -93,6 +93,14 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                 Route::post('replace', [\App\Http\Controllers\Vendor\V2SidebarPinController::class, 'replace'])->name('replace');
             });
 
+            /*
+            | A vendor's own analytics. No id in the route on purpose: the seller is taken from the
+            | authentication guard, so there is no parameter to change and no way to ask for
+            | somebody else's numbers.
+            */
+            Route::get('analytics', [\App\Http\Controllers\Vendor\AnalyticsController::class, 'index'])
+                ->name('analytics.index');
+
             Route::group(['prefix' => 'dashboard', 'as' => 'dashboard.'], function () {
                 Route::controller(DashboardController::class)->group(function () {
                     Route::get('/', 'index')->name('index');

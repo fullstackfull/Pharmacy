@@ -33,15 +33,6 @@
     // The neutral ramp for splits that carry no verdict. Status classes take the state palette
     // instead, which is why they are not run through this.
     $tone = ['a', 'b', 'c', 'd', 'e'];
-
-    // A pill reads the same colour as its segment in the bar above it, 3xx included: a redirect is
-    // not a success and not a fault, and a green pill would call it one.
-    $statusTone = static fn (string $class) => match ($class) {
-        '5xx' => 'critical',
-        '4xx' => 'warning',
-        '3xx' => 'info',
-        default => 'ok',
-    };
 @endphp
 
 {{-- Said before any number: on a five-minute window a stopped flush and a quiet shop produce the
@@ -230,7 +221,8 @@
                 @foreach ($statuses['top'] as $status)
                     <tr>
                         <td>
-                            <span class="mon-pill mon-pill--{{ $statusTone($status['class']) }}">{{ $status['status'] }}</span>
+                            {{-- The pill reads the same colour the panel gave its class in the bar above. --}}
+                            <span class="mon-pill mon-pill--{{ $status['severity'] }}">{{ $status['status'] }}</span>
                         </td>
                         <td class="k-table__num k-num">{{ number_format($status['hits']) }}</td>
                         <td class="k-table__num k-num">{{ $status['share_pct'] }}%</td>
@@ -258,7 +250,7 @@
      Neither carries a verdict, so neither is coloured like one. --}}
 @foreach ([
     ['key' => 'platforms', 'title' => 'traffic_by_platform', 'unit' => 'requests', 'why' => 'a_request_is_filed_under_the_platform_its_header_declares_or_the_one_its_user_agent_implies'],
-    ['key' => 'devices', 'title' => 'traffic_by_device', 'unit' => 'sessions', 'why' => 'classified_from_the_user_agent_when_the_session_opened_bot_is_a_pattern_match_not_a_verified_identity'],
+    ['key' => 'devices', 'title' => 'traffic_by_device', 'unit' => 'sessions', 'why' => 'classified_from_the_user_agent_at_the_moment_the_session_opened_so_bot_is_a_pattern_match_rather_than_a_verified_identity'],
 ] as $split)
     @php($part = $panel[$split['key']] ?? [])
     <x-k.card :title="translate($split['title'])">
