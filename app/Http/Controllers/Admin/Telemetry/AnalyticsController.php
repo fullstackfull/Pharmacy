@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
+use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Reporting\AnalyticsReporting;
 use App\Services\Analytics\Reporting\Window;
 use Illuminate\Contracts\View\View;
@@ -22,8 +23,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AnalyticsController extends BaseController
 {
-    public function __construct(private readonly AnalyticsReporting $reporting)
-    {
+    public function __construct(
+        private readonly AnalyticsReporting $reporting,
+        private readonly CampaignService $campaigns,
+    ) {
     }
 
     /**
@@ -96,6 +99,52 @@ class AnalyticsController extends BaseController
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * Create a campaign link.
+     *
+     * The destination is validated here and never again taken from a request — the redirect
+     * endpoint only ever follows a row that passed this check.
+     */
+    public function storeCampaign(Request $request): RedirectResponse
+    {
+        $result = $this->campaigns->create($request->all(), auth('admin')->id());
+
+        return redirect()
+            ->route('admin.analytics.section', ['section' => 'campaigns'])
+            ->with($result['ok'] ? 'success' : 'error',
+                $result['ok']
+                    ? translate('campaign_link_created')
+                    : translate((string) $result['error']));
+    }
+
+    public function toggleCampaign(Request $request, int $id): RedirectResponse
+    {
+        $this->campaigns->setActive($id, $request->boolean('active'));
+
+        return redirect()->route('admin.analytics.section', ['section' => 'campaigns']);
+    }
+
+    /** The QR for one short link, as an SVG the browser can render or a merchant can save. */
+    public function campaignQr(int $id): \Illuminate\Http\Response|RedirectResponse
+    {
+        $campaign = $this->campaigns->find($id);
+
+        if ($campaign === null) {
+            return back();
+        }
+
+        $svg = $this->campaigns->qrSvg($campaign->code, 512);
+
+        if ($svg === null) {
+            return back();
+        }
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Content-Disposition' => 'inline; filename="qr-' . $campaign->code . '.svg"',
+        ]);
+    }
+
     /** The Live screen polls this rather than reloading a page every few seconds. */
     public function live(Request $request): JsonResponse
     {
@@ -131,6 +180,11 @@ class AnalyticsController extends BaseController
                 'funnel' => $this->reporting->funnel($window),
             ],
             'live' => ['live' => $this->reporting->live()],
+            'campaigns' => [
+                'campaigns' => $this->campaigns->all(),
+                'allowed_hosts' => app(\App\Services\Analytics\Support\CampaignDestination::class)->allowedHosts(),
+                'ready' => $this->campaigns->ready(),
+            ],
             'acquisition' => [
                 'sources' => $this->reporting->breakdown($window, 'source', 30),
                 'mediums' => $this->reporting->breakdown($window, 'medium', 20),

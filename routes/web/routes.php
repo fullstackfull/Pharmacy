@@ -102,6 +102,20 @@ Route::get('/image-proxy', function (\App\Services\Security\OutboundUrlGuard $gu
     return response($body, 200)->header('Content-Type', $contentType);
 })->middleware('throttle:30,1');
 
+/*
+| Campaign short links.
+|
+| Public and unauthenticated by design — these get printed on posters and pasted into WhatsApp.
+| The redirect target is never taken from the request: it is a row an administrator created, whose
+| destination is re-validated against the allow-list on every click, so this cannot become an open
+| redirect. Throttled per IP because a short-link endpoint is a cheap thing to hammer.
+*/
+Route::get(trim((string) config('analytics.campaigns.path', 'go'), '/') . '/{code}',
+    \App\Http\Controllers\Web\CampaignRedirectController::class)
+    ->where('code', '[a-z0-9]{4,24}')
+    ->middleware('throttle:' . (int) config('analytics.campaigns.click_rate_limit', 120) . ',1')
+    ->name('campaign.go');
+
 Route::controller(WebController::class)->group(function () {
     Route::get('maintenance-mode', 'maintenance_mode')->name('maintenance-mode');
 });

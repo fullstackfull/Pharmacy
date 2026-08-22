@@ -348,3 +348,84 @@
         color: inherit;
     }
 }
+
+/* ── Campaigns ─────────────────────────────────────────────────────────────── */
+.ana-form__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--k-size-3, 12px);
+    margin-bottom: var(--k-size-3, 12px);
+
+    label { display: flex; flex-direction: column; gap: 4px; }
+    span { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--k-text-muted); }
+    input {
+        padding: 7px 10px;
+        border: 1px solid var(--k-border, rgba(128, 138, 157, .22));
+        border-radius: var(--k-radius-md, 8px);
+        background: var(--k-surface, #fff);
+        color: inherit;
+    }
+}
+
+.ana-campaign {
+    padding: var(--k-size-4, 16px) 0;
+    border-bottom: 1px solid var(--k-border, rgba(128, 138, 157, .16));
+
+    /* A paused or expired link is still shown — a merchant needs its history — but reads as
+       switched off at a glance rather than being quietly removed from the list. */
+    &.is-inactive { opacity: .6; }
+    &:last-child { border-bottom: 0; }
+}
+.ana-campaign__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--k-size-3, 12px);
+    flex-wrap: wrap;
+
+    small { display: block; font-size: 11px; }
+}
+.ana-campaign__state { display: flex; align-items: center; gap: var(--k-size-2, 8px); }
+
+.ana-campaign__body {
+    display: flex;
+    gap: var(--k-size-4, 16px);
+    align-items: flex-start;
+    margin-top: var(--k-size-3, 12px);
+}
+.ana-campaign__links {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    label { display: block; margin-bottom: 6px; }
+    span { display: block; font-size: 11px; text-transform: uppercase; color: var(--k-text-muted); }
+    input {
+        width: 100%;
+        padding: 6px 9px;
+        border: 1px solid var(--k-border, rgba(128, 138, 157, .22));
+        border-radius: var(--k-radius-md, 8px);
+        background: var(--k-surface-sunk, rgba(128, 138, 157, .08));
+        color: inherit;
+        font-family: var(--k-font-mono, monospace);
+        font-size: var(--k-text-xs, 12px);
+    }
+}
+.ana-campaign__qr {
+    flex: 0 0 auto;
+    display: block;
+    line-height: 0;
+    border-radius: var(--k-radius-md, 8px);
+    overflow: hidden;
+
+    svg { display: block; }
+}
+
+.ana-campaign__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: var(--k-size-3, 12px);
+    margin-top: var(--k-size-3, 12px);
+
+    .k-num { font-size: var(--k-text-lg, 18px); font-weight: 700; }
+    small { display: block; font-size: 11px; color: var(--k-text-muted); }
+}
