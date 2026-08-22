@@ -240,9 +240,14 @@ class SslCollector implements Collector
             'issuer' => Metric::of($peer['issuer'], $source, null, $peer['issuer'] === null
                 ? 'The certificate names no issuer, which is what a self-signed certificate looks like.'
                 : null),
-            'valid_from' => Metric::of(Clock::parse($startsAt)->toDateTimeString(), $source, null, $startsAt > $now
-                ? 'The certificate is not valid yet; browsers reject it until this moment.'
-                : null),
+            // Judged here rather than trusted from the probe, because an unreadable start date
+            // must never reach the page as a timestamp of zero: "1970-01-01" reads as a date
+            // somebody typed, not as a field that could not be read.
+            'valid_from' => $startsAt <= 0
+                ? Metric::noData($source, 'The certificate carries no readable notBefore date, so when it started being valid cannot be shown.')
+                : Metric::of(Clock::parse($startsAt)->toDateTimeString(), $source, null, $startsAt > $now
+                    ? 'The certificate is not valid yet; browsers reject it until this moment.'
+                    : null),
             'valid_to' => Metric::of(Clock::parse($expiresAt)->toDateTimeString(), $source),
             'days_until_expiry' => Metric::of($daysLeft, $source, 'days', $daysLeft < 0
                 ? 'The certificate expired ' . abs($daysLeft) . ' day(s) ago; every visitor is being shown a browser warning.'
@@ -296,17 +301,60 @@ class SslCollector implements Collector
 
         try {
             $key = self::HANDSHAKE_KEY . ':' . $this->endpoint($target);
-            $cached = Cache::get($key);
-            if (is_array($cached)) {
+            $cached = $this->cached($key);
+            if (is_array($cached) && $this->isReadable($cached)) {
                 return $this->peer = $cached;
             }
 
             $reading = $this->readPeerCertificate($target);
-            Cache::put($key, $reading, isset($reading['error']) ? self::UNREACHABLE_SECONDS : self::READING_SECONDS);
+            $this->remember($key, $reading, isset($reading['error']) ? self::UNREACHABLE_SECONDS : self::READING_SECONDS);
 
             return $this->peer = $reading;
         } catch (\Throwable $exception) {
             return $this->peer = ['stage' => 'probe', 'error' => class_basename($exception) . ': ' . $exception->getMessage()];
+        }
+    }
+
+    /**
+     * Whether a cached reading still has every field this build goes on to read.
+     *
+     * A deploy that changes the shape of the array above leaves up to five minutes of readings in
+     * the cache that the new code will index into. Re-handshaking costs one connection; trusting
+     * the old shape costs an undefined-key exception thrown out of a dashboard render.
+     *
+     * @param  array<string, mixed>  $reading
+     */
+    private function isReadable(array $reading): bool
+    {
+        if (isset($reading['error'])) {
+            return true;
+        }
+
+        return array_diff(['valid_from', 'valid_to', 'names'], array_keys($reading)) === [];
+    }
+
+    /**
+     * The cache is a convenience here, never a dependency.
+     *
+     * A cache store that is down is a different machine with a different remedy than a TLS endpoint
+     * that is down, and reporting the first as the second sends whoever is on call to the wrong
+     * server. A failed read or write only means this render pays for its own handshake.
+     */
+    private function cached(string $key): mixed
+    {
+        try {
+            return Cache::get($key);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function remember(string $key, mixed $value, int $seconds): void
+    {
+        try {
+            Cache::put($key, $value, $seconds);
+        } catch (\Throwable) {
+            // The reading is already in hand; it just will not outlive this request.
         }
     }
 
@@ -370,11 +418,14 @@ class SslCollector implements Collector
             }
 
             $crypto = stream_get_meta_data($stream)['crypto'] ?? [];
+            $startsAt = (int) ($parsed['validFrom_time_t'] ?? 0);
 
             return [
                 'subject' => $this->distinguishedName($parsed['subject'] ?? []),
                 'issuer' => $this->distinguishedName($parsed['issuer'] ?? []),
-                'valid_from' => (int) ($parsed['validFrom_time_t'] ?? 0),
+                // notBefore is not fatal the way notAfter is — an expiry is still worth reporting
+                // without it — so it travels as null and is rendered as a missing reading.
+                'valid_from' => $startsAt > 0 ? $startsAt : null,
                 'valid_to' => (int) $parsed['validTo_time_t'],
                 'names' => $this->certificateNames($parsed),
                 'protocol' => $crypto['protocol'] ?? null,
@@ -396,13 +447,13 @@ class SslCollector implements Collector
 
         return Metric::probe($source, function () use ($target, $source) {
             $key = self::REDIRECT_KEY . ':' . $target['host'];
-            $cached = Cache::get($key);
+            $cached = $this->cached($key);
             if ($cached instanceof Metric) {
                 return $cached;
             }
 
             $metric = $this->probeRedirect($target, $source);
-            Cache::put($key, $metric, $metric->isOk() ? self::READING_SECONDS : self::UNREACHABLE_SECONDS);
+            $this->remember($key, $metric, $metric->isOk() ? self::READING_SECONDS : self::UNREACHABLE_SECONDS);
 
             return $metric;
         });
@@ -455,7 +506,9 @@ class SslCollector implements Collector
 
         return Metric::notConfigured(
             self::DOMAIN_SOURCE,
-            "No registry source is configured. Read it from the registry itself — curl -s https://rdap.org/domain/{$host} and take the event with eventAction \"expiration\" — and schedule that if you want it as a live metric.",
+            // -L is not optional: rdap.org is a bootstrap redirector, so without it the command
+            // returns a 302 and zero bytes, and the remedy reads as though the domain had no record.
+            "No registry source is configured. Read it from the registry itself — curl -sL https://rdap.org/domain/{$host} and take the event with eventAction \"expiration\" — and schedule that if you want it as a live metric.",
             'A certificate says nothing about the domain behind it: a 90-day certificate keeps renewing itself right up to the day the registration lapses, so deriving this from validTo would report a healthy number for a name that is about to stop resolving.',
         );
     }

@@ -77,6 +77,9 @@ class WebServerCollector implements Collector
     /** @var array<string, Metric>|null */
     private ?array $traffic = null;
 
+    /** Everything identityReadings() answers, so one throw in detection marks exactly these. */
+    private const IDENTITY_METRICS = ['server', 'server_type', 'sapi', 'is_development_server'];
+
     public function __construct(private readonly Environment $environment)
     {
     }
@@ -111,6 +114,32 @@ class WebServerCollector implements Collector
     /** @return array<string, Metric> */
     private function identityReadings(): array
     {
+        return $this->guard(fn () => $this->readIdentity(), self::IDENTITY_METRICS, 'Linux process table (ps)');
+    }
+
+    /**
+     * A group of readings, or the same keys all reporting the throw.
+     *
+     * The contract is that nothing here reaches the page it is drawn on as an exception, and the
+     * three groups fail independently: an unreadable bucket table must not also blank the name of
+     * the web server, which needs no database at all.
+     *
+     * @param  callable(): array<string, Metric>  $readings
+     * @param  array<int, string>  $keys
+     * @return array<string, Metric>
+     */
+    private function guard(callable $readings, array $keys, string $source): array
+    {
+        try {
+            return $readings();
+        } catch (\Throwable $exception) {
+            return array_fill_keys($keys, Metric::failed($source, $exception));
+        }
+    }
+
+    /** @return array<string, Metric> */
+    private function readIdentity(): array
+    {
         $identity = $this->detect();
         $source = $identity['detected_by'];
 
@@ -120,14 +149,19 @@ class WebServerCollector implements Collector
                 : Metric::of($identity['name'], $source, null, $identity['note']),
             'server_type' => Metric::of($identity['type'], $source),
             'sapi' => Metric::of(php_sapi_name(), 'PHP php_sapi_name()'),
-            'is_development_server' => Metric::of(
-                $identity['type'] === self::DEVELOPMENT,
-                $source,
-                null,
-                $identity['type'] === self::DEVELOPMENT
-                    ? 'php artisan serve runs one request at a time in a single process, keeps no connection counters and has no status endpoint. It is a development server; nothing measured here describes production.'
-                    : null,
-            ),
+            // A flat `false` here reads as "this is a production server", which is a different
+            // claim from "nothing that serves could be found" — and the second is what we have
+            // whenever the name is unknown.
+            'is_development_server' => $identity['name'] === null
+                ? Metric::noData($source, 'What serves this site could not be identified, so whether it is a development server is not known either.')
+                : Metric::of(
+                    $identity['type'] === self::DEVELOPMENT,
+                    $source,
+                    null,
+                    $identity['type'] === self::DEVELOPMENT
+                        ? 'php artisan serve runs one request at a time in a single process, keeps no connection counters and has no status endpoint. It is a development server; nothing measured here describes production.'
+                        : null,
+                ),
         ];
     }
 
@@ -268,7 +302,11 @@ class WebServerCollector implements Collector
     /** @return array<string, Metric> */
     private function statusReadings(): array
     {
-        return $this->status ??= $this->readStatus();
+        return $this->status ??= $this->guard(
+            fn () => $this->readStatus(),
+            array_merge(self::STATUS_METRICS, ['status_endpoint']),
+            self::NGINX_SOURCE,
+        );
     }
 
     /** @return array<string, Metric> */
@@ -302,7 +340,7 @@ class WebServerCollector implements Collector
      */
     private function fetchStatus(): array|Metric
     {
-        $url = trim((string) config('monitoring.nginx_status_url', ''));
+        $url = $this->configString('monitoring.nginx_status_url');
 
         if ($url === '') {
             return $this->detect()['type'] === self::DEVELOPMENT
@@ -345,7 +383,13 @@ class WebServerCollector implements Collector
                 'Check that the web server is running (systemctl status nginx, or systemctl status apache2) and that the status location is reachable from this host.',
             );
         } catch (\Throwable $exception) {
-            return Metric::failed(self::NGINX_SOURCE, $exception);
+            // Metric::failed keeps an exception message word for word, and the HTTP client quotes
+            // the URL it was handed — userinfo included — into several of them. The ConnectionException
+            // above is only the common case; anything else reaching a stored note is scrubbed here.
+            return Metric::failed(self::NGINX_SOURCE, new \RuntimeException(
+                class_basename($exception) . ': ' . $this->withoutCredentials($exception->getMessage()),
+                previous: $exception,
+            ));
         }
 
         if (!$response->successful()) {
@@ -502,7 +546,7 @@ class WebServerCollector implements Collector
             'waiting' => $this->apacheWaiting($fields, $board),
             'busy_workers' => Metric::of($busy, self::APACHE_SOURCE, 'workers', 'Workers currently serving a request.'),
             'idle_workers' => Metric::of($idle, self::APACHE_SOURCE, 'workers', 'Workers ready for the next request. When this reaches zero, requests queue in the kernel backlog.'),
-            'worker_saturation_pct' => $this->saturation($busy, $idle),
+            'worker_saturation_pct' => $this->saturation($busy, $idle, $board),
         ], $this->rates($requests, null, self::APACHE_SOURCE, $url));
     }
 
@@ -526,17 +570,32 @@ class WebServerCollector implements Collector
         return Metric::of($board['K'], self::APACHE_SOURCE, 'connections', 'Workers held open on a keep-alive connection, counted from the scoreboard.');
     }
 
-    private function saturation(?int $busy, ?int $idle): Metric
+    /**
+     * How close Apache is to running out of workers.
+     *
+     * The denominator has to be a ceiling, and busy + idle is not one. Apache keeps only a handful
+     * of spare children alive and forks more on demand, so that ratio sits at 50% on a server using
+     * 2% of its capacity and crosses 90% while two hundred slots are still free — a panic reading
+     * with "raise MaxRequestWorkers" attached to it. The scoreboard is the slot table the MPM
+     * allocated at startup and nothing can ever run outside it, so that is what this measures
+     * against; without a scoreboard mod_status publishes no ceiling at all, and the answer is that.
+     *
+     * @param  array<string, int>|null  $board
+     */
+    private function saturation(?int $busy, ?int $idle, ?array $board): Metric
     {
-        if ($busy === null || $idle === null || ($busy + $idle) === 0) {
-            return Metric::noData(self::APACHE_SOURCE, 'mod_status did not report both busy and idle workers.');
+        $slots = $board['slots'] ?? 0;
+
+        if ($busy === null || $slots < 1) {
+            return Metric::noData(
+                self::APACHE_SOURCE,
+                'mod_status publishes no MaxRequestWorkers, and this status page carried no scoreboard to count worker slots from, so there is no ceiling to measure against. Read idle workers instead: requests begin queuing once it reaches zero.',
+            );
         }
 
-        $pct = round(100 * $busy / ($busy + $idle), 1);
-
-        return Metric::of($pct, self::APACHE_SOURCE, '%', $pct >= 90
-            ? 'Nearly every worker is busy. At 100% Apache queues new connections in the kernel backlog and then refuses them; raise MaxRequestWorkers, having checked the box has the RAM for the extra children.'
-            : 'Share of configured workers currently serving a request.');
+        return Metric::of(round(100 * $busy / $slots, 1), self::APACHE_SOURCE, '%', $idle === 0 && ($board['open'] ?? 0) === 0
+            ? 'Every worker slot Apache has is serving a request and there are none left to spawn: new connections are queuing in the kernel backlog and will be refused next. Raise MaxRequestWorkers, and ServerLimit with it, having checked the box has the RAM for the extra children.'
+            : "Share of the {$slots} worker slots this MPM allocated at startup (ServerLimit, times ThreadLimit where it is threaded) that are serving a request. MaxRequestWorkers can be configured below that, so read this as a floor and watch idle workers beside it.");
     }
 
     private function dropped(?int $accepts, ?int $handled): Metric
@@ -635,7 +694,7 @@ class WebServerCollector implements Collector
     /** @return array<string, Metric> */
     private function trafficReadings(): array
     {
-        return $this->traffic ??= $this->readTraffic();
+        return $this->traffic ??= $this->guard(fn () => $this->readTraffic(), self::TRAFFIC_METRICS, self::BUCKET_SOURCE);
     }
 
     /**
@@ -653,7 +712,7 @@ class WebServerCollector implements Collector
         $source = self::BUCKET_SOURCE . ' (last ' . self::TRAFFIC_WINDOW_MINUTES . ' minutes)';
 
         try {
-            $totals = DB::connection(config('monitoring.connection', 'monitoring'))
+            $totals = DB::connection($this->connectionName())
                 ->table('monitoring_request_buckets')
                 ->where('resolution', 'minute')
                 ->where('bucket_at', '>=', Clock::minutesAgo(self::TRAFFIC_WINDOW_MINUTES))
@@ -700,8 +759,15 @@ class WebServerCollector implements Collector
 
     private function bucketFailure(\Throwable $exception, string $source): Metric
     {
-        $connection = (string) config('monitoring.connection', 'monitoring');
+        $connection = $this->connectionName();
         $code = $this->driverErrorCode($exception);
+        $account = $this->configString("database.connections.{$connection}.username", '<MONITORING_DB_USERNAME>');
+        // The grant has to name the account as the server sees it, and the server sees the host
+        // this connection dials from. Not a detail: MySQL and MariaDB store 'user'@'localhost' —
+        // the unix socket — and 'user'@'127.0.0.1' — TCP — as two separate accounts with separate
+        // privileges, so a grant written against the wrong one changes nothing and looks like it
+        // should have worked.
+        $host = $this->configString("database.connections.{$connection}.host", '127.0.0.1');
 
         // 1146 is the table, 1049 the schema: both mean the monitoring tables were never created
         // on this connection, which is a migration away rather than a broken collector.
@@ -713,15 +779,46 @@ class WebServerCollector implements Collector
             );
         }
 
-        if (in_array($code, [1044, 1045, 1142, 1143], true)) {
+        // 1045, and MariaDB's 1698 for an account pinned to unix_socket auth, are the login being
+        // refused outright. No GRANT reaches an account the server will not let in.
+        if ($code === 1045 || $code === 1698) {
+            return Metric::permissionDenied(
+                $source,
+                "The `{$connection}` connection could not log in: " . $exception->getMessage(),
+                "Check MONITORING_DB_USERNAME and MONITORING_DB_PASSWORD in .env — they fall back to DB_USERNAME and DB_PASSWORD — then run php artisan config:clear. On MariaDB, error 1698 means the account authenticates by unix socket and ignores the password entirely; ALTER USER '{$account}'@'{$host}' IDENTIFIED VIA mysql_native_password USING PASSWORD('the password in .env'); switches it back.",
+            );
+        }
+
+        if (in_array($code, [1044, 1142, 1143], true)) {
             return Metric::permissionDenied(
                 $source,
                 "The `{$connection}` login may not read monitoring_request_buckets: " . $exception->getMessage(),
-                'Grant it: GRANT SELECT, INSERT, UPDATE, DELETE ON `' . (string) config('database.connections.' . $connection . '.database') . '`.* TO \'' . (string) config('database.connections.' . $connection . '.username') . '\'@\'localhost\'; FLUSH PRIVILEGES;',
+                'Grant it against the account the error above names, which is the one that was refused: GRANT SELECT, INSERT, UPDATE, DELETE ON `'
+                    . $this->configString("database.connections.{$connection}.database", '<MONITORING_DB_DATABASE>')
+                    . "`.* TO '{$account}'@'{$host}';",
             );
         }
 
         return Metric::failed($source, $exception);
+    }
+
+    private function connectionName(): string
+    {
+        return $this->configString('monitoring.connection', 'monitoring') ?: 'monitoring';
+    }
+
+    /**
+     * A configuration value as a string.
+     *
+     * Anything that is not one is treated as unset rather than cast: an array left in config or
+     * .env turns into an "Array to string conversion" the moment it is cast, and that is an
+     * exception out of a collector that is supposed to answer "not configured" instead.
+     */
+    private function configString(string $key, string $default = ''): string
+    {
+        $value = config($key, $default);
+
+        return is_string($value) ? trim($value) : $default;
     }
 
     private function driverErrorCode(\Throwable $exception): ?int
@@ -779,6 +876,10 @@ class WebServerCollector implements Collector
             'R' => $counts[ord('R')] ?? 0,
             'W' => $counts[ord('W')] ?? 0,
             'K' => $counts[ord('K')] ?? 0,
+            // One character per slot in the MPM's process/thread table, so its length is the only
+            // worker ceiling mod_status ever states. A '.' is a slot no child occupies yet.
+            'slots' => strlen($board),
+            'open' => $counts[ord('.')] ?? 0,
         ];
     }
 
