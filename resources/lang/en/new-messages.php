@@ -4259,4 +4259,5 @@ return [
 	'the_redis_collector_could_not_reach_a_server' => 'The redis collector could not reach a server',
 	'The_scheduler_last_reported_a_run_17_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 17 minutes ago  the server cron appears to have stopped.',
 	'The_scheduler_last_reported_a_run_18_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 18 minutes ago  the server cron appears to have stopped.',
+	'The_scheduler_last_reported_a_run_19_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 19 minutes ago  the server cron appears to have stopped.',
 ];

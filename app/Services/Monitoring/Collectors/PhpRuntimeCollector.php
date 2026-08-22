@@ -182,7 +182,14 @@ class PhpRuntimeCollector implements Collector
         $source = 'PHP ini max_execution_time';
 
         return Metric::probe($source, function () use ($source) {
-            $seconds = (int) ini_get('max_execution_time');
+            // ini_get() answers false for a directive that does not exist, and (int) false is 0 —
+            // which this metric would then publish as the meaningful reading "no time limit".
+            $raw = ini_get('max_execution_time');
+            if ($raw === false || trim((string) $raw) === '') {
+                return Metric::noData($source);
+            }
+
+            $seconds = (int) $raw;
 
             // Zero is a reading, not a blank. It means no limit, which is the CLI default and the
             // reason a queue worker may run for hours where a web request may not.
@@ -269,16 +276,19 @@ class PhpRuntimeCollector implements Collector
 
         $megabytes = fn (?float $bytes) => $bytes === null ? null : round($bytes / self::MEGABYTE, 1);
         $wasted = $this->number($memory, 'current_wasted_percentage');
+        $wastedCeiling = $this->wastedCeiling();
         $oomRestarts = $this->integer($statistics, 'oom_restarts');
         $hashRestarts = $this->integer($statistics, 'hash_restarts');
 
         return [
-            'opcache_enabled' => Metric::of((bool) ($status['opcache_enabled'] ?? false), self::OPCACHE_SOURCE),
+            'opcache_enabled' => array_key_exists('opcache_enabled', $status)
+                ? Metric::of((bool) $status['opcache_enabled'], self::OPCACHE_SOURCE)
+                : Metric::noData(self::OPCACHE_SOURCE),
             'opcache_memory_used' => Metric::of($megabytes($this->number($memory, 'used_memory')), self::OPCACHE_SOURCE, 'MB'),
             'opcache_memory_free' => Metric::of($megabytes($this->number($memory, 'free_memory')), self::OPCACHE_SOURCE, 'MB'),
             'opcache_wasted' => Metric::of($megabytes($this->number($memory, 'wasted_memory')), self::OPCACHE_SOURCE, 'MB', 'Memory held by scripts that have since been invalidated; it is only reclaimed by a full restart.'),
-            'opcache_wasted_pct' => Metric::of($wasted === null ? null : round($wasted, 1), self::OPCACHE_SOURCE, '%', $wasted !== null && $wasted >= 5.0
-                ? 'Wasted memory has reached opcache.max_wasted_percentage, so OPcache is restarting itself and recompiling every file each time. Raise opcache.memory_consumption.'
+            'opcache_wasted_pct' => Metric::of($wasted === null ? null : round($wasted, 1), self::OPCACHE_SOURCE, '%', $wasted !== null && $wastedCeiling !== null && $wasted >= $wastedCeiling
+                ? "Wasted memory has reached opcache.max_wasted_percentage ({$wastedCeiling}%), so OPcache is restarting itself and recompiling every file each time. Raise opcache.memory_consumption in php.ini and reload PHP."
                 : null),
             'opcache_hit_rate' => $this->opcacheHitRate($statistics),
             'opcache_hits' => Metric::of($this->integer($statistics, 'hits'), self::OPCACHE_SOURCE, null, 'Lookups served from the cache since the last restart, not a rate.'),
@@ -293,6 +303,19 @@ class PhpRuntimeCollector implements Collector
                 : null),
             'opcache_manual_restarts' => Metric::of($this->integer($statistics, 'manual_restarts'), self::OPCACHE_SOURCE, null, 'Restarts triggered by opcache_reset(), typically a deployment.'),
         ];
+    }
+
+    /**
+     * The percentage at which this pool restarts itself, as configured rather than as defaulted.
+     *
+     * The directive defaults to 5, and asserting that default at a host that raised it would put
+     * "OPcache is restarting itself" under a number that is nowhere near the real threshold.
+     */
+    private function wastedCeiling(): ?float
+    {
+        $configured = ini_get('opcache.max_wasted_percentage');
+
+        return is_numeric($configured) ? (float) $configured : null;
     }
 
     /**
@@ -402,9 +425,9 @@ class PhpRuntimeCollector implements Collector
             return array_fill_keys(self::FPM_METRICS, $pool);
         }
 
-        $listenQueue = $this->integer($pool, 'listen queue');
         $maxChildrenReached = $this->integer($pool, 'max children reached');
         $slowRequests = $this->integer($pool, 'slow requests');
+        $queue = $this->queueReadings($pool);
 
         return [
             'fpm_pool' => Metric::of($pool['pool'] ?? null, self::FPM_SOURCE),
@@ -412,11 +435,9 @@ class PhpRuntimeCollector implements Collector
             'fpm_idle_processes' => Metric::of($this->integer($pool, 'idle processes'), self::FPM_SOURCE, 'processes'),
             'fpm_total_processes' => Metric::of($this->integer($pool, 'total processes'), self::FPM_SOURCE, 'processes'),
             'fpm_max_active_processes' => Metric::of($this->integer($pool, 'max active processes'), self::FPM_SOURCE, 'processes', 'The busiest the pool has been since it started.'),
-            'fpm_listen_queue' => Metric::of($listenQueue, self::FPM_SOURCE, 'requests', $listenQueue !== null && $listenQueue > 0
-                ? 'Requests are waiting on the socket for a free child right now. Every one of them is already counting against the visitor\'s page load.'
-                : null),
-            'fpm_max_listen_queue' => Metric::of($this->integer($pool, 'max listen queue'), self::FPM_SOURCE, 'requests', 'The deepest that queue has been since the pool started.'),
-            'fpm_listen_queue_len' => Metric::of($this->integer($pool, 'listen queue len'), self::FPM_SOURCE, 'requests', 'Capacity of the socket backlog; requests arriving past it are refused outright.'),
+            'fpm_listen_queue' => $queue['listen_queue'],
+            'fpm_max_listen_queue' => $queue['max_listen_queue'],
+            'fpm_listen_queue_len' => $queue['listen_queue_len'],
             'fpm_max_children_reached' => Metric::of($maxChildrenReached, self::FPM_SOURCE, null, $maxChildrenReached !== null && $maxChildrenReached > 0
                 ? 'The pool has hit pm.max_children and queued requests while it did. Raise pm.max_children in the pool config, having checked the box has the RAM for the extra children.'
                 : null),
@@ -429,10 +450,59 @@ class PhpRuntimeCollector implements Collector
         ];
     }
 
+    /**
+     * The three socket-queue numbers, which FPM can only sometimes measure.
+     *
+     * FPM reads the backlog out of the kernel with TCP_INFO, and the kernel answers that only for
+     * a TCP listener. On a UNIX socket — nginx's default and this application's likely setup — the
+     * call fails and FPM writes a plain 0 into all three fields. Published as readings they draw a
+     * queue that is永 empty, so the one chart that would show requests piling up in front of the
+     * pool is a flat line on exactly the pools where the pile-up is otherwise invisible. The
+     * backlog capacity is the tell: no pool listens with a backlog of nothing.
+     *
+     * @param  array<string, mixed>  $pool
+     * @return array<string, Metric>
+     */
+    private function queueReadings(array $pool): array
+    {
+        $capacity = $this->integer($pool, 'listen queue len');
+
+        if ($capacity === null || $capacity === 0) {
+            $unmeasurable = Metric::notSupported(
+                self::FPM_SOURCE,
+                'This pool listens on a UNIX socket, where the kernel does not report the backlog, so FPM publishes its three queue counters as zero whatever the real depth is.',
+                'Give the pool a TCP listener (listen = 127.0.0.1:9000 in ' . $this->poolConfigPath() . ', with a matching fastcgi_pass) if the queue depth is worth measuring.',
+            );
+
+            return array_fill_keys(['listen_queue', 'max_listen_queue', 'listen_queue_len'], $unmeasurable);
+        }
+
+        $waiting = $this->integer($pool, 'listen queue');
+
+        return [
+            'listen_queue' => Metric::of($waiting, self::FPM_SOURCE, 'requests', $waiting !== null && $waiting > 0
+                ? 'Requests are waiting on the socket for a free child right now. Every one of them is already counting against the visitor\'s page load.'
+                : null),
+            'max_listen_queue' => Metric::of($this->integer($pool, 'max listen queue'), self::FPM_SOURCE, 'requests', 'The deepest that queue has been since the pool started.'),
+            'listen_queue_len' => Metric::of($capacity, self::FPM_SOURCE, 'requests', 'Capacity of the socket backlog; requests arriving past it are refused outright.'),
+        ];
+    }
+
     /** @return array<string, mixed>|Metric */
     private function fpmStatus(): array|Metric
     {
-        return $this->pool ??= $this->readFpmStatus();
+        if ($this->pool === null) {
+            try {
+                $this->pool = $this->readFpmStatus();
+            } catch (\Throwable $exception) {
+                // Monitoring must not be the thing that breaks the page it is drawn on, and the
+                // work below reaches configuration, the network and a JSON body — three places
+                // this collector does not own.
+                $this->pool = Metric::failed(self::FPM_SOURCE, $exception);
+            }
+        }
+
+        return $this->pool;
     }
 
     /**

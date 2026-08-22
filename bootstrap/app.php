@@ -164,6 +164,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('monitoring:rollup')->hourlyAt(3)->withoutOverlapping();
         $schedule->command('monitoring:rollup --prune')->dailyAt('01:45')->withoutOverlapping();
 
+        /*
+        | Analytics.
+        |
+        | Hourly so today's charts are never more than an hour behind, and a nightly pass that
+        | rebuilds yesterday (late events, an order paid after midnight) and prunes raw rows past
+        | their retention. Rollups are a rebuild of the day, so running them repeatedly is safe.
+        */
+        $schedule->command('analytics:rollup')->hourlyAt(12)->withoutOverlapping();
+        $schedule->command('analytics:rollup --days=2 --prune')->dailyAt('02:15')->withoutOverlapping();
+
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
         $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();
