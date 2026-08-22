@@ -63,6 +63,36 @@ return [
             ]) : [],
         ],
 
+        /*
+        | Monitoring writes far more rows than the shop does — request buckets, spans, error
+        | groups, check results — and none of it belongs in a backup of the store's orders. It
+        | therefore gets its own connection NAME while pointing, by default, at the same database:
+        | a single-server deployment needs no extra infrastructure and nothing to install.
+        |
+        | Set MONITORING_DB_DATABASE (and optionally host/user) to move every monitoring table to
+        | its own database or its own server. No code changes, no migration rewrite — the app
+        | notices they are separate and stops joining across them.
+        */
+        'monitoring' => [
+            'driver' => 'mysql',
+            'url' => env('MONITORING_DATABASE_URL'),
+            'host' => env('MONITORING_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('MONITORING_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('MONITORING_DB_DATABASE', env('DB_DATABASE', 'forge')),
+            'username' => env('MONITORING_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('MONITORING_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('MONITORING_DB_SOCKET', env('DB_SOCKET', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
