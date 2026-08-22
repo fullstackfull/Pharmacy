@@ -19,7 +19,8 @@
         'custom_html', 'spacer', 'flash_deal', 'testimonials', 'faq', 'category_showcase',
         'vendor_slider', 'vendor_showcase',
         'deal_of_the_day', 'featured_deal', 'clearance_sale', 'coupon_strip', 'stats_bar', 'bundle',
-        'interest_tiles', 'stories', 'blog_posts', 'branches', 'shipping_cutoff', 'before_after'];
+        'interest_tiles', 'stories', 'blog_posts', 'branches', 'shipping_cutoff', 'before_after',
+        'product_tabs', 'brand_showcase', 'trending_searches', 'recently_viewed', 'app_download', 'price_tiles'];
 @endphp
 
 @if (!empty($__sections))
@@ -252,6 +253,49 @@
     .ml-dotd--banner .ml-dotd__card{ max-width:320px; margin-inline:auto; }
     .ml-dotd--card{ grid-template-columns:1fr; max-width:420px; margin-inline:auto; padding:1rem; }
     .ml-dotd--card .ml-dotd__copy h2{ font-size:1.15rem; }
+
+    /* ---- new sections ----------------------------------------------------------------------
+       Tabs, a brand mark, a ranked list of real searches, a get-the-app panel and price bands. */
+    .ml-tabs{ display:flex; gap:.35rem; flex-wrap:wrap; }
+    .ml-tabs__btn{ border:1px solid var(--ml-line); background:var(--ml-paper); color:var(--ml-ink2);
+        border-radius:99px; padding:.35rem .9rem; font-size:.8rem; font-weight:600; cursor:pointer;
+        transition:background .3s var(--ml-ease), color .3s, border-color .3s; }
+    .ml-tabs__btn.is-active{ background:var(--ml-grad); color:#fff; border-color:transparent; }
+    .ml-tabs__panel{ display:none; }
+    .ml-tabs__panel.is-active{ display:block; }
+
+    .ml-brand-mark{ width:56px; height:56px; border-radius:16px; background:var(--ml-paper);
+        border:1px solid var(--ml-line); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .ml-brand-mark img{ width:78%; height:78%; object-fit:contain; }
+
+    .ml-trend{ list-style:none; margin:0; padding:0; display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.35rem .9rem; counter-reset:trend; }
+    .ml-trend a{ display:flex; align-items:center; gap:.7rem; padding:.5rem .35rem; text-decoration:none;
+        color:inherit; border-bottom:1px solid var(--ml-line); }
+    .ml-trend a:hover{ text-decoration:none; color:var(--ml-primary); }
+    .ml-trend__rank{ flex:0 0 26px; height:26px; border-radius:9px; background:var(--ml-sand);
+        display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.78rem; color:var(--ml-primary); }
+    .ml-trend__term{ flex:1 1 auto; font-size:.86rem; font-weight:600; }
+    .ml-trend__count{ font-size:.74rem; color:var(--ml-muted); }
+
+    .ml-getapp{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1.4rem; align-items:center;
+        background:var(--ml-dark); color:#fff; border-radius:26px; padding:1.6rem 1.8rem; }
+    .ml-getapp h3{ color:#fff; margin:.2rem 0 .4rem; }
+    .ml-getapp p{ color:rgba(255,255,255,.72); margin:0 0 .9rem; }
+    .ml-getapp__badges{ display:flex; gap:.6rem; flex-wrap:wrap; }
+    .ml-getapp__qr{ background:#fff; padding:.6rem; border-radius:18px; line-height:0; }
+    .ml-getapp__qr svg{ width:132px; height:132px; display:block; }
+    .ml-getapp__art img{ max-width:220px; border-radius:18px; }
+    .ml-getapp--strip{ grid-template-columns:1fr; text-align:center; padding:1.1rem 1.3rem; }
+    .ml-getapp--strip .ml-getapp__badges{ justify-content:center; }
+    .ml-getapp--strip .ml-getapp__qr{ display:none; }
+    @media (max-width:720px){ .ml-getapp{ grid-template-columns:1fr; text-align:center; } .ml-getapp__badges{ justify-content:center; } .ml-getapp__qr{ margin-inline:auto; } }
+
+    .ml-price-tile{ display:flex; align-items:center; justify-content:center; min-height:118px;
+        border-radius:20px; background:var(--ml-grad); background-size:cover; background-position:center;
+        color:#fff; font-weight:800; font-size:1.05rem; text-decoration:none; box-shadow:var(--ml-shadow);
+        transition:transform .35s var(--ml-spring), box-shadow .35s var(--ml-ease); }
+    .ml-price-tile:hover{ transform:translateY(-4px); box-shadow:var(--ml-shadow-lg); color:#fff; text-decoration:none; }
 
     /* ---- display variants ------------------------------------------------------------------
        Every "display style" in the builder is a real difference in layout, not a renamed class.
@@ -804,6 +848,17 @@
             $set = $type === 'bundle' ? $__data->bundle($s) : null;
             $posts = $type === 'blog_posts' ? $__data->blogPosts((int) ($s['limit'] ?? 3)) : collect();
             $secondsLeft = $type === 'shipping_cutoff' ? $__data->shippingCutoff((string) ($s['cutoff'] ?? '16:00')) : null;
+            $brandShowcase = $type === 'brand_showcase' ? $__data->brandShowcase($s) : null;
+            $searchTerms = $type === 'trending_searches'
+                ? $__data->trendingSearches((int) ($s['days'] ?? 30), (int) ($s['limit'] ?? 10))
+                : collect();
+            $seenProducts = $type === 'recently_viewed' ? $__data->recentlyViewed((int) ($s['limit'] ?? 8)) : collect();
+            $appStores = $type === 'app_download'
+                ? array_filter([
+                    'android' => app(\App\Services\DeepLink\AppLinkService::class)->storeUrl('android'),
+                    'ios' => app(\App\Services\DeepLink\AppLinkService::class)->storeUrl('ios'),
+                ])
+                : [];
             // Block-driven sections are nothing but their blocks: one whose blocks carry no
             // content yet would open a padded band with nothing inside it.
             $rawBlocks = match ($type) {
@@ -831,6 +886,10 @@
             'bundle' => $set,
             'posts' => $posts->all(),
             'secondsLeft' => $secondsLeft,
+            'brandShowcase' => $brandShowcase,
+            'searchTerms' => $searchTerms->all(),
+            'seenProducts' => $seenProducts->all(),
+            'appStores' => $appStores,
         ]))
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
@@ -1874,6 +1933,206 @@
                         <div class="ml-reveal">{{ $s['content'] ?? '' }}</div>
                         @break
 
+                    {{-- One row, several sources, one line of tabs. Everything is rendered up
+                         front and switched with a class, so changing tab costs no request and works
+                         with JavaScript disabled (the first tab is simply the one that shows). --}}
+                    @case('product_tabs')
+                        @php
+                            $tabsId = 'ml-tabs-' . ($__section['id'] ?? $loop->index);
+                            $tabStyle = $s['style'] ?? 'rail';
+                            $cardCart = (bool) ($s['add_to_cart'] ?? true);
+                            $tabs = [];
+                            foreach ($__section['blocks'] ?? [] as $tabBlock) {
+                                $tabSettings = $tabBlock['settings'] ?? [];
+                                if (empty($tabSettings['label'])) { continue; }
+                                $tabs[] = [
+                                    'label' => $tabSettings['label'],
+                                    'products' => $__data->products($tabSettings + ['limit' => (int) ($s['limit'] ?? 8)]),
+                                ];
+                            }
+                            $tabs = array_values(array_filter($tabs, fn ($tab) => $tab['products']->isNotEmpty()));
+                        @endphp
+                        @if ($tabs !== [])
+                            <div class="ml-sec-head ml-reveal">
+                                <div>
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                </div>
+                                <div class="ml-tabs" data-ml-tabs="{{ $tabsId }}">
+                                    @foreach ($tabs as $tabIndex => $tab)
+                                        <button type="button" class="ml-tabs__btn {{ $tabIndex === 0 ? 'is-active' : '' }}"
+                                                data-ml-tab="{{ $tabIndex }}">{{ $tab['label'] }}</button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @foreach ($tabs as $tabIndex => $tab)
+                                <div class="ml-tabs__panel {{ $tabIndex === 0 ? 'is-active' : '' }}"
+                                     data-ml-tab-panel="{{ $tabsId }}-{{ $tabIndex }}" data-ml-tab-of="{{ $tabsId }}">
+                                    <div class="{{ $tabStyle === 'grid' ? 'ml-grid' : 'ml-rail' }}">
+                                        @foreach ($tab['products'] as $product)
+                                            @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endif
+                        @break
+
+                    {{-- The brand half of category_showcase: one brand, its mark, its products. --}}
+                    @case('brand_showcase')
+                        @php
+                            $cardCart = (bool) ($s['add_to_cart'] ?? true);
+                            $brandRail = ($s['style'] ?? 'rail') !== 'grid';
+                        @endphp
+                        <div class="ml-sec-head ml-reveal">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (($s['logo'] ?? true) && !empty($brandShowcase['brand']->image_full_url))
+                                    <span class="ml-brand-mark">
+                                        <img src="{{ getStorageImages(path: $brandShowcase['brand']->image_full_url, type: 'brand') }}"
+                                             alt="{{ $brandShowcase['brand']->name }}" loading="lazy">
+                                    </span>
+                                @endif
+                                <div>
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    <h2>{{ $s['title'] ?: $brandShowcase['brand']->name }}</h2>
+                                </div>
+                            </div>
+                            @if ($s['view_all'] ?? true)
+                                <a class="ml-viewall" href="{{ route('products', ['brand_id' => $brandShowcase['brand']->id]) }}">{{ translate('view_all') }}</a>
+                            @endif
+                        </div>
+                        <div class="{{ $brandRail ? 'ml-rail' : 'ml-grid' }} ml-reveal">
+                            @foreach ($brandShowcase['products'] as $product)
+                                @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                            @endforeach
+                        </div>
+                        @break
+
+                    {{-- What customers actually typed into the search box. Not a hand-written list
+                         of what the merchant hopes is popular — the shop's own measured demand,
+                         already filtered of bots and staff by the analytics rollup. --}}
+                    @case('trending_searches')
+                        @php $termStyle = $s['style'] ?? 'chips'; @endphp
+                        @if (!empty($s['title']) || !empty($s['eyebrow']))
+                            <div class="ml-sec-head ml-reveal">
+                                <div>
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                </div>
+                            </div>
+                        @endif
+                        @if ($termStyle === 'ranked')
+                            <ol class="ml-trend ml-reveal">
+                                @foreach ($searchTerms as $term)
+                                    <li>
+                                        <a href="{{ route('products', ['search' => $term->term]) }}">
+                                            <span class="ml-trend__rank">{{ $loop->iteration }}</span>
+                                            <span class="ml-trend__term">{{ $term->term }}</span>
+                                            <span class="ml-trend__count">{{ number_format((int) $term->searches) }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @else
+                            <div class="ml-cat-chips ml-reveal">
+                                @foreach ($searchTerms as $term)
+                                    <a class="ml-chip" href="{{ route('products', ['search' => $term->term]) }}">
+                                        <span>{{ $term->term }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                        @break
+
+                    {{-- A visitor's own history, shown back to them. Scoped to their own first-party
+                         cookie — reading anyone else's would be both wrong and a privacy failure. --}}
+                    @case('recently_viewed')
+                        @php
+                            $cardCart = (bool) ($s['add_to_cart'] ?? true);
+                            $seenRail = ($s['style'] ?? 'rail') !== 'grid';
+                        @endphp
+                        <div class="ml-sec-head ml-reveal">
+                            <div>
+                                @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                <h2>{{ $s['title'] ?: translate('recently_viewed') }}</h2>
+                            </div>
+                        </div>
+                        <div class="{{ $seenRail ? 'ml-rail' : 'ml-grid' }} ml-reveal">
+                            @foreach ($seenProducts as $product)
+                                @include('theme-sections.partials.product-card', ['product' => $product, 'addToCart' => $cardCart, 'wishlisted' => $__wishlisted])
+                            @endforeach
+                        </div>
+                        @break
+
+                    {{-- Get the app. The QR is generated by the same service the campaign builder
+                         uses, over the same deep link, so the code on a poster and the code on this
+                         page open the same thing. --}}
+                    @case('app_download')
+                        @php
+                            $appStyle = $s['style'] ?? 'split';
+                            $androidUrl = $appStores['android'] ?? null;
+                            $iosUrl = $appStores['ios'] ?? null;
+                            $qrSvg = ($s['qr'] ?? true)
+                                ? app(\App\Services\Analytics\Support\QrCode::class)->svg(url('/'), 132)
+                                : null;
+                        @endphp
+                            <div class="ml-getapp ml-getapp--{{ $appStyle }} ml-reveal">
+                                <div class="ml-getapp__copy">
+                                    @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                    <h3>{{ $s['title'] ?: translate('get_the_app') }}</h3>
+                                    @if (!empty($s['subtitle']))<p>{{ $s['subtitle'] }}</p>@endif
+                                    <div class="ml-getapp__badges">
+                                        @if ($androidUrl)
+                                            <a class="ml-btn ml-btn-gold" href="{{ $androidUrl }}" rel="noopener">{{ translate('google_play') }}</a>
+                                        @endif
+                                        @if ($iosUrl)
+                                            <a class="ml-btn ml-btn-light" href="{{ $iosUrl }}" rel="noopener">{{ translate('app_store') }}</a>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if ($qrSvg)
+                                    <div class="ml-getapp__qr">{!! $qrSvg !!}</div>
+                                @elseif (!empty($s['image']))
+                                    <div class="ml-getapp__art"><img src="{{ $s['image'] }}" alt="" loading="lazy"></div>
+                                @endif
+                            </div>
+                        @break
+
+                    {{-- Shop by what the customer can spend, which is how a lot of people actually
+                         shop — and the one entry point a category tree cannot offer. --}}
+                    @case('price_tiles')
+                        @if (count($blocks))
+                            @if (!empty($s['title']) || !empty($s['eyebrow']))
+                                <div class="ml-sec-head ml-reveal">
+                                    <div>
+                                        @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
+                                        @if (!empty($s['title']))<h2>{{ $s['title'] }}</h2>@endif
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="ml-grid">
+                                @foreach ($__section['blocks'] ?? [] as $bandBlock)
+                                    @php
+                                        // Its own settings, not the banner-shaped card blockCards()
+                                        // builds: a price band is a number pair, not a picture.
+                                        $band = $bandBlock['settings'] ?? [];
+                                        $min = max(0, (int) ($band['min'] ?? 0));
+                                        $max = max(0, (int) ($band['max'] ?? 0));
+                                        $query = ['min_price' => $min] + ($max > 0 ? ['max_price' => $max] : []);
+                                        $label = ($band['label'] ?? '') ?: ($max > 0
+                                            ? webCurrencyConverter(amount: $min) . ' - ' . webCurrencyConverter(amount: $max)
+                                            : webCurrencyConverter(amount: $min) . '+');
+                                    @endphp
+                                    <a class="ml-price-tile ml-reveal" data-delay="{{ $loop->index % 6 }}"
+                                       href="{{ route('products', $query) }}"
+                                       @if (!empty($band['image'])) style="background-image:linear-gradient(140deg,rgba(20,8,46,.62),rgba(20,8,46,.28)),url('{{ $band['image'] }}')" @endif>
+                                        <span class="ml-price-tile__label">{{ $label }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                        @break
+
                     @case('spacer')
                         <div style="height:var(--tb-h,{{ (int) ($s['height'] ?? 40) }}px)"></div>
                         @break
@@ -1957,6 +2216,23 @@
             var step = railStep(rail) * direction;
             rail.scrollBy({left: rtl ? -step : step, behavior: 'smooth'});
         }
+
+        // Product tabs: every panel is already in the page, so switching is a class change rather
+        // than a request — and with JavaScript off the first tab is simply the one that shows.
+        root.querySelectorAll('[data-ml-tabs]').forEach(function (bar) {
+            bar.addEventListener('click', function (event) {
+                var button = event.target.closest('[data-ml-tab]');
+                if (!button) return;
+
+                var group = bar.dataset.mlTabs;
+                bar.querySelectorAll('[data-ml-tab]').forEach(function (item) { item.classList.remove('is-active'); });
+                button.classList.add('is-active');
+
+                root.querySelectorAll('[data-ml-tab-of="' + group + '"]').forEach(function (panel) {
+                    panel.classList.toggle('is-active', panel.dataset.mlTabPanel === group + '-' + button.dataset.mlTab);
+                });
+            });
+        });
 
         root.querySelectorAll('[data-ml-rail]').forEach(function (button) {
             button.addEventListener('click', function () {

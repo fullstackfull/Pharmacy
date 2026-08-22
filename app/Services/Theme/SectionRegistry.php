@@ -462,6 +462,96 @@ class SectionRegistry
                     'link'        => ['type' => 'link', 'label' => 'link', 'default' => ''],
                 ],
             ],
+            // --- new: sections that draw on what the shop already knows ------------------------
+            // One row, several sources, one line of tabs. A home page that wants "new", "best
+            // selling" and "top rated" needed three sections and three screens of height; this is
+            // the same products in one, and the merchant names the tabs.
+            'product_tabs' => [
+                'preview' => 'rail', 'label' => 'product_tabs', 'pages' => ['home'],
+                'blocks' => ['tab'],
+                'hint' => 'one_row_of_products_with_tabs_across_the_top_each_tab_its_own_source',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products_per_tab', 'default' => 8],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            // The brand equivalent of category_showcase: one brand, its logo, its products.
+            'brand_showcase' => [
+                'preview' => 'showcase', 'label' => 'brand_showcase', 'pages' => ['home'],
+                'hint' => 'one_brand_with_its_logo_and_its_products',
+                'schema' => [
+                    'brand_id'    => ['type' => 'resource', 'label' => 'choose_brand', 'default' => null,
+                                      'resource' => 'brand'],
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title_leave_empty_for_the_brand_name', 'default' => ''],
+                    'logo'        => ['type' => 'boolean','label' => 'show_the_brand_logo', 'default' => true],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'view_all'    => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            // What customers are actually typing into the search box, from the analytics rollup.
+            // Not a guess and not a hand-written list: a shop's own demand, on its own home page.
+            'trending_searches' => [
+                'preview' => 'coupon', 'label' => 'trending_searches', 'pages' => ['home'],
+                'hint' => 'the_terms_customers_actually_searched_for_taken_from_your_analytics',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'days'    => ['type' => 'number', 'label' => 'look_back_days', 'default' => 30],
+                    'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 10],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'chips',
+                                  'options' => ['chips', 'ranked']],
+                ],
+            ],
+            // The products this visitor looked at, from their own events and nobody else's.
+            'recently_viewed' => [
+                'preview' => 'rail', 'label' => 'recently_viewed', 'pages' => ['home'],
+                'hint' => 'the_products_this_visitor_looked_at_shown_back_to_them',
+                'schema' => [
+                    'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 8],
+                    'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
+                                      'options' => ['rail', 'grid']],
+                    'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
+                ],
+            ],
+            // Get the app — with the QR the deep-link system can already generate, so the code on
+            // the poster and the code on the page are the same link.
+            'app_download' => [
+                'preview' => 'split', 'label' => 'get_the_app', 'pages' => ['home', 'footer'],
+                'hint' => 'app_store_buttons_and_a_qr_code_that_opens_the_app_or_the_store',
+                'schema' => [
+                    'eyebrow'   => ['type' => 'text',    'label' => 'eyebrow', 'default' => ''],
+                    'title'     => ['type' => 'text',    'label' => 'title', 'default' => ''],
+                    'subtitle'  => ['type' => 'text',    'label' => 'subtitle', 'default' => ''],
+                    'image'     => ['type' => 'image',   'label' => 'phone_image', 'default' => ''],
+                    'qr'        => ['type' => 'boolean', 'label' => 'show_a_qr_code', 'default' => true],
+                    'style'     => ['type' => 'select',  'label' => 'display_style', 'default' => 'split',
+                                    'options' => ['split', 'strip']],
+                ],
+            ],
+            // Shop by what the customer can spend, which is how a lot of people actually shop.
+            'price_tiles' => [
+                'preview' => 'tiles', 'label' => 'shop_by_price', 'pages' => ['home'],
+                'blocks' => ['price_band'],
+                'hint' => 'tiles_that_lead_to_a_price_filtered_listing',
+                'schema' => [
+                    'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
+                    'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
+                ],
+            ],
             'custom_html' => [
                 'preview' => 'text', 'label' => 'custom_content', 'pages' => ['home', 'footer'], 'hint' => 'your_own_text_block',
                 'schema' => ['content' => ['type' => 'textarea', 'label' => 'content', 'default' => '']],
@@ -627,6 +717,28 @@ class SectionRegistry
                 'schema' => [
                     'question' => ['type' => 'text',     'label' => 'question', 'default' => ''],
                     'answer'   => ['type' => 'textarea', 'label' => 'answer', 'default' => ''],
+                ],
+            ],
+            'tab' => [
+                'label' => 'product_tab', 'title_key' => 'label',
+                'schema' => [
+                    'label'       => ['type' => 'text',   'label' => 'tab_label', 'default' => ''],
+                    'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'new_arrival',
+                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
+                    'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
+                                      'resource_from' => 'source', 'depends_on' => ['source' => ['category', 'brand']]],
+                    'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
+                                      'resource' => 'product', 'multiple' => true,
+                                      'depends_on' => ['source' => ['manual']]],
+                ],
+            ],
+            'price_band' => [
+                'label' => 'price_band', 'title_key' => 'label',
+                'schema' => [
+                    'label' => ['type' => 'text',   'label' => 'label_leave_empty_to_build_it_from_the_range', 'default' => ''],
+                    'min'   => ['type' => 'number', 'label' => 'from', 'default' => 0],
+                    'max'   => ['type' => 'number', 'label' => 'to_leave_empty_for_no_ceiling', 'default' => 0],
+                    'image' => ['type' => 'image',  'label' => 'background_image', 'default' => ''],
                 ],
             ],
             'menu' => [

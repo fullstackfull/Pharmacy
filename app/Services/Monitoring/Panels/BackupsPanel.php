@@ -545,13 +545,19 @@ class BackupsPanel implements Panel
         $history = [];
         $previousSize = null;
         // Oldest first while the sizes are compared, so each row is measured against the backup
-        // that came before it rather than the one that came after.
+        // that came before it rather than the one that came after. Only successful backups take
+        // part: a failed run's half-written artefact is not the size of a backup, and letting one
+        // anchor the comparison would report the next good backup as having doubled.
         foreach ($listed->reverse() as $row) {
             $summary = $this->summarise($row);
-            $summary['size_change_percent'] = $this->sizeChangePercent($summary['size_bytes'], $previousSize);
-            $summary['compared_with_size_bytes'] = $summary['size_bytes'] === null ? null : $previousSize;
+            $comparable = $summary['status'] === 'success' && $summary['size_bytes'] !== null;
 
-            if ($summary['size_bytes'] !== null) {
+            $summary['size_change_percent'] = $comparable
+                ? $this->sizeChangePercent($summary['size_bytes'], $previousSize)
+                : null;
+            $summary['compared_with_size_bytes'] = $summary['size_change_percent'] === null ? null : $previousSize;
+
+            if ($comparable) {
                 $previousSize = $summary['size_bytes'];
             }
 
@@ -830,9 +836,10 @@ class BackupsPanel implements Panel
      */
     private function restoreCounts(array $history): array
     {
-        if ($history['state'] !== 'ok') {
+        if ($history['state'] === 'failed') {
             // Null rather than zero: the history could not be read, so the number of untested
-            // backups in the window was not counted rather than counted as none.
+            // backups in the window was not counted rather than counted as none. A window that
+            // simply holds no backup is a measured zero and falls through to the loop below.
             return [null, null];
         }
 
@@ -959,9 +966,10 @@ class BackupsPanel implements Panel
      *
      * The check's context is written by BackupCheck and is flat today; anything nested arriving in
      * it later is dropped rather than rendered, so a column that grows a structure cannot put a
-     * PHP notice where a value belongs.
+     * PHP notice where a value belongs. A null is kept rather than dropped — the check writes
+     * restore_tested_at as null on purpose, and that null is the reading.
      *
-     * @return array<string, scalar>|null
+     * @return array<string, scalar|null>|null
      */
     private function scalars(mixed $value): ?array
     {
@@ -976,7 +984,7 @@ class BackupsPanel implements Panel
 
         $scalars = [];
         foreach ($decoded as $key => $item) {
-            if (is_scalar($item)) {
+            if (is_scalar($item) || $item === null) {
                 $scalars[(string) $key] = $item;
             }
         }

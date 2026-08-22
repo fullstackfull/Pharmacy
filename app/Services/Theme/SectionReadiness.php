@@ -53,7 +53,11 @@ class SectionReadiness
             'bundle' => !empty($resolved['bundle']),
             'blog_posts' => !empty($resolved['posts']),
             'shipping_cutoff' => !empty($resolved['secondsLeft']),
-            'stats_bar', 'interest_tiles', 'stories', 'branches', 'before_after' => $blocks !== [],
+            'stats_bar', 'interest_tiles', 'stories', 'branches', 'before_after', 'product_tabs', 'price_tiles' => $blocks !== [],
+            'brand_showcase' => !empty($resolved['brandShowcase']),
+            'trending_searches' => !empty($resolved['searchTerms']),
+            'recently_viewed' => !empty($resolved['seenProducts']),
+            'app_download' => !empty($resolved['appStores']),
             default => true,
         };
     }
@@ -159,9 +163,32 @@ class SectionReadiness
                 ? $this->ready()
                 : $this->missing(self::NO_CONTENT, 'no_banner_of_this_type_is_published_in_promotion_banners'),
 
+            'brand_showcase' => empty($settings['brand_id'])
+                ? $this->missing(self::NEEDS_CHOICE, 'choose_a_brand_for_this_section_to_have_something_to_show')
+                : ($this->data->brandShowcase($settings) !== null
+                    ? $this->ready()
+                    : $this->missing(self::NO_CONTENT, 'the_chosen_brand_has_no_published_products_yet')),
+
+            // Both of these are drawn from what the shop has measured, so "nothing yet" is a real
+            // and temporary state rather than a misconfiguration — and saying which it is matters:
+            // one is fixed by waiting, the other by installing analytics.
+            'trending_searches' => $this->data->trendingSearches((int) ($settings['days'] ?? 30), (int) ($settings['limit'] ?? 10))->isNotEmpty()
+                ? $this->ready()
+                : $this->missing(self::NO_CONTENT, 'no_search_has_been_rolled_up_yet_this_fills_in_once_customers_search'),
+
+            'recently_viewed' => $this->missing(self::NOT_NOW, 'this_shows_each_visitor_their_own_history_so_it_is_empty_until_they_have_one'),
+
+            // Nothing to link to is not something the merchant can fix from the theme: the app's
+            // store listings live in the deep-link settings, so the badge points there.
+            'app_download' => app(\App\Services\DeepLink\AppLinkService::class)->storeUrl('android') !== null
+                || app(\App\Services\DeepLink\AppLinkService::class)->storeUrl('ios') !== null
+                    ? $this->ready()
+                    : $this->missing(self::NEEDS_CHOICE, 'add_the_app_store_links_in_settings_deep_links_for_this_section_to_have_somewhere_to_send_people'),
+
             // Block-driven sections are nothing but their blocks.
             'stats_bar', 'interest_tiles', 'stories', 'branches', 'before_after', 'hero_banner',
-            'promotional_banner', 'split_banner', 'banner_mosaic', 'footer_columns' => $this->blockVerdict($type, $blocks),
+            'promotional_banner', 'split_banner', 'banner_mosaic', 'footer_columns',
+            'product_tabs', 'price_tiles' => $this->blockVerdict($type, $blocks),
 
             default => $this->ready(),
         };
@@ -175,6 +202,7 @@ class SectionReadiness
     {
         $withContent = match ($type) {
             'stories' => $this->data->blocksWithContent($blocks, either: ['image', 'video']),
+            'product_tabs' => $this->data->blocksWithContent($blocks, required: ['label']),
             'branches' => $this->data->blocksWithContent($blocks, required: ['title']),
             'before_after' => $this->data->blocksWithContent($blocks, required: ['image', 'after']),
             default => $blocks,

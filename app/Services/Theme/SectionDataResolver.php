@@ -24,6 +24,112 @@ use Illuminate\Support\Collection;
 class SectionDataResolver
 {
     /**
+     * One brand with its products — the brand half of category_showcase.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>|null
+     */
+    public function brandShowcase(array $settings): ?array
+    {
+        $brandId = (int) ($settings['brand_id'] ?? 0);
+
+        if ($brandId < 1) {
+            return null;
+        }
+
+        $brand = $this->safely(fn () => Brand::query()->where('status', 1)->where('id', $brandId)->get())->first();
+
+        if ($brand === null) {
+            return null;
+        }
+
+        $products = $this->products([
+            'source' => 'brand',
+            'source_id' => $brandId,
+            'limit' => (int) ($settings['limit'] ?? 10),
+        ]);
+
+        return $products->isEmpty() ? null : ['brand' => $brand, 'products' => $products];
+    }
+
+    /**
+     * What customers actually searched for, from the analytics rollup.
+     *
+     * Read from analytics_daily rather than the raw events: the rollup has already excluded bots
+     * and staff, which is the difference between "what customers want" and "what a crawler asked
+     * for". Returns nothing at all when analytics is not installed or has not rolled up yet — the
+     * section then does not render, and the builder says why.
+     *
+     * @return Collection<int, object>
+     */
+    public function trendingSearches(int $days = 30, int $limit = 10): Collection
+    {
+        $days = max(1, min(365, $days));
+        $limit = $this->bounded($limit, 24);
+
+        return $this->safely(function () use ($days, $limit) {
+            $connection = \Illuminate\Support\Facades\DB::connection(config('analytics.connection'));
+
+            if (!\Illuminate\Support\Facades\Schema::connection(config('analytics.connection'))->hasTable('analytics_daily')) {
+                return collect();
+            }
+
+            return collect($connection->table('analytics_daily')
+                ->where('dimension', 'search_term')
+                ->where('date', '>=', now()->subDays($days)->toDateString())
+                ->groupBy('dimension_key')
+                ->selectRaw('dimension_key AS term, SUM(events) AS searches')
+                ->orderByDesc('searches')
+                ->limit($limit)
+                ->get());
+        });
+    }
+
+    /**
+     * The products THIS visitor looked at, and nobody else's.
+     *
+     * Scoped to the visitor's own id from their own first-party cookie: this section shows a person
+     * their own history, so reading anyone else's would be both wrong and a privacy failure. A
+     * visitor with no cookie has no history, which is the correct answer rather than a fallback to
+     * somebody else's.
+     *
+     * @return Collection<int, Product>
+     */
+    public function recentlyViewed(int $limit = 8): Collection
+    {
+        $limit = $this->bounded($limit, 24);
+
+        return $this->safely(function () use ($limit) {
+            $visitorId = request()->cookie(\App\Services\Telemetry\TelemetryRecorder::VISITOR_COOKIE);
+
+            if (!is_string($visitorId) || $visitorId === '') {
+                return collect();
+            }
+
+            $connection = \Illuminate\Support\Facades\DB::connection(config('analytics.connection'));
+
+            if (!\Illuminate\Support\Facades\Schema::connection(config('analytics.connection'))->hasTable('analytics_events')) {
+                return collect();
+            }
+
+            $ids = $connection->table('analytics_events')
+                ->where('visitor_id', $visitorId)
+                ->where('name', \App\Services\Analytics\AnalyticsEvent::PRODUCT_VIEWED)
+                ->where('entity_type', 'product')
+                ->orderByDesc('id')
+                ->limit($limit * 3)
+                ->pluck('entity_id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter()
+                ->unique()
+                ->take($limit)
+                ->all();
+
+            return $ids === [] ? collect() : $this->pickedProducts($ids, $limit);
+        });
+    }
+
+    /**
      * Categories for the category grid: the ones the merchant hand-picked, in the order they
      * picked them, or the top-level categories by priority when they picked none.
      */

@@ -90,6 +90,41 @@ class SectionReadinessTest extends TestCase
         }
     }
 
+    public function test_the_new_sections_never_open_an_empty_band(): void
+    {
+        // Each of these draws on something the shop may not have yet — a brand pick, a measured
+        // search, this visitor's own history, a configured app listing. None of them may render a
+        // padded band with nothing in it, which is what an empty section looks like on the page.
+        $readiness = app(SectionReadiness::class);
+
+        $this->assertFalse($readiness->willRender('brand_showcase', [], [], ['brandShowcase' => null]));
+        $this->assertTrue($readiness->willRender('brand_showcase', [], [], ['brandShowcase' => ['brand' => 1]]));
+
+        $this->assertFalse($readiness->willRender('trending_searches', [], [], ['searchTerms' => []]));
+        $this->assertTrue($readiness->willRender('trending_searches', [], [], ['searchTerms' => [['term' => 'x']]]));
+
+        $this->assertFalse($readiness->willRender('recently_viewed', [], [], ['seenProducts' => []]));
+        $this->assertTrue($readiness->willRender('recently_viewed', [], [], ['seenProducts' => [1]]));
+
+        $this->assertFalse($readiness->willRender('app_download', [], [], ['appStores' => []]));
+        $this->assertTrue($readiness->willRender('app_download', [], [], ['appStores' => ['android' => 'https://play.google.com/x']]));
+
+        // Tabs and price bands are nothing but their blocks.
+        $this->assertFalse($readiness->willRender('product_tabs', [], [], []));
+        $this->assertFalse($readiness->willRender('price_tiles', [], [], []));
+    }
+
+    public function test_a_visitors_own_history_is_the_only_history_it_reads(): void
+    {
+        // recently_viewed shows a person their own products. Reading anyone else's would be both
+        // wrong and a privacy failure, so the query is scoped to the visitor's own cookie and a
+        // visitor without one has no history rather than somebody else's.
+        $resolver = file_get_contents(app_path('Services/Theme/SectionDataResolver.php'));
+
+        $this->assertStringContainsString('VISITOR_COOKIE', $resolver);
+        $this->assertStringContainsString("where('visitor_id', \$visitorId)", $resolver);
+    }
+
     public function test_the_storefront_rule_reads_what_the_view_already_resolved(): void
     {
         // willRender must not query: it is called inside the loop that renders a customer's page,
