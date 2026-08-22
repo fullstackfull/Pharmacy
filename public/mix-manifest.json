@@ -1,8 +1,9 @@
 {
-    "/assets/kohl/js/kohl.js": "/assets/kohl/js/kohl.js",
-    "/assets/kohl/css/console.css": "/assets/kohl/css/console.css",
-    "/assets/kohl/css/store.css": "/assets/kohl/css/store.css",
-    "/assets/kohl/css/monitoring.css": "/assets/kohl/css/monitoring.css",
-    "/assets/kohl/css/developer.css": "/assets/kohl/css/developer.css",
-    "/assets/kohl/js/monitoring.js": "/assets/kohl/js/monitoring.js"
+    "/assets/kohl/js/kohl.js": "/assets/kohl/js/kohl.js?id=ea9ec79454c3756285cc",
+    "/assets/kohl/css/console.css": "/assets/kohl/css/console.css?id=8cadfcff3db9dc65d7f8",
+    "/assets/kohl/css/store.css": "/assets/kohl/css/store.css?id=51679aa160c07c909c00",
+    "/assets/kohl/css/monitoring.css": "/assets/kohl/css/monitoring.css?id=2338ae6dfe92399721b3",
+    "/assets/kohl/css/developer.css": "/assets/kohl/css/developer.css?id=0364f43d3f38b7448c90",
+    "/assets/kohl/css/analytics.css": "/assets/kohl/css/analytics.css?id=36c30bbb3b6532a4be46",
+    "/assets/kohl/js/monitoring.js": "/assets/kohl/js/monitoring.js?id=c319dab81900637f495b"
 }

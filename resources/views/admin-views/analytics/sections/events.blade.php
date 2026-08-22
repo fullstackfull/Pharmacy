@@ -1,0 +1,1 @@
+@include('admin-views.analytics.sections._breakdown', ['breakdown' => $data['events'], 'title' => translate('every_recorded_event'), 'label' => translate('event'), 'dimension' => 'event', 'window' => $window, 'showEngagement' => false])
