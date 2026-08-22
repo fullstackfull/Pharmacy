@@ -47,6 +47,15 @@ class QueueCollector implements Collector
     /** Enough failures to see a pattern, few enough to render beside everything else. */
     private const RECENT_FAILURES = 10;
 
+    /**
+     * Upper bound on how many queue names are reported.
+     *
+     * Queue names are normally a handful of constants, but a job dispatched onto a per-tenant or
+     * per-order queue makes them unbounded — and every one of those would become a permanent gauge
+     * series. Beyond this the list is cut and says so.
+     */
+    private const MAX_QUEUES = 50;
+
     /** Upper bound on one Redis discovery pass, so a huge keyspace cannot stall the dashboard. */
     private const REDIS_SCAN_KEYS = 500;
 
@@ -287,6 +296,7 @@ class QueueCollector implements Collector
                 'stuck_note' => "reserved longer than this connection's retry_after of {$retryAfter}s",
                 'fresh_reservation' => $newestReservation !== null && $newestReservation >= $now - $retryAfter,
                 'paused' => $this->allPaused(),
+                'resume' => $this->resumeRemedy($connectionName),
                 'stalled_reason' => $this->lagVerdict($oldest),
                 'restart' => 'php artisan queue:restart, then confirm the supervisor is actually respawning workers (supervisorctl status).',
                 'start' => "Start a worker for this connection and keep it alive: php artisan queue:work {$connectionName} --queue=" . implode(',', array_keys($this->perQueue)),
@@ -329,38 +339,42 @@ class QueueCollector implements Collector
         $now = time();
         $failures = $this->failureCounts();
         $names = $this->queueNames($connectionName, $this->discoverRedisQueues($redis), $failures);
+
+        try {
+            $counts = $this->redisCounts($redis, $names, $now);
+        } catch (Throwable $exception) {
+            return array_fill_keys(self::METRICS, Metric::failed($source, $exception));
+        }
+
+        // Laravel's Redis queue writes no timestamp into the job payload, so how long the head of
+        // the list has been sitting there genuinely cannot be read back. Horizon adds pushedAt for
+        // exactly this reason, which makes it the only honest way to get this number.
+        $noEnqueueTime = 'A job on a Redis list carries no enqueue time, so the age of the oldest waiting job cannot be recovered from Redis alone.';
         $overdue = 0;
         $reservedTotal = 0;
 
-        foreach ($names as $name) {
-            $key = 'queues:' . $name;
-            $delayedOverdue = (int) $redis->zcount($key . ':delayed', '-inf', (string) $now);
-            $reserved = (int) $redis->zcard($key . ':reserved');
-            $overdue += $delayedOverdue;
-            $reservedTotal += $reserved;
+        foreach ($counts as $name => $count) {
+            $overdue += $count['delayed_overdue'];
+            $reservedTotal += $count['reserved'];
 
             $this->perQueue[$name] = [
-                'pending' => Metric::of((int) $redis->llen($key), $source, 'jobs'),
+                'pending' => Metric::of($count['pending'], $source, 'jobs'),
                 'delayed' => Metric::of(
-                    (int) $redis->zcard($key . ':delayed'),
+                    $count['delayed'],
                     $source,
                     'jobs',
-                    $delayedOverdue > 0 ? "{$delayedOverdue} of them came due and have not been moved onto the queue." : null,
+                    $count['delayed_overdue'] > 0
+                        ? "{$count['delayed_overdue']} of them came due and have not been moved onto the queue."
+                        : null,
                 ),
-                'reserved' => Metric::of($reserved, $source, 'jobs'),
+                'reserved' => Metric::of($count['reserved'], $source, 'jobs'),
                 'stuck_reserved' => Metric::of(
-                    (int) $redis->zcount($key . ':reserved', '-inf', (string) $now),
+                    $count['reserved_expired'],
                     $source,
                     'jobs',
                     'Reservations whose retry_after has already passed: the worker holding them is gone.',
                 ),
-                // Laravel's Redis queue writes no timestamp into the job payload, so how long the
-                // head of the list has been sitting there genuinely cannot be read back. Horizon
-                // adds pushedAt for exactly this reason, and is the only honest way to get it.
-                'oldest_wait_seconds' => $this->horizonOnly(
-                    $source,
-                    'A job on a Redis list carries no enqueue time, so the age of the oldest waiting job cannot be recovered from Redis alone.',
-                ),
+                'oldest_wait_seconds' => $this->horizonOnly($source, $noEnqueueTime),
                 'paused' => $this->paused($connectionName, $name),
                 ...$this->failuresFor($failures, $name),
             ];
@@ -372,10 +386,7 @@ class QueueCollector implements Collector
         return $totals + [
             'queues' => $this->queueTable($source),
             'queue_count' => Metric::of(count($this->perQueue), $source, 'queues'),
-            'oldest_wait_seconds' => $this->horizonOnly(
-                $source,
-                'A job on a Redis list carries no enqueue time, so the age of the oldest waiting job cannot be recovered from Redis alone.',
-            ),
+            'oldest_wait_seconds' => $this->horizonOnly($source, $noEnqueueTime),
             'recent_failures' => $this->recentFailures(),
             'worker_processes' => $processes,
             'workers_consuming' => $this->consumption([
@@ -387,6 +398,7 @@ class QueueCollector implements Collector
                 'stuck_note' => 'past the point Redis says their reservation expired',
                 'fresh_reservation' => $reservedTotal > 0 && $totals['stuck_reserved']->valueOr(0) < $reservedTotal,
                 'paused' => $this->allPaused(),
+                'resume' => $this->resumeRemedy($connectionName),
                 // Migrating a due job from the delayed set onto the list is something only a
                 // running worker does, so an overdue backlog is proof nothing is polling.
                 'stalled_reason' => $overdue > 0
@@ -399,6 +411,53 @@ class QueueCollector implements Collector
             'throughput_per_minute' => $this->horizonOnly($source, 'Redis keeps no counter of jobs completed per minute.'),
             'average_runtime_ms' => $this->horizonOnly($source, 'Redis keeps no per-job runtime.'),
         ];
+    }
+
+    /**
+     * Every queue's depths in one round trip.
+     *
+     * Five commands per queue, sent as one pipeline: a dashboard that opened a hundred separate
+     * round trips to a Redis on another host would spend more time measuring the queue than the
+     * queue spends running. A reply that is not a number is refused rather than cast — (int) false
+     * is 0, and a zero here would read as an empty, healthy queue.
+     *
+     * @param  list<string>  $names
+     * @return array<string, array{pending: int, delayed: int, delayed_overdue: int, reserved: int, reserved_expired: int}>
+     */
+    private function redisCounts(RedisConnection $redis, array $names, int $now): array
+    {
+        if ($names === []) {
+            return [];
+        }
+
+        $fields = ['pending', 'delayed', 'delayed_overdue', 'reserved', 'reserved_expired'];
+        $replies = (array) $redis->pipeline(function ($pipe) use ($names, $now) {
+            foreach ($names as $name) {
+                $key = 'queues:' . $name;
+                $pipe->llen($key);
+                $pipe->zcard($key . ':delayed');
+                $pipe->zcount($key . ':delayed', '-inf', (string) $now);
+                $pipe->zcard($key . ':reserved');
+                $pipe->zcount($key . ':reserved', '-inf', (string) $now);
+            }
+        });
+
+        if (count($replies) !== count($names) * count($fields)) {
+            throw new \RuntimeException('Redis returned ' . count($replies) . ' replies to ' . count($names) * count($fields) . ' pipelined queue commands.');
+        }
+
+        $counts = [];
+        foreach (array_values($names) as $index => $name) {
+            $values = array_slice($replies, $index * count($fields), count($fields));
+            foreach ($values as $value) {
+                if (!is_numeric($value)) {
+                    throw new \RuntimeException("Redis did not answer the depth of queue \"{$name}\".");
+                }
+            }
+            $counts[$name] = array_map('intval', array_combine($fields, $values));
+        }
+
+        return $counts;
     }
 
     /**
@@ -488,7 +547,11 @@ class QueueCollector implements Collector
             }
         }
 
-        return array_values(array_unique(array_filter($names, static fn (string $name) => $name !== '')));
+        $unique = array_values(array_unique(array_filter($names, static fn (string $name) => $name !== '')));
+
+        // The configured queue comes first and the ones only seen in failed_jobs come last, so a
+        // truncated list keeps the queues that are actually in use.
+        return array_slice($unique, 0, self::MAX_QUEUES);
     }
 
     /**
@@ -595,6 +658,20 @@ class QueueCollector implements Collector
 
             return (bool) $manager->isPaused($connectionName, $queue);
         });
+    }
+
+    /**
+     * The exact command that un-pauses this connection, queue names included.
+     */
+    private function resumeRemedy(string $connectionName): string
+    {
+        $queues = array_keys($this->perQueue);
+        $first = $queues[0] ?? 'default';
+        $others = array_slice($queues, 1);
+
+        return "php artisan queue:resume {$connectionName}:{$first}"
+            . ($others === [] ? '' : ', and once more for each of ' . implode(', ', $others))
+            . '. The pause flag is stored in the cache and survives restarts and deployments, so find out what set it before resuming.';
     }
 
     private function allPaused(): bool
@@ -849,7 +926,7 @@ class QueueCollector implements Collector
         if ($facts['paused'] === true) {
             return Metric::notConfigured(
                 'Laravel queue pause flag (cache)',
-                'php artisan queue:resume — or check what paused it, since a pause set with queue:pause survives restarts and deployments.',
+                (string) $facts['resume'],
                 'Job processing is paused. Workers may well be running; they are deliberately not taking jobs, so this backlog is expected rather than a failure.',
             );
         }

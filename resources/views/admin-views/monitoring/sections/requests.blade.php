@@ -77,10 +77,17 @@
 </div>
 
 @if (!$measured)
-    <p class="mon-note {{ ($summary['state'] ?? '') === 'failed' ? 'mon-note--critical' : '' }}">
+    {{-- Why the eight cards above say "no data" rather than zero. Zero requests and no measurement
+         are different facts, and only one of them has something an operator can do about it. --}}
+    <div class="mon-note {{ ($summary['state'] ?? '') === 'failed' ? 'mon-note--critical' : '' }}">
         {{ $summary['note'] ?? '' }}
-        @if (!empty($summary['remedy'])) <code>{{ $summary['remedy'] }}</code> @endif
-    </p>
+        @if (!empty($summary['remedy']))
+            <details class="mon-metric__remedy">
+                <summary>{{ translate('how_to_enable_this') }}</summary>
+                <code>{{ $summary['remedy'] }}</code>
+            </details>
+        @endif
+    </div>
 @endif
 
 <x-k.card :title="translate('requests_over_time')">
@@ -92,7 +99,11 @@
         <div class="mon-chart"
              data-mon-chart='@json(['points' => $panel['timeline']['points'], 'resolution' => $panel['timeline']['resolution'] ?? null])'></div>
         <p class="mon-note">
-            {{ translate('the_red_line_is_5xx_responses') }} —
+            {{-- The second line is only drawn when something actually failed, so naming it
+                 unconditionally would describe a line that is not on the chart. --}}
+            @if (collect($panel['timeline']['points'])->sum('errors') > 0)
+                {{ translate('the_red_line_is_5xx_responses') }} —
+            @endif
             {{ translate('window') }}: {{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} ({{ $panel['window']['timezone'] }}),
             {{ translate('resolution') }}: {{ translate($panel['window']['resolution']) }}
         </p>

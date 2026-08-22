@@ -119,10 +119,16 @@
 <x-k.card :padded="false">
     {{-- Filter state lives in the URL: a filtered error view is something people paste to each
          other during an incident. --}}
-    <form method="get" class="mon-filter" role="search">
+    {{-- Filter state lives in the URL: a filtered error view is something people paste to each
+         other during an incident.
+
+         Every control is wrapped in the toolbar's grow class rather than left bare, because
+         `.k-select` is 100% wide by design — five of those in one flex row would each claim the
+         full width and wrap onto five separate lines. --}}
+    <form method="get" class="k-view__toolbar" role="search">
         <input type="hidden" name="range" value="{{ $range }}">
 
-        <div class="mon-filter__search">
+        <div class="k-view__toolbar-grow">
             <div class="k-search">
                 <x-k.icon name="search" :size="15" />
                 <input type="search" name="q" class="k-input" value="{{ $filters['q'] }}"
@@ -131,40 +137,50 @@
             </div>
         </div>
 
-        <select name="status" class="k-select" aria-label="{{ translate('status') }}">
-            @foreach (['open', 'resolved', 'ignored', 'all'] as $status)
-                <option value="{{ $status }}" @selected($filters['status'] === $status)>
-                    {{ translate($status) }}
-                    @if (isset($options['statuses'][$status]))
-                        ({{ number_format($options['statuses'][$status]) }})
-                    @endif
-                </option>
-            @endforeach
-        </select>
+        <div class="k-view__toolbar-grow">
+            <select name="status" class="k-select" aria-label="{{ translate('status') }}">
+                @foreach (['open', 'resolved', 'ignored', 'all'] as $status)
+                    <option value="{{ $status }}" @selected($filters['status'] === $status)>
+                        {{ translate($status) }}
+                        @if (isset($options['statuses'][$status]))
+                            ({{ number_format($options['statuses'][$status]) }})
+                        @endif
+                    </option>
+                @endforeach
+            </select>
+        </div>
 
-        <select name="severity" class="k-select" aria-label="{{ translate('severity') }}">
-            <option value="">{{ translate('any_severity') }}</option>
-            @foreach ($withCurrent($options['severities'], $filters['severity']) as $severity)
-                <option value="{{ $severity }}" @selected($filters['severity'] === $severity)>{{ translate($severity) }}</option>
-            @endforeach
-        </select>
+        <div class="k-view__toolbar-grow">
+            <select name="severity" class="k-select" aria-label="{{ translate('severity') }}">
+                <option value="">{{ translate('any_severity') }}</option>
+                @foreach ($withCurrent($options['severities'], $filters['severity']) as $severity)
+                    <option value="{{ $severity }}" @selected($filters['severity'] === $severity)>{{ translate($severity) }}</option>
+                @endforeach
+            </select>
+        </div>
 
-        <select name="channel" class="k-select" aria-label="{{ translate('channel') }}">
-            <option value="">{{ translate('any_channel') }}</option>
-            @foreach ($withCurrent($options['channels'], $filters['channel']) as $channel)
-                <option value="{{ $channel }}" @selected($filters['channel'] === $channel)>{{ translate($channel) }}</option>
-            @endforeach
-        </select>
+        <div class="k-view__toolbar-grow">
+            <select name="channel" class="k-select" aria-label="{{ translate('channel') }}">
+                <option value="">{{ translate('any_channel') }}</option>
+                @foreach ($withCurrent($options['channels'], $filters['channel']) as $channel)
+                    <option value="{{ $channel }}" @selected($filters['channel'] === $channel)>{{ translate($channel) }}</option>
+                @endforeach
+            </select>
+        </div>
 
-        <select name="release" class="k-select" aria-label="{{ translate('release') }}">
-            <option value="">{{ translate('any_release') }}</option>
-            @foreach ($withCurrent($options['releases'], $filters['release']) as $release)
-                <option value="{{ $release }}" @selected($filters['release'] === $release)>{{ $release }}</option>
-            @endforeach
-        </select>
+        <div class="k-view__toolbar-grow">
+            <select name="release" class="k-select" aria-label="{{ translate('release') }}">
+                <option value="">{{ translate('any_release') }}</option>
+                @foreach ($withCurrent($options['releases'], $filters['release']) as $release)
+                    <option value="{{ $release }}" @selected($filters['release'] === $release)>{{ $release }}</option>
+                @endforeach
+            </select>
+        </div>
 
-        <x-k.button type="submit" variant="primary" size="sm" icon="filter">{{ translate('apply') }}</x-k.button>
-        <x-k.button :href="$clearUrl" variant="ghost" size="sm">{{ translate('clear') }}</x-k.button>
+        <div class="k-row">
+            <x-k.button type="submit" variant="primary" size="sm" icon="filter">{{ translate('apply') }}</x-k.button>
+            <x-k.button :href="$clearUrl" variant="ghost" size="sm">{{ translate('clear') }}</x-k.button>
+        </div>
     </form>
 
     @if ($groupList['state'] === 'unavailable')

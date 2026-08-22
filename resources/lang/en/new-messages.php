@@ -3999,4 +3999,10 @@ return [
 	'total_time' => 'Total time',
 	'route' => 'Route',
 	'minute' => 'Minute',
+	'resolution' => 'Resolution',
+	'occurrences_are_kept_for' => 'Occurrences are kept for',
+	'window' => 'Window',
+	'request_collection_has_fallen_behind' => 'Request collection has fallen behind',
+	'window_starts' => 'Window starts',
+	'read_from' => 'Read from',
 ];
