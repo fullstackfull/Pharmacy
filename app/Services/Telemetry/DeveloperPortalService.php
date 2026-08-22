@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Route;
  */
 class DeveloperPortalService
 {
+    /** The quality table lists this many endpoints; the count above it says how many there are. */
+    private const QUALITY_TABLE_LIMIT = 200;
+
     public function __construct(
         private readonly ApiManifest $manifest,
         private readonly ApiSnapshotService $snapshots,
@@ -212,6 +215,40 @@ class DeveloperPortalService
     }
 
     /**
+     * How many endpoints have been seen answering successfully at least once.
+     *
+     * The response-shape gap is the only one that closes without anybody writing anything: the
+     * portal learns the shape from a real 2xx. So the screen shows the progress rather than a
+     * static count that looks permanent.
+     *
+     * @return array<string, int>
+     */
+    private function observedEndpointCount(): array
+    {
+        try {
+            $shapes = app(\App\Services\DeveloperPortal\ResponseShapeRecorder::class)->all();
+        } catch (\Throwable) {
+            return ['endpoints' => 0, 'with_success' => 0];
+        }
+
+        $withSuccess = 0;
+
+        foreach ($shapes as $byMethod) {
+            foreach ($byMethod as $byStatus) {
+                foreach (array_keys($byStatus) as $status) {
+                    if ((int) $status >= 200 && (int) $status < 300) {
+                        $withSuccess++;
+
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return ['endpoints' => count($shapes), 'with_success' => $withSuccess];
+    }
+
+    /**
      * The conventions screens, all read from the code rather than described.
      *
      * @return array<string, mixed>
@@ -262,12 +299,24 @@ class DeveloperPortalService
 
         arsort($byReason);
 
+        $summary = $this->manifest->get()['summary'];
+        $observed = $this->observedEndpointCount();
+
         return [
             'score' => $this->qualityScore(),
-            'summary' => $this->manifest->get()['summary'],
+            'summary' => $summary,
             'by_reason' => $byReason,
-            'endpoints' => array_slice($warnings, 0, 200),
+            'endpoints' => array_slice($warnings, 0, self::QUALITY_TABLE_LIMIT),
             'total_flagged' => count($warnings),
+            // The screen used to headline the number of ENDPOINTS with a gap, which reads as that
+            // many distinct problems. It is three gaps, each shared by hundreds of endpoints — and
+            // knowing that is the difference between a hopeless list and three afternoons of work.
+            'api_endpoints' => (int) ($summary['api'] ?? 0),
+            'distinct_gaps' => count($byReason),
+            'table_limit' => self::QUALITY_TABLE_LIMIT,
+            // Response shapes are learned from live traffic, so this gap closes itself. How far
+            // along that is, is a fact the screen should show rather than leave to be discovered.
+            'observed' => $observed,
         ];
     }
 
