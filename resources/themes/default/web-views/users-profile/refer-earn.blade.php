@@ -103,6 +103,12 @@
         </div>
     </div>
 
-    @include("layouts.front-end.partials.modal._social-share-modal", ['link'=> route('home').'?referral_code='. $customer_detail['referral_code']])
+    {{-- Tagged, so a referral that works can be seen working. Untagged, every visit a customer's
+         own link brought in was recorded as (direct) and the referral programme looked like it
+         produced nothing at all. --}}
+    @include("layouts.front-end.partials.modal._social-share-modal", [
+        'link' => app(\App\Services\Analytics\Support\ShareLink::class)
+            ->forReferral(route('home') . '?referral_code=' . $customer_detail['referral_code']),
+    ])
 
 @endsection

@@ -2258,10 +2258,55 @@ $(".alert-insufficient-loyalty-point").on("click", function () {
     toastr.error(message);
 });
 
+/*
+ * Which network a share button is for, taken from the endpoint it posts to.
+ *
+ * Every share button in the shop went through this one handler and sent the bare canonical URL, so
+ * a share that arrived without a Referer — which is most of them, from a messaging app — came back
+ * as (direct) and the share buttons looked like they produced nothing.
+ */
+function shareNetworkOf(endpoint) {
+    let host = String(endpoint || "").split("/")[0].toLowerCase();
+
+    if (host.indexOf("facebook") !== -1) return "facebook";
+    if (host.indexOf("twitter") !== -1 || host === "x.com") return "twitter";
+    if (host.indexOf("linkedin") !== -1) return "linkedin";
+    if (host.indexOf("whatsapp") !== -1) return "whatsapp";
+    if (host.indexOf("telegram") !== -1 || host === "t.me") return "telegram";
+    if (host.indexOf("pinterest") !== -1) return "pinterest";
+    if (host.indexOf("reddit") !== -1) return "reddit";
+
+    return host.split(".")[0] || "social";
+}
+
+/* Tag a link this shop is handing out, without touching one that is already tagged or foreign. */
+function taggedShareUrl(rawUrl, network) {
+    let parsed;
+
+    try {
+        parsed = new URL(rawUrl, window.location.origin);
+    } catch (error) {
+        return rawUrl;
+    }
+
+    if (parsed.origin !== window.location.origin) {
+        return rawUrl;
+    }
+
+    // A referral link already says where it came from, and that is the more specific truth.
+    if (!parsed.searchParams.has("utm_source")) {
+        parsed.searchParams.set("utm_source", network);
+        parsed.searchParams.set("utm_medium", "social");
+        parsed.searchParams.set("utm_campaign", "share_button");
+    }
+
+    return parsed.toString();
+}
+
 $(document).on("click", ".share-on-social-media", function (e) {
     e.preventDefault();
     let social = $(this).data("social-media-name");
-    let url = $(this).data("action");
+    let url = taggedShareUrl($(this).data("action"), shareNetworkOf(social));
     let width = 600,
         height = 400,
         left = (screen.width - width) / 2,

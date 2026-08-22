@@ -5311,4 +5311,5 @@ return [
 	'tcp_in_segments_per_s' => 'Tcp in segments per s',
 	'a_retransmission_rate_means_nothing_without_the_traffic_it_happened_in' => 'A retransmission rate means nothing without the traffic it happened in',
 	'not_stored' => 'Not stored',
+	'the_line_above_is_drawn_in' => 'The line above is drawn in',
 ];
