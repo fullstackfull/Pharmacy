@@ -55,7 +55,7 @@ trait ActivationClass
     public function getRequestConfig(string|null $username = null, string|null $purchaseKey = null, string|null $softwareId = null, string|null $softwareType = null, string|null $name = null, string|null $identifier = null): array
     {
         $isLocal = false;
-        if ($this->is_local() || env('DEVELOPMENT_ENVIRONMENT', false) || env('APP_MODE') == 'demo') {
+        if ($this->is_local() || env('DEVELOPMENT_ENVIRONMENT', false) || config('app.mode') == 'demo') {
             $isLocal = true;
         }
 
@@ -96,7 +96,7 @@ trait ActivationClass
 
     public function checkActivationCache(string|null $app)
     {
-        if ($this->is_local() || is_null($app) || env('DEVELOPMENT_ENVIRONMENT', false) || env('APP_MODE') == 'demo') {
+        if ($this->is_local() || is_null($app) || env('DEVELOPMENT_ENVIRONMENT', false) || config('app.mode') == 'demo') {
             return true;
         }
 

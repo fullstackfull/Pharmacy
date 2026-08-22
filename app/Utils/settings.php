@@ -359,9 +359,9 @@ if (!function_exists('getDemoModeFormButton')) {
     {
         $result = '';
         if ($type == 'class') {
-            $result = env('APP_MODE') != 'demo' ? '' : 'call-demo-alert';
+            $result = config('app.mode') != 'demo' ? '' : 'call-demo-alert';
         } elseif ($type == 'button') {
-            $result = env('APP_MODE') != 'demo' ? 'submit' : 'button';
+            $result = config('app.mode') != 'demo' ? 'submit' : 'button';
         }
         return $result;
     }
@@ -370,7 +370,7 @@ if (!function_exists('getDemoModeFormButton')) {
 if (!function_exists('showDemoModeInputValue')) {
     function showDemoModeInputValue($value = null): string|null
     {
-        return env('APP_MODE') != 'demo' ? $value : '';
+        return config('app.mode') != 'demo' ? $value : '';
     }
 }
 

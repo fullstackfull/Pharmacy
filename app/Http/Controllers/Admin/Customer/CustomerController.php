@@ -450,7 +450,7 @@ class CustomerController extends BaseController
 
     public function updateCustomer(CustomerUpdateSettingsRequest $request): View|RedirectResponse
     {
-        if (env('APP_MODE') === 'demo') {
+        if (config('app.mode') === 'demo') {
             ToastMagic::info(translate('update_option_is_disable_for_demo'));
             return back();
         }

@@ -100,7 +100,7 @@
 
     {!! getSystemDynamicPartials(type: 'analytics_script') !!}
 
-    @if(env('APP_MODE')=='demo')
+    @if(config('app.mode')=='demo')
         <!-- Google Tag Manager -->
         <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
                     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -111,7 +111,7 @@
     @endif
 </head>
 
-<body class="k k-store toolbar-enabled {{ env('APP_MODE')=='demo'?'demo':'' }}" id="demo">
+<body class="k k-store toolbar-enabled {{ config('app.mode')=='demo'?'demo':'' }}" id="demo">
 
 @include('layouts.front-end.partials._modals')
 
@@ -415,7 +415,7 @@
         }
     });
 </script>
-@if(env('APP_MODE') == 'demo')
+@if(config('app.mode') == 'demo')
     <script>
         'use strict'
         function checkDemoResetTime() {

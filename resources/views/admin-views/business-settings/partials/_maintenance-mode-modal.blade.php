@@ -283,8 +283,8 @@
                         {{ translate('Cancel') }}
                     </button>
                     <button
-                        type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                        class="btn btn-primary w-120 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                        type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                        class="btn btn-primary w-120 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                     >
                         {{ translate('Save') }}
                     </button>

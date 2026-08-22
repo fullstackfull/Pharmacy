@@ -11,7 +11,7 @@
         </div>
         @include('admin-views.third-party._third-party-others-menu')
 
-        <form action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.map-api') : 'javascript:' }}"
+        <form action="{{ config('app.mode') != 'demo' ? route('admin.third-party.map-api') : 'javascript:' }}"
             method="POST" enctype="multipart/form-data" id="google-map-api-status-form" class="form-advance-validation form-advance-inputs-validation form-advance-file-validation non-ajax-form-validate" novalidate>
             @csrf
 

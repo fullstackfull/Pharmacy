@@ -26,7 +26,7 @@
                     <div class="card-body">
                         @php($googleAnalytics = $analyticsData['google_analytics'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}" method="post" enctype="multipart/form-data" id="google-analytics-status-form">
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}" method="post" enctype="multipart/form-data" id="google-analytics-status-form">
                             @csrf
                             <div class="view-details-container">
                                 <div class="d-flex justify-content-between align-items-center gap-3">
@@ -73,8 +73,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_GA_Measurement_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $googleAnalytics?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -89,7 +89,7 @@
                     <div class="card-body">
                         @php($googleTagManager = $analyticsData['google_tag_manager'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="google-tag-manager-status-form"
                         >
@@ -136,8 +136,8 @@
                                             <textarea type="text" placeholder="{{ translate('enter_the_GTM_Container_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $googleTagManager?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                                class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                                class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                 </div>
@@ -152,7 +152,7 @@
                     <div class="card-body">
                         @php($linkedinInsight = $analyticsData['linkedin_insight'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="linkedin-insight-status-form"
                         >
@@ -198,8 +198,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_Linkedin_insight_tag_id') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $linkedinInsight?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -214,7 +214,7 @@
                     <div class="card-body">
                         @php($metaPixel = $analyticsData['meta_pixel'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="meta-pixel-status-form"
                         >
@@ -261,8 +261,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_Meta_Pixel_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $metaPixel?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -277,7 +277,7 @@
                     <div class="card-body">
                         @php($pinterestTag = $analyticsData['pinterest_tag'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="pinterest-tag-status-form"
                         >
@@ -324,8 +324,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_Pinterest_Tag_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $pinterestTag?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -340,7 +340,7 @@
                     <div class="card-body">
                         @php($snapchatTag = $analyticsData['snapchat_tag'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="snapchat-tag-status-form"
                         >
@@ -387,8 +387,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_Snap_Pixel_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $snapchatTag?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -405,7 +405,7 @@
                     <div class="card-body">
                         @php($tiktokTag = $analyticsData['tiktok_tag'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="tiktok-tag-status-form"
                         >
@@ -451,8 +451,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_TikTok_Pixel_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $tiktokTag?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>
@@ -467,7 +467,7 @@
                     <div class="card-body">
                         @php($twitterTag = $analyticsData['twitter_tag'] ?? null)
                         <form
-                            action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
+                            action="{{ config('app.mode') != 'demo' ? route('admin.third-party.analytics-update') : 'javascript:' }}"
                             method="post" enctype="multipart/form-data"
                             id="twitter-tag-status-form"
                         >
@@ -514,8 +514,8 @@
                                             <textarea type="text" placeholder="{{ translate('Enter_the_Pixel_ID') }}"
                                                       class="form-control min-h-40" rows="1" name="script_id">{!! $twitterTag?->script_id ?? '' !!}</textarea>
                                         </div>
-                                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                        class="btn btn-primary px-4 h-40 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}"
+                                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                        class="btn btn-primary px-4 h-40 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}"
                                         >{{ translate('save') }}</button>
                                     </div>
                                  </div>

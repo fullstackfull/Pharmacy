@@ -121,7 +121,7 @@
                         </button>
                     </form>
 
-                    @if (env('APP_MODE') == 'demo')
+                    @if (config('app.mode') == 'demo')
                         <div class="card-footer py-3">
                             <div class="row align-items-center">
                                 <div class="col-10">

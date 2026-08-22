@@ -50,7 +50,7 @@
                                     </div>
                                 </div>
                             </div>
-                            @if(env('APP_MODE') != 'demo')
+                            @if(config('app.mode') != 'demo')
                                 <button class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#warning-modal">
                                     <i class="fi fi-sr-language-exchange"></i>
                                     {{ translate('Translate_All') }}
@@ -124,7 +124,7 @@
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-3">
-                        @if(env('APP_MODE') != 'demo')
+                        @if(config('app.mode') != 'demo')
                             <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="translating-modal-start">
                                 {{ translate('Continue') }}
                             </button>

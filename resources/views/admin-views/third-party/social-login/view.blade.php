@@ -94,8 +94,8 @@
                                                 <div class="d-flex justify-content-end flex-wrap gap-3">
                                                     <button type="reset"
                                                             class="btn btn-secondary w-120 px-4">{{ translate('reset') }}</button>
-                                                    <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                                                            class="btn btn-primary w-120 px-4 {{env('APP_MODE')!= 'demo'? '' : 'call-demo-alert'}}"
+                                                    <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                                                            class="btn btn-primary w-120 px-4 {{config('app.mode')!= 'demo'? '' : 'call-demo-alert'}}"
                                                     >{{ translate('save') }}</button>
                                                 </div>
                                             @else
@@ -184,7 +184,7 @@
                                                         </label>
                                                         <input type="text" class="form-control" name="client_id"
                                                                placeholder="{{ translate('ex') }}:{{ translate('client_ID') }}"
-                                                               value="{{env('APP_MODE')!='demo'? $socialLoginService['client_id']??"":''}}">
+                                                               value="{{config('app.mode')!='demo'? $socialLoginService['client_id']??"":''}}">
                                                     </div>
                                                     <div class="form-group">
                                                         <label class="form-label"
@@ -199,14 +199,14 @@
                                                         <input type="text" class="form-control form-ellipsis"
                                                                name="client_secret"
                                                                placeholder="{{ translate('ex') }}:{{ translate('client_secret_key') }}"
-                                                               value="{{env('APP_MODE')!='demo'?$socialLoginService['client_secret']??"":''}}">
+                                                               value="{{config('app.mode')!='demo'?$socialLoginService['client_secret']??"":''}}">
                                                     </div>
                                                 </div>
                                                 <div class="d-flex justify-content-end flex-wrap gap-3 mt-4">
                                                     <button type="reset"
                                                             class="btn btn-secondary w-120 px-4">{{ translate('reset') }}</button>
-                                                    <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                                                            class="btn btn-primary w-120 px-4 {{env('APP_MODE')!= 'demo'? '' : 'call-demo-alert'}}"
+                                                    <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                                                            class="btn btn-primary w-120 px-4 {{config('app.mode')!= 'demo'? '' : 'call-demo-alert'}}"
                                                     >{{ translate('save') }}</button>
                                                 </div>
                                             </div>
@@ -319,8 +319,8 @@
                                                 <div class="d-flex justify-content-end flex-wrap gap-3 mt-4">
                                                     <button type="reset"
                                                             class="btn btn-secondary w-120 px-4">{{ translate('reset') }}</button>
-                                                    <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                                                            class="btn btn-primary w-120 px-4 {{env('APP_MODE')!= 'demo'? '' : 'call-demo-alert'}}"
+                                                    <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                                                            class="btn btn-primary w-120 px-4 {{config('app.mode')!= 'demo'? '' : 'call-demo-alert'}}"
                                                     >{{ translate('save') }}</button>
                                                 </div>
                                             </div>

@@ -34,16 +34,16 @@
                         {{ translate('Download_Generate_Sitemap') }}
                     </h4>
                     <div class="d-flex flex-wrap gap-2 justify-content-center">
-                        <button id="{{env('APP_MODE')!='demo'? 'generateAndDownloadSitemap' : '' }}"
+                        <button id="{{config('app.mode')!='demo'? 'generateAndDownloadSitemap' : '' }}"
                                 data-route="{{ route('admin.seo-settings.sitemap-generate-download') }}"
-                                class="btn btn-primary px-5 d-flex gap-2 align-items-center {{env('APP_MODE')!='demo'? '' : 'call-demo-alert' }}">
+                                class="btn btn-primary px-5 d-flex gap-2 align-items-center {{config('app.mode')!='demo'? '' : 'call-demo-alert' }}">
                             <span class="spinner-border extra-small-spinner-border d--none" role="status"
-                                  id="{{env('APP_MODE')!='demo'? 'generateAndDownloadSitemapSpinner' : '' }}">
+                                  id="{{config('app.mode')!='demo'? 'generateAndDownloadSitemapSpinner' : '' }}">
                                 <span class="sr-only"></span>
                             </span>
                             <span>{{ translate('Generate_&_Download') }}</span>
                         </button>
-                        <a href="{{ env('APP_MODE') != 'demo' ? route('admin.seo-settings.sitemap-generate-upload') : 'javascript:' }}"
+                        <a href="{{ config('app.mode') != 'demo' ? route('admin.seo-settings.sitemap-generate-upload') : 'javascript:' }}"
                            class="btn btn-outline-primary px-5 {{ getDemoModeFormButton(type: 'class') }}">
                             {{ translate('Generate_&_Upload_to_Server') }}
                         </a>
@@ -95,12 +95,12 @@
                                 <td>
                                     <div class="d-flex justify-content-center gap-2">
                                         <a class="btn btn-outline-success btn-outline-success-dark icon-btn {{ getDemoModeFormButton(type: 'class') }}"
-                                           href="{{env('APP_MODE')!='demo'? route('admin.seo-settings.sitemap-download', ['path' => base64_encode($siteMap['name'])]) : 'javascript:'}}">
+                                           href="{{config('app.mode')!='demo'? route('admin.seo-settings.sitemap-download', ['path' => base64_encode($siteMap['name'])]) : 'javascript:'}}">
                                             <i class="fi fi-sr-down-to-line"></i>
                                         </a>
 
                                         <a class="btn btn-outline-danger icon-btn {{ getDemoModeFormButton(type: 'class') }}"
-                                           href="{{ env('APP_MODE') != 'demo'? route('admin.seo-settings.sitemap-delete', ['path' => base64_encode($siteMap['name'])]) : 'javascript:'}}">
+                                           href="{{ config('app.mode') != 'demo'? route('admin.seo-settings.sitemap-delete', ['path' => base64_encode($siteMap['name'])]) : 'javascript:'}}">
                                             <i class="fi fi-rr-trash"></i>
                                         </a>
                                     </div>

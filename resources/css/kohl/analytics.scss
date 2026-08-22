@@ -276,7 +276,9 @@
     /* Colour carries the value here, so the shape of retention is readable without reading every
        cell. The alpha is driven straight from the percentage. */
     &[style*='--pct'] {
-        background: rgba(47, 111, 208, calc(var(--pct) / 130));
+        /* The accent, so the grid follows the merchant's colour and the dark theme, rather
+           than a blue hardcoded once and left behind by both. */
+        background: color-mix(in srgb, var(--k-accent) calc(var(--pct) * 1%), transparent);
     }
 }
 

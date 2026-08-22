@@ -129,7 +129,7 @@ class CustomerAuthController extends Controller
         } else {
             $response = $this->customerAuthService->sendCustomerPhoneVerificationToken($phoneNumber, $token);
             $response = $response['response'] ?? 'error';
-            if (env('APP_MODE') == 'dev') {
+            if (config('app.mode') == 'dev') {
                 $response = 'success';
             }
         }
@@ -594,7 +594,7 @@ class CustomerAuthController extends Controller
             $timeDifferance = 0;
         }
 
-        $newTokenGenerate = (env('APP_MODE') == 'live') ? rand(100000, 999999) : 123456;
+        $newTokenGenerate = (config('app.mode') == 'live') ? rand(100000, 999999) : 123456;
         if ($timeDifferance == 0) {
             if ($token) {
                 $token->token = $newTokenGenerate;

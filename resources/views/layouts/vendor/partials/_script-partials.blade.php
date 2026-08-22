@@ -234,7 +234,7 @@
     if (/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) document.write(
         '<script src="{{ dynamicAsset(path: 'public/assets/back-end') }}/vendor/babel-polyfill/polyfill.min.js"><\/script>');
 </script>
-@if(env('APP_MODE') == 'demo')
+@if(config('app.mode') == 'demo')
     <script>
         'use strict'
 

@@ -70,7 +70,7 @@
                             <label class="form-label">{{ translate('Web_Api_Key') }}</label>
                             <input type="text" class="form-control" name="web_api_key"
                                    placeholder="{{ translate('Enter_api_key') }}" autocomplete="off"
-                                   {{ env('APP_MODE') != 'demo' ? '' : 'disabled' }}
+                                   {{ config('app.mode') != 'demo' ? '' : 'disabled' }}
                                    value="{{ showDemoModeInputValue(value: $firebaseOTPVerification && $firebaseOTPVerification['web_api_key'] ? $firebaseOTPVerification['web_api_key'] : '') }}">
                         </div>
                     </div>

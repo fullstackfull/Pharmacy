@@ -49,7 +49,7 @@ class DatabaseRefresh extends Command
     {
         // db:wipe on a live store is unrecoverable. This command exists for the demo platform's
         // periodic reset only; anywhere else it must refuse loudly instead of destroying data.
-        if (env('APP_MODE') !== 'demo') {
+        if (config('app.mode') !== 'demo') {
             $this->error('database:refresh wipes the ENTIRE database and reimports demo data. It only runs when APP_MODE=demo.');
             return;
         }
@@ -67,7 +67,7 @@ class DatabaseRefresh extends Command
 
         Cache::forget('demo_database_refresh');
 
-        if (in_array(request()->ip(), ['127.0.0.1', '::1']) && env('APP_MODE') != 'demo') {
+        if (in_array(request()->ip(), ['127.0.0.1', '::1']) && config('app.mode') != 'demo') {
             Artisan::call('local:database-refresh');
         }
     }

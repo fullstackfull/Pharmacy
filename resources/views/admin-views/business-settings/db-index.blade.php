@@ -73,7 +73,7 @@
                             <div class="d-flex justify-content-end gap-3 flex-wrap mt-4">
                                 <button type="reset" class="btn btn-secondary px-4">{{ translate('reset') }}</button>
 
-                                @if(env('APP_MODE') != 'demo')
+                                @if(config('app.mode') != 'demo')
                                     <button type="button" class="btn btn-primary px-4" data-bs-toggle="modal"
                                             data-bs-target="#cleanDatabaseModal">
                                         {{ translate('clear') }}

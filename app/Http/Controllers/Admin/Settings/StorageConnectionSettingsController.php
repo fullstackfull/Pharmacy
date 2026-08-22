@@ -42,7 +42,7 @@ class StorageConnectionSettingsController extends BaseController
 
     public function updateStorageType(Request $request): JsonResponse|RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             if ($request->ajax()) {
                 return response()->json([
                     'message' => translate('you_can_not_update_this_on_demo_mode.')
@@ -102,7 +102,7 @@ class StorageConnectionSettingsController extends BaseController
 
     public function updateS3Credential(S3CredentialAddOrUpdateRequest $request): JsonResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             return response()->json([
                 'status' => 0,
                 'error' => translate('you_can_not_update_this_on_demo_mode') . '.'

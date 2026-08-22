@@ -64,7 +64,7 @@ class ForgotPasswordController extends Controller
         } elseif ($verification_by == 'phone') {
             $seller = Seller::where('phone', 'like', "%{$request['identity']}%")->first();
             if (isset($seller)) {
-                $token = env('APP_MODE') == 'dev' ? 1234 : rand(1000, 9999);
+                $token = config('app.mode') == 'dev' ? 1234 : rand(1000, 9999);
                 DB::table('password_resets')->insert([
                     'identity' => $seller['phone'],
                     'token' => $token,

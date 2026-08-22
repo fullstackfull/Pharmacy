@@ -103,7 +103,7 @@ class ForgotPasswordController extends Controller
             } else if ($verificationBy == 'phone') {
                 $response = $this->customerAuthService->sendCustomerPhoneVerificationToken($customer['phone'], $token);
                 $response = $response['status'];
-                if (env('APP_MODE') == 'dev') {
+                if (config('app.mode') == 'dev') {
                     $response = 'success';
                 }
             } else {

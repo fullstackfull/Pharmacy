@@ -77,7 +77,7 @@ class ForgotPasswordController extends Controller
         } elseif ($verification_by == 'phone') {
             $seller = Seller::where('phone', 'like', "%{$request['identity']}%")->first();
             if (isset($seller)) {
-                $token = (env('APP_MODE') == 'live') ? rand(1000, 9999) : 1234;
+                $token = (config('app.mode') == 'live') ? rand(1000, 9999) : 1234;
                 DB::table('password_resets')->insert([
                     'identity' => $seller['phone'],
                     'token' => $token,
@@ -86,7 +86,7 @@ class ForgotPasswordController extends Controller
                 ]);
 
                 $response = SMSModule::sendCentralizedSMS($seller->phone, $token);
-                if (env('APP_MODE') == 'dev') {
+                if (config('app.mode') == 'dev') {
                     $response = 'success';
                 }
 

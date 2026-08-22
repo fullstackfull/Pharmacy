@@ -174,7 +174,7 @@
                                 <div class="d-flex justify-content-end">
                                     <button type="button" data-id="admin-profile-form"
                                             data-message="{{ translate('want_to_update_admin_info').'?'}}"
-                                            class="btn btn-primary {{env('APP_MODE')!='demo'?'form-alert':'call-demo-alert'}}">{{ translate('save_Changes') }}</button>
+                                            class="btn btn-primary {{config('app.mode')!='demo'?'form-alert':'call-demo-alert'}}">{{ translate('save_Changes') }}</button>
                                 </div>
                             </div>
                         </div>

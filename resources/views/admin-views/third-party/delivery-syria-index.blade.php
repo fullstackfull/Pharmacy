@@ -21,7 +21,7 @@
             </div>
         </div>
 
-        <form action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.delivery-syria') : 'javascript:' }}"
+        <form action="{{ config('app.mode') != 'demo' ? route('admin.third-party.delivery-syria') : 'javascript:' }}"
               method="POST">
             @csrf
 
@@ -152,8 +152,8 @@
                     </div>
                     <div class="d-flex justify-content-end flex-wrap gap-3 mt-4">
                         <button type="reset" class="btn btn-secondary w-120 px-4">{{ translate('reset') }}</button>
-                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                class="btn btn-primary w-120 px-4 {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}">
+                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                class="btn btn-primary w-120 px-4 {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}">
                             {{ translate('save') }}
                         </button>
                     </div>
@@ -185,10 +185,10 @@
                         <h2 class="mb-1">{{ translate('governorate_rates') }}</h2>
                         <p class="mb-0 fs-12">{{ translate('per_kg_price_synced_from_delivery_syria') }}.</p>
                     </div>
-                    <form action="{{ env('APP_MODE') != 'demo' ? route('admin.third-party.delivery-syria.verify-sync') : 'javascript:' }}" method="POST">
+                    <form action="{{ config('app.mode') != 'demo' ? route('admin.third-party.delivery-syria.verify-sync') : 'javascript:' }}" method="POST">
                         @csrf
-                        <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
-                                class="btn btn-outline-primary {{ env('APP_MODE') != 'demo' ? '' : 'call-demo-alert' }}">
+                        <button type="{{ config('app.mode') != 'demo' ? 'submit' : 'button' }}"
+                                class="btn btn-outline-primary {{ config('app.mode') != 'demo' ? '' : 'call-demo-alert' }}">
                             <i class="fi fi-rr-refresh"></i> {{ translate('verify_and_sync') }}
                         </button>
                     </form>

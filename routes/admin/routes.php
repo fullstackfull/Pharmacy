@@ -1620,7 +1620,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     // Auction Time Adjustment — demo mode only, requires the Auction addon
-    if (env('APP_MODE') == 'demo' && function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction')) {
+    if (config('app.mode') == 'demo' && function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction')) {
         Route::get('auction-time/{auction_id}', function ($auction_id) {
             $auction = \Modules\Auction\app\Models\AuctionProduct::findOrFail($auction_id);
             return response()->make(view('auction-time-form', compact('auction'))->render());

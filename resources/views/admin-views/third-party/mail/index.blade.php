@@ -86,7 +86,7 @@
                                                    placeholder="{{translate('ex')}}:{{translate('alex')}}"
                                                    class="form-control" name="name"
                                                    data-required-msg="{{translate('mailer_name_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo' ? '' :$data_smtp['name']}}" required>
+                                                   value="{{config('app.mode')=='demo' ? '' :$data_smtp['name']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -102,7 +102,7 @@
                                            <input type="text" class="form-control" name="host"
                                                    placeholder="{{translate('ex').':'}} {{translate('smtp.mailtrap.io')}}"
                                                   data-required-msg="{{translate('host_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['host']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['host']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -118,7 +118,7 @@
                                             <input type="text" class="form-control" name="driver"
                                                    placeholder="{{translate('ex')}}:{{translate('smtp')}}"
                                                     data-required-msg="{{translate('driver_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['driver']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['driver']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -134,7 +134,7 @@
                                            <input type="text" class="form-control" name="port"
                                                    placeholder="{{translate('ex')}}:587"
                                                     data-required-msg="{{translate('port_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['port']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['port']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -151,7 +151,7 @@
                                                    class="form-control"
                                                    name="username"
                                                    data-required-msg="{{translate('username_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['username']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['username']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -168,7 +168,7 @@
                                                    placeholder="{{translate('ex')}}:{{translate('example@example.com')}}"
                                                    class="form-control" name="email"
                                                    data-required-msg="{{translate('email_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['email_id']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['email_id']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -184,7 +184,7 @@
                                                    placeholder="{{translate('ex :')}}:{{translate('tls')}}"
                                                    class="form-control" name="encryption"
                                                   data-required-msg="{{translate('encryption_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo'?'':$data_smtp['encryption']}}" required>
+                                                   value="{{config('app.mode')=='demo'?'':$data_smtp['encryption']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -198,7 +198,7 @@
                                             </label>
                                             <div class="input-group">
                                                 <input type="password" class="form-control"
-                                                    value="{{env('APP_MODE')=='demo'?'':$data_smtp['password']}}"
+                                                    value="{{config('app.mode')=='demo'?'':$data_smtp['password']}}"
                                                     name="password" id="smtpPassword"
                                                        data-required-msg="{{translate('password_field_is_required')}}"
                                                     placeholder="{{translate('ex')}}:123456"
@@ -288,7 +288,7 @@
                                                            placeholder="{{translate('ex').':'}}{{translate('alex')}}"
                                                            class="form-control" name="name"
                                                             data-required-msg="{{translate('mailer_name_field_is_required')}}"
-                                                           value="{{env('APP_MODE')=='demo' ? '' :$data_sendgrid['name']}}" required>
+                                                           value="{{config('app.mode')=='demo' ? '' :$data_sendgrid['name']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -304,7 +304,7 @@
                                             <input type="text" class="form-control" name="host"
                                                    placeholder="{{translate('ex')}}:{{translate('smtp.mailtrap.io')}}"
                                                    data-required-msg="{{translate('host_field_is_required')}}"
-                                                   value="{{env('APP_MODE')=='demo' ? '' : $data_sendgrid['host']}}" required>
+                                                   value="{{config('app.mode')=='demo' ? '' : $data_sendgrid['host']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -320,7 +320,7 @@
                                             <input type="text" class="form-control" name="driver"
                                                            placeholder="{{translate('ex')}}:{{translate('smtp')}}"
                                                    data-required-msg="{{translate('smtp_field_is_required')}}"
-                                                           value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['driver']}}" required>
+                                                           value="{{config('app.mode')=='demo'?'':$data_sendgrid['driver']}}" required>
 
                                         </div>
                                     </div>
@@ -337,7 +337,7 @@
                                             <input type="text" class="form-control" name="port"
                                             placeholder="{{translate('ex').':'.'587'}}"
                                                    data-required-msg="{{translate('port_field_is_required')}}"
-                                            value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['port']}}" required>
+                                            value="{{config('app.mode')=='demo'?'':$data_sendgrid['port']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -353,7 +353,7 @@
                                             <input type="text" placeholder="{{translate('ex').':'.'yahoo'}}"
                                                            class="form-control" name="username"
                                                    data-required-msg="{{translate('username_field_is_required')}}"
-                                                           value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['username']}}" required>
+                                                           value="{{config('app.mode')=='demo'?'':$data_sendgrid['username']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -370,7 +370,7 @@
                                             placeholder="{{translate('ex').':'}}{{translate('example@example.com')}}"
                                             class="form-control" name="email"
                                                    data-required-msg="{{translate('email_field_is_required')}}"
-                                            value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['email_id']}}" required>
+                                            value="{{config('app.mode')=='demo'?'':$data_sendgrid['email_id']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -386,7 +386,7 @@
                                             placeholder="{{translate('ex').':'}}{{translate('tls')}}"
                                             class="form-control" name="encryption"
                                                    data-required-msg="{{translate('encryption_field_is_required')}}"
-                                            value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['encryption']}}" required>
+                                            value="{{config('app.mode')=='demo'?'':$data_sendgrid['encryption']}}" required>
                                         </div>
                                     </div>
                                     <div class="col-lg-4 col-sm-6">
@@ -403,7 +403,7 @@
                                                        name="password" id="sendGridPassword"
                                                        placeholder="{{translate('ex')}}:123456"
                                                        data-required-msg="{{translate('password_field_is_required')}}"
-                                                       value="{{env('APP_MODE')=='demo'?'':$data_sendgrid['password']}}" required>
+                                                       value="{{config('app.mode')=='demo'?'':$data_sendgrid['password']}}" required>
 
                                                 <div class="input-group-append changePassTarget">
                                                     <a class="text-body-light" href="javascript:">

@@ -92,9 +92,11 @@
 .mon-status[data-state="degraded"] .mon-status__dot { background: var(--mon-degraded); }
 .mon-status[data-state="critical"] .mon-status__dot { background: var(--mon-critical); }
 
+/* The ring reads as the healthy colour in whichever theme is on: hardcoding the light-theme
+   green left it illegible against a dark surface. */
 @keyframes mon-breathe {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(31, 157, 85, .45); }
-    50% { box-shadow: 0 0 0 6px rgba(31, 157, 85, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--k-success) 45%, transparent); }
+    50% { box-shadow: 0 0 0 6px transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
     .mon-status__dot { animation: none !important; }
@@ -728,11 +730,14 @@
 /* Ordered for separation rather than by taste: the first two are what a two-value split
    gets, and the console's accent is already violet, so the purple in the waterfall palette
    cannot be second or desktop and bot arrive as the same bar. */
-.mon-split__part--a { background: var(--k-accent, #3b5bdb); }
-.mon-split__part--b { background: #0c8599; }
-.mon-split__part--c { background: #adb5bd; }
-.mon-split__part--d { background: #7048e8; }
-.mon-split__part--e { background: #868e96; }
+/* Four of these five were raw hex with no dark variant while the first read the accent, so the
+   same chart was half themed and half not. Each is now derived from a token, which keeps the
+   separation the ordering above is for while following the theme. */
+.mon-split__part--a { background: var(--k-accent); }
+.mon-split__part--b { background: var(--k-info); }
+.mon-split__part--c { background: var(--k-text-muted); }
+.mon-split__part--d { background: color-mix(in srgb, var(--k-accent) 65%, var(--k-violet-700, #5f3dc4)); }
+.mon-split__part--e { background: var(--k-border); }
 
 .mon-split__legend {
     list-style: none;

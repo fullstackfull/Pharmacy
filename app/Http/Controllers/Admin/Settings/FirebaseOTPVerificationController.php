@@ -35,7 +35,7 @@ class FirebaseOTPVerificationController extends BaseController
 
     public function updateAuthentication(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
             return back();
         }

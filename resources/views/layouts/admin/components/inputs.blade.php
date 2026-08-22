@@ -2751,8 +2751,8 @@
                                             </div>
                                             <div class="d-flex justify-content-end flex-wrap gap-3">
                                                 <button type="reset" class="btn btn-secondary w-120 px-4">{{translate('reset')}}</button>
-                                                <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                                                    class="btn btn-primary w-120 px-4 {{env('APP_MODE')!= 'demo'? '' : 'call-demo'}}">{{translate('save')}}</button>
+                                                <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                                                    class="btn btn-primary w-120 px-4 {{config('app.mode')!= 'demo'? '' : 'call-demo'}}">{{translate('save')}}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -2827,8 +2827,8 @@
                     </div>
                     <div class="d-flex justify-content-end flex-wrap gap-3">
                         <button type="reset" class="btn btn-secondary w-120 px-4">{{translate('reset')}}</button>
-                        <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                            class="btn btn-primary w-120 px-4 {{env('APP_MODE')!= 'demo'? '' : 'call-demo'}}">{{translate('save')}}</button>
+                        <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                            class="btn btn-primary w-120 px-4 {{config('app.mode')!= 'demo'? '' : 'call-demo'}}">{{translate('save')}}</button>
                     </div>
                 </div>
             </div>

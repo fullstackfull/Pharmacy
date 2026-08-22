@@ -89,10 +89,10 @@
                                             <select name="app_mode" class="custom-select"
                                                     data-placeholder="Select_from_dropdown">
                                                 <option></option>
-                                                <option value="live" {{env('APP_MODE')=='live'?'selected':''}}>
+                                                <option value="live" {{config('app.mode')=='live'?'selected':''}}>
                                                     {{ translate('live') }}
                                                 </option>
-                                                <option value="dev" {{env('APP_MODE')=='dev'?'selected':''}}>
+                                                <option value="dev" {{config('app.mode')=='dev'?'selected':''}}>
                                                     {{ translate('dev') }}
                                                 </option>
                                             </select>
@@ -126,7 +126,7 @@
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_connection') }}</label>
                                             <input type="text"
-                                                value="{{ env('APP_MODE') != 'demo' ? env('DB_CONNECTION') : '---' }}"
+                                                value="{{ config('app.mode') != 'demo' ? env('DB_CONNECTION') : '---' }}"
                                                 name="db_connection" class="form-control"
                                                 placeholder="{{ translate('ex').':'.'mysql' }}" required
                                                 readonly
@@ -140,7 +140,7 @@
                                     <div class="col-xl-4 col-md-6">
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_host') }}</label>
-                                            <input type="text" value="{{ env('APP_MODE') != 'demo' ? env('DB_HOST') : '---' }}"
+                                            <input type="text" value="{{ config('app.mode') != 'demo' ? env('DB_HOST') : '---' }}"
                                                 name="db_host" class="form-control"
                                                 placeholder="{{ translate('ex').':'.'http://localhost/' }}" required
                                                 readonly
@@ -154,7 +154,7 @@
                                     <div class="col-xl-4 col-md-6">
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_port') }}</label>
-                                            <input type="text" value="{{ env('APP_MODE') != 'demo' ? env('DB_PORT') : '---' }}"
+                                            <input type="text" value="{{ config('app.mode') != 'demo' ? env('DB_PORT') : '---' }}"
                                                 name="db_port" class="form-control"
                                                 placeholder="{{ translate('ex').':'.'3306' }}" required
                                                 readonly
@@ -169,7 +169,7 @@
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_database') }}</label>
                                             <input type="text"
-                                                value="{{ env('APP_MODE') != 'demo' ? env('DB_DATABASE') : '---' }}"
+                                                value="{{ config('app.mode') != 'demo' ? env('DB_DATABASE') : '---' }}"
                                                 name="db_database" class="form-control"
                                                 placeholder="{{ translate('ex').':'.'demo_db'}} " required
                                                 readonly
@@ -184,7 +184,7 @@
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_username') }}</label>
                                             <input type="text"
-                                                value="{{ env('APP_MODE') != 'demo' ? env('DB_USERNAME') : '---' }}"
+                                                value="{{ config('app.mode') != 'demo' ? env('DB_USERNAME') : '---' }}"
                                                 name="db_username" class="form-control"
                                                 placeholder="{{ translate('ex').':'.translate('root')  }}" required
                                                 readonly
@@ -199,7 +199,7 @@
                                         <div class="form-group">
                                             <label class="form-label text-capitalize" for="">{{ translate('DB_password') }}</label>
                                             <input type="password"
-                                                value="{{ env('APP_MODE') != 'demo' ? env('DB_PASSWORD') : '---' }}"
+                                                value="{{ config('app.mode') != 'demo' ? env('DB_PASSWORD') : '---' }}"
                                                 name="db_password" class="form-control"
                                                 placeholder="{{ translate('ex').':'.translate('password') }}"
                                                 readonly
@@ -248,7 +248,7 @@
                 <div class="d-flex justify-content-end trans3 mt-4 action-btn-wrapper-container">
                     <div class="d-flex justify-content-sm-end justify-content-center gap-3 flex-grow-1 flex-grow-sm-0 bg-white action-btn-wrapper trans3">
                         <button type="reset" class="btn btn-secondary px-3 px-sm-4 w-120">{{ translate('reset') }}</button>
-                        <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}" class="btn btn-primary px-3 px-sm-4 {{env('APP_MODE')!='demo'?'':'call-demo-alert'}}">
+                        <button type="{{config('app.mode')!='demo'?'submit':'button'}}" class="btn btn-primary px-3 px-sm-4 {{config('app.mode')!='demo'?'':'call-demo-alert'}}">
                             <i class="fi fi-sr-disk"></i>
                             {{ translate('save_information') }}
                         </button>
@@ -256,7 +256,7 @@
                 </div>
             </form>
 
-            @if((env('APP_MODE') != 'demo' && env('APP_MODE') == 'dev'))
+            @if((config('app.mode') != 'demo' && config('app.mode') == 'dev'))
                 <div class="row d-none">
                     <div class="col-md-4">
                         <div class="card">

@@ -313,7 +313,7 @@
                                 </button>
                                 <button type="button"
                                         data-message="{{ translate('please_ensure_your_s3_credentials_are_valid.') }}"
-                                        class="btn btn-primary px-3 px-sm-4 {{env('APP_MODE')!= 'demo'? 'form-submit' : 'call-demo-alert'}}"
+                                        class="btn btn-primary px-3 px-sm-4 {{config('app.mode')!= 'demo'? 'form-submit' : 'call-demo-alert'}}"
                                         data-form-id="get-storage-connection-route">
                                     <i class="fi fi-sr-disk"></i>
                                     {{ translate('Save_information') }}

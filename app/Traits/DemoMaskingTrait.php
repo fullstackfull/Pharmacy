@@ -13,7 +13,7 @@ trait DemoMaskingTrait
     protected function shouldMask(): bool
     {
         $segment = request()->segment(1);
-        if (env('APP_MODE') == 'demo' && in_array($segment, ['admin', 'vendor', 'seller'], true)) {
+        if (config('app.mode') == 'demo' && in_array($segment, ['admin', 'vendor', 'seller'], true)) {
             return true;
         }
         return false;

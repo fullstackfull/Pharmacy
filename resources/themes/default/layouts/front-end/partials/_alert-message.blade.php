@@ -3,7 +3,7 @@
 </audio>
 
 <div class="alert--container active">
-    @if(env('APP_MODE') == 'demo')
+    @if(config('app.mode') == 'demo')
         <div class="alert alert--message-2 alert-dismissible fade show" id="demo-reset-warning">
             <img width="28" class="align-self-start" src="{{ theme_asset(path: 'assets/front-end/img/info-2.png') }}" alt="">
             <div class="w--0">

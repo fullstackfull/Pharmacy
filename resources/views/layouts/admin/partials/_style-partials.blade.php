@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/admin/css/payment-addon.css') }}">
 @endif
 
-@if (env('APP_MODE')=='demo')
+@if (config('app.mode')=='demo')
     <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/backend/admin/css/demo.css') }}">
 @endif
 

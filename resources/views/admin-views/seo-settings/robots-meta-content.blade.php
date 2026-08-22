@@ -83,7 +83,7 @@
                                            {{ $pageListSingle['meta_title'] ? translate('edit_Content') : translate('add_Content') }}
                                         </a>
                                         <a class="btn btn-outline-danger icon-btn {{ getDemoModeFormButton(type: 'class') }}"
-                                           href="{{ env('APP_MODE') != 'demo' ? route('admin.seo-settings.robots-meta-content.delete-page', ['id' => $pageListSingle['id']]) : 'javascript:' }}">
+                                           href="{{ config('app.mode') != 'demo' ? route('admin.seo-settings.robots-meta-content.delete-page', ['id' => $pageListSingle['id']]) : 'javascript:' }}">
                                             <i class="fi fi-rr-trash"></i>
                                         </a>
                                     </div>
@@ -136,7 +136,7 @@
                                        readonly>
                             </div>
                             <div class="mb-3 d-flex justify-content-end">
-                                <button type="{{env('APP_MODE')!='demo'? 'submit' : 'button' }}" class="btn btn-primary {{env('APP_MODE')!='demo'? '' : 'call-demo-alert' }}">
+                                <button type="{{config('app.mode')!='demo'? 'submit' : 'button' }}" class="btn btn-primary {{config('app.mode')!='demo'? '' : 'call-demo-alert' }}">
                                     {{ translate('save') }}
                                 </button>
                             </div>

@@ -87,7 +87,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex flex-wrap justify-content-center align-items-center mt-1">
-                                        <a class="{{env('APP_MODE')!='demo'? 'delete-data' : 'call-demo-alert'}}" href="javascript:" data-id="error-logs-{{ $errorLog['id']}}">
+                                        <a class="{{config('app.mode')!='demo'? 'delete-data' : 'call-demo-alert'}}" href="javascript:" data-id="error-logs-{{ $errorLog['id']}}">
                                             <img src="{{dynamicAsset('public/assets/new/back-end/img/delete-outlined.png')}}" alt="" width="30">
                                         </a>
                                     </div>
@@ -176,7 +176,7 @@
                     </button>
                 </div>
                 <div class="modal-body px-20 py-0 mb-30">
-                    <form action="{{ env('APP_MODE') != 'demo' ? route('admin.seo-settings.error-logs.delete-selected-error-logs') : 'javascript:'}}"
+                    <form action="{{ config('app.mode') != 'demo' ? route('admin.seo-settings.error-logs.delete-selected-error-logs') : 'javascript:'}}"
                           method="post">
                         @csrf @method('delete')
                         <div id="selected-ids"></div>

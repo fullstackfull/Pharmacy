@@ -75,7 +75,7 @@ class SiteMapController extends BaseController
 
     public function getGenerateAndUpload(Request $request): BinaryFileResponse|RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
             return redirect()->back();
         }
