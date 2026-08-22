@@ -7,7 +7,6 @@ use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\SeriesReader;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 /**
  * The scheduler: whether cron is firing at all, and what each task did the last time it ran.
@@ -70,6 +69,17 @@ class SchedulerPanel implements Panel
      */
     private const STATUS_ORDER = ['missed' => 0, 'failed' => 1, 'late' => 2, 'unknown' => 3, 'running' => 4, 'healthy' => 5];
 
+    /**
+     * Month names for reading a cron expression out loud, spelled out rather than formatted.
+     *
+     * Carbon::create() fills a missing year from the ambient clock and the process timezone, and no
+     * timestamp in this system is allowed to come from either — a month name needs neither anyway.
+     */
+    private const MONTH_NAMES = [
+        1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June',
+        7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+    ];
+
     public function __construct(
         private readonly CollectorRegistry $collectors,
         private readonly SeriesReader $reader,
@@ -80,7 +90,7 @@ class SchedulerPanel implements Panel
     {
         $window = $this->reader->window($range);
         $readings = $this->collectors->collect('scheduler');
-        $statistics = $this->statistics($range, $window);
+        $statistics = $this->statistics($range);
         $tasks = $this->tasks($readings, $statistics);
 
         return [
@@ -143,19 +153,33 @@ class SchedulerPanel implements Panel
             ];
         }
 
+        // The collector is left without an age both when the table says nothing has ever run and
+        // when the table could not be read at all, and it reports the two as the same
+        // COLLECTOR_OFFLINE. Only the first is evidence that cron has stopped. Believing the second
+        // would print "not one scheduled task is executing" across a page that has measured
+        // nothing, and send somebody to the crontab of a server whose scheduler is running fine —
+        // so the reading behind the verdict is checked before the verdict is repeated.
+        $observed = $lastRun instanceof Metric
+            && in_array($lastRun->state, [Metric::OK, Metric::COLLECTOR_OFFLINE], true);
+
         $running = match (true) {
             $installed->isOk() && $installed->value === true => true,
             // COLLECTOR_OFFLINE is the collector's own explicit verdict: it read the table and
             // found either no run ever or the newest one too old to be a running cron.
-            $installed->state === Metric::COLLECTOR_OFFLINE => false,
+            $installed->state === Metric::COLLECTOR_OFFLINE && $observed => false,
             default => null,
         };
 
+        // When the verdict is unknown because the read failed, the collector's note still claims
+        // nothing has ever run — the very thing it could not check. The failed read's own note
+        // names what actually broke, which is the sentence that leads somebody somewhere.
+        $unreadable = $running === null && $lastRun instanceof Metric && !$observed;
+
         return [
-            'state' => $installed->state,
+            'state' => $unreadable ? $lastRun->state : $installed->state,
             'running' => $running,
-            'note' => $installed->note,
-            'remedy' => $installed->remedy,
+            'note' => $unreadable ? $lastRun->note : $installed->note,
+            'remedy' => $unreadable ? $lastRun->remedy : $installed->remedy,
             'source' => $installed->source,
             'last_run_at' => $lastRun instanceof Metric && $lastRun->isOk()
                 ? $this->displayStamp($lastRun->value)
@@ -408,10 +432,9 @@ class SchedulerPanel implements Panel
      * One grouped read rather than a count per task: the table has as many rows as the schedule
      * has tasks, and a query each would make this page the slowest thing on the server it watches.
      *
-     * @param  array{minutes: int, resolution: string, points: int}  $window
      * @return array<string, mixed>
      */
-    private function statistics(string $range, array $window): array
+    private function statistics(string $range): array
     {
         $source = 'monitoring_scheduled_runs';
 
@@ -730,7 +753,7 @@ class SchedulerPanel implements Panel
             if (!$this->isNumber($month) || (int) $month < 1 || (int) $month > 12) {
                 return null;
             }
-            $parts[] = 'in ' . Carbon::create(null, (int) $month, 1)->format('F');
+            $parts[] = 'in ' . self::MONTH_NAMES[(int) $month];
         }
 
         return implode(', ', $parts);

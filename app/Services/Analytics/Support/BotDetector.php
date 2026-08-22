@@ -26,12 +26,25 @@ class BotDetector
         'facebookexternalhit', 'whatsapp', 'telegrambot', 'twitterbot', 'linkedinbot',
         'pinterest', 'discordbot', 'slackbot', 'embedly', 'quora link preview',
         'headlesschrome', 'phantomjs', 'puppeteer', 'playwright', 'selenium',
-        'curl/', 'wget/', 'python-requests', 'python-urllib', 'go-http-client',
-        'java/', 'okhttp', 'apache-httpclient', 'httpclient', 'libwww-perl', 'guzzlehttp',
-        'postman', 'insomnia', 'axios/', 'node-fetch', 'lighthouse', 'pagespeed',
+        'curl/', 'wget/', 'python-requests', 'python-urllib',
+        'libwww-perl', 'guzzlehttp', 'postman', 'insomnia', 'lighthouse', 'pagespeed',
         'uptimerobot', 'pingdom', 'statuscake', 'newrelicpinger', 'datadog', 'ahrefs',
         'semrush', 'mj12bot', 'dotbot', 'petalbot', 'bytespider', 'gptbot', 'ccbot',
         'claudebot', 'perplexitybot', 'applebot', 'amazonbot', 'yandex', 'baiduspider',
+    ];
+
+    /**
+     * HTTP libraries, which are what a scraper uses AND what a native app is built on.
+     *
+     * okhttp is the default user agent of every Android app built on Retrofit — including this
+     * shop's own — and NSURLSession sends nothing recognisable at all. Treating these as crawlers
+     * classified the store's own customers as bots and erased them from every report, which is the
+     * one direction this class is not allowed to be wrong in. They only count as a crawler when
+     * the request has not identified itself as one of the shop's apps.
+     */
+    private const GENERIC_CLIENTS = [
+        'okhttp', 'java/', 'go-http-client', 'apache-httpclient', 'httpclient',
+        'axios/', 'node-fetch', 'dart:io', 'dio/', 'cfnetwork',
     ];
 
     /** Our own probes, which must never appear anywhere in a customer report. */
@@ -41,23 +54,64 @@ class BotDetector
     {
         $agent = strtolower(trim((string) $request->userAgent()));
 
-        // No user agent at all is not a browser. Every real one sends something.
+        // A declared crawler is a crawler whatever else it claims to be.
+        foreach (array_merge(self::AGENT_SIGNATURES, self::OWN_AGENTS) as $signature) {
+            if ($agent !== '' && str_contains($agent, $signature)) {
+                return true;
+            }
+        }
+
+        // The shop's own apps say so, in the same header MonitorRequest files their traffic under.
+        // Without this the two systems disagreed about the same request: monitoring counted it as
+        // the Android app while analytics deleted it as a crawler.
+        if ($this->isOwnApp($request)) {
+            return false;
+        }
+
         if ($agent === '') {
+            // On the web a browser always sends one. On the API an app that did not declare itself
+            // is unidentifiable rather than proven fake — but counting it as a person would let any
+            // script inflate the numbers, so the conservative answer stands where it is cheap.
             return true;
         }
 
-        foreach (array_merge(self::AGENT_SIGNATURES, self::OWN_AGENTS) as $signature) {
+        foreach (self::GENERIC_CLIENTS as $signature) {
             if (str_contains($agent, $signature)) {
                 return true;
             }
         }
 
-        // A browser that asks for a page and accepts nothing is not rendering it.
-        if ($request->isMethod('GET') && trim((string) $request->headers->get('Accept')) === '') {
+        // A browser that asks for a page and accepts nothing is not rendering it. Only asked of
+        // browser traffic: native clients routinely omit Accept and are none the worse for it.
+        if (!$this->isApi($request)
+            && $request->isMethod('GET')
+            && trim((string) $request->headers->get('Accept')) === '') {
             return true;
         }
 
         return false;
+    }
+
+    /** Did this request identify itself as one of the shop's own apps? */
+    private function isOwnApp(Request $request): bool
+    {
+        $platform = strtolower(trim((string) $request->headers->get('X-Platform', '')));
+
+        if (in_array($platform, ['android', 'ios'], true)) {
+            return true;
+        }
+
+        // The version header is the app's too, and an app that sends one has been built by whoever
+        // runs this shop rather than pointed at it.
+        return preg_match(
+            '/^[0-9A-Za-z\.\-\+]{1,32}$/',
+            (string) $request->headers->get('X-App-Version', '')
+        ) === 1;
+    }
+
+    private function isApi(Request $request): bool
+    {
+        return $request->is('api/*') || $request->expectsJson();
     }
 
     /**
@@ -96,7 +150,14 @@ class BotDetector
             return 'tablet';
         }
 
-        return preg_match('/mobile|iphone|ipod|android|windows phone|opera mini/', $agent) === 1 ? 'mobile' : 'desktop';
+        if (preg_match('/mobile|iphone|ipod|android|windows phone|opera mini/', $agent) === 1) {
+            return 'mobile';
+        }
+
+        // A native app sends a user agent that says nothing about the handset — okhttp/4.12.0 on
+        // Android, nothing at all on iOS — so the header it does send decides, rather than
+        // defaulting a phone to 'desktop'.
+        return $this->isOwnApp($request) ? 'mobile' : 'desktop';
     }
 
     private function matches(string $address, string $range): bool

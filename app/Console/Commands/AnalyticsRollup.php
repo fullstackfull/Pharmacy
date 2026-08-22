@@ -188,7 +188,7 @@ class AnalyticsRollup extends Command
     private function rollupHours(Carbon $day, Carbon $from, Carbon $to): int
     {
         $rows = $this->realSessions($from, $to)
-            ->selectRaw('LPAD(HOUR(started_at), 2, "0") dimension_key')
+            ->selectRaw($this->hourOfDay('started_at') . ' dimension_key')
             ->selectRaw('COUNT(*) sessions, COUNT(DISTINCT visitor_id) visitors, SUM(pageviews) pageviews')
             ->selectRaw('SUM(orders) orders, COALESCE(SUM(revenue), 0) revenue')
             ->groupBy('dimension_key')
@@ -201,6 +201,26 @@ class AnalyticsRollup extends Command
             ->first();
 
         return $written + $this->put($day, 'weekday', (string) $day->dayOfWeek, (array) $weekday);
+    }
+
+    /**
+     * The hour of a timestamp, zero-padded, in the dialect the active connection speaks.
+     *
+     * HOUR() and LPAD() are MySQL's. Writing them literally meant the rollup — the command every
+     * chart on the analytics screens is drawn from — could not run anywhere else, and so could not
+     * be exercised by a test at all.
+     */
+    private function hourOfDay(string $column): string
+    {
+        $grammar = $this->connection()->getQueryGrammar();
+        $wrapped = $grammar->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite' => "strftime('%H', {$wrapped})",
+            'pgsql' => "to_char({$wrapped}, 'HH24')",
+            'sqlsrv' => "RIGHT('0' + CAST(DATEPART(hour, {$wrapped}) AS varchar(2)), 2)",
+            default => "LPAD(HOUR({$wrapped}), 2, '0')",
+        };
     }
 
     /** Top pages, by normalised path — the raw URL was never stored, so this cannot explode. */
@@ -334,16 +354,44 @@ class AnalyticsRollup extends Command
             ->groupBy('dimension_key')
             ->get();
 
-        foreach ($rows as $row) {
-            $this->connection()->table('analytics_campaigns')->where('id', $row->dimension_key)->update([
-                'sessions' => (int) $row->sessions,
-                'orders' => (int) $row->orders,
-                'revenue' => (float) $row->revenue,
-                'updated_at' => Carbon::now(),
-            ]);
-        }
+        $this->refreshCampaignTotals();
 
         return $this->putMany($day, 'campaign_link', $rows);
+    }
+
+    /**
+     * The counters denormalised onto the campaign row, recomputed over the campaign's whole life.
+     *
+     * These used to be written from the day being rolled up, which put a single day's sessions,
+     * orders and revenue next to a `clicks` counter that accumulates for life — so the campaigns
+     * screen divided a lifetime numerator by a one-day denominator and called the result a
+     * conversion rate. Worse, a campaign with no sessions that day was not in the day's result set
+     * at all, so it silently kept whatever numbers the last day it appeared in had left behind.
+     *
+     * Every campaign is written, including the ones with nothing: a campaign that has never
+     * converted has to read as zero rather than as last week.
+     */
+    private function refreshCampaignTotals(): void
+    {
+        $totals = $this->realSessions(Carbon::createFromTimestamp(0), Carbon::now())
+            ->whereNotNull('campaign_id')
+            ->selectRaw('campaign_id, COUNT(*) sessions, SUM(orders) orders, COALESCE(SUM(revenue), 0) revenue')
+            ->groupBy('campaign_id')
+            ->get()
+            ->keyBy('campaign_id');
+
+        $now = Carbon::now();
+
+        foreach ($this->connection()->table('analytics_campaigns')->pluck('id') as $campaignId) {
+            $row = $totals->get($campaignId);
+
+            $this->connection()->table('analytics_campaigns')->where('id', $campaignId)->update([
+                'sessions' => (int) ($row->sessions ?? 0),
+                'orders' => (int) ($row->orders ?? 0),
+                'revenue' => (float) ($row->revenue ?? 0),
+                'updated_at' => $now,
+            ]);
+        }
     }
 
     // -------------------------------------------------------------------------------------------

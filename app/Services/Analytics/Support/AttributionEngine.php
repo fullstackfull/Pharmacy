@@ -43,8 +43,21 @@ class AttributionEngine
         't.me' => 'telegram', 'whatsapp' => 'whatsapp', 'wa.me' => 'whatsapp',
     ];
 
-    /** Mail clients and webmail, which arrive as referrals but are email traffic. */
-    private const EMAIL_DOMAINS = ['mail.google', 'outlook', 'mail.yahoo', 'webmail', 'zoho.com/mail'];
+    /**
+     * Mail clients and webmail, which arrive as referrals but are email traffic.
+     *
+     * Checked BEFORE the search table, because mail.google.com contains "google" and was therefore
+     * reported as an organic search — which made the two entries below that say otherwise
+     * unreachable, and filed every Gmail click as SEO.
+     */
+    private const EMAIL_DOMAINS = [
+        'mail.google.com', 'mail.yahoo.com', 'outlook.com', 'outlook.live.com', 'outlook.office.com',
+        'outlook.office365.com', 'mail.proton.me', 'protonmail.com', 'mail.zoho.com', 'mail.aol.com',
+        'mail.yandex.ru', 'roundcube.net',
+    ];
+
+    /** Any host whose first label is one of these is somebody's webmail, whatever the domain is. */
+    private const EMAIL_PREFIXES = ['mail', 'webmail', 'mail2', 'email'];
 
     /**
      * Work out the session touch for a request.
@@ -70,11 +83,21 @@ class AttributionEngine
 
         // 2. UTM parameters on the URL. Explicit, and set by whoever built the link.
         $utmSource = $this->clean($request->query('utm_source'), 96);
-        if ($utmSource !== null) {
+        $utmMedium = $this->clean($request->query('utm_medium'), 64);
+        $utmCampaign = $this->clean($request->query('utm_campaign'), 96);
+
+        // Any of the three is enough. Requiring utm_source meant a link carrying only a medium and
+        // a campaign — which is what most mail tools and half the ad platforms produce — was filed
+        // as direct with the campaign discarded, so the campaign report was missing the traffic it
+        // was built to measure.
+        if ($utmSource !== null || $utmMedium !== null || $utmCampaign !== null) {
             return [
-                'source' => $utmSource,
-                'medium' => $this->clean($request->query('utm_medium'), 64) ?? 'unknown',
-                'campaign' => $this->clean($request->query('utm_campaign'), 96),
+                // Where the source was not stated, the referrer that carried the link is the
+                // honest answer; a link opened from a mail client with no referrer is unknown, and
+                // says so rather than claiming to be direct.
+                'source' => $utmSource ?? $this->sourceOfReferrer($request) ?? 'unknown',
+                'medium' => $utmMedium ?? 'unknown',
+                'campaign' => $utmCampaign,
                 'content' => $this->clean($request->query('utm_content'), 96),
                 'term' => $this->clean($request->query('utm_term'), 96),
                 'referrer_domain' => $this->referrerDomain($request),
@@ -83,12 +106,28 @@ class AttributionEngine
             ];
         }
 
-        // 3. Advertising click identifiers, which arrive without UTMs more often than not.
-        foreach (['gclid' => 'google', 'gbraid' => 'google', 'wbraid' => 'google', 'fbclid' => 'facebook', 'msclkid' => 'bing', 'ttclid' => 'tiktok'] as $parameter => $source) {
+        /*
+         * 3. Advertising click identifiers, which arrive without UTMs more often than not.
+         *
+         * The medium is per-parameter, not a blanket 'cpc'. gclid, gbraid, wbraid and msclkid are
+         * only ever minted by an ad platform, so a click carrying one was paid for. fbclid is not:
+         * Facebook appends it to EVERY outbound link, including a shop's own organic post, so
+         * calling it cpc reported unpaid social as paid clicks and made paid traffic look larger
+         * than the ad account it was supposedly bought from. A genuinely paid Facebook click is
+         * tagged by the advertiser and has already been caught by the UTM branch above.
+         */
+        foreach ([
+            'gclid' => ['google', 'cpc'],
+            'gbraid' => ['google', 'cpc'],
+            'wbraid' => ['google', 'cpc'],
+            'msclkid' => ['bing', 'cpc'],
+            'ttclid' => ['tiktok', 'cpc'],
+            'fbclid' => ['facebook', 'social'],
+        ] as $parameter => [$source, $medium]) {
             if ($request->query($parameter)) {
                 return [
                     'source' => $source,
-                    'medium' => 'cpc',
+                    'medium' => $medium,
                     'campaign' => null,
                     'content' => null,
                     'term' => null,
@@ -165,25 +204,67 @@ class AttributionEngine
      */
     public function classify(string $domain): array
     {
+        $domain = strtolower(trim($domain, '. '));
+
+        // Webmail first: mail.google.com is Gmail, not a Google search.
+        foreach (self::EMAIL_DOMAINS as $needle) {
+            if ($this->hostMatches($domain, $needle)) {
+                return [$domain, 'email'];
+            }
+        }
+
+        $firstLabel = explode('.', $domain)[0] ?? '';
+        if (in_array($firstLabel, self::EMAIL_PREFIXES, true)) {
+            return [$domain, 'email'];
+        }
+
         foreach (self::SEARCH_DOMAINS as $needle => $source) {
-            if (str_contains($domain, $needle)) {
+            if ($this->hostMatches($domain, $needle)) {
                 return [$source, 'organic'];
             }
         }
 
         foreach (self::SOCIAL_DOMAINS as $needle => $source) {
-            if (str_contains($domain, $needle)) {
+            if ($this->hostMatches($domain, $needle)) {
                 return [$source, 'social'];
             }
         }
 
-        foreach (self::EMAIL_DOMAINS as $needle) {
-            if (str_contains($domain, $needle)) {
-                return [$domain, 'email'];
+        return [$domain, 'referral'];
+    }
+
+    /**
+     * Does this host belong to that domain?
+     *
+     * By label, never by substring. str_contains reported notgoogle.example.com as Google and
+     * mybrave.shop as the Brave search engine — a referring shop's traffic credited to a search
+     * engine it never touched.
+     */
+    private function hostMatches(string $host, string $needle): bool
+    {
+        if ($host === $needle || str_ends_with($host, '.' . $needle)) {
+            return true;
+        }
+
+        // Entries like 'google' or 'facebook' name a brand rather than a host, so they match any
+        // label of it — google.co.uk and google.com.eg are both Google.
+        if (!str_contains($needle, '.')) {
+            foreach (explode('.', $host) as $label) {
+                if ($label === $needle) {
+                    return true;
+                }
             }
         }
 
-        return [$domain, 'referral'];
+        return false;
+    }
+
+    /** The source a referrer implies, for a link that carried a campaign but not a source. */
+    private function sourceOfReferrer(Request $request): ?string
+    {
+        $referrer = $this->referrerDomain($request);
+
+        return $referrer === null ? null : $this->classify($referrer)[0];
     }
 
     private function clean(mixed $value, int $limit): ?string

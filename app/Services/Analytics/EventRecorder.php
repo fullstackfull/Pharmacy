@@ -142,7 +142,7 @@ class EventRecorder
             $written = $this->connection()->table('analytics_events')->insertOrIgnore($queued);
 
             if ($written < count($queued)) {
-                $delta = $this->deltaOfWrittenRows($watermark);
+                $delta = $this->deltaOfWrittenRows($watermark, $queued, $sessionId);
             }
 
             $this->applySessionDelta($sessionId, $delta);
@@ -228,15 +228,29 @@ class EventRecorder
      * response has already been sent is the right price for totals that agree with the events
      * they summarise.
      *
+     * @param  array<int, array<string, mixed>>  $queued  the rows this flush attempted
      * @return array<string, float|int>
      */
-    private function deltaOfWrittenRows(int $watermark): array
+    private function deltaOfWrittenRows(int $watermark, array $queued, ?string $sessionId): array
     {
         $delta = [];
 
+        $keys = array_values(array_filter(array_column($queued, 'dedupe_key')));
+
+        if ($keys === []) {
+            return $delta;
+        }
+
         try {
             $rows = $this->connection()->table('analytics_events')
+                // The id watermark alone is not this flush's rows: flush() runs in terminate(), so
+                // between the MAX(id) read and this one, other requests have inserted their own.
+                // Counting those put another customer's order and its revenue onto this visitor's
+                // session. The rows this flush owns are the ones carrying ITS dedupe keys, on ITS
+                // session — everything else above the watermark belongs to somebody else.
                 ->where('id', '>', $watermark)
+                ->whereIn('dedupe_key', $keys)
+                ->when($sessionId !== null, fn ($query) => $query->where('session_id', $sessionId))
                 ->get(['name', 'value']);
         } catch (\Throwable) {
             return $delta;

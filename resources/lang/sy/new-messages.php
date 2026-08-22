@@ -1320,4 +1320,6 @@ return [
 	'calls' => 'Calls',
 	'routes_issuing_the_most_queries_per_request' => 'Routes issuing the most queries per request',
 	'no_failed_job_is_recorded' => 'No failed job is recorded',
+	'laravel_populates_it_only_when_the_console_kernel_boots_which_is_why' => 'Laravel populates it only when the console kernel boots which is why',
+	'only_the_first_line_of_each_exception_is_kept_and_it_has_been_redacted' => 'Only the first line of each exception is kept and it has been redacted',
 ];
