@@ -1277,4 +1277,6 @@ return [
 	'write_probes_run_in_every_directory_laravel_must_be_able_to_write_because_permission_bits_alone_still_read_as_writable_on_a_read_only_remount' => 'Write probes run in every directory laravel must be able to write because permission bits alone still read as writable on a read only remount',
 	'public_disk_size_over_time' => 'Public disk size over time',
 	'The_scheduler_last_reported_a_run_73_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 73 minutes ago  the server cron appears to have stopped.',
+	'The_scheduler_last_reported_a_run_77_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 77 minutes ago  the server cron appears to have stopped.',
+	'neither_php_lookup_accepts_a_timeout_so_a_resolver_that_stops_answering_is_skipped_on_the_next_collection_rather_than_holding_this_page_behind_it' => 'Neither php lookup accepts a timeout so a resolver that stops answering is skipped on the next collection rather than holding this page behind it',
 ];
