@@ -171,6 +171,29 @@
             @endforeach
         </x-k.card>
 
+        {{-- What it actually answers with. Nothing in this API declares a response type — the
+             controllers return JSON directly — so the only honest source is what the endpoint has
+             been seen answering. Keys and types are recorded; no value ever is. --}}
+        <x-k.card :title="translate('what_it_answers_with')">
+            @forelse ($endpoint['observed'] ?? [] as $observed)
+                <h4 class="dev-subhead">
+                    {{ $observed['method'] }} · {{ $observed['status'] }}
+                    <small class="dev-muted">
+                        {{ translate('observed_from') }} {{ number_format($observed['samples']) }}
+                        {{ translate('real_response_s_most_recently') }} {{ $observed['last_seen_at'] }}
+                    </small>
+                </h4>
+                <pre class="dev-code"><code>{{ json_encode($observed['shape'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+            @empty
+                <x-k.empty
+                    :title="translate('not_observed_yet')"
+                    :text="translate('this_endpoint_has_not_been_called_since_response_shapes_started_being_recorded_so_nothing_is_claimed_about_what_it_returns')" />
+            @endforelse
+            <p class="dev-note">
+                {{ translate('keys_and_types_only_no_value_from_any_response_is_stored') }}
+            </p>
+        </x-k.card>
+
         <div class="dev-grid dev-grid--2">
             <x-k.card :title="translate('live_usage')">
                 @if ($endpoint['health']['measured'] ?? false)

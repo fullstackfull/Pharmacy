@@ -154,8 +154,33 @@ class DeveloperPortalService
             'callers' => $this->health->callers($endpoint),
             'related' => $this->related($endpoint),
             'changes' => $this->changesFor($endpoint['id']),
+            // What this endpoint has actually been seen answering with. Derived from real
+            // responses because the controllers return JSON directly and there is no type to
+            // reflect — keys and types only, never a value.
+            'observed' => $this->observedResponses($endpoint),
             'full_url' => rtrim($baseUrl, '/') . $endpoint['path'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $endpoint
+     * @return array<int, array<string, mixed>>
+     */
+    private function observedResponses(array $endpoint): array
+    {
+        $recorder = app(\App\Services\DeveloperPortal\ResponseShapeRecorder::class);
+        $byMethod = $recorder->all()[$endpoint['path']] ?? [];
+        $found = [];
+
+        foreach ($endpoint['methods'] as $method) {
+            foreach ($byMethod[$method] ?? [] as $status => $record) {
+                $found[$status] = $record + ['status' => $status, 'method' => $method];
+            }
+        }
+
+        ksort($found);
+
+        return array_values($found);
     }
 
     /**

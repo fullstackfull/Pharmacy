@@ -28,7 +28,36 @@ class OpenApiGenerator
         private readonly ApiManifest $manifest,
         private readonly RuleTranslator $translator,
         private readonly AuthResolver $auth,
+        private readonly \App\Services\DeveloperPortal\ResponseShapeRecorder $observed,
     ) {
+    }
+
+    /** @var array<string, array<string, array<int, array<string, mixed>>>>|null */
+    private ?array $observedShapes = null;
+
+    /**
+     * What this endpoint has actually been seen answering with, by status.
+     *
+     * Read once for the whole document rather than per endpoint: four hundred operations would
+     * otherwise be four hundred queries to render one page.
+     *
+     * @param  array<string, mixed>  $endpoint
+     * @return array<int, array<string, mixed>>
+     */
+    private function observedFor(array $endpoint): array
+    {
+        $this->observedShapes ??= $this->observed->all();
+
+        $byMethod = $this->observedShapes[$endpoint['path']] ?? [];
+        $found = [];
+
+        foreach ($endpoint['methods'] as $method) {
+            foreach ($byMethod[$method] ?? [] as $status => $record) {
+                $found[$status] = $record;
+            }
+        }
+
+        return $found;
     }
 
     /**
@@ -113,8 +142,16 @@ class OpenApiGenerator
                     : 'request schema unreadable (' . $endpoint['body_source'] . ')';
             }
 
-            if ($endpoint['response_example'] === null) {
-                $missing[] = 'no response schema or example';
+            // An observed shape counts. It is derived from what the endpoint actually answered
+            // with rather than from what somebody remembered to type, which is the stronger of the
+            // two claims — the weaker one is a hand-written example that nothing keeps true.
+            $observedSuccess = array_filter(
+                array_keys($this->observedFor($endpoint)),
+                static fn (int $status) => $status >= 200 && $status < 300,
+            );
+
+            if ($endpoint['response_example'] === null && $observedSuccess === []) {
+                $missing[] = 'no response schema, and none observed yet';
             }
 
             if ($endpoint['deprecated'] && $endpoint['replaced_by'] === null) {
@@ -285,19 +322,31 @@ class OpenApiGenerator
      */
     private function responses(array $endpoint): array
     {
-        $success = in_array('POST', $endpoint['methods'], true) ? '200' : '200';
+        $observed = $this->observedFor($endpoint);
+        $responses = [];
 
-        $responses = [
-            $success => array_filter([
+        foreach ($observed as $status => $record) {
+            $responses[(string) $status] = [
+                'description' => $this->describeStatus($status)
+                    . ' Observed from ' . $record['samples'] . ' real response(s), most recently '
+                    . $record['last_seen_at'] . '. Keys and types only — no value from any response is stored.',
+                'content' => ['application/json' => [
+                    'schema' => $this->schemaOf($record['shape']),
+                ]],
+            ];
+        }
+
+        if (!isset($responses['200'])) {
+            $responses['200'] = array_filter([
                 'description' => 'Success',
                 'content' => $endpoint['response_example'] !== null
                     ? ['application/json' => ['example' => $endpoint['response_example']]]
                     : null,
-            ], static fn ($value) => $value !== null),
-        ];
+            ], static fn ($value) => $value !== null);
 
-        if ($endpoint['response_example'] === null) {
-            $responses[$success]['description'] = 'Success. The response body is produced by the controller directly and is not declared as a schema; call the endpoint in the API console to see its exact shape.';
+            if ($endpoint['response_example'] === null) {
+                $responses['200']['description'] = 'Success. The response body is produced by the controller directly and has not been observed yet, so its shape is not declared here.';
+            }
         }
 
         if ($endpoint['body'] !== []) {
@@ -330,6 +379,79 @@ class OpenApiGenerator
         ksort($responses);
 
         return $responses;
+    }
+
+    /** A short sentence for an observed status, so the schema is not the only thing on the row. */
+    private function describeStatus(int $status): string
+    {
+        return match (true) {
+            $status === 201 => 'Created.',
+            $status === 202 => 'Accepted.',
+            $status >= 200 && $status < 300 => 'Success.',
+            $status === 401 => 'Missing, expired or invalid credentials.',
+            $status === 403 => 'Authenticated, but not allowed.',
+            $status === 404 => 'The referenced record does not exist.',
+            $status === 422 => 'Validation failed.',
+            default => 'Response.',
+        };
+    }
+
+    /**
+     * An observed shape, as an OpenAPI schema.
+     *
+     * @param  array<string, mixed>  $shape
+     * @return array<string, mixed>
+     */
+    private function schemaOf(array $shape): array
+    {
+        $type = $shape['type'] ?? 'object';
+
+        if ($type === 'object') {
+            $properties = [];
+            $required = [];
+
+            foreach ($shape['properties'] ?? [] as $key => $child) {
+                $properties[$key] = $this->schemaOf($child);
+
+                if (!($child['optional'] ?? false)) {
+                    $required[] = $key;
+                }
+            }
+
+            return array_filter([
+                'type' => 'object',
+                'properties' => $properties ?: null,
+                // Required means "present in every response seen", which is what the observation
+                // supports — not a promise the controller has made.
+                'required' => $required ?: null,
+                'description' => ($shape['truncated'] ?? false) ? 'Truncated: this object was deeper or wider than the recorder describes.' : null,
+            ], static fn ($one) => $one !== null);
+        }
+
+        if ($type === 'array') {
+            return array_filter([
+                'type' => 'array',
+                'items' => isset($shape['items']) ? $this->schemaOf($shape['items']) : null,
+                'description' => ($shape['observed_empty'] ?? false) && !isset($shape['items'])
+                    ? 'Only ever observed empty, so the item shape is unknown.'
+                    : null,
+            ], static fn ($one) => $one !== null);
+        }
+
+        if ($type === 'mixed' || $type === 'null') {
+            return array_filter([
+                'nullable' => true,
+                'description' => $type === 'mixed'
+                    ? 'Observed as more than one type: ' . implode(', ', $shape['was'] ?? [])
+                    : null,
+            ], static fn ($one) => $one !== null);
+        }
+
+        return array_filter([
+            'type' => $type,
+            'format' => $shape['format'] ?? null,
+            'nullable' => ($shape['nullable'] ?? false) ?: null,
+        ], static fn ($one) => $one !== null);
     }
 
     /**
