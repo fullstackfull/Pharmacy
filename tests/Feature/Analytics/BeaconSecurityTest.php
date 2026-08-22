@@ -44,6 +44,12 @@ class BeaconSecurityTest extends TestCase
             AnalyticsEvent::WISHLIST_ADDED,
             AnalyticsEvent::CHECKOUT_STARTED,
             AnalyticsEvent::PAGE_VIEWED,
+            // Both of these were on the allow-list and neither could ever be sent: nothing in the
+            // theme carries the data-analytics attribute that would have fired them. They are
+            // recorded on the server now — the cart page is a page the server serves, a compare
+            // add is a row the server writes — so accepting them here would double count.
+            AnalyticsEvent::CART_VIEWED,
+            AnalyticsEvent::COMPARE_ADDED,
         ] as $name) {
             $this->assertFalse(
                 AnalyticsEvent::isClientAllowed($name),
@@ -57,8 +63,6 @@ class BeaconSecurityTest extends TestCase
         // The product filter navigates with pushState and returns JSON, so those navigations are
         // correctly not pageviews and are lost without the beacon.
         $this->assertTrue(AnalyticsEvent::isClientAllowed(AnalyticsEvent::PRODUCT_LIST_VIEWED));
-        $this->assertTrue(AnalyticsEvent::isClientAllowed(AnalyticsEvent::CART_VIEWED));
-        $this->assertTrue(AnalyticsEvent::isClientAllowed(AnalyticsEvent::COMPARE_ADDED));
     }
 
     public function test_the_javascript_allow_list_matches_the_server_one(): void
@@ -98,7 +102,7 @@ class BeaconSecurityTest extends TestCase
     {
         // 204 regardless, so a prober cannot learn which event names exist by watching responses.
         foreach ([
-            ['events' => [['name' => 'cart_viewed']]],
+            ['events' => [['name' => 'product_list_viewed']]],
             ['events' => [['name' => 'order_placed', 'value' => 999999]]],
             ['events' => 'not-an-array'],
             [],

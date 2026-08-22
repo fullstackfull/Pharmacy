@@ -13,6 +13,7 @@ use App\Models\Color;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ShippingType;
+use App\Services\Analytics\Analytics;
 use App\Services\RestockProductService;
 use App\Utils\CartManager;
 use App\Utils\CustomerManager;
@@ -137,6 +138,11 @@ class CartController extends Controller
             });
         }
 
+        // Analytics: the same funnel step the web cart page records, from the app's side of it.
+        // Web and API have to agree about what a cart view is, or the funnel measures which client
+        // a customer happened to use.
+        app(Analytics::class)->cartViewed(items: $cart->count(), value: (float) CartManager::cart_grand_total());
+
         return response()->json($cart, 200);
     }
 
@@ -187,11 +193,26 @@ class CartController extends Controller
         }
 
         $user = Helpers::getCustomerInformation($request);
-        Cart::where([
+        $owner = [
             'id' => $request->key,
             'customer_id' => ($user == 'offline' ? (session('guest_id') ?? $request->guest_id) : $user->id),
             'is_guest' => ($user == 'offline' ? 1 : '0'),
-        ])->delete();
+        ];
+
+        // Read before the delete: afterwards there is nothing left to say what was removed. The
+        // same event the web cart records, so removals are comparable across clients.
+        $removed = Cart::where($owner)->first(['product_id', 'quantity', 'price']);
+
+        Cart::where($owner)->delete();
+
+        if ($removed !== null) {
+            app(Analytics::class)->cartRemoved(
+                productId: (int) $removed->product_id,
+                quantity: (int) $removed->quantity,
+                value: (float) $removed->price * (int) $removed->quantity,
+            );
+        }
+
         return response()->json(translate('successfully_removed'));
     }
 

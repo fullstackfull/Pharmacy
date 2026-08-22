@@ -878,6 +878,15 @@ class WebController extends Controller
             || (getWebConfig(name: 'guest_checkout') && session()->has('guest_id') && session('guest_id'))
         ) {
             ProductManager::updateProductPriceInCartList(request: $request);
+
+            // Analytics: the middle of the funnel. Recorded here rather than from the browser
+            // because the server is the only side that knows what is actually in the cart — and
+            // because a page load it can see for itself is not a client's to report.
+            app(Analytics::class)->cartViewed(
+                items: count(CartManager::getCartListQuery()),
+                value: (float) CartManager::cart_grand_total(),
+            );
+
             $topRatedShops = [];
             $newSellers = [];
             $currentDate = date('Y-m-d H:i:s');

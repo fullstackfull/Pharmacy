@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Analytics;
 use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Support\AttributionEngine;
 use App\Services\Analytics\Support\BotDetector;
@@ -29,6 +30,7 @@ class CampaignRedirectController extends Controller
         private readonly VisitorContext $context,
         private readonly BotDetector $bots,
         private readonly AttributionEngine $attribution,
+        private readonly Analytics $analytics,
     ) {
     }
 
@@ -87,6 +89,12 @@ class CampaignRedirectController extends Controller
                 'is_bot' => $this->bots->isBot($request),
                 'ip_hash' => null,
             ]);
+
+            // The click table answers "how is this link performing"; the event stream answers "what
+            // did the person who clicked it go on to do". Writing only the first left campaign_clicked
+            // in the catalogue as an event nothing produced, so every journey through a short link
+            // started at the destination page with no visible arrival.
+            $this->analytics->campaignClicked(campaignId: (int) $campaign->id, code: (string) $campaign->code);
         } catch (\Throwable) {
             // A click that cannot be counted still has to arrive.
         }

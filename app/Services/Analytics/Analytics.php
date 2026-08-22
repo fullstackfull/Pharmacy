@@ -250,6 +250,47 @@ class Analytics
         ));
     }
 
+    /** A line in the cart whose quantity changed. */
+    public function cartUpdated(int $productId, int $quantity, ?float $value = null): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::CART_UPDATED,
+            entityType: 'product',
+            entityId: (string) $productId,
+            value: $value,
+            currency: $value !== null ? $this->currency() : null,
+            quantity: $quantity,
+        ));
+    }
+
+    /**
+     * The cart page, opened.
+     *
+     * The middle of the funnel: how many people who filled a cart went on to look at it is the
+     * question that separates "nobody adds to cart" from "everybody abandons the cart page". The
+     * value is read from the cart the server already has in hand, never from the client — a figure
+     * a browser could choose is not a figure.
+     */
+    public function cartViewed(int $items, ?float $value = null): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::CART_VIEWED,
+            value: $value,
+            currency: $value !== null ? $this->currency() : null,
+            quantity: $items,
+        ));
+    }
+
+    public function compareAdded(int $productId, ?int $vendorId = null): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::COMPARE_ADDED,
+            entityType: 'product',
+            entityId: (string) $productId,
+            vendorId: $vendorId,
+        ));
+    }
+
     public function wishlistAdded(int $productId, ?int $vendorId = null): void
     {
         $this->recorder->record(new AnalyticsEvent(

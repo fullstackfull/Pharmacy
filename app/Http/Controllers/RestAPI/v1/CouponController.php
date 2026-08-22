@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Analytics;
 use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\Order;
@@ -101,6 +102,16 @@ class CouponController extends Controller
     public function apply(Request $request): JsonResponse
     {
         $result = OrderManager::getTotalCouponAmount(request: $request, couponCode: $request['code']);
+
+        // The same measurement the web coupon form records, so a code's rejection rate is the
+        // code's, not the storefront's.
+        app(Analytics::class)->couponApplied(
+            code: (string) $request['code'],
+            accepted: (bool) $result['status'],
+            discount: $result['status'] ? (float) ($result['discount'] ?? 0) : null,
+            reason: $result['status'] ? null : 'rejected',
+        );
+
         if ($result['status']) {
             return response()->json([
                 'coupon_discount' => $result['discount'],

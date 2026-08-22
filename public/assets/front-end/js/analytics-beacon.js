@@ -8,7 +8,10 @@
  |     sorting and changing a price range are real page changes that return JSON, so the server
  |     counts them as an XHR and — correctly — not as a pageview. Without this they are simply
  |     lost, and on a catalogue site that is a large share of all navigation.
- |  2. Interactions that never navigate at all: a wishlist toggle, a quick view.
+ |  2. Interactions that never navigate and write nothing on the server, should the theme ever add
+ |     one. The delegated [data-analytics] handler below is that extension point; today nothing in
+ |     the theme carries the attribute, and an event the server already records is refused here
+ |     rather than counted twice.
  |
  | Deliberately small, dependency-free and defensive. It runs on every storefront page of a live
  | shop, so it must never throw into a customer's console, never block a click, and never delay a
@@ -33,10 +36,12 @@
     // The server allow-list, mirrored here so a typo never becomes a silent no-op that only shows
     // up as a missing report weeks later.
     //
-    // Short on purpose. Anything the server already records — a product view, a wishlist add, a
-    // checkout start — is deliberately absent: sending it from here as well would count it twice,
-    // and it would not be caught by deduplication because the two sides disagree about the path.
-    var ALLOWED = ['product_list_viewed', 'cart_viewed', 'compare_added'];
+    // One entry, on purpose. Anything the server already records — a product view, a wishlist add,
+    // a checkout start, the cart page, a compare add — is deliberately absent: sending it from here
+    // as well would count it twice, and deduplication would not catch it because the two sides
+    // disagree about the path. What is left is the filter's pushState navigation, which returns
+    // JSON and is correctly not a pageview to the server.
+    var ALLOWED = ['product_list_viewed'];
 
     function push(name, payload) {
         try {
