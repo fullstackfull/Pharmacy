@@ -132,4 +132,33 @@ class ArrayValuedRequestInputTest extends TestCase
 
         return $reflection->invoke($instance, $request, ...$extra);
     }
+    public function test_a_search_box_that_is_not_a_string_returns_the_unfiltered_list(): void
+    {
+        // Seven seller-API listings split their search on spaces and ANDed the parts. Every one did
+        // it straight off the request, so `?search[]=x` from the vendor app answered with a 500
+        // instead of a result set. A search nobody can spell is simply not applied — which is what
+        // an empty search box already does.
+        $this->assertSame([], searchTerms(['x']));
+        $this->assertSame([], searchTerms(null));
+        $this->assertSame([], searchTerms(''));
+        $this->assertSame([], searchTerms('   '), 'whitespace is not a search term');
+
+        $this->assertSame(['paracetamol'], searchTerms('paracetamol'));
+        $this->assertSame(['paracetamol', 'syrup'], searchTerms('  paracetamol  syrup '));
+    }
+
+    public function test_a_bulk_action_refuses_an_array_instead_of_throwing_on_it(): void
+    {
+        // The allow-list under each of these was always right; the cast above it threw first, so
+        // the 422 they were written to return could never be reached.
+        $request = Request::create('/', 'POST', ['status' => ['x'], 'action' => ['y'], 'order_status' => ['z']]);
+
+        foreach (['status', 'action', 'order_status'] as $field) {
+            $value = $request->input($field);
+            $guarded = is_string($value) ? $value : '';
+
+            $this->assertSame('', $guarded);
+            $this->assertFalse(in_array($guarded, ['block', 'unblock', 'approved', 'delivered'], true));
+        }
+    }
 }

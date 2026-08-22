@@ -449,7 +449,7 @@ class BusinessSettingsController extends BaseController
         $this->businessSettingRepo->updateOrInsert(type: 'product_live_viewers_min', value: $viewersMin);
         $this->businessSettingRepo->updateOrInsert(type: 'product_live_viewers_max', value: $viewersMax);
         $this->businessSettingRepo->updateOrInsert(type: 'product_authenticity_badge_status', value: $request->get('product_authenticity_badge_status', 0));
-        $this->businessSettingRepo->updateOrInsert(type: 'product_authenticity_badge_text', value: strip_tags((string) $request->get('product_authenticity_badge_text', '')));
+        $this->businessSettingRepo->updateOrInsert(type: 'product_authenticity_badge_text', value: strip_tags(is_string($badgeText = $request->get('product_authenticity_badge_text')) ? $badgeText : ''));
         $this->businessSettingRepo->updateOrInsert(type: 'bought_together_status', value: $request->get('bought_together_status', 0));
         $this->businessSettingRepo->updateOrInsert(type: 'bought_together_limit', value: max(2, min(12, (int) $request->get('bought_together_limit', 6))));
         $this->businessSettingRepo->updateOrInsert(type: 'bought_together_auto_fill', value: $request->get('bought_together_auto_fill', 0));

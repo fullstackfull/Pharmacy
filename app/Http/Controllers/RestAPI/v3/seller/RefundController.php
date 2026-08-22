@@ -50,7 +50,7 @@ class RefundController extends Controller
                 $query->where('seller_is', 'seller')->where('seller_id', $seller['id']);
             })
             ->when($request['search'], function ($query) use ($request) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 foreach ($key as $value) {
                     $query->where('order_id', 'like', "%{$value}%");
                 }

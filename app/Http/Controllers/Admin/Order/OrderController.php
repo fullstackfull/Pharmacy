@@ -791,7 +791,8 @@ class OrderController extends BaseController
     ): JsonResponse
     {
         $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
-        $status = (string) $request->input('order_status', '');
+        // Not cast: `order_status[]=x` would throw before the allow-list below could refuse it.
+        $status = is_string($request->input('order_status')) ? $request->input('order_status') : '';
 
         if (empty($ids)) {
             return response()->json(['status' => 0, 'message' => translate('select_at_least_one_order')], 422);

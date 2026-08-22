@@ -15,10 +15,14 @@ use App\Services\Monitoring\Support\SeriesReader;
  * line right now" and "above the line for the whole two minutes" is the entire difference between
  * an alert worth waking up for and a pager that everybody mutes.
  *
- * Two sources, one interface:
+ * Three sources, one interface:
  *   - gauges and counters written to monitoring_series by the flush (server.*, db.*, queue.*, check.*)
  *   - request-derived numbers computed from the request buckets (http.*), which are aggregates and
  *     therefore cannot be stored as a single per-minute sample without lying about percentiles.
+ *   - the same shape for OUTBOUND calls, from the dependency buckets (dependency.*). Without these
+ *     no rule could watch a payment gateway or an SMS provider at all — the numbers were on the
+ *     integrations page and unreachable from the alert engine, so the one failure a shop most wants
+ *     to be woken for was the one it could only find by looking.
  */
 class MetricResolver
 {
@@ -33,6 +37,19 @@ class MetricResolver
         'http.avg_ms' => 'avg',
         'http.requests_per_minute' => 'requests_per_minute',
         'http.db_ms_avg' => 'db_ms_avg',
+    ];
+
+    /**
+     * Dependency-derived metric name => the field computed from a minute of outbound calls.
+     *
+     * The label on such a rule is the SERVICE — the host, as DependencyRecorder files it — so
+     * "api.stripe.com above 5% errors for two minutes" is a rule somebody can write.
+     */
+    private const DEPENDENCY_METRICS = [
+        'dependency.error_rate' => 'error_rate',
+        'dependency.timeout_rate' => 'timeout_rate',
+        'dependency.avg_ms' => 'avg_ms',
+        'dependency.calls_per_minute' => 'calls',
     ];
 
     public function __construct(private readonly SeriesReader $reader)
@@ -59,13 +76,24 @@ class MetricResolver
             $hasRequests = $this->reader->connection()->table('monitoring_request_buckets')
                 ->where('bucket_at', '>=', Clock::daysAgo(2))
                 ->exists();
+
+            // Same rule for the dependency metrics: offered only where something is actually
+            // recording outbound calls, because this build can only see the ones made through
+            // Laravel's HTTP client and a rule against a gateway nobody measures is a rule that
+            // stays silent through the outage it was written for.
+            $hasDependencies = $this->reader->connection()->table('monitoring_dependency_buckets')
+                ->where('bucket_at', '>=', Clock::daysAgo(2))
+                ->exists();
         } catch (\Throwable) {
             // Null, not an empty list: an unanswered question is not a negative answer, and the
             // panel renders the two differently.
             return null;
         }
 
-        $metrics = $hasRequests ? array_keys(self::REQUEST_METRICS) : [];
+        $metrics = array_merge(
+            $hasRequests ? array_keys(self::REQUEST_METRICS) : [],
+            $hasDependencies ? array_keys(self::DEPENDENCY_METRICS) : [],
+        );
 
         return array_values(array_unique(array_merge($metrics, $stored)));
     }
@@ -83,9 +111,11 @@ class MetricResolver
     {
         $minutes = max(1, (int) ceil($windowSeconds / 60));
 
-        return isset(self::REQUEST_METRICS[$metric])
-            ? $this->requestSamples($metric, $label, $minutes)
-            : $this->seriesSamples($metric, $label, $minutes, $worst);
+        return match (true) {
+            isset(self::REQUEST_METRICS[$metric]) => $this->requestSamples($metric, $label, $minutes),
+            isset(self::DEPENDENCY_METRICS[$metric]) => $this->dependencySamples($metric, $label, $minutes),
+            default => $this->seriesSamples($metric, $label, $minutes, $worst),
+        };
     }
 
     /** The most recent reading, whatever the window — what the alert shows as "last value". */
@@ -100,6 +130,10 @@ class MetricResolver
     {
         if (isset(self::REQUEST_METRICS[$metric])) {
             return Metric::of($metric, 'monitoring_request_buckets');
+        }
+
+        if (isset(self::DEPENDENCY_METRICS[$metric])) {
+            return Metric::of($metric, 'monitoring_dependency_buckets');
         }
 
         return in_array($metric, $this->available(), true)
@@ -171,6 +205,51 @@ class MetricResolver
             if (($summary['has_data'] ?? false) === true && isset($summary[$field]) && is_numeric($summary[$field])) {
                 $samples[] = (float) $summary[$field];
             }
+        }
+
+        return $samples;
+    }
+
+    /**
+     * Outbound calls, one sample per minute.
+     *
+     * A minute in which this service was not called at all produces NO sample rather than a zero:
+     * a rate needs calls to be a rate of, and "nobody called the gateway this minute" must never
+     * evaluate as "the gateway answered everything perfectly".
+     *
+     * @return array<int, float>
+     */
+    private function dependencySamples(string $metric, string $label, int $minutes): array
+    {
+        try {
+            $rows = $this->reader->connection()->table('monitoring_dependency_buckets')
+                ->selectRaw('bucket_at, SUM(calls) AS calls, SUM(failures) AS failures, SUM(timeouts) AS timeouts, SUM(duration_sum_ms) AS duration_sum_ms')
+                ->where('resolution', 'minute')
+                ->where('bucket_at', '>=', Clock::minutesAgo($minutes))
+                ->when($label !== '', fn ($query) => $query->where('service', $label))
+                ->groupBy('bucket_at')
+                ->orderBy('bucket_at')
+                ->get();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $field = self::DEPENDENCY_METRICS[$metric];
+        $samples = [];
+
+        foreach ($rows as $row) {
+            $calls = (int) $row->calls;
+
+            if ($calls <= 0) {
+                continue;
+            }
+
+            $samples[] = match ($field) {
+                'error_rate' => round(100 * (int) $row->failures / $calls, 3),
+                'timeout_rate' => round(100 * (int) $row->timeouts / $calls, 3),
+                'avg_ms' => round((float) $row->duration_sum_ms / $calls, 3),
+                default => (float) $calls,
+            };
         }
 
         return $samples;

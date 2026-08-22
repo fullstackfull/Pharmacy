@@ -36,7 +36,7 @@ class RefundController extends Controller
 
             $search = $request->search;
             if ($request->has('search')) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 $refund_list = $refund_list->where(function ($q) use ($key) {
                     foreach ($key as $value) {
                         $q->orWhere('order_id', 'like', "%{$value}%");

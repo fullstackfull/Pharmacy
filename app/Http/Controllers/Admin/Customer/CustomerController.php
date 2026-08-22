@@ -169,7 +169,8 @@ class CustomerController extends BaseController
     public function bulkUpdateStatus(Request $request): JsonResponse
     {
         $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
-        $action = (string) $request->input('action', '');
+        // Not cast: `action[]=x` would throw before the allow-list below could refuse it.
+        $action = is_string($request->input('action')) ? $request->input('action') : '';
 
         if (empty($ids)) {
             return response()->json(['status' => 0, 'message' => translate('select_at_least_one_customer')], 422);

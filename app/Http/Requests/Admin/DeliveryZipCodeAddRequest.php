@@ -16,7 +16,9 @@ class DeliveryZipCodeAddRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'zipcode' => 'required'
+            // `string`, not just `required`: the controller splits this on commas, and explode()
+            // rejects an array outright — so `?zipcode[]=x` used to 500 instead of being refused here.
+            'zipcode' => 'required|string'
         ];
     }
 
@@ -24,6 +26,7 @@ class DeliveryZipCodeAddRequest extends FormRequest
     {
         return [
             'zipcode.required' => translate('the_zipcode_field_is_required'),
+            'zipcode.string' => translate('the_zipcode_field_is_required'),
         ];
     }
 
