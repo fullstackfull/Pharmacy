@@ -35,7 +35,14 @@ class SubCategoryUpdateRequest extends FormRequest
             'name' => [
                 'required',
             ],
-            'image' => 'mimes:jpg,jpeg,png|max:'. getFileUploadMaxSize(unit: 'kb'),
+            // Same gate as every other category image, rather than a hand-written mime list that
+            // rejects the .webp the uploader itself produces.
+            'image' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg'],
+                maxSize: getFileUploadMaxSize(unit: 'kb'),
+                isDisallowed: true,
+            ),
             'priority' => 'required'
         ];
     }

@@ -56,6 +56,28 @@
                             </div>
                         @endforeach
                     </div>
+
+                    {{-- Monitoring is split finer than a single module because it exposes far more
+                         than most screens: revenue as it happens, error messages quoting real data,
+                         a log viewer, and settings that change how the system behaves. Holding the
+                         System Settings module keeps the read-only view; the rest is deliberate. --}}
+                    <h5 class="mb-2">{{ translate('monitoring') }}</h5>
+                    <div class="row gy-2 mb-4">
+                        @foreach (\App\Services\Monitoring\MonitoringPermissionService::all() as $monitoringKey => $monitoringLabel)
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="form-group d-flex gap-2">
+                                    <input type="checkbox" name="modules[]" value="{{ $monitoringKey }}"
+                                           class="form-check-input checkbox--input module-permission"
+                                           id="{{ $monitoringKey }}-permission"
+                                           >
+                                    <label class="" style="{{ $direction === "rtl" ? 'margin-right: 1.25rem;' : '' }};"
+                                           for="{{ $monitoringKey }}-permission">
+                                        {{ translate($monitoringLabel) }}
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                     <div class="d-flex justify-content-end ">
                         <button type="submit" class="btn btn-primary">
                             {{ translate('submit') }}

@@ -27,12 +27,20 @@ class SubCategoryAddRequest extends FormRequest
 
     public function rules(): array
     {
-        $rules = [
+        return [
             'name' => 'required',
             'priority' => 'required',
-            'parent_id' => 'required'
+            'parent_id' => 'required',
+            // A sub-category may carry its own icon. Optional — the storefront falls back to a
+            // letter chip — but when one IS uploaded it goes through the same format and size
+            // gate as a main category's, or an unvalidated file reaches the disk.
+            'image' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg'],
+                maxSize: getFileUploadMaxSize(unit: 'kb'),
+                isDisallowed: true,
+            ),
         ];
-        return $rules;
     }
 
     public function messages(): array

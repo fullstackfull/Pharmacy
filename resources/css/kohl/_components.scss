@@ -676,3 +676,24 @@
     .k-savebar__actions { inline-size: 100%; }
     .k-savebar__actions .k-btn { flex: 1; }
 }
+
+/* ── Category icon slot ──────────────────────────────────────────────────────
+   Where a category's icon would be, for one that has none yet. A status badge
+   reads as a state ("active", "warning"); a dashed slot reads as "no artwork",
+   which is what it actually means — and it keeps a list of icon-less rows from
+   looking like a row of broken images. */
+.category-icon-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 38px;
+    block-size: 38px;
+    border-radius: var(--k-radius-2, 8px);
+    border: 1px dashed var(--k-border-strong, rgba(128, 138, 157, .5));
+    background: var(--k-surface-2, rgba(128, 138, 157, .08));
+    color: var(--k-text-muted, #6b7a8d);
+    font-weight: var(--k-weight-bold, 700);
+    font-size: 15px;
+    line-height: 1;
+    text-transform: uppercase;
+}

@@ -51,6 +51,7 @@
                                 <thead>
                                 <tr>
                                     <th>{{ translate('SL') }}</th>
+                                    <th>{{ translate('icon') }}</th>
                                     <th>{{ translate('sub_sub_category_name') }}</th>
                                     <th>{{ translate('sub_category_name') }}</th>
                                     <th>{{ translate('category_name') }}</th>
@@ -62,6 +63,19 @@
                                 @foreach($categories as $key=>$category)
                                     <tr>
                                         <td>{{ $categories->firstItem() + $key }}</td>
+                                        {{-- The uploaded icon, or a letter chip: a row of identical grey placeholders
+                                             reads as "the icons are broken" rather than "this one has none". --}}
+                                        <td>
+                                            @php($subIcon = category_icon_url($category))
+                                            @if ($subIcon)
+                                                <img class="rounded" width="38" height="38" loading="lazy"
+                                                     src="{{ $subIcon }}" alt="{{ $category['defaultname'] }}">
+                                            @else
+                                                <span class="category-icon-placeholder" title="{{ translate('no_icon_uploaded_yet') }}">
+                                                    {{ mb_substr(trim((string) $category['defaultname']), 0, 1) }}
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td>
                                             <h6 class="fs-14">{{ $category['defaultname'] }}</h6>
                                             <span class="fs-12">{{ translate('ID') }}  #{{ $category['id'] }}</span>

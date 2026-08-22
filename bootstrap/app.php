@@ -61,11 +61,16 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\DetectMobile::class,
             \App\Http\Middleware\ApplySeoRedirects::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
+            // Operational monitoring. Separate from RecordHttpTelemetry on purpose: that one keeps
+            // a row per request for visits and sources, this one only ever increments counters in
+            // the current minute and never writes a row on the request path.
+            \App\Http\Middleware\MonitorRequest::class,
         ]);
         $middleware->group('api', [
             'throttle:3000,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
+            \App\Http\Middleware\MonitorRequest::class,
         ]);
         /*
         |--------------------------------------------------------------------------
@@ -136,6 +141,23 @@ return Application::configure(basePath: dirname(__DIR__))
                 ['value' => now()->toDateTimeString()]
             );
         })->everyFiveMinutes()->name('scheduler-heartbeat')->withoutOverlapping();
+
+        /*
+        | Monitoring.
+        |
+        | The one-minute flush is the collection heartbeat: it drains the request counters that web
+        | requests have been incrementing in Redis and takes a reading of every gauge. If it stops,
+        | the dashboard reports that monitoring itself has gone blind rather than showing the last
+        | numbers it saw as if they were current.
+        */
+        $schedule->command('monitoring:flush')->everyMinute()->withoutOverlapping()->runInBackground();
+        // Health and synthetic checks: probes of the things a request does not touch.
+        $schedule->command('monitoring:check')->everyFiveMinutes()->withoutOverlapping();
+        // Evaluate alert rules against the series the flush just wrote.
+        $schedule->command('monitoring:evaluate')->everyMinute()->withoutOverlapping();
+        // Minutes into hours into days, and prune past each resolution's retention.
+        $schedule->command('monitoring:rollup')->hourlyAt(3)->withoutOverlapping();
+        $schedule->command('monitoring:rollup --prune')->dailyAt('01:45')->withoutOverlapping();
 
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
