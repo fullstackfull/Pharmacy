@@ -110,8 +110,8 @@ class EnergyCollector implements Collector
     {
         $collected = $this->collect();
 
-        // Only the two that are readings. Cost is this series multiplied by a config number, so
-        // storing it would freeze today's tariff into history and re-derive nothing; per-domain
+        // Only the two that are readings. Cost is this series multiplied by a tariff the operator
+        // typed in, so storing it would freeze today's tariff into history for good; per-domain
         // watts is detail for the panel, not a line anybody charts.
         return array_filter([
             self::WATTS_METRIC => $collected['watts'],
@@ -130,9 +130,10 @@ class EnergyCollector implements Collector
             return self::MEASURED;
         }
 
-        // Read as an explicit boolean rather than for truthiness: a leftover MONITORING_ENERGY=0 or
-        // =off arrives here as a non-empty string, which PHP calls true, and that must not be
-        // enough to start inventing watts. The estimate has to be turned on in so many words.
+        // Read as an explicit boolean rather than for truthiness: a leftover
+        // MONITORING_ENERGY_ESTIMATED=0 or =off arrives here as a non-empty string, which PHP calls
+        // true, and that must not be enough to start inventing watts. The estimate is opt-in and
+        // has to be turned on in so many words.
         $enabled = filter_var($this->settings->get('energy.estimated_mode'), FILTER_VALIDATE_BOOLEAN);
 
         return $enabled ? self::ESTIMATED : null;
@@ -562,8 +563,13 @@ class EnergyCollector implements Collector
             return $energy;
         }
 
+        $cost = (float) $energy->value * $rate;
+
+        // A few hours of a small server at a low tariff is a fraction of one unit of currency, and
+        // two decimals prints that as 0.00 — the one number this panel must never show for
+        // something it did measure. Amounts under a unit keep the digits that make them non-zero.
         return Metric::of(
-            round((float) $energy->value * $rate, 2),
+            round($cost, abs($cost) < 1 ? 4 : 2),
             $energy->source . ' x ' . self::PRICE_SOURCE,
             $currency === '' ? null : $currency,
             $note,

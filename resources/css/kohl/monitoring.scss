@@ -628,3 +628,53 @@
 .mon-cores__fill--busy { background: var(--mon-degraded); }
 .mon-cores__fill--saturated { background: var(--mon-critical); }
 .mon-cores__value { text-align: end; font-size: var(--k-text-xs, 12px); }
+
+/* ── Fullness bar ──────────────────────────────────────────────────────────── */
+/*
+   The storage section needs one thing no existing class provides: a percentage
+   whose bar IS the headline of the card rather than a detail inside it. A
+   filesystem at 92% and one at 12% render as the same handful of characters in
+   .mon-grid, and the whole point of this section is that those two are not the
+   same news.
+
+   .mon-cores__* is the nearest existing pattern and is deliberately not reused:
+   it is a compact one-line-per-core row whose label column is far too narrow for
+   a mount point, and its bar carries no thresholds. Here the two configured
+   thresholds are drawn ON the track, so a bar is read against the line it is
+   about to cross rather than against nothing.
+
+   Colours come from the same --mon-* state variables as every card, dot and
+   pill, so 92% reads the same red here as the same figure does anywhere else.
+
+   Sized in logical properties so the fill grows from the inline start and the
+   threshold marks sit correctly in Arabic without a second set of rules. */
+.mon-usage { display: flex; flex-direction: column; gap: 6px; margin-block-start: 12px; }
+.mon-usage__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mon-usage__value { font-size: clamp(22px, 3vw, 28px); font-weight: var(--k-weight-bold, 700); line-height: 1.1; }
+.mon-usage__value i { font-style: normal; font-size: 13px; color: var(--k-text-muted); font-weight: 400; margin-inline-start: 2px; }
+.mon-usage__caption { font-size: var(--k-text-xs, 12px); color: var(--k-text-muted); text-align: end; flex: 1 1 auto; min-inline-size: 0; }
+
+.mon-usage__track {
+    position: relative;
+    display: block;
+    block-size: 12px;
+    border-radius: 6px;
+    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    overflow: hidden;
+}
+.mon-usage__fill { display: block; block-size: 100%; border-radius: 6px; background: var(--k-primary, #3b5bdb); }
+/* The two thresholds are the configured disk_warning / disk_critical, so a filesystem
+   reads the same colour here as the same figure does on the overview card. */
+.mon-usage__fill--healthy { background: var(--mon-healthy); }
+.mon-usage__fill--degraded { background: var(--mon-degraded); }
+.mon-usage__fill--critical { background: var(--mon-critical); }
+
+/* A reading with no configured threshold behind it — device utilisation — keeps the
+   neutral fill: colouring it would teach the eye a state no alert rule shares. */
+.mon-usage__fill--unscored { background: var(--k-primary, #3b5bdb); }
+
+.mon-usage--degraded .mon-usage__value { color: var(--mon-degraded); }
+.mon-usage--critical .mon-usage__value { color: var(--mon-critical); }
+
+.mon-usage__mark { position: absolute; inset-block: 0; inline-size: 1px; background: var(--k-text-muted); opacity: .45; }
+.mon-usage__mark--critical { inline-size: 2px; opacity: .7; }

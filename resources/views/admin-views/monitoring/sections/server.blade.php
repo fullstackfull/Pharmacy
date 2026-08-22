@@ -164,10 +164,12 @@
     <x-k.card :title="translate($chart['title'])">
         @if ($chart['state'] === 'ok')
             <div class="mon-chart" data-mon-chart='@json($asChart($chart))'></div>
+            {{-- The window is stated once at the foot of the page rather than on every card: the
+                 shared renderer labels its axis with the VIEWER's clock, so a dashboard timezone
+                 printed directly under it reads as a contradiction on a browser set elsewhere. --}}
             <p class="mon-note">
                 {{ translate('latest') }}: {{ $count($chart['latest']) }} {{ $chart['unit'] }} —
-                <code>{{ $chart['metric'] }}</code>, {{ translate('window') }}:
-                {{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} ({{ $panel['window']['timezone'] }})
+                <code>{{ $chart['metric'] }}</code>
             </p>
         @else
             <x-k.empty icon="trend-up" :title="$stateTitle($chart['state'])" :text="$chart['note'] ?? ''" />
@@ -211,10 +213,12 @@
     <x-k.card :title="translate($chart['title'])">
         @if ($chart['state'] === 'ok')
             <div class="mon-chart" data-mon-chart='@json($asChart($chart))'></div>
+            {{-- The window is stated once at the foot of the page rather than on every card: the
+                 shared renderer labels its axis with the VIEWER's clock, so a dashboard timezone
+                 printed directly under it reads as a contradiction on a browser set elsewhere. --}}
             <p class="mon-note">
                 {{ translate('latest') }}: {{ $count($chart['latest']) }} {{ $chart['unit'] }} —
-                <code>{{ $chart['metric'] }}</code>, {{ translate('window') }}:
-                {{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} ({{ $panel['window']['timezone'] }})
+                <code>{{ $chart['metric'] }}</code>
             </p>
         @else
             <x-k.empty icon="trend-up" :title="$stateTitle($chart['state'])" :text="$chart['note'] ?? ''" />
@@ -354,4 +358,6 @@
     <code>/sys/fs/cgroup</code>.
     {{ translate('the_charts_are_read_from_the_stored_series_in') }} <code>monitoring_series</code>
     ({{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} {{ $panel['window']['timezone'] }}).
+    {{ translate('every_sample_is_stored_in_utc_and_converted_once_for_this_page') }};
+    {{ translate('the_time_labels_drawn_on_the_charts_themselves_come_from_the_clock_of_the_browser_you_are_reading_this_in') }}.
 </p>
