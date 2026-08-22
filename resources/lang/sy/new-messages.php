@@ -1295,4 +1295,8 @@ return [
 	'count' => 'Count',
 	'route' => 'Route',
 	'what_the_shop_spends_its_day_answering_the_context_the_other_three_tables_are_read_against' => 'What the shop spends its day answering the context the other three tables are read against',
+	'db' => 'Db',
+	'occurrences_are_kept_for' => 'Occurrences are kept for',
+	'window_starts' => 'Window starts',
+	'read_from' => 'Read from',
 ];

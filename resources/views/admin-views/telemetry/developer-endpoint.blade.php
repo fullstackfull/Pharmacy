@@ -191,6 +191,23 @@
                         :title="translate('no_traffic_recorded')"
                         :text="$endpoint['health']['reason']['note'] ?? null ?? translate('nothing_has_called_this_endpoint_in_the_measured_window')" />
                 @endif
+
+                {{-- These numbers are a summary of what Monitoring recorded; the evidence behind
+                     them — the individual slow requests, the failures — lives there, and having to
+                     go and find the route by hand is the difference between a link and a search. --}}
+                <p class="dev-note dev-note--links">
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'traces', 'route' => $endpoint['path'], 'range' => '24h']) }}">
+                        {{ translate('traced_requests_for_this_route') }}
+                    </a>
+                    ·
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'requests', 'range' => '24h']) }}">
+                        {{ translate('all_route_timings') }}
+                    </a>
+                    ·
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'errors', 'range' => '24h']) }}">
+                        {{ translate('errors') }}
+                    </a>
+                </p>
             </x-k.card>
 
             <x-k.card :title="translate('can_this_be_removed')">

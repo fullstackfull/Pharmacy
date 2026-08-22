@@ -36,6 +36,20 @@
                 <div>
                     <strong>{{ translate('analytics_is_not_collecting_normally') }}</strong>
                     <p>{{ $health['message'] ?? '' }}</p>
+                    {{-- Where the cause is visible. A rollup that never ran is almost always the
+                         server cron, and Monitoring is the section that can say whether it fired —
+                         which is a different screen, and one nobody thinks to open from here. --}}
+                    <p class="ana-muted">
+                        @if ($health['state'] === 'rollup_never_ran')
+                            <a href="{{ route('admin.monitoring.section', ['section' => 'scheduler']) }}">
+                                {{ translate('check_whether_the_scheduler_is_running') }}
+                            </a>
+                        @else
+                            <a href="{{ route('admin.monitoring.section', ['section' => 'overview']) }}">
+                                {{ translate('check_the_state_of_the_server') }}
+                            </a>
+                        @endif
+                    </p>
                 </div>
             </div>
         @endif

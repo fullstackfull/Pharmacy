@@ -234,8 +234,18 @@
                     @foreach ($breakdown['rows'] as $row)
                         <tr>
                             <td>
-                                <span class="k-truncate" style="display:block;max-inline-size:260px"
-                                      title="{{ $row['channel'] }} {{ $row['method'] }} {{ $row['route'] }}">{{ $row['route'] }}</span>
+                                {{-- Straight through to what this route is: the Developer Portal
+                                     resolves the path, so this does not have to know how its
+                                     endpoint ids are made. Folded rows are not a route, so they do
+                                     not link anywhere. --}}
+                                @if ($row['route'] === '__other__')
+                                    <span class="k-truncate" style="display:block;max-inline-size:260px"
+                                          title="{{ translate('routes_folded_together_by_the_cardinality_guard') }}">{{ $row['route'] }}</span>
+                                @else
+                                    <a class="k-truncate" style="display:block;max-inline-size:260px"
+                                       href="{{ route('admin.developer.lookup', ['path' => $row['route'], 'method' => $row['method']]) }}"
+                                       title="{{ $row['channel'] }} {{ $row['method'] }} {{ $row['route'] }} — {{ translate('open_this_endpoint_in_the_developer_portal') }}">{{ $row['route'] }}</a>
+                                @endif
                             </td>
                             <td>{{ $row['method'] }}</td>
                             <td class="k-table__num k-num">{{ number_format($row['hits']) }}</td>
@@ -277,4 +287,7 @@
 <p class="mon-note">
     {{ translate('every_figure_on_this_page_is_read_from') }} <code>monitoring_request_buckets</code>,
     {{ translate('folded_per_minute_per_route_percentiles_are_interpolated_from_the_stored_latency_histogram_not_from_sampled_requests') }}
+    {{-- The complement: this page counts requests, Analytics counts people. Neither is a substitute
+         for the other and until now there was no way across. --}}
+    <a href="{{ route('admin.analytics.section', ['section' => 'acquisition']) }}">{{ translate('who_those_requests_were_and_where_they_came_from') }}</a>.
 </p>

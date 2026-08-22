@@ -134,6 +134,38 @@ class ApiManifest
         return $endpoints;
     }
 
+    /**
+     * One endpoint by the path it is registered at.
+     *
+     * The id is a hash of the methods and the URI, so nothing outside this class can compute it —
+     * which is why Monitoring, whose request buckets are keyed by route pattern rather than by a
+     * portal id, could not link to an endpoint's documentation. This is how it asks.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByPath(string $path, ?string $method = null): ?array
+    {
+        $path = '/' . ltrim(trim($path), '/');
+        $method = $method === null ? null : strtoupper($method);
+        $fallback = null;
+
+        foreach ($this->get()['endpoints'] ?? [] as $endpoint) {
+            if ($endpoint['path'] !== $path) {
+                continue;
+            }
+
+            if ($method === null || in_array($method, $endpoint['methods'], true)) {
+                return $endpoint;
+            }
+
+            // The same path registered for a different verb still documents the resource, so it is
+            // a better answer than nothing — but only if no exact match turns up.
+            $fallback ??= $endpoint;
+        }
+
+        return $fallback;
+    }
+
     /** One endpoint by its stable id. */
     public function endpoint(string $id): ?array
     {

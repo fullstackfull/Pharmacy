@@ -184,6 +184,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('download/openapi', 'openapi')->name('openapi');
             Route::get('download/postman', 'postman')->name('postman');
             Route::get('endpoint/{id}', 'endpoint')->name('endpoint');
+            // How other sections link in. They know an endpoint by its path, not by the portal's
+            // internal id, so they hand over the path and the portal resolves it.
+            Route::get('lookup', 'lookup')->name('lookup');
             // Writes, so they are POSTs: capturing a snapshot records history, and rebuilding the
             // manifest discards a cache. Neither belongs behind a link a browser can prefetch.
             Route::post('snapshot', 'snapshot')->name('snapshot');
