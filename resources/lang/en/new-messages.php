@@ -4670,4 +4670,5 @@ return [
 	'cloud_region' => 'Cloud region',
 	'cloud_endpoint' => 'Cloud endpoint',
 	'cloud_credentials_set' => 'Cloud credentials set',
+	'a_lookup_that_is_answered_from_etc_hosts_or_a_local_cache_is_not_dns_and_timing_it_would_put_a_reassuring_number_where_no_resolver_was_ever_measured' => 'A lookup that is answered from etc hosts or a local cache is not dns and timing it would put a reassuring number where no resolver was ever measured',
 ];
