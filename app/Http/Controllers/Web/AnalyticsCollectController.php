@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Services\Analytics\Analytics;
 use App\Services\Analytics\AnalyticsEvent;
+use App\Services\Telemetry\TelemetryRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -81,8 +82,11 @@ class AnalyticsCollectController extends Controller
 
         if (!is_string($origin) || $origin === '') {
             // No Origin at all is a same-origin navigation-time POST in some browsers, and also
-            // what a naive script sends. Accepted, because the payload can do nothing dangerous.
-            return true;
+            // what a bare script sends. A browser that is about to send a beacon was served a page
+            // first, and that response set the visitor cookie — so requiring it here costs a real
+            // visitor nothing and asks a script for something it has no reason to have. The
+            // payload could do nothing dangerous either way; this keeps junk out of the reports.
+            return $request->cookie(TelemetryRecorder::VISITOR_COOKIE) !== null;
         }
 
         $host = parse_url($origin, PHP_URL_HOST);

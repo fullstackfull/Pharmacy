@@ -11,7 +11,7 @@
     </div>
 </x-k.card>
 
-@include('admin-views.analytics.sections._trend', ['trend' => $data['trend']])
+@include('admin-views.analytics.sections._trend', ['trend' => $data['trend'], 'trendState' => $data['totals']['state'] ?? null])
 
 <div class="ana-grid ana-grid--2">
     @include('admin-views.analytics.sections._breakdown', [

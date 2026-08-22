@@ -3,8 +3,11 @@
 <x-k.card :title="translate('collection_health')">
     <div class="ana-health ana-health--{{ $data['health']['state'] }}">
         <strong>{{ translate($data['health']['state']) }}</strong>
-        @if (isset($data['health']['message']))
-            <p>{{ $data['health']['message'] }}</p>
+        @if (isset($data['health']['message_key']))
+            <p>{{ translate($data['health']['message_key']) }}</p>
+            @if (!empty($data['health']['detail']))
+                <p><code>{{ $data['health']['detail'] }}</code></p>
+            @endif
         @endif
     </div>
     <ul class="ana-list">

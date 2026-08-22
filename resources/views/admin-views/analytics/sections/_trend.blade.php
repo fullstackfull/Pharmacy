@@ -4,6 +4,9 @@
      a quiet day reads as a dip rather than being skipped and drawn through. --}}
 @php
     $points = collect($trend);
+    // An empty series is not automatically a quiet week: the tables can be absent and the rollup
+    // can never have run, and those say something different to a merchant.
+    $emptyReason = $trendState ?? 'no_traffic';
     $maxSessions = max(1, $points->max('sessions'));
     $maxRevenue = max(0.01, $points->max('revenue'));
     $width = 1000;
@@ -16,7 +19,7 @@
 
 <x-k.card :title="translate('over_time')">
     @if ($points->sum('sessions') === 0 && !$hasRevenue)
-        @include('admin-views.analytics.sections._empty', ['state' => 'no_traffic'])
+        @include('admin-views.analytics.sections._empty', ['state' => $emptyReason])
     @else
         <div class="ana-chart">
             <svg viewBox="0 0 {{ $width }} {{ $height }}" preserveAspectRatio="none" role="img"

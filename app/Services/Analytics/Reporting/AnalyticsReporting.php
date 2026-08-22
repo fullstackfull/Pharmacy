@@ -46,9 +46,18 @@ class AnalyticsReporting
      */
     public function collectionHealth(): array
     {
+        /*
+         * Each branch returns a translation KEY as well as its sentence. The bar this feeds renders
+         * on every analytics section, and it was printing hardcoded English at an Arabic-speaking
+         * merchant; the sentence itself cannot go through translate() because two of them carry a
+         * path and an hour count, and a runtime-composed string mints a new language key per value.
+         * So: the explanation is a key from a fixed set, and what varies is rendered beside it.
+         */
         if (!$this->ready()) {
             return [
                 'state' => 'not_installed',
+                'message_key' => 'the_analytics_tables_are_not_present_on_this_installation',
+                'detail' => 'php artisan migrate',
                 'message' => 'The analytics tables are not present on this installation. Run php artisan migrate.',
             ];
         }
@@ -56,6 +65,8 @@ class AnalyticsReporting
         if (!config('analytics.enabled', true)) {
             return [
                 'state' => 'disabled',
+                'message_key' => 'analytics_collection_is_switched_off_so_nothing_is_being_recorded',
+                'detail' => 'ANALYTICS_ENABLED=false',
                 'message' => 'Analytics collection is switched off (ANALYTICS_ENABLED=false). Nothing is being recorded.',
             ];
         }
@@ -70,6 +81,8 @@ class AnalyticsReporting
         if ($lastEvent === null) {
             return [
                 'state' => 'no_events',
+                'message_key' => 'no_event_has_ever_been_recorded_visit_the_storefront_once_and_if_nothing_appears_check_that_the_analytics_middleware_is_in_the_web_group',
+                'detail' => null,
                 'message' => 'No event has ever been recorded. Visit the storefront once — if nothing appears, check that the RecordAnalytics middleware is in the web group.',
             ];
         }
@@ -79,6 +92,8 @@ class AnalyticsReporting
         if ($lastRollup === null) {
             return [
                 'state' => 'rollup_never_ran',
+                'message_key' => 'events_are_being_collected_but_the_rollup_has_never_run_so_every_window_except_today_is_empty',
+                'detail' => '* * * * * cd ' . base_path() . ' && php artisan schedule:run',
                 'message' => 'Events are being collected but analytics:rollup has never run, so every window except today is empty. Install the scheduler cron: * * * * * cd ' . base_path() . ' && php artisan schedule:run',
                 'last_event_at' => $lastEvent,
             ];
@@ -87,6 +102,8 @@ class AnalyticsReporting
         if ($rollupAgeHours !== null && $rollupAgeHours > 6) {
             return [
                 'state' => 'rollup_stale',
+                'message_key' => 'the_rollup_has_not_run_recently_so_the_most_recent_days_may_be_incomplete',
+                'detail' => $rollupAgeHours . 'h',
                 'message' => "The rollup last ran {$rollupAgeHours} hours ago, so recent days may be incomplete. Check that the scheduler is running.",
                 'last_event_at' => $lastEvent,
                 'last_rollup_at' => $lastRollup,
@@ -110,6 +127,13 @@ class AnalyticsReporting
      */
     public function totals(Window $window): array
     {
+        if (!$this->ready()) {
+            // The same keys, with nothing in them. A different shape here is a crash on the screen
+            // rather than a message on it — which is how a missing migration became a 500 rather
+            // than "analytics is not installed".
+            return $this->unavailableTotals();
+        }
+
         $current = $this->totalsFor($window->fromDate(), $window->toDate(), $window->includesToday());
         $previous = $this->totalsFor($window->previousFromDate(), $window->previousToDate(), false);
 
@@ -146,6 +170,13 @@ class AnalyticsReporting
      */
     public function trend(Window $window): array
     {
+        if (!$this->ready()) {
+            // A list, like every other return from this method: the state travels to the view in
+            // its own key rather than by changing the shape, because a shape change here is a
+            // crash on the page instead of a message on it.
+            return [];
+        }
+
         $rows = $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'totals')
             ->where('dimension_key', 'all')
@@ -191,6 +222,10 @@ class AnalyticsReporting
      */
     public function breakdown(Window $window, string $dimension, int $limit = 25): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed', 'rows' => []];
+        }
+
         if (!in_array($dimension, self::DIMENSIONS, true)) {
             return ['state' => 'unknown_dimension', 'rows' => []];
         }
@@ -223,10 +258,25 @@ class AnalyticsReporting
             return ['state' => $this->emptyReason($window), 'rows' => []];
         }
 
-        $total = (float) $rows->sum('sessions') ?: (float) $rows->sum('events');
+        // The DIMENSION's total, not the page's. Summing only the rows that survived the top-N cut
+        // made every share add up to 100% however much tail was left out, so a source with a fifth
+        // of the traffic was reported as having half of it.
+        $dimensionTotal = $this->rollupQuery($window->fromDate(), $window->toDate())
+            ->where('dimension', $dimension)
+            ->selectRaw('COALESCE(SUM(sessions), 0) sessions, COALESCE(SUM(events), 0) events')
+            ->first();
+
+        $total = (float) ($dimensionTotal->sessions ?? 0) ?: (float) ($dimensionTotal->events ?? 0);
+        $shown = (float) $rows->sum('sessions') ?: (float) $rows->sum('events');
+        $tail = max(0.0, $total - $shown);
 
         return [
             'state' => 'ok',
+            // What the page is not showing, so a table that does not add up says why.
+            'total' => $total,
+            'shown' => $shown,
+            'other' => $tail,
+            'truncated' => $rows->count() >= $limit && $tail > 0,
             'rows' => $rows->map(function ($row) use ($total) {
                 $sessions = (int) $row->sessions;
                 $weight = $sessions > 0 ? $sessions : (int) $row->events;
@@ -262,6 +312,10 @@ class AnalyticsReporting
      */
     public function excludedTraffic(Window $window): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed'];
+        }
+
         $rows = $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'excluded_traffic')
             ->selectRaw('dimension_key, SUM(sessions) sessions, SUM(visitors) visitors, SUM(pageviews) pageviews')
@@ -306,6 +360,10 @@ class AnalyticsReporting
      */
     public function funnel(Window $window): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed', 'steps' => []];
+        }
+
         $steps = [
             ['key' => 'visited', 'label' => 'visited_the_shop', 'event' => null],
             ['key' => 'viewed_product', 'label' => 'viewed_a_product', 'event' => AnalyticsEvent::PRODUCT_VIEWED],
@@ -497,11 +555,19 @@ class AnalyticsReporting
             ->limit(60)
             ->get(['name', 'category', 'entity_type', 'entity_id', 'value', 'path', 'channel', 'occurred_at']);
 
+        // How many there ARE in the window. The screen used to show the size of the sixty-row feed
+        // above, so a busy shop's headline silently stopped at sixty.
+        $totalEvents = (int) $this->connection()->table('analytics_events')
+            ->where('occurred_at', '>=', $since)
+            ->where('is_bot', false)
+            ->where('is_internal', false)
+            ->count();
+
         $perMinute = $this->connection()->table('analytics_events')
             ->where('occurred_at', '>=', $since)
             ->where('is_bot', false)
             ->where('is_internal', false)
-            ->selectRaw("DATE_FORMAT(occurred_at, '%Y-%m-%d %H:%i:00') minute, COUNT(*) events")
+            ->selectRaw($this->minuteExpression('occurred_at') . ' minute, COUNT(*) events')
             ->groupBy('minute')
             ->orderBy('minute')
             ->get();
@@ -510,9 +576,29 @@ class AnalyticsReporting
             'state' => $active === 0 && $events->isEmpty() ? 'quiet' : 'ok',
             'window_minutes' => $minutes,
             'active_sessions' => $active,
+            'total_events' => $totalEvents,
+            'feed_limit' => 60,
             'events' => $events->all(),
             'per_minute' => $perMinute->all(),
         ];
+    }
+
+    /**
+     * A timestamp truncated to the minute, in the dialect the active connection speaks.
+     *
+     * DATE_FORMAT is MySQL's; writing it literally meant the live screen could not run — or be
+     * tested — on any other driver.
+     */
+    private function minuteExpression(string $column): string
+    {
+        $wrapped = $this->connection()->getQueryGrammar()->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m-%d %H:%M:00', {$wrapped})",
+            'pgsql' => "to_char(date_trunc('minute', {$wrapped}), 'YYYY-MM-DD HH24:MI:00')",
+            'sqlsrv' => "FORMAT({$wrapped}, 'yyyy-MM-dd HH:mm:00')",
+            default => "DATE_FORMAT({$wrapped}, '%Y-%m-%d %H:%i:00')",
+        };
     }
 
     /**
@@ -573,6 +659,29 @@ class AnalyticsReporting
     /**
      * @return array<string, float|int>
      */
+    /**
+     * Every headline metric, unmeasured.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function unavailableTotals(): array
+    {
+        $keys = [
+            'sessions', 'visitors', 'new_visitors', 'pageviews', 'events', 'bounces',
+            'engaged_sessions', 'duration_seconds', 'cart_adds', 'checkouts', 'orders', 'revenue',
+            'bounce_rate', 'engagement_rate', 'conversion_rate', 'pages_per_session',
+            'average_order_value', 'session_duration',
+        ];
+
+        $metrics = ['state' => 'not_installed'];
+
+        foreach ($keys as $key) {
+            $metrics[$key] = ['value' => null, 'previous' => null, 'change_pct' => null];
+        }
+
+        return $metrics;
+    }
+
     private function totalsFor(string $from, string $to, bool $spliceToday): array
     {
         $row = $this->rollupQuery($from, $to)

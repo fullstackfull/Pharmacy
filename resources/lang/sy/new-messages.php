@@ -1332,4 +1332,9 @@ return [
 	'cloud_reachable' => 'Cloud reachable',
 	'stored_points_in_window' => 'Stored points in window',
 	'series' => 'Series',
+	'gauge' => 'Gauge',
+	'cloud_credentials_set' => 'Cloud credentials set',
+	'other_stored_gauges' => 'Other stored gauges',
+	'cloud_endpoint' => 'Cloud endpoint',
+	'dns' => 'Dns',
 ];

@@ -146,6 +146,14 @@ class AnalyticsController extends BaseController
     /** The QR for one short link, as an SVG the browser can render or a merchant can save. */
     public function campaignQr(int $id): \Illuminate\Http\Response|RedirectResponse
     {
+        // The same capability the campaigns section is gated on. Without it, an employee whose role
+        // grants only the reports module — which implies analytics_view and nothing more — could
+        // walk the ids and read every campaign's short code out of its QR.
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return redirect()->route('admin.analytics.section', ['section' => 'overview'])
+                ->with('error', translate('access_Denied') . '!');
+        }
+
         $campaign = $this->campaigns->find($id);
 
         if ($campaign === null) {
@@ -167,6 +175,12 @@ class AnalyticsController extends BaseController
     /** The Live screen polls this rather than reloading a page every few seconds. */
     public function live(Request $request): JsonResponse
     {
+        // Gated like the section it feeds. A polled JSON feed is still the same data, and the
+        // section's own check does not run for it.
+        if (!$this->permissions->can($this->permissions->capabilityForSection('live'))) {
+            return response()->json(['error' => 'forbidden'], 403);
+        }
+
         return response()->json($this->reporting->live((int) $request->query('minutes', 30)));
     }
 
