@@ -1340,4 +1340,6 @@ return [
 	'cloud_region' => 'Cloud region',
 	'cloud_bucket' => 'Cloud bucket',
 	'default_disk' => 'Default disk',
+	'where_uploads_actually_land_and_whether_this_deployment_can_reach_it' => 'Where uploads actually land and whether this deployment can reach it',
+	'name_resolution' => 'Name resolution',
 ];

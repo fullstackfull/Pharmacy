@@ -184,6 +184,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
         $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();
+        // Yesterday, once it is over. The hourly run only ever covers the current day, so its last
+        // pass at 23:07 left 23:07 to midnight in no daily row at all — fifty-three minutes of
+        // every day missing, permanently, once the raw rows aged out.
+        $schedule->command('telemetry:rollup --date=yesterday')->dailyAt('00:20')->withoutOverlapping();
         $schedule->command('telemetry:rollup --prune')->dailyAt('01:30')->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions) {

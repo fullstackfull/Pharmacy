@@ -382,8 +382,13 @@ class AnalyticsReporting
             return ['state' => $this->emptyReason($window), 'steps' => []];
         }
 
+        // Restricted to the sessions the denominator counts. Without this the two sides were
+        // measured on different clocks — the denominator on when a session STARTED, the steps on
+        // when an event HAPPENED — so a session that began before the window and acted inside it
+        // was a step without being a visit, and a step could exceed the visits above it.
         $reached = $this->realEvents($from, $to)
             ->whereNotNull('session_id')
+            ->whereIn('session_id', $this->realSessions($from, $to)->select('id'))
             ->selectRaw('name, COUNT(DISTINCT session_id) sessions')
             ->groupBy('name')
             ->pluck('sessions', 'name');
@@ -434,8 +439,11 @@ class AnalyticsReporting
             ->where('v.is_bot', false)
             ->where('v.is_internal', false)
             ->where('s.is_bot', false)
-            ->selectRaw('YEARWEEK(v.first_seen_at, 3) cohort_week')
-            ->selectRaw('YEARWEEK(s.started_at, 3) active_week')
+            // Staff were excluded on the visitor side and not on the session side, so the shop's
+            // own people counted as returning customers in every retention cohort.
+            ->where('s.is_internal', false)
+            ->selectRaw($this->isoWeekStart('v.first_seen_at') . ' cohort_week')
+            ->selectRaw($this->isoWeekStart('s.started_at') . ' active_week')
             ->selectRaw('COUNT(DISTINCT s.visitor_id) visitors')
             ->groupBy('cohort_week', 'active_week')
             ->get();
@@ -722,15 +730,29 @@ class AnalyticsReporting
 
         $live = $this->liveTotals($today);
 
+        /*
+         * The live figure replaces the rolled one for today, whichever way it moved.
+         *
+         * The "only if larger" guard was there to stop a partial live read from shrinking a
+         * complete rollup, and it works for counts, which only ever grow through the day. Bounces
+         * do not: a bounce becomes a non-bounce the moment that session opens a second page, and
+         * so does the count. Guarding it meant today's bounces could only ever go up, so the
+         * bounce rate on any window containing today was reported higher than it was — and it is a
+         * number a merchant changes the shop over.
+         */
+        $monotonic = ['sessions', 'visitors', 'new_visitors', 'pageviews', 'events', 'cart_adds', 'checkouts', 'orders', 'revenue', 'duration_seconds'];
+
         foreach ($totals as $metric => $value) {
             $rolled = (float) ($rolledToday->{$metric} ?? 0);
             $liveValue = (float) ($live[$metric] ?? 0);
 
-            if ($liveValue > $rolled) {
-                $totals[$metric] = $metric === 'revenue'
-                    ? round($value - $rolled + $liveValue, 2)
-                    : (int) ($value - $rolled + $liveValue);
+            if (in_array($metric, $monotonic, true) && $liveValue <= $rolled) {
+                continue;
             }
+
+            $totals[$metric] = $metric === 'revenue'
+                ? round($value - $rolled + $liveValue, 2)
+                : (int) ($value - $rolled + $liveValue);
         }
 
         return $totals;
@@ -867,8 +889,32 @@ class AnalyticsReporting
             : (int) round($cohortStart->diffInDays($activeStart) / 7);
     }
 
+    /**
+     * The Monday of a timestamp's ISO week, as YYYY-MM-DD, in the dialect this connection speaks.
+     *
+     * YEARWEEK is MySQL's, so the retention grid — like the hour-of-day rollup and the live feed —
+     * could not run anywhere else. A date is also a better key than 202634: it sorts naturally and
+     * it is already the label the screen prints.
+     */
+    private function isoWeekStart(string $column): string
+    {
+        $wrapped = $this->connection()->getQueryGrammar()->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite' => "date({$wrapped}, 'weekday 1', '-7 days')",
+            'pgsql' => "to_char(date_trunc('week', {$wrapped}), 'YYYY-MM-DD')",
+            'sqlsrv' => "CONVERT(varchar(10), DATEADD(day, -((DATEPART(weekday, {$wrapped}) + 5) % 7), {$wrapped}), 23)",
+            default => "DATE_FORMAT(DATE_SUB({$wrapped}, INTERVAL WEEKDAY({$wrapped}) DAY), '%Y-%m-%d')",
+        };
+    }
+
     private function weekStart(string $yearWeek): ?Carbon
     {
+        // Already a date: what isoWeekStart() emits.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $yearWeek) === 1) {
+            return Carbon::parse($yearWeek)->startOfDay();
+        }
+
         if (!preg_match('/^(\d{4})(\d{2})$/', $yearWeek, $matches)) {
             return null;
         }

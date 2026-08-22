@@ -433,6 +433,7 @@ class AnalyticsRollup extends Command
     private function putMany(Carbon $day, string $dimension, $rows): int
     {
         $written = 0;
+        $keys = [];
 
         foreach ($rows as $row) {
             $values = (array) $row;
@@ -443,8 +444,19 @@ class AnalyticsRollup extends Command
                 continue;
             }
 
+            $keys[] = mb_substr($key, 0, 191);
             $written += $this->put($day, $dimension, $key, $values);
         }
+
+        // A rebuild has to remove as well as write. Each dimension is capped at a top-N, so a key
+        // that was in yesterday's cut and is not in today's kept its old row for ever — a search
+        // term or a product that stopped appearing stayed in the table with the figures it had the
+        // last time it made the list, and the day stopped adding up.
+        $this->connection()->table('analytics_daily')
+            ->where('date', $day->toDateString())
+            ->where('dimension', $dimension)
+            ->when($keys !== [], fn ($query) => $query->whereNotIn('dimension_key', $keys))
+            ->delete();
 
         return $written;
     }

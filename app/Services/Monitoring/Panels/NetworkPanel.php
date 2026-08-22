@@ -147,6 +147,7 @@ class NetworkPanel implements Panel
         $readings = $this->collectors->collect(self::COLLECTOR);
         $labelled = $this->byLabel($readings);
         $host = $labelled[''] ?? [];
+        $faults = $this->collectorFaults($readings);
 
         $published = $this->publishedGauges();
         $stored = $this->storedSeries($range, $window['resolution']);
@@ -161,9 +162,9 @@ class NetworkPanel implements Panel
                 'timezone' => Clock::displayTimezone(),
             ],
             'host' => $this->hostDescription(),
-            'collectors' => $this->collectorFaults($readings),
+            'collectors' => $faults,
             'series' => ['state' => $stored['state'], 'note' => $stored['note'], 'truncated' => $stored['truncated']],
-            'interfaces' => $this->interfaces($labelled, $published, $stored, $window['resolution']),
+            'interfaces' => $this->interfaces($labelled, $published, $stored, $window['resolution'], $faults),
             'tcp' => $this->tcp($host, $published, $stored, $window['resolution']),
             'dns' => $this->dns($host, $published, $stored, $window['resolution']),
             'unrendered' => $this->unrendered($readings),
@@ -268,13 +269,23 @@ class NetworkPanel implements Panel
 
         $fallback = ($labelled['']['interfaces'] ?? null) instanceof Metric ? $labelled['']['interfaces'] : null;
 
+        // A collector that could not answer at all did not measure zero interfaces — it did not
+        // measure. Without this the card said "returned no interface readings on this host" over a
+        // collector that threw, which is the reassuring version of a fault.
+        $fault = $cards === [] && $fallback === null ? ($faults[0] ?? null) : null;
+
         return [
             'state' => match (true) {
                 $cards !== [] => 'ok',
                 $fallback instanceof Metric && !$fallback->isOk() => $fallback->state,
+                $fault !== null => $fault['state'],
                 default => 'no_data',
             },
-            'note' => $cards !== [] ? null : ($fallback?->note ?? 'The network collector returned no interface readings on this host.'),
+            'note' => match (true) {
+                $cards !== [] => null,
+                $fault !== null => $fault['note'],
+                default => $fallback?->note ?? 'The network collector returned no interface readings on this host.',
+            },
             'remedy' => $cards !== [] ? null : $fallback?->remedy,
             'source' => $fallback?->source ?? 'Linux /proc/net/dev',
             'total' => count($cards),

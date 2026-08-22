@@ -131,7 +131,10 @@ class MonitoringPermissionService
             'logs' => self::LOGS,
             'errors', 'traces', 'requests' => self::ERRORS,
             'security' => self::SECURITY,
-            'server', 'network', 'storage', 'energy', 'deployments', 'backups', 'redis', 'database', 'queues', 'scheduler' => self::INFRASTRUCTURE,
+            // 'webserver' was the one member of this group that was missing, so it fell through to
+            // the default and was readable by anyone holding monitoring_view — a page naming the
+            // nginx and PHP-FPM pools, their worker counts and their configuration.
+            'server', 'network', 'storage', 'energy', 'webserver', 'deployments', 'backups', 'redis', 'database', 'queues', 'scheduler' => self::INFRASTRUCTURE,
             'settings', 'alerts' => self::SETTINGS,
             default => self::VIEW,
         };
