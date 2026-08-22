@@ -595,3 +595,36 @@
     outline: 1px dashed var(--k-border-strong);
     outline-offset: -1px;
 }
+
+/* ── Per-core utilisation bars ─────────────────────────────────────────────────
+   The server section needs one thing no existing class provides: a row per core
+   whose bar length is the reading itself. A column of eight percentages hides the
+   shape that matters — one core pinned while the rest idle, which the average on
+   the card above cannot express.
+
+   .mon-waterfall__* is the nearest existing pattern and is deliberately not
+   reused: its bars carry a start offset as well as a length, so borrowing them
+   here would produce a bar whose position means nothing.
+
+   Sized in logical properties so the fill grows from the inline start and the row
+   reads correctly in Arabic without a second rule. */
+.mon-cores { display: grid; gap: 6px; }
+.mon-cores__row {
+    display: grid;
+    grid-template-columns: minmax(56px, auto) minmax(0, 1fr) 56px;
+    align-items: center;
+    gap: 10px;
+}
+.mon-cores__label { font-size: var(--k-text-xs, 12px); color: var(--k-text-muted); }
+.mon-cores__track {
+    block-size: 8px;
+    border-radius: 4px;
+    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    overflow: hidden;
+}
+.mon-cores__fill { display: block; block-size: 100%; border-radius: 4px; background: var(--k-primary, #3b5bdb); }
+/* The two thresholds are the configured cpu_warning / cpu_critical, so a core reads
+   the same colour here as the same figure does anywhere else on the dashboard. */
+.mon-cores__fill--busy { background: var(--mon-degraded); }
+.mon-cores__fill--saturated { background: var(--mon-critical); }
+.mon-cores__value { text-align: end; font-size: var(--k-text-xs, 12px); }

@@ -1,165 +1,102 @@
 @extends('layouts.admin.app')
 
-@section('title', translate('developer_portal'))
+@section('title', translate('developer_portal') . ' — ' . translate($meta['label']))
+
+@push('css_or_js')
+    <link rel="stylesheet" href="{{ dynamicAsset(path: 'public/assets/kohl/css/developer.css') }}">
+@endpush
 
 @section('content')
-    <div class="content container-fluid k" id="dev-portal">
-        <x-k.page-header :title="translate('developer_portal')"
-                         :subtitle="translate('the_live_api_surface_of_this_store_generated_from_the_route_table_so_it_can_never_go_stale')">
+    {{-- One shell for every section: a header that states the size and freshness of the API
+         surface, a section rail, and whichever section is open. The header does not change as you
+         move around, so "how big is this API and when was it read" stays answered. --}}
+    <div class="content container-fluid k dev" id="developer-root"
+         data-section="{{ $section }}"
+         data-endpoint-url="{{ route('admin.developer.endpoint', ['id' => '__ID__']) }}">
+
+        <x-k.page-header :title="translate('developer_portal')" :subtitle="translate($meta['hint'])">
             <x-slot:actions>
-                <span class="k-badge k-badge--info">v{{ $version['version'] }}</span>
-                <code class="k-text-subtle">{{ $baseUrl }}</code>
+                <form action="{{ route('admin.developer.refresh') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="k-btn k-btn--ghost k-btn--sm" title="{{ translate('rebuild_the_manifest_from_the_live_route_table') }}">
+                        <i class="tio-refresh"></i> {{ translate('rebuild') }}
+                    </button>
+                </form>
+                <a class="k-btn k-btn--ghost k-btn--sm" href="{{ route('admin.developer.openapi') }}">
+                    <i class="tio-download"></i> OpenAPI
+                </a>
+                <a class="k-btn k-btn--ghost k-btn--sm" href="{{ route('admin.developer.postman') }}">
+                    <i class="tio-download"></i> Postman
+                </a>
             </x-slot:actions>
         </x-k.page-header>
 
-        {{-- What shipped, read from the repo's own changelog so this panel updates itself. --}}
-        @if (!empty($releases))
-            <x-k.card :title="translate('what_is_new')" style="margin-block-end:16px">
-                <div class="row g-3">
-                    @foreach ($releases as $release)
-                        <div class="col-lg-4 col-md-6">
-                            <div class="k-dev-group" open style="border:0">
-                                <span class="k-badge k-badge--info">{{ $release['version'] }}</span>
-                                <p class="k-text-subtle" style="margin-block:6px 4px">{{ $release['title'] }}</p>
-                                @if (!empty($release['points']))
-                                    <ul class="k-text-subtle" style="padding-inline-start:18px;margin:0">
-                                        @foreach ($release['points'] as $point)
-                                            <li>{{ $point }}</li>
-                                        @endforeach
-                                    </ul>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
+        {{-- The surface bar. Every number here is counted from the manifest that was just built,
+             which is why the "read from the route table" line carries a timestamp: a developer
+             needs to know whether they are looking at the API as it is now. --}}
+        <div class="dev-surface">
+            <div class="dev-surface__figure">
+                <span class="k-num">{{ number_format($manifest['summary']['api']) }}</span>
+                <small>{{ translate('api_endpoints') }}</small>
+            </div>
+            <div class="dev-surface__figure">
+                <span class="k-num">{{ number_format($manifest['summary']['authenticated']) }}</span>
+                <small>{{ translate('authenticated') }}</small>
+            </div>
+            <div class="dev-surface__figure">
+                <span class="k-num">{{ number_format($manifest['summary']['public']) }}</span>
+                <small>{{ translate('public') }}</small>
+            </div>
+            <div class="dev-surface__figure">
+                <span class="k-num">{{ count($manifest['summary']['by_version']) }}</span>
+                <small>{{ translate('versions') }}</small>
+            </div>
+            @if ($manifest['summary']['deprecated'] > 0)
+                <div class="dev-surface__figure dev-surface__figure--warn">
+                    <span class="k-num">{{ $manifest['summary']['deprecated'] }}</span>
+                    <small>{{ translate('deprecated') }}</small>
                 </div>
-            </x-k.card>
-        @endif
-
-        <div class="row g-3" style="margin-block-end:16px">
-            @foreach ($guides as $guide)
-                <div class="col-lg-4 col-md-6">
-                    <x-k.card :title="$guide['title']">
-                        <p class="k-text-subtle">{{ $guide['body'] }}</p>
-                        <div style="position:relative">
-                            <pre class="k-dev-snippet"><code>{{ $guide['snippet'] }}</code></pre>
-                            <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon k-dev-copy"
-                                    title="{{ translate('copy') }}" aria-label="{{ translate('copy') }}">
-                                <x-k.icon name="copy" :size="14" />
-                            </button>
-                        </div>
-                    </x-k.card>
-                </div>
-            @endforeach
+            @endif
+            <div class="dev-surface__meta">
+                <strong>{{ $manifest['base_url'] }}</strong>
+                <small>
+                    {{ translate('read_from_the_live_route_table') }} ·
+                    <time datetime="{{ $manifest['generated_at'] }}">{{ \Carbon\Carbon::parse($manifest['generated_at'])->diffForHumans() }}</time>
+                    @if ($manifest['app_version']) · v{{ $manifest['app_version'] }} @endif
+                </small>
+            </div>
         </div>
 
-        <x-k.card :title="translate('api_reference')">
-            <div class="k-row" style="gap:12px;margin-block-end:12px;flex-wrap:wrap">
-                <div class="k-search" style="max-inline-size:340px">
-                    <x-k.icon name="search" :size="15" />
-                    <input type="search" class="k-input" id="dev-filter"
-                           placeholder="{{ translate('filter_endpoints') }}" aria-label="{{ translate('filter_endpoints') }}">
-                </div>
-                <nav class="k-tabs" id="dev-version-tabs">
-                    @foreach (array_keys($reference) as $index => $apiVersion)
-                        <button type="button" class="k-tab" data-version="{{ $apiVersion }}"
-                                aria-selected="{{ $index === 0 ? 'true' : 'false' }}">{{ $apiVersion }}</button>
-                    @endforeach
-                </nav>
-                <span class="k-text-subtle">{{ translate('bearer_badge_means_the_call_needs_an_authorization_token') }}</span>
-            </div>
+        <div class="dev-layout">
+            {{-- Section rail. A section this installation cannot serve is shown disabled with the
+                 reason, not hidden: a developer looking for webhooks should learn there are none
+                 rather than wonder where the menu item went. --}}
+            <nav class="dev-rail" aria-label="{{ translate('developer_portal_sections') }}">
+                @foreach ($navigation as $groupKey => $group)
+                    <div class="dev-rail__group">
+                        <span class="dev-rail__label">{{ translate($group['label']) }}</span>
+                        @foreach ($group['sections'] as $key => $item)
+                            @if ($item['available'])
+                                <a class="dev-rail__item {{ $key === $section ? 'is-active' : '' }}"
+                                   href="{{ route('admin.developer.section', ['section' => $key]) }}">
+                                    {{ translate($item['label']) }}
+                                </a>
+                            @else
+                                <span class="dev-rail__item is-unavailable" title="{{ translate('not_available_on_this_installation') }}">
+                                    {{ translate($item['label']) }}
+                                </span>
+                            @endif
+                        @endforeach
+                    </div>
+                @endforeach
+            </nav>
 
-            @foreach ($reference as $apiVersion => $resources)
-                <div data-version-panel="{{ $apiVersion }}" @if (!$loop->first) hidden @endif>
-                    @foreach ($resources as $resource => $routes)
-                        <details class="k-dev-group" @if ($loop->parent->first && $loop->index < 3) open @endif>
-                            <summary>
-                                <span class="fw-semibold">{{ $resource }}</span>
-                                <span class="k-tab__count k-num">{{ count($routes) }}</span>
-                            </summary>
-                            <div class="k-table-wrap">
-                                <table class="k-table">
-                                    <tbody>
-                                    @foreach ($routes as $route)
-                                        <tr data-endpoint="{{ strtolower($route['uri'] . ' ' . $route['name']) }}">
-                                            <td style="inline-size:110px">
-                                                <span class="k-badge {{ str_contains($route['methods'], 'POST') ? 'k-badge--warning' : 'k-badge--success' }}" >
-                                                    {{ $route['methods'] }}
-                                                </span>
-                                            </td>
-                                            <td><code>{{ $route['uri'] }}</code></td>
-                                            <td style="inline-size:90px">
-                                                @if ($route['auth'])
-                                                    <x-k.badge tone="info">bearer</x-k.badge>
-                                                @endif
-                                            </td>
-                                            <td class="k-table__num">
-                                                <button type="button" class="k-btn k-btn--ghost k-btn--sm k-btn--icon k-dev-copy-uri"
-                                                        data-uri="{{ $baseUrl . $route['uri'] }}"
-                                                        title="{{ translate('copy_full_url') }}" aria-label="{{ translate('copy_full_url') }}">
-                                                    <x-k.icon name="copy" :size="14" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </details>
-                    @endforeach
-                </div>
-            @endforeach
-        </x-k.card>
+            <main class="dev-body">
+                @includeFirst(
+                    ['admin-views.telemetry.developer.' . $section, 'admin-views.telemetry.developer._placeholder'],
+                    ['data' => $data, 'section' => $section, 'meta' => $meta, 'manifest' => $manifest]
+                )
+            </main>
+        </div>
     </div>
 @endsection
-
-@push('script')
-    <script>
-        "use strict";
-        (function () {
-            var root = document.getElementById('dev-portal');
-
-            root.querySelectorAll('#dev-version-tabs .k-tab').forEach(function (tab) {
-                tab.addEventListener('click', function () {
-                    root.querySelectorAll('#dev-version-tabs .k-tab').forEach(function (t) {
-                        t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
-                    });
-                    root.querySelectorAll('[data-version-panel]').forEach(function (panel) {
-                        panel.hidden = panel.getAttribute('data-version-panel') !== tab.getAttribute('data-version');
-                    });
-                });
-            });
-
-            document.getElementById('dev-filter').addEventListener('input', function () {
-                var query = this.value.trim().toLowerCase();
-                root.querySelectorAll('[data-endpoint]').forEach(function (row) {
-                    row.hidden = query !== '' && row.getAttribute('data-endpoint').indexOf(query) === -1;
-                });
-                // A group with every row hidden collapses out of the way.
-                root.querySelectorAll('.k-dev-group').forEach(function (group) {
-                    var any = Array.prototype.some.call(group.querySelectorAll('[data-endpoint]'), function (row) { return !row.hidden; });
-                    group.style.display = any ? '' : 'none';
-                    if (query !== '' && any) group.open = true;
-                });
-            });
-
-            function copyText(text, button) {
-                (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
-                    .catch(function () {
-                        var area = document.createElement('textarea');
-                        area.value = text; document.body.appendChild(area);
-                        area.select(); document.execCommand('copy'); area.remove();
-                    })
-                    .finally(function () {
-                        button.classList.add('k-btn--primary');
-                        setTimeout(function () { button.classList.remove('k-btn--primary'); }, 700);
-                    });
-            }
-            root.addEventListener('click', function (event) {
-                var snippetBtn = event.target.closest('.k-dev-copy');
-                if (snippetBtn) copyText(snippetBtn.parentElement.querySelector('code').innerText, snippetBtn);
-                var uriBtn = event.target.closest('.k-dev-copy-uri');
-                if (uriBtn) copyText(uriBtn.getAttribute('data-uri'), uriBtn);
-            });
-        })();
-    </script>
-@endpush

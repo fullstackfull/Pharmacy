@@ -17,6 +17,8 @@
     $tasks = $panel['tasks'];
     $history = $panel['history'];
     $statistics = $panel['statistics'];
+    $observed = $panel['observed'];
+    $definedTasksDrawn = $tasks['state'] === 'ok' && !empty($tasks['rows']);
 
     $duration = static fn ($milliseconds) => $milliseconds === null
         ? '—'
@@ -31,10 +33,10 @@
             return null;
         }
         if ($minutes < 60) {
-            return $minutes . ' ' . translate('min');
+            return $minutes . ' ' . translate('minutes');
         }
         if ($minutes < 1440) {
-            return intdiv($minutes, 60) . ' ' . translate('hr');
+            return intdiv($minutes, 60) . ' ' . translate('hours');
         }
 
         return intdiv($minutes, 1440) . ' ' . translate('days');
@@ -58,8 +60,6 @@
         default => translate('no_data'),
     };
 
-    // What each pill claims, stated once under the table. Six states that all mean "not fine" in
-    // different ways are worse than none unless the page says which is which.
     $statusMeanings = [
         'healthy' => 'the_task_has_run_since_the_last_time_its_schedule_said_it_should',
         'running' => 'the_task_started_and_has_not_reported_finishing_yet',
@@ -154,7 +154,7 @@
 {{-- Every defined task, worst state first. An operator opens this page to find what is broken,
      and a table in alphabetical order buries the one row that matters. --}}
 <x-k.card :title="translate('scheduled_tasks')">
-    @if ($tasks['state'] === 'ok' && !empty($tasks['rows']))
+    @if ($definedTasksDrawn)
         <div class="k-table-wrap">
             <table class="k-table k-table--compact">
                 <thead>
@@ -240,18 +240,6 @@
         </div>
 
         <p class="mon-note">
-            {{ translate('what_each_status_means') }}:
-        </p>
-        <ul class="mon-note">
-            @foreach ($statusMeanings as $status => $meaning)
-                <li>
-                    <span class="mon-pill {{ $statusPill($status) }}">{{ translate($status) }}</span>
-                    {{ translate($meaning) }}@if (!empty($tasks['counts'])) — {{ $tasks['counts'][$status] ?? 0 }} {{ translate('of') }} {{ count($tasks['rows']) }}@endif
-                </li>
-            @endforeach
-        </ul>
-
-        <p class="mon-note">
             {{ translate('schedules_are_stated_in_the_timezone_the_scheduler_evaluates_them_in') }}
             ({{ $window['scheduler_timezone'] }});
             {{ translate('run_and_due_timestamps_are_shown_in') }} {{ $window['timezone'] }}.
@@ -285,12 +273,109 @@
         <x-k.empty icon="clock" :title="$stateTitle($tasks['state'])" :text="$tasks['note'] ?? ''" />
         @if (!empty($tasks['remedy']))
             <details class="mon-metric__remedy">
-                <summary>{{ translate('how_to_enable_this') }}</summary>
+                <summary>{{ translate('how_to_read_this') }}</summary>
                 <code>{{ $tasks['remedy'] }}</code>
             </details>
         @endif
     @endif
+
+    {{-- The key, drawn whether or not a row currently holds each state. Six states that all mean
+         "not fine" in different ways are worse than none unless the page says which is which. --}}
+    <p class="mon-note">{{ translate('what_each_status_means') }}:</p>
+    <ul class="mon-note">
+        @foreach ($statusMeanings as $status => $meaning)
+            <li>
+                <span class="mon-pill {{ $statusPill($status) }}">{{ translate($status) }}</span>
+                {{ translate($meaning) }}@if ($definedTasksDrawn) — {{ $tasks['counts'][$status] ?? 0 }} {{ translate('of') }} {{ count($tasks['rows']) }}@endif
+            </li>
+        @endforeach
+    </ul>
 </x-k.card>
+
+{{-- Only when the defined schedule could not be drawn. Two task tables side by side would read as
+     one list disagreeing with itself, and this one answers a different question: not what should
+     run, but what did. --}}
+@unless ($definedTasksDrawn)
+    <x-k.card :title="translate('tasks_that_reported_a_run_in_this_window')">
+        @if ($observed['state'] === 'ok' && !empty($observed['rows']))
+            <div class="k-table-wrap">
+                <table class="k-table k-table--compact">
+                    <thead>
+                    <tr>
+                        <th>{{ translate('task') }}</th>
+                        <th>{{ translate('recorded_schedule') }}</th>
+                        <th>{{ translate('last_run') }}</th>
+                        <th class="k-table__num">{{ translate('runs') }}</th>
+                        <th class="k-table__num">{{ translate('failed') }}</th>
+                        <th class="k-table__num">{{ translate('success_rate_in_window') }}</th>
+                        <th class="k-table__num">{{ translate('average_duration') }}</th>
+                        <th class="k-table__num">{{ translate('slowest_run') }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($observed['rows'] as $task)
+                        <tr>
+                            <td><code>{{ $task['task'] }}</code></td>
+                            <td>
+                                @if ($task['expression_changed'])
+                                    <span class="mon-metric__state">{{ translate('changed_within_this_window') }}</span>
+                                @else
+                                    {{ $task['schedule'] ?? '—' }}
+                                    <small class="mon-metric__note" style="display:block"><code>{{ $task['expression'] ?? '—' }}</code></small>
+                                @endif
+                            </td>
+                            <td class="k-num">
+                                {{ $task['last_started_at'] ?? '—' }}
+                                @if ($task['last_started_minutes_ago'] !== null)
+                                    <small class="mon-metric__note" style="display:block"
+                                           title="{{ $task['last_started_minutes_ago'] }} {{ translate('minutes') }}">
+                                        {{ $elapsed($task['last_started_minutes_ago']) }} {{ translate('ago') }}
+                                    </small>
+                                @endif
+                            </td>
+                            <td class="k-table__num k-num">{{ number_format($task['runs']) }}</td>
+                            <td class="k-table__num k-num">
+                                @if ($task['failures'] > 0)
+                                    <span class="mon-pill mon-pill--critical">{{ number_format($task['failures']) }}</span>
+                                @else
+                                    {{ number_format($task['failures']) }}
+                                @endif
+                            </td>
+                            <td class="k-table__num k-num">
+                                @if ($task['success_rate'] !== null)
+                                    {{ $task['success_rate'] }}%
+                                    <small class="mon-metric__note" style="display:block">
+                                        {{ $task['successes'] }}/{{ $task['settled'] }} {{ translate('runs') }}
+                                    </small>
+                                @else
+                                    <span class="mon-metric__state">{{ translate('nothing_settled_yet') }}</span>
+                                @endif
+                            </td>
+                            <td class="k-table__num k-num">{{ $duration($task['avg_duration_ms']) }}</td>
+                            <td class="k-table__num k-num">{{ $duration($task['max_duration_ms']) }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <p class="mon-note">
+                {{ translate('these_rows_are_measurements_of_what_ran_not_a_list_of_what_is_supposed_to_run_a_task_that_has_stopped_entirely_is_absent_from_this_table_rather_than_marked_missed_which_is_what_the_defined_schedule_above_is_for') }}.
+                {{ translate('no_status_is_given_here_because_on_time_and_late_are_judgements_against_a_due_date_and_the_due_date_comes_from_the_defined_schedule') }}.
+            </p>
+            @if ($observed['truncated'])
+                <p class="mon-note">{{ translate('more_task_names_were_recorded_in_this_window_than_this_page_reads_so_some_are_not_listed') }}.</p>
+            @endif
+        @else
+            <x-k.empty icon="clock" :title="$stateTitle($observed['state'])" :text="$observed['note'] ?? ''" />
+            @if (!empty($observed['remedy']))
+                <details class="mon-metric__remedy">
+                    <summary>{{ translate('how_to_read_this') }}</summary>
+                    <code>{{ $observed['remedy'] }}</code>
+                </details>
+            @endif
+        @endif
+    </x-k.card>
+@endunless
 
 {{-- What actually ran, newest first. The table above says what each task is doing now; this one is
      how it got there — the same task failing three nights running is visible here and nowhere else. --}}
@@ -361,9 +446,10 @@
 @endif
 
 <p class="mon-note">
-    {{ translate('the_task_list_and_its_due_times_are_read_from_the_applications_own_schedule_object_so_a_task_added_to') }}
-    <code>bootstrap/app.php</code>
-    {{ translate('is_monitored_the_moment_it_exists') }}.
+    {{ translate('the_defined_task_list_and_its_due_times_come_from_the_applications_own_schedule_object_registered_in') }}
+    <code>bootstrap/app.php</code> —
+    {{ translate('laravel_populates_it_only_when_the_console_kernel_boots_which_is_why') }}
+    <code>php artisan schedule:list</code> {{ translate('can_show_it_and_a_browser_request_cannot') }}.
     {{ translate('runs_durations_and_outcomes_are_read_from') }} <code>monitoring_scheduled_runs</code>,
     {{ translate('written_by_the_task_listeners_in') }} <code>MonitoringServiceProvider</code>.
 </p>

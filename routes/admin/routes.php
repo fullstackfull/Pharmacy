@@ -168,10 +168,29 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     // rather than discovered later on a production screen.
     Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
 
-    // Developer portal: the live API surface for the app teams, generated
-    // from the route table so it can never go stale.
-    Route::get('developer', [\App\Http\Controllers\Admin\Telemetry\DeveloperPortalController::class, 'index'])
-        ->name('developer.index')->middleware('module:system_settings');
+    /*
+    | Developer portal: the live API surface for the app teams, the vendor app and any outside
+    | integration — derived from the route table, the controllers and their validation, so it
+    | cannot describe an endpoint this application does not serve.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Telemetry\DeveloperPortalController::class)
+        ->prefix('developer')->name('developer.')->middleware('module:system_settings')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            // Downloads live under their own prefix. Named /openapi and /postman they would sit on
+            // the same paths as the sections that describe them, and the named routes win over the
+            // {section} catch-all — so the two documentation pages became unreachable file
+            // downloads, which a browser check caught by trying to navigate to one.
+            Route::get('download/openapi', 'openapi')->name('openapi');
+            Route::get('download/postman', 'postman')->name('postman');
+            Route::get('endpoint/{id}', 'endpoint')->name('endpoint');
+            // Writes, so they are POSTs: capturing a snapshot records history, and rebuilding the
+            // manifest discards a cache. Neither belongs behind a link a browser can prefetch.
+            Route::post('snapshot', 'snapshot')->name('snapshot');
+            Route::post('refresh', 'refresh')->name('refresh');
+            // Last, so it cannot swallow the named routes above.
+            Route::get('{section}', 'index')->name('section');
+        });
 
     // Analytics: visits, sources, products, vendors and API load, read from
     // the telemetry rollups.

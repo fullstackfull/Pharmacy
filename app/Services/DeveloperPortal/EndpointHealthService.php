@@ -38,10 +38,13 @@ class EndpointHealthService
             return [
                 'measured' => false,
                 'status' => 'no_traffic',
+                // Serialised rather than handed over as an object: the portal's other health
+                // sources return a plain reason, and a view that has to know which of the two it
+                // got is a view that breaks the first time the other one appears.
                 'reason' => Metric::noData(
                     'monitoring_request_buckets',
                     'No request to this endpoint has been recorded in this window. That is not the same as zero errors — nobody has called it.',
-                ),
+                )->jsonSerialize(),
                 'range' => $range,
             ];
         }
@@ -158,7 +161,7 @@ class EndpointHealthService
                     'analytics_sessions.app_version',
                     'Have the mobile apps send an X-App-Version header on every request. Until they do, there is no way to tell which release is calling an endpoint, and no deprecation can be proven safe.',
                     'No request has arrived carrying an app version.',
-                ),
+                )->jsonSerialize(),
             ];
         }
 

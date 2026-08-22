@@ -45,6 +45,8 @@ class StorageCollector implements Collector
     private const CLOUD_PROBE_SECONDS = 60;
 
     private const PERMISSION_REMEDY = 'Run php artisan file:permission, or chown -R the storage tree to the web user.';
+    private const SPACE_REMEDY = 'Free space on the filesystem holding this directory (df -h, and df -i for inodes) or raise the account quota. The permission bits are already correct, so chown will not help.';
+    private const S3_REMEDY = 'Set AWS_BUCKET and AWS_DEFAULT_REGION in .env (plus AWS_ENDPOINT for a non-AWS S3 provider), then run php artisan config:clear.';
 
     private const S3_ADAPTER = \League\Flysystem\AwsS3V3\AwsS3V3Adapter::class;
 
@@ -87,7 +89,7 @@ class StorageCollector implements Collector
     // -------------------------------------------------------------------------------------------
 
     /**
-     * The five directories whose loss is a total outage, one metric each.
+     * The six directories whose loss is a total outage, one metric each.
      *
      * They are reported separately rather than as a single "storage is writable" because the
      * consequence of each is different, and so is the fix — knowing that sessions cannot be
@@ -126,35 +128,97 @@ class StorageCollector implements Collector
             // outage — so it is published as a value with the fix beside it, rather than as a
             // state that would file it among the things monitoring merely could not measure.
             return Metric::of($failure === null, $source, null, $failure === null ? null : sprintf(
-                '%s is not writable by the PHP user (%s), so %s. %s',
+                '%s cannot be written by the PHP user (%s), so %s. %s',
                 $this->relative($path),
-                $failure,
+                $failure['reason'],
                 $consequence,
-                self::PERMISSION_REMEDY,
+                $failure['remedy'],
             ));
         });
     }
 
     /**
-     * @return string|null  what stopped the write, or null when it went through
+     * @return array{reason: string, remedy: string}|null  what stopped the write and the fix for
+     *                                                     that particular failure, or null when the
+     *                                                     write went through
      */
-    private function writeProbe(string $directory): ?string
+    private function writeProbe(string $directory): ?array
     {
         // Named per process so two concurrent renders cannot delete each other's probe file.
         $probe = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.monitoring-write-' . getmypid();
 
-        $handle = @fopen($probe, 'w');
-        if ($handle === false) {
-            return 'the directory refused a new file';
+        [$opened, $written, $diagnostic] = $this->attemptWrite($probe);
+
+        if (!$opened) {
+            return $this->openFailure($diagnostic);
+        }
+        if ($written) {
+            return null;
         }
 
-        // Creating the file is not the test: fopen succeeds on a full filesystem and on an
-        // over-quota account, and only the write itself comes back short.
-        $written = @fwrite($handle, '.');
-        fclose($handle);
-        @unlink($probe);
+        return [
+            'reason' => 'the file was created but could not be written to, which is what a full filesystem or an exhausted quota looks like',
+            'remedy' => self::SPACE_REMEDY,
+        ];
+    }
 
-        return $written === 1 ? null : 'the file was created but could not be written to, which is what a full filesystem or an exhausted quota looks like';
+    /**
+     * @return array{0: bool, 1: bool, 2: string}  whether the file opened, whether the byte landed,
+     *                                             and the kernel's own complaint about it
+     */
+    private function attemptWrite(string $probe): array
+    {
+        // The handler is taken over rather than the calls being suppressed with @: Laravel installs
+        // its own, which swallows a suppressed warning before error_get_last() ever sees it, and
+        // the kernel's wording is the only thing separating a read-only remount from a bad chown —
+        // two failures whose fixes have nothing to do with each other.
+        $diagnostic = '';
+        set_error_handler(static function (int $level, string $message) use (&$diagnostic): bool {
+            $diagnostic = $message;
+
+            return true;
+        });
+
+        try {
+            $handle = fopen($probe, 'w');
+            if ($handle === false) {
+                return [false, false, $diagnostic];
+            }
+
+            // Creating the file is not the test: fopen succeeds on a full filesystem and on an
+            // over-quota account, and only the write itself comes back short.
+            $written = fwrite($handle, '.');
+            fclose($handle);
+            unlink($probe);
+
+            return [true, $written === 1, $diagnostic];
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    /**
+     * Why the directory refused the file, and the fix for that reason rather than for the usual one.
+     *
+     * Sending an operator to chown during a read-only remount or a full disk costs them the outage
+     * twice: the command changes nothing, and running it reads as having ruled permissions out.
+     *
+     * @return array{reason: string, remedy: string}
+     */
+    private function openFailure(string $message): array
+    {
+        if (stripos($message, 'read-only file system') !== false) {
+            return [
+                'reason' => 'the filesystem is mounted read-only',
+                'remedy' => 'Remount it read-write (mount -o remount,rw <mountpoint>), but read dmesg first: the kernel drops a filesystem to read-only after an I/O error, so the disk is the suspect, not the mount.',
+            ];
+        }
+
+        if (stripos($message, 'no space left') !== false) {
+            return ['reason' => 'the filesystem is full', 'remedy' => self::SPACE_REMEDY];
+        }
+
+        return ['reason' => 'the directory refused a new file', 'remedy' => self::PERMISSION_REMEDY];
     }
 
     /**
@@ -231,7 +295,17 @@ class StorageCollector implements Collector
                         readlink($link) ?: 'an unreadable path',
                     ));
                 }
-                if ($resolvedTarget !== false && $resolved !== $resolvedTarget) {
+                if ($resolvedTarget === false) {
+                    // The link lands on a real directory, so it looks healthy — but the disk root
+                    // it is supposed to mirror is gone, and the local driver silently recreates
+                    // that root on the first upload, somewhere the link does not point.
+                    return Metric::of(false, $source, null, sprintf(
+                        'public/storage resolves to %s, but the public disk root %s no longer exists, so the next upload creates a root nothing serves. Recreate it and run php artisan storage:link.',
+                        $this->relative($resolved),
+                        $this->relative($target),
+                    ));
+                }
+                if ($resolved !== $resolvedTarget) {
                     return Metric::of(false, $source, null, sprintf(
                         'public/storage resolves to %s, not to the public disk root %s, so uploads are written where nothing serves them. Delete the link and run php artisan storage:link.',
                         $resolved,
@@ -382,12 +456,11 @@ class StorageCollector implements Collector
 
         $bucket = trim((string) ($disk['bucket'] ?? ''));
         $region = trim((string) ($disk['region'] ?? ''));
-        $remedy = 'Set AWS_BUCKET and AWS_DEFAULT_REGION in .env (plus AWS_ENDPOINT for a non-AWS S3 provider), then run php artisan config:clear.';
 
         if ($bucket === '') {
             return array_fill_keys($keys, Metric::notConfigured(
                 $source,
-                $remedy,
+                self::S3_REMEDY,
                 "The default disk '{$name}' is an S3 disk with no bucket set, so every upload fails.",
             ));
         }
@@ -395,7 +468,7 @@ class StorageCollector implements Collector
         return [
             'cloud_bucket' => Metric::of($bucket, $source),
             'cloud_region' => $region === ''
-                ? Metric::notConfigured($source, $remedy, 'The S3 disk has no region, and the SDK will not sign a request without one.')
+                ? Metric::notConfigured($source, self::S3_REMEDY, 'The S3 disk has no region, and the SDK will not sign a request without one.')
                 : Metric::of($region, $source),
             'cloud_endpoint' => $this->cloudEndpoint($disk, $source),
             'cloud_credentials_set' => Metric::of(
@@ -461,7 +534,20 @@ class StorageCollector implements Collector
             return Metric::failed($source, $exception);
         }
 
-        return Metric::of($probe['reachable'], $source, null, $probe['reachable']
+        // A client the SDK refused to build never put a packet on the wire, so there is no
+        // reachability to report. False here would read as "the bucket is down" and send someone
+        // hunting a firewall rule when what is missing is a line of .env.
+        if ($probe['outcome'] === 'unconfigured') {
+            return Metric::notConfigured(
+                $source,
+                self::S3_REMEDY,
+                'The S3 client could not be built from this disk, so no request was attempted: the region or the endpoint is missing or unusable.',
+            );
+        }
+
+        $reachable = $probe['outcome'] === 'reachable';
+
+        return Metric::of($reachable, $source, null, $reachable
             ? "Bucket {$bucket} answered in {$probe['ms']} ms."
             : sprintf(
                 'The bucket did not answer after %s ms (%s). The SDK message is withheld because S3 error bodies quote the access key id back; check the bucket name, region and credentials.',
@@ -472,7 +558,7 @@ class StorageCollector implements Collector
 
     /**
      * @param  array<string, mixed>  $disk
-     * @return array{reachable: bool, ms: float, error: string|null}
+     * @return array{outcome: string, ms: float, error: string|null}
      */
     private function probeBucket(array $disk): array
     {
@@ -491,10 +577,15 @@ class StorageCollector implements Collector
             // signature exactly as well as true does, and transfers nothing.
             Storage::build($disk)->exists('monitoring/reachability-probe');
 
-            return ['reachable' => true, 'ms' => $this->elapsedMs($started), 'error' => null];
+            return ['outcome' => 'reachable', 'ms' => $this->elapsedMs($started), 'error' => null];
+        } catch (\InvalidArgumentException $exception) {
+            // Raised before any I/O by both the filesystem manager and the SDK — an unknown driver,
+            // a missing region. Flysystem reports transport failures as RuntimeExceptions instead,
+            // so a configuration fault and a dead bucket never arrive as the same class.
+            return ['outcome' => 'unconfigured', 'ms' => $this->elapsedMs($started), 'error' => class_basename($exception)];
         } catch (\Throwable $exception) {
             // Only the exception's class survives, for the reason above.
-            return ['reachable' => false, 'ms' => $this->elapsedMs($started), 'error' => class_basename($exception)];
+            return ['outcome' => 'unreachable', 'ms' => $this->elapsedMs($started), 'error' => class_basename($exception)];
         }
     }
 
