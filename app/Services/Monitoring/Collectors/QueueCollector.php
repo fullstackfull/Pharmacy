@@ -63,17 +63,39 @@ class QueueCollector implements Collector
     private const REDIS_SCAN_BATCH = 100;
 
     /**
-     * Every name this collector answers to, so one unusable driver is reported once, in one state,
-     * instead of as a page full of separate failures.
+     * The readings only the queue backend can answer, so one unusable driver is reported once, in
+     * one state, instead of as a page full of separate failures.
      *
      * @var list<string>
      */
-    private const METRICS = [
+    private const BACKEND_METRICS = [
         'queues', 'queue_count', 'pending', 'reserved', 'delayed', 'oldest_wait_seconds',
-        'stuck_reserved', 'failed_24h', 'failed_total', 'recent_failures',
-        'worker_processes', 'workers_consuming', 'pending_batches',
+        'stuck_reserved', 'workers_consuming',
+    ];
+
+    /**
+     * The readings that come from this application's own tables and hold on every driver.
+     *
+     * Failures land in failed_jobs, batches in job_batches, and throughput and runtime in
+     * monitoring_series from the workers' own JobProcessed events — none of which the broker is
+     * involved in. Blanketing these with the driver's excuse would hide a real count of failed jobs
+     * behind "read it from CloudWatch", and hand the operator a remedy that cannot fix the thing it
+     * is attached to.
+     *
+     * @var list<string>
+     */
+    private const LOCAL_METRICS = [
+        'failed_24h', 'failed_total', 'recent_failures', 'pending_batches',
         'throughput_per_minute', 'average_runtime_ms',
     ];
+
+    /**
+     * The window throughput is averaged over.
+     *
+     * Fifteen minutes is long enough to survive a worker restart and short enough that the number
+     * still describes now rather than this morning.
+     */
+    private const THROUGHPUT_WINDOW_MINUTES = 15;
 
     /** The per-queue readings gauges() publishes, metric name => gauge name. */
     private const PER_QUEUE_GAUGES = [
@@ -84,6 +106,9 @@ class QueueCollector implements Collector
 
     /** @var array<string, array<string, Metric>> queue name => metric name => reading */
     private array $perQueue = [];
+
+    /** Whether more queue names were found than MAX_QUEUES reports. */
+    private bool $queuesTruncated = false;
 
     /** @var array<string, Metric>|null */
     private ?array $readings = null;
@@ -140,6 +165,7 @@ class QueueCollector implements Collector
     private function read(): array
     {
         $this->perQueue = [];
+        $this->queuesTruncated = false;
 
         $connectionName = (string) config('queue.default', 'sync');
         $driver = (string) config("queue.connections.{$connectionName}.driver", '');
@@ -158,7 +184,9 @@ class QueueCollector implements Collector
                 default => $this->otherDriver($driver, $source),
             };
         } catch (Throwable $exception) {
-            return $header + array_fill_keys(self::METRICS, Metric::failed($source, $exception));
+            // The outermost catch, so the throw could have come from anywhere in the read —
+            // including the parts that do not touch the broker. Nothing here is known good.
+            return $header + array_fill_keys($this->everyMetric(), Metric::failed($source, $exception));
         }
     }
 
@@ -167,11 +195,14 @@ class QueueCollector implements Collector
      */
     private function sync(): array
     {
-        return array_fill_keys(self::METRICS, Metric::notConfigured(
+        // Workers are blanketed with the rest here, unlike on a broker this collector cannot read:
+        // on sync there is nothing for a worker to consume, so a count of local queue:work
+        // processes would be a true number answering a question that does not apply.
+        return $this->unavailable(Metric::notConfigured(
             'config/queue.php [sync]',
             'Set QUEUE_CONNECTION=database in .env, run php artisan config:clear, then keep a worker alive: php artisan queue:work --queue=default (under supervisor or systemd, not by hand).',
             'This application has no queue. On the sync driver a dispatched job runs inline, inside the request that dispatched it, so the customer waits for the invoice PDF and the mail send. Pending, lag and worker counts are not zero here — they do not exist.',
-        ));
+        ), workersToo: true);
     }
 
     /**
@@ -180,22 +211,86 @@ class QueueCollector implements Collector
     private function otherDriver(string $driver, string $source): array
     {
         if ($driver === '' || $driver === 'null') {
-            return array_fill_keys(self::METRICS, Metric::notConfigured(
+            return $this->unavailable(Metric::notConfigured(
                 $source,
                 'Set QUEUE_CONNECTION=database (or redis) in .env and run php artisan config:clear.',
                 $driver === 'null'
                     ? 'The null driver throws every dispatched job away: nothing is queued, nothing runs, and nothing fails visibly.'
                     : 'No queue driver is configured for this connection.',
-            ));
+            ), workersToo: true);
         }
 
-        return array_fill_keys(self::METRICS, Metric::notSupported(
+        return $this->unavailable(Metric::notSupported(
             $source,
             "This application queues onto {$driver}, which keeps its depth, age and worker counters inside the broker rather than anywhere this server can read.",
             $driver === 'sqs'
                 ? 'Read ApproximateNumberOfMessagesVisible and ApproximateAgeOfOldestMessage from CloudWatch for this queue, or point MONITORING_NODE_EXPORTER_URL at an exporter that already does.'
                 : null,
         ));
+    }
+
+    /**
+     * One reason, applied to every reading that reason actually covers.
+     *
+     * Only the depths come from the backend. The failure counts, batches, throughput and runtime are
+     * read out of this application's own tables and stay real whatever the queue is running on, so
+     * they are collected normally rather than being buried under the driver's excuse — a `pending`
+     * that says "read it from CloudWatch" is honest, and a `failed_total` that says the same is a
+     * count this server has sitting in a table it can read.
+     *
+     * @param  bool  $workersToo  whether the reason covers the worker count as well
+     * @return array<string, Metric>
+     */
+    private function unavailable(Metric $reason, bool $workersToo = false): array
+    {
+        return array_fill_keys(self::BACKEND_METRICS, $reason)
+            + ['worker_processes' => $workersToo ? $reason : $this->workerProcesses()]
+            + $this->localReadings();
+    }
+
+    /**
+     * Every name this collector answers to, for the case where nothing at all could be read.
+     *
+     * @return list<string>
+     */
+    private function everyMetric(): array
+    {
+        return array_merge(self::BACKEND_METRICS, self::LOCAL_METRICS, ['worker_processes']);
+    }
+
+    /**
+     * The readings that do not depend on the queue backend being reachable.
+     *
+     * @return array<string, Metric>
+     */
+    private function localReadings(): array
+    {
+        $failures = $this->failureCounts();
+
+        return [
+            'failed_24h' => $this->failureTotal($failures, 'last24'),
+            'failed_total' => $this->failureTotal($failures, 'total'),
+            'recent_failures' => $this->recentFailures(),
+            'pending_batches' => $this->pendingBatches(),
+            'throughput_per_minute' => $this->recordedThroughput(),
+            'average_runtime_ms' => $this->recordedRuntime(),
+        ];
+    }
+
+    /**
+     * @param  array<string, array{total: int, last24: int}>|Metric  $failures
+     */
+    private function failureTotal(array|Metric $failures, string $field): Metric
+    {
+        if ($failures instanceof Metric) {
+            return $failures;
+        }
+
+        return Metric::of(
+            array_sum(array_column($failures, $field)),
+            'database table ' . (string) config('queue.failed.table', 'failed_jobs'),
+            'jobs',
+        );
     }
 
     // ---- database driver ------------------------------------------------------------------------
@@ -213,13 +308,16 @@ class QueueCollector implements Collector
             $connection = DB::connection(config("queue.connections.{$connectionName}.connection"));
             $connection->getPdo();
         } catch (Throwable $exception) {
-            return array_fill_keys(self::METRICS, Metric::failed($source, $exception));
+            // Not narrowed to the depths: failed_jobs, job_batches and the monitoring series all
+            // default to this same server, so probing each of them in turn would add a connection
+            // timeout per reading to a dashboard render and arrive at the same answer.
+            return array_fill_keys($this->everyMetric(), Metric::failed($source, $exception));
         }
 
         if (!$this->hasTable($connection, $table)) {
-            // Without this table every dispatch throws, so the whole driver is unusable — one
-            // statement of that, rather than fifteen metrics each inventing a zero.
-            return array_fill_keys(self::METRICS, Metric::notConfigured(
+            // Without this table every dispatch throws, so every depth is unreadable — one
+            // statement of that, rather than a set of metrics each inventing a zero.
+            return $this->unavailable(Metric::notConfigured(
                 $source,
                 "php artisan make:queue-table && php artisan migrate (creates the `{$table}` table this connection is configured to use).",
                 "The queue is configured to use the `{$table}` table and this database does not have it, so no job can be queued at all.",
@@ -284,16 +382,16 @@ class QueueCollector implements Collector
 
         return $totals + [
             'queues' => $this->queueTable($source),
-            'queue_count' => Metric::of(count($this->perQueue), $source, 'queues'),
+            'queue_count' => $this->queueCount($source),
             'oldest_wait_seconds' => $oldest,
             'recent_failures' => $this->recentFailures(),
             'worker_processes' => $processes,
             'workers_consuming' => $this->consumption([
                 'source' => $source,
                 'processes' => $processes,
-                'pending' => $totals['pending']->valueOr(0),
-                'reserved' => $totals['reserved']->valueOr(0),
-                'stuck' => $totals['stuck_reserved']->valueOr(0),
+                'pending' => $totals['pending'],
+                'reserved' => $totals['reserved'],
+                'stuck' => $totals['stuck_reserved'],
                 'stuck_note' => "reserved longer than this connection's retry_after of {$retryAfter}s",
                 'fresh_reservation' => $newestReservation !== null && $newestReservation >= $now - $retryAfter,
                 'paused' => $this->allPaused(),
@@ -319,7 +417,7 @@ class QueueCollector implements Collector
         $source = 'Redis queue keys (queues:*)';
 
         if (!$this->environment->has('redis_ext') && !$this->environment->has('predis')) {
-            return array_fill_keys(self::METRICS, Metric::notConfigured(
+            return $this->unavailable(Metric::notConfigured(
                 $source,
                 'Install the phpredis extension (pecl install redis, then extension=redis.so) or require predis/predis — the queue is configured for Redis but this PHP has no client to reach it with.',
             ));
@@ -329,7 +427,7 @@ class QueueCollector implements Collector
             $redis = Redis::connection((string) config("queue.connections.{$connectionName}.connection", 'default'));
             $redis->ping();
         } catch (Throwable $exception) {
-            return array_fill_keys(self::METRICS, Metric::failed($source, $exception));
+            return $this->unavailable(Metric::failed($source, $exception));
         }
 
         $now = time();
@@ -339,7 +437,7 @@ class QueueCollector implements Collector
         try {
             $counts = $this->redisCounts($redis, $names, $now);
         } catch (Throwable $exception) {
-            return array_fill_keys(self::METRICS, Metric::failed($source, $exception));
+            return $this->unavailable(Metric::failed($source, $exception));
         }
 
         // Laravel's Redis queue writes no timestamp into the job payload, so how long the head of
@@ -381,16 +479,16 @@ class QueueCollector implements Collector
 
         return $totals + [
             'queues' => $this->queueTable($source),
-            'queue_count' => Metric::of(count($this->perQueue), $source, 'queues'),
+            'queue_count' => $this->queueCount($source),
             'oldest_wait_seconds' => $this->horizonOnly($source, $noEnqueueTime),
             'recent_failures' => $this->recentFailures(),
             'worker_processes' => $processes,
             'workers_consuming' => $this->consumption([
                 'source' => $source,
                 'processes' => $processes,
-                'pending' => $totals['pending']->valueOr(0),
+                'pending' => $totals['pending'],
                 'reserved' => $reservedTotal,
-                'stuck' => $totals['stuck_reserved']->valueOr(0),
+                'stuck' => $totals['stuck_reserved'],
                 'stuck_note' => 'past the point Redis says their reservation expired',
                 'fresh_reservation' => $reservedTotal > 0 && $totals['stuck_reserved']->valueOr(0) < $reservedTotal,
                 'paused' => $this->allPaused(),
@@ -547,6 +645,7 @@ class QueueCollector implements Collector
         }
 
         $unique = array_values(array_unique(array_filter($names, static fn (string $name) => $name !== '')));
+        $this->queuesTruncated = count($unique) > self::MAX_QUEUES;
 
         // The configured queue comes first and the ones only seen in failed_jobs come last, so a
         // truncated list keeps the queues that are actually in use.
@@ -559,6 +658,13 @@ class QueueCollector implements Collector
     private function totals(string $source): array
     {
         $sum = function (string $name) use ($source): Metric {
+            if ($this->perQueue === []) {
+                // Nothing was found to add up, which is not the same as adding up to nothing: a
+                // zero here would report an idle queue on a connection whose queue name is blank
+                // and which therefore cannot be read at all.
+                return Metric::noData($source, 'No queue is configured or in use on this connection, so there is nothing to total.');
+            }
+
             $total = 0;
             // The total is published under the source of the rows it came from, not the source of
             // the collector: failures are read from failed_jobs, and a total labelled `jobs` would
@@ -579,7 +685,7 @@ class QueueCollector implements Collector
                 $total += (int) $metric->value;
             }
 
-            return Metric::of($total, $origin, 'jobs');
+            return Metric::of($total, $origin, 'jobs', $this->truncationNote());
         };
 
         return [
@@ -618,7 +724,30 @@ class QueueCollector implements Collector
             return Metric::noData($source, 'No queue is configured or in use on this connection.');
         }
 
-        return Metric::of($worst, $source, 'seconds', "Oldest waiting job across all queues (on \"{$worstQueue}\").");
+        // Zero is a measured backlog of nothing, not an oldest job that waited no time — naming a
+        // queue beside it would assert a waiting job that is not there.
+        return Metric::of(
+            $worst,
+            $source,
+            'seconds',
+            $this->truncationNote(
+                $worst === 0
+                    ? 'No job is waiting on any queue.'
+                    : "Oldest waiting job across all queues (on \"{$worstQueue}\").",
+            ),
+        );
+    }
+
+    /**
+     * How many queues are in use, and whether that is all of them.
+     */
+    private function queueCount(string $source): Metric
+    {
+        if ($this->perQueue === []) {
+            return Metric::noData($source, 'No queue is configured or in use on this connection.');
+        }
+
+        return Metric::of(count($this->perQueue), $source, 'queues', $this->truncationNote());
     }
 
     /**
@@ -641,7 +770,24 @@ class QueueCollector implements Collector
 
         return $rows === []
             ? Metric::noData($source, 'No queue is configured or in use on this connection.')
-            : Metric::of($rows, $source);
+            : Metric::of($rows, $source, null, $this->truncationNote());
+    }
+
+    /**
+     * Said out loud rather than silently, on every number the cut affects.
+     *
+     * A count of fifty on a list cut at fifty is wrong, and so is a total summed from it — both in
+     * the direction that makes a queue name built from an id look tidy.
+     */
+    private function truncationNote(?string $note = null): ?string
+    {
+        if (!$this->queuesTruncated) {
+            return $note;
+        }
+
+        $cut = 'More than ' . self::MAX_QUEUES . ' queue names are in use; the rest are not listed, counted or totalled here. A queue name built from an id or a tenant is the usual cause.';
+
+        return $note === null ? $cut : $note . ' ' . $cut;
     }
 
     private function paused(string $connectionName, string $queue): Metric
@@ -921,6 +1067,9 @@ class QueueCollector implements Collector
         $source = (string) $facts['source'];
         $processes = $facts['processes'];
         $running = $processes instanceof Metric && $processes->isOk() ? (int) $processes->value : null;
+        $pending = $this->depth($facts['pending']);
+        $reserved = $this->depth($facts['reserved']);
+        $stuck = $this->depth($facts['stuck']);
 
         if ($facts['paused'] === true) {
             return Metric::notConfigured(
@@ -930,16 +1079,16 @@ class QueueCollector implements Collector
             );
         }
 
-        if ((int) $facts['stuck'] > 0) {
+        if ($stuck !== null && $stuck > 0) {
             return Metric::collectorOffline(
                 $source,
-                $facts['stuck'] . ' job(s) are ' . $facts['stuck_note'] . ', which means the worker that took them is gone. They will be retried once, then start again from the beginning — a job that is not idempotent will run twice.',
+                $stuck . ' job(s) are ' . $facts['stuck_note'] . ', which means the worker that took them is gone. They will be retried once, then start again from the beginning — a job that is not idempotent will run twice.',
                 (string) $facts['restart'],
             );
         }
 
         if ($facts['fresh_reservation'] === true) {
-            return Metric::of(true, $source, null, 'A worker holds ' . $facts['reserved'] . ' job(s) reserved right now, so something is consuming this queue.');
+            return Metric::of(true, $source, null, 'A worker holds ' . ($reserved ?? 'some') . ' job(s) reserved right now, so something is consuming this queue.');
         }
 
         if ($facts['stalled_reason'] !== null) {
@@ -956,15 +1105,24 @@ class QueueCollector implements Collector
         // ps alone is not enough to declare a queue unattended: on a deployment where workers run
         // on their own machine, this host correctly sees none. It takes a backlog that is also
         // ageing before the absence of a local worker means anything.
-        if ((int) $facts['pending'] > 0 && $running === 0 && $waited !== null && $waited > $warning) {
+        if ($pending !== null && $pending > 0 && $running === 0 && $waited !== null && $waited > $warning) {
             return Metric::collectorOffline(
                 'ps -eo args',
-                $facts['pending'] . " job(s) are waiting, the oldest for {$waited}s, and no worker process is running on this host. If the workers run on another machine, check there; if they do not, nothing is draining this queue.",
+                $pending . " job(s) are waiting, the oldest for {$waited}s, and no worker process is running on this host. If the workers run on another machine, check there; if they do not, nothing is draining this queue.",
                 (string) $facts['start'],
             );
         }
 
-        if ((int) $facts['pending'] === 0 && (int) $facts['reserved'] === 0) {
+        // An unreadable depth is not an empty one. Every remaining verdict is an inference from how
+        // much is sitting in the queue, so without that figure there is nothing left to infer from.
+        if ($pending === null || $reserved === null) {
+            return Metric::noData(
+                $source,
+                'The depth of this queue could not be read, so whether anything is draining it cannot be judged from here either.',
+            );
+        }
+
+        if ($pending === 0 && $reserved === 0) {
             return Metric::noData(
                 $source,
                 'The queue is empty, so an idle worker and a stopped one look identical from here. Worker state becomes readable again as soon as a job is queued.',
@@ -977,6 +1135,18 @@ class QueueCollector implements Collector
                 ? 'Jobs are waiting, and on this driver their age cannot be read, so a busy worker and a stopped one cannot be told apart from the queue alone.'
                 : "Jobs are waiting but the oldest has only waited {$waited}s, short of the {$warning}s threshold, so a busy worker and a stopped one cannot yet be told apart.",
         );
+    }
+
+    /**
+     * A depth as a number, or null when it was never actually read.
+     */
+    private function depth(Metric|int|null $fact): ?int
+    {
+        if ($fact instanceof Metric) {
+            return $fact->isOk() && is_numeric($fact->value) ? (int) $fact->value : null;
+        }
+
+        return $fact;
     }
 
     /**
@@ -1025,13 +1195,16 @@ class QueueCollector implements Collector
 
     // ---- plumbing -----------------------------------------------------------------------------------
 
+    /**
+     * The throw is deliberately not swallowed. A login that may not read information_schema fails
+     * here exactly as a missing table would, and answering "false" would put `php artisan migrate`
+     * in front of an operator whose table is present and whose grant is not. Every caller already
+     * sits inside a probe or a catch that turns it into a failed reading carrying the driver's own
+     * message, which names the real problem.
+     */
     private function hasTable(Connection $connection, string $table): bool
     {
-        try {
-            return $connection->getSchemaBuilder()->hasTable($table);
-        } catch (Throwable) {
-            return false;
-        }
+        return $connection->getSchemaBuilder()->hasTable($table);
     }
 
     /**
@@ -1064,21 +1237,24 @@ class QueueCollector implements Collector
             $row = $this->monitoring()->table('monitoring_series')
                 ->where('metric', 'queue.processed')
                 ->where('resolution', 'minute')
-                ->where('bucket_at', '>=', Clock::minutesAgo(15))
-                ->selectRaw('SUM(samples) AS jobs, COUNT(DISTINCT bucket_at) AS minutes')
+                ->where('bucket_at', '>=', Clock::minutesAgo(self::THROUGHPUT_WINDOW_MINUTES))
+                ->selectRaw('SUM(samples) AS jobs')
                 ->first();
 
             $jobs = (int) ($row->jobs ?? 0);
-            $minutes = (int) ($row->minutes ?? 0);
-
-            if ($minutes === 0) {
+            if ($jobs === 0) {
                 return Metric::noData(
                     'monitoring_series (queue.processed)',
-                    'No job has been processed in the last fifteen minutes, so there is no throughput to report yet.',
+                    'Nothing has been recorded as processed in the last fifteen minutes. Either no job ran, or nothing is recording them — the workers write this series themselves, so a worker on an older release, or monitoring switched off, looks the same from here.',
                 );
             }
 
-            return round($jobs / $minutes, 2);
+            // Divided by the whole window, not by the minutes that happen to contain jobs. A minute
+            // with no work writes no row, so the second denominator would make the rate independent
+            // of how long the queue stood idle: 300 jobs in one minute of fifteen would read as
+            // 300/min and could never fall. It is also the divisor the queue panel uses, and two
+            // throughput figures on one page have to agree.
+            return round($jobs / self::THROUGHPUT_WINDOW_MINUTES, 2);
         }, 'jobs/min');
     }
 

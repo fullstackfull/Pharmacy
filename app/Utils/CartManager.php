@@ -551,12 +551,18 @@ class CartManager
         // added to a controller would be missing from the other four callers the day it shipped.
         // Cart rows are written with insertGetId, which is a query-builder call and fires no model
         // event, so the hook has to be explicit.
-        app(Analytics::class)->cartAdded(
-            productId: (int) $cartArray['product_id'],
-            quantity: (int) ($cartArray['quantity'] ?? 1),
-            value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
-            vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
-        );
+        try {
+            app(Analytics::class)->cartAdded(
+                productId: (int) $cartArray['product_id'],
+                quantity: (int) ($cartArray['quantity'] ?? 1),
+                value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
+                vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
+            );
+        } catch (\Throwable) {
+            // Recording an event is never allowed to be the reason an item does not reach a cart.
+            // The recorder already swallows its own failures; this covers the container itself,
+            // which on a partial deployment can be asked for a class that is not there yet.
+        }
 
         if ($request['buy_now'] == 1) {
             $productTotalPrice = ($price * $request['quantity']) - ($getProductDiscount * $request['quantity']);
@@ -718,12 +724,18 @@ class CartManager
         // added to a controller would be missing from the other four callers the day it shipped.
         // Cart rows are written with insertGetId, which is a query-builder call and fires no model
         // event, so the hook has to be explicit.
-        app(Analytics::class)->cartAdded(
-            productId: (int) $cartArray['product_id'],
-            quantity: (int) ($cartArray['quantity'] ?? 1),
-            value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
-            vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
-        );
+        try {
+            app(Analytics::class)->cartAdded(
+                productId: (int) $cartArray['product_id'],
+                quantity: (int) ($cartArray['quantity'] ?? 1),
+                value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
+                vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
+            );
+        } catch (\Throwable) {
+            // Recording an event is never allowed to be the reason an item does not reach a cart.
+            // The recorder already swallows its own failures; this covers the container itself,
+            // which on a partial deployment can be asked for a class that is not there yet.
+        }
 
         if ($request['buy_now'] == 1) {
             $productTotalPrice = ($price * $request['quantity']) - ($getProductDiscount * $request['quantity']);

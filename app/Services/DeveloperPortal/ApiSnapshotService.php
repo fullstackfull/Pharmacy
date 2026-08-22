@@ -4,6 +4,7 @@ namespace App\Services\DeveloperPortal;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Remembers what the API used to look like, so it can say what changed and who it broke.
@@ -32,6 +33,10 @@ class ApiSnapshotService
      */
     public function capture(string $label, ?int $userId = null): array
     {
+        if (!$this->ready()) {
+            return ['id' => 0, 'label' => $label, 'endpoints' => 0, 'unavailable' => true];
+        }
+
         $manifest = $this->manifest->get();
         $comparable = $this->comparable($manifest['endpoints'] ?? []);
 
@@ -48,19 +53,51 @@ class ApiSnapshotService
         return ['id' => $id, 'label' => $label, 'endpoints' => count($comparable)];
     }
 
-    /** @return array<int, object> */
+    /**
+     * @return array<int, object>
+     *
+     * Every read here tolerates the tables being absent. A deployment that ships code before it
+     * runs migrations is normal, and the documentation portal going down in that window is a
+     * self-inflicted outage on a screen whose whole purpose is to explain the system.
+     */
     public function snapshots(int $limit = 25): array
     {
-        return DB::table('api_snapshots')
-            ->orderByDesc('captured_at')
-            ->limit($limit)
-            ->get(['id', 'label', 'app_version', 'endpoint_count', 'captured_at'])
-            ->all();
+        if (!$this->ready()) {
+            return [];
+        }
+
+        try {
+            return DB::table('api_snapshots')
+                ->orderByDesc('captured_at')
+                ->limit($limit)
+                ->get(['id', 'label', 'app_version', 'endpoint_count', 'captured_at'])
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function latest(): ?object
     {
-        return DB::table('api_snapshots')->orderByDesc('captured_at')->first();
+        if (!$this->ready()) {
+            return null;
+        }
+
+        try {
+            return DB::table('api_snapshots')->orderByDesc('captured_at')->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Have the portal's own migrations been run on this installation? */
+    public function ready(): bool
+    {
+        try {
+            return Schema::hasTable('api_snapshots') && Schema::hasTable('api_changes');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -121,7 +158,7 @@ class ApiSnapshotService
         $previous = $this->latest();
         $captured = $this->capture($label, $userId);
 
-        if ($previous === null) {
+        if (($captured['unavailable'] ?? false) || $previous === null) {
             return $captured + ['changes' => 0, 'breaking' => 0, 'first' => true];
         }
 
@@ -162,13 +199,21 @@ class ApiSnapshotService
      */
     public function changelog(int $limit = 200, ?string $severity = null): array
     {
-        return DB::table('api_changes')
+        if (!$this->ready()) {
+            return [];
+        }
+
+        try {
+            return DB::table('api_changes')
             ->when($severity !== null, fn ($query) => $query->where('severity', $severity))
             ->orderByDesc('detected_at')
-            ->orderByRaw("FIELD(severity, 'breaking', 'warning', 'none')")
-            ->limit($limit)
-            ->get()
-            ->all();
+                ->orderByRaw("FIELD(severity, 'breaking', 'warning', 'none')")
+                ->limit($limit)
+                ->get()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     // -------------------------------------------------------------------------------------------

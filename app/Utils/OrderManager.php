@@ -1588,30 +1588,35 @@ class OrderManager
             // afterCommit, not inline: this runs inside a retried transaction, and an order that
             // rolls back must not leave a sale in the reports that never happened.
             DB::afterCommit(function () use ($order, $ordersData, $vendorWiseCart) {
-                app(Analytics::class)->orderPlaced(
-                    orderId: (int) $ordersData['id'],
-                    amount: (float) $ordersData['order_amount'],
-                    vendorId: ($ordersData['seller_is'] ?? null) === 'seller' ? (int) $ordersData['seller_id'] : null,
-                    items: $order?->details?->count(),
-                    properties: array_filter([
-                        'payment_method' => $ordersData['payment_method'] ?? null,
-                        'payment_status' => $ordersData['payment_status'] ?? null,
-                        'coupon_code' => $ordersData['coupon_code'] ?? null,
-                        'is_guest' => (bool) ($ordersData['is_guest'] ?? false),
-                        'shipping_cost' => (float) ($ordersData['shipping_cost'] ?? 0),
-                    ], static fn ($value) => $value !== null && $value !== ''),
-                );
-
-                // A paid-on-placement order is a completed payment. Counting only gateway callbacks
-                // would leave every cash-on-delivery and wallet order out of payment analytics —
-                // which, in this shop, is most of them.
-                if (($ordersData['payment_status'] ?? null) === 'paid') {
-                    app(Analytics::class)->paymentAttempted(
-                        gateway: (string) ($ordersData['payment_method'] ?: 'unknown'),
-                        outcome: 'succeeded',
-                        amount: (float) $ordersData['order_amount'],
+                try {
+                    app(Analytics::class)->orderPlaced(
                         orderId: (int) $ordersData['id'],
+                        amount: (float) $ordersData['order_amount'],
+                        vendorId: ($ordersData['seller_is'] ?? null) === 'seller' ? (int) $ordersData['seller_id'] : null,
+                        items: $order?->details?->count(),
+                        properties: array_filter([
+                            'payment_method' => $ordersData['payment_method'] ?? null,
+                            'payment_status' => $ordersData['payment_status'] ?? null,
+                            'coupon_code' => $ordersData['coupon_code'] ?? null,
+                            'is_guest' => (bool) ($ordersData['is_guest'] ?? false),
+                            'shipping_cost' => (float) ($ordersData['shipping_cost'] ?? 0),
+                        ], static fn ($value) => $value !== null && $value !== ''),
                     );
+
+                    // A paid-on-placement order is a completed payment. Counting only gateway
+                    // callbacks would leave every cash-on-delivery and wallet order out of payment
+                    // analytics — which, in this shop, is most of them.
+                    if (($ordersData['payment_status'] ?? null) === 'paid') {
+                        app(Analytics::class)->paymentAttempted(
+                            gateway: (string) ($ordersData['payment_method'] ?: 'unknown'),
+                            outcome: 'succeeded',
+                            amount: (float) $ordersData['order_amount'],
+                            orderId: (int) $ordersData['id'],
+                        );
+                    }
+                } catch (\Throwable) {
+                    // The order is already committed by the time this runs. Nothing analytics can
+                    // fail at is worth turning a completed sale into an error page.
                 }
             });
 

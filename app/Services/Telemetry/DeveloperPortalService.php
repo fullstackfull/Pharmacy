@@ -44,7 +44,7 @@ class DeveloperPortalService
         return [
             'webhooks' => $this->hasInboundWebhooks(),
             'monitoring' => $this->hasMonitoring(),
-            'snapshots' => $this->snapshots->latest() !== null,
+            'snapshots' => $this->snapshots->ready(),
         ];
     }
 
@@ -345,6 +345,10 @@ class DeveloperPortalService
      */
     private function changesFor(string $endpointId): array
     {
+        if (!$this->snapshots->ready()) {
+            return [];
+        }
+
         try {
             return DB::table('api_changes')
                 ->where('endpoint_id', $endpointId)

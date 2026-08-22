@@ -1253,4 +1253,12 @@ return [
 	'The_scheduler_last_reported_a_run_38_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 38 minutes ago  the server cron appears to have stopped.',
 	'depth_lag_and_failures_are_read_live_from' => 'Depth lag and failures are read live from',
 	'written_by_the_task_listeners_in' => 'Written by the task listeners in',
+	'runs_durations_and_outcomes_are_read_from' => 'Runs durations and outcomes are read from',
+	'The_scheduler_last_reported_a_run_47_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 47 minutes ago  the server cron appears to have stopped.',
+	'can_show_it_and_a_browser_request_cannot' => 'Can show it and a browser request cannot',
+	'The_scheduler_last_reported_a_run_49_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 49 minutes ago  the server cron appears to have stopped.',
+	'the_readings_above_are_taken_live_from' => 'The readings above are taken live from',
+	'any_of_them_can_be_charted_over_any_window_on_this_page' => 'Any of them can be charted over any window on this page',
+	'The_scheduler_last_reported_a_run_56_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 56 minutes ago  the server cron appears to have stopped.',
+	'every_one_of_these_gauges_is_sampled_every_minute_and_stored_in' => 'Every one of these gauges is sampled every minute and stored in',
 ];

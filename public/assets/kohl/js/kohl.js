@@ -1,1 +1,521 @@
-!function(e){var t={};function n(r){if(t[r])return t[r].exports;var o=t[r]={i:r,l:!1,exports:{}};return e[r].call(o.exports,o,o.exports,n),o.l=!0,o.exports}n.m=e,n.c=t,n.d=function(e,t,r){n.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:r})},n.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},n.t=function(e,t){if(1&t&&(e=n(e)),8&t)return e;if(4&t&&"object"==typeof e&&e&&e.__esModule)return e;var r=Object.create(null);if(n.r(r),Object.defineProperty(r,"default",{enumerable:!0,value:e}),2&t&&"string"!=typeof e)for(var o in e)n.d(r,o,function(t){return e[t]}.bind(null,o));return r},n.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return n.d(t,"a",t),t},n.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},n.p="/",n(n.s=0)}({0:function(e,t,n){n("YnIz"),n("wNmi"),n("XhI/"),e.exports=n("6Nob")},"6Nob":function(e,t){},"XhI/":function(e,t){},YnIz:function(e,t){function n(e){return function(e){if(Array.isArray(e))return r(e)}(e)||function(e){if("undefined"!=typeof Symbol&&Symbol.iterator in Object(e))return Array.from(e)}(e)||function(e,t){if(!e)return;if("string"==typeof e)return r(e,t);var n=Object.prototype.toString.call(e).slice(8,-1);"Object"===n&&e.constructor&&(n=e.constructor.name);if("Map"===n||"Set"===n)return Array.from(e);if("Arguments"===n||/^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n))return r(e,t)}(e)||function(){throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")}()}function r(e,t){(null==t||t>e.length)&&(t=e.length);for(var n=0,r=new Array(t);n<t;n++)r[n]=e[n];return r}function o(){var e=null;try{e=window.localStorage.getItem("k-theme")}catch(t){e=null}var t=document.body&&document.body.classList.contains("k-console"),n=document.documentElement,r=t?"dark"===e?"dark":"light":"dark"===e||"light"===e?e:null;r?n.setAttribute("data-k-theme",r):n.removeAttribute("data-k-theme"),t&&(n.setAttribute("data-bs-theme",r),document.querySelectorAll(".app-v2").forEach((function(e){e.classList.toggle("v2-theme-dark","dark"===r)})))}var a=null;function c(e){var t=document.getElementById(e);if(t){var n=document.querySelector('[data-k-drawer-backdrop="'.concat(e,'"]'));a=document.activeElement,t.classList.add("is-open"),n&&n.classList.add("is-open"),document.body.style.overflow="hidden";var r=t.querySelector("[autofocus], input, select, textarea, button");r&&r.focus({preventScroll:!0})}}function i(e){var t=e?document.getElementById(e):document.querySelector(".k-drawer.is-open");if(t){var n=document.querySelector('[data-k-drawer-backdrop="'.concat(t.id,'"]'));t.classList.remove("is-open"),n&&n.classList.remove("is-open"),document.querySelector(".k-drawer.is-open")||(document.body.style.overflow=""),a&&"function"==typeof a.focus&&a.focus({preventScroll:!0})}}function l(e){var t=e.querySelectorAll("[data-k-row-select]"),r=n(t).filter((function(e){return e.checked})),o=e.querySelector("[data-k-bulk]"),a=e.querySelector("[data-k-bulk-count]"),c=e.querySelector("[data-k-select-all]");t.forEach((function(e){var t=e.closest("tr");t&&t.setAttribute("aria-selected",e.checked?"true":"false")})),a&&(a.textContent=String(r.length)),o&&(o.hidden=0===r.length),c&&(c.checked=t.length>0&&r.length===t.length,c.indeterminate=r.length>0&&r.length<t.length)}function d(e){var t=[];return e.querySelectorAll("input, select, textarea").forEach((function(e){"file"!==e.type&&!e.disabled&&e.name&&t.push(e.name+"="+("checkbox"===e.type||"radio"===e.type?e.checked:e.value))})),t.join("&")}function u(){document.querySelectorAll("form[data-k-save-bar]").forEach((function(e){var t,n;if("1"!==e.dataset.kSaveBarReady){var r=e.querySelector("[data-k-savebar]");if(r){e.dataset.kSaveBarReady="1";var o=d(e),a=function(){var t=d(e)!==o;r.classList.toggle("is-dirty",t),e.dataset.kDirty=t?"1":"0"};e.addEventListener("input",a),e.addEventListener("change",a),null===(t=r.querySelector("[data-k-savebar-save]"))||void 0===t||t.addEventListener("click",(function(){e.dataset.kDirty="0","function"==typeof e.requestSubmit?e.requestSubmit():e.submit()})),null===(n=r.querySelector("[data-k-savebar-discard]"))||void 0===n||n.addEventListener("click",(function(){e.reset(),o=d(e),a()})),e.addEventListener("submit",(function(){e.dataset.kDirty="0"}))}}}))}window.addEventListener("beforeunload",(function(e){document.querySelector('form[data-k-dirty="1"]')&&(e.preventDefault(),e.returnValue="")})),document.addEventListener("DOMContentLoaded",u),"loading"!==document.readyState&&u(),document.addEventListener("click",(function(e){var t=e.target.closest("[data-k-drawer-open]");if(t)return e.preventDefault(),void c(t.getAttribute("data-k-drawer-open"));if(e.target.closest("[data-k-drawer-close]"))return e.preventDefault(),void i();var n=e.target.closest("[data-k-drawer-backdrop]");n&&i(n.getAttribute("data-k-drawer-backdrop"))})),document.addEventListener("change",(function(e){var t=e.target.closest("[data-k-select-all]");if(t){var n=t.closest("[data-k-selectable]");if(!n)return;return n.querySelectorAll("[data-k-row-select]").forEach((function(e){e.checked=t.checked})),void l(n)}var r=e.target.closest("[data-k-row-select]");if(r){var o=r.closest("[data-k-selectable]");o&&l(o)}})),document.addEventListener("keydown",(function(e){"Escape"===e.key&&document.querySelector(".k-drawer.is-open")&&i()})),o(),window.Kohl=Object.assign(window.Kohl||{},{version:"0.2.0",setTheme:function(e){try{"system"===e?window.localStorage.removeItem("k-theme"):window.localStorage.setItem("k-theme",e)}catch(e){}o()},direction:function(){return"rtl"===document.documentElement.getAttribute("dir")?"rtl":"ltr"},toast:function(){var e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:{},t=e.title,n=e.text,r=void 0===n?null:n,o=e.tone,a=void 0===o?"neutral":o,c=e.action,i=void 0===c?null:c,l=e.duration,d=void 0===l?5e3:l,u=document.getElementById("k-toasts");if(!u||!t)return null;var s=document.createElement("div");s.className="k-toast"+("neutral"!==a?" k-toast--".concat(a):"");var f=document.createElement("div");f.className="k-toast__body";var m=document.createElement("div");if(m.className="k-toast__title",m.textContent=t,f.appendChild(m),r){var v=document.createElement("div");v.className="k-toast__text",v.textContent=r,f.appendChild(v)}if(i&&"function"==typeof i.onClick){var k=document.createElement("button");k.type="button",k.className="k-toast__action",k.textContent=i.label,k.addEventListener("click",(function(){i.onClick(),b()})),f.appendChild(k)}var y=document.createElement("button");y.type="button",y.className="k-btn k-btn--ghost k-btn--icon k-btn--sm",y.setAttribute("aria-label","Close"),y.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',y.addEventListener("click",(function(){return b()})),s.appendChild(f),s.appendChild(y),u.appendChild(s);var p=null;function b(){p&&clearTimeout(p),s.remove()}return!i&&d>0&&(p=setTimeout(b,d)),{dismiss:b}},openDrawer:c,closeDrawer:i,selectedIds:function(e){return n(e.querySelectorAll("[data-k-row-select]:checked")).map((function(e){return e.value}))},initSaveBars:u})},wNmi:function(e,t){}});
+/******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+/******/
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId]) {
+/******/ 			return installedModules[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			i: moduleId,
+/******/ 			l: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/
+/******/ 		// Flag the module as loaded
+/******/ 		module.l = true;
+/******/
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/
+/******/
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+/******/
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+/******/
+/******/ 	// define getter function for harmony exports
+/******/ 	__webpack_require__.d = function(exports, name, getter) {
+/******/ 		if(!__webpack_require__.o(exports, name)) {
+/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
+/******/ 		}
+/******/ 	};
+/******/
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = function(exports) {
+/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		}
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/
+/******/ 	// create a fake namespace object
+/******/ 	// mode & 1: value is a module id, require it
+/******/ 	// mode & 2: merge all properties of value into the ns
+/******/ 	// mode & 4: return value when already ns object
+/******/ 	// mode & 8|1: behave like require
+/******/ 	__webpack_require__.t = function(value, mode) {
+/******/ 		if(mode & 1) value = __webpack_require__(value);
+/******/ 		if(mode & 8) return value;
+/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
+/******/ 		var ns = Object.create(null);
+/******/ 		__webpack_require__.r(ns);
+/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
+/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
+/******/ 		return ns;
+/******/ 	};
+/******/
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__webpack_require__.n = function(module) {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			function getDefault() { return module['default']; } :
+/******/ 			function getModuleExports() { return module; };
+/******/ 		__webpack_require__.d(getter, 'a', getter);
+/******/ 		return getter;
+/******/ 	};
+/******/
+/******/ 	// Object.prototype.hasOwnProperty.call
+/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+/******/
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "/";
+/******/
+/******/
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ })
+/************************************************************************/
+/******/ ({
+
+/***/ "./resources/css/kohl/console.scss":
+/*!*****************************************!*\
+  !*** ./resources/css/kohl/console.scss ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+
+/***/ "./resources/css/kohl/developer.scss":
+/*!*******************************************!*\
+  !*** ./resources/css/kohl/developer.scss ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+
+/***/ "./resources/css/kohl/monitoring.scss":
+/*!********************************************!*\
+  !*** ./resources/css/kohl/monitoring.scss ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+
+/***/ "./resources/css/kohl/store.scss":
+/*!***************************************!*\
+  !*** ./resources/css/kohl/store.scss ***!
+  \***************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+
+/***/ "./resources/js/kohl/index.js":
+/*!************************************!*\
+  !*** ./resources/js/kohl/index.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+/**
+ * Kohl runtime.
+ *
+ * Deliberately dependency-free and tiny: it runs alongside 41 existing admin
+ * scripts, so it may not assume jQuery, Bootstrap or any load order, and it may
+ * not touch anything it did not render itself. Every behaviour is delegated from
+ * the document, so markup swapped in by PJAX works with no re-initialisation.
+ */
+var THEME_KEY = 'k-theme';
+/* ------------------------------------------------------------------ theme */
+
+/**
+ * Apply the stored colour-scheme choice.
+ *
+ * Three states, matching the token layer: 'dark' and 'light' stamp the root and
+ * win over the OS; no stored value leaves the attribute off so the OS preference
+ * decides. Stamping 'light' by default would override a user's dark OS setting.
+ */
+
+function applyStoredTheme() {
+  var stored = null;
+
+  try {
+    stored = window.localStorage.getItem(THEME_KEY);
+  } catch (error) {
+    stored = null; // private mode / storage disabled — fall back to light
+  }
+
+  var isConsole = document.body && document.body.classList.contains('k-console');
+  var root = document.documentElement; // The console never follows the OS silently (see the pre-paint note in the admin layout):
+  // anything that is not an explicit 'dark' resolves to light there. The storefront keeps the
+  // three-state behaviour, where 'system' means "let the OS decide".
+
+  var theme = isConsole ? stored === 'dark' ? 'dark' : 'light' : stored === 'dark' || stored === 'light' ? stored : null;
+
+  if (theme) {
+    root.setAttribute('data-k-theme', theme);
+  } else {
+    root.removeAttribute('data-k-theme');
+  }
+
+  if (!isConsole) {
+    return;
+  } // Dark has to be stamped on all three layers or the page comes out half-dark: Bootstrap 5.3
+  // themes its own components off data-bs-theme, and the v2 shell (rail, header, context panel)
+  // off its own class.
+
+
+  root.setAttribute('data-bs-theme', theme);
+  document.querySelectorAll('.app-v2').forEach(function (shell) {
+    shell.classList.toggle('v2-theme-dark', theme === 'dark');
+  });
+}
+
+function setTheme(value) {
+  try {
+    if (value === 'system') {
+      window.localStorage.removeItem(THEME_KEY);
+    } else {
+      window.localStorage.setItem(THEME_KEY, value);
+    }
+  } catch (error) {
+    /* not fatal — the choice just will not persist */
+  }
+
+  applyStoredTheme();
+}
+
+function direction() {
+  return document.documentElement.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
+}
+/* ----------------------------------------------------------------- toasts */
+
+
+var TOAST_DEFAULT_MS = 5000;
+/**
+ * Show a toast.
+ *
+ * `action` gives destructive operations an undo affordance, which is what makes
+ * an optimistic write safe: act immediately, offer the way back for a few
+ * seconds. A toast carrying an action stays until it is dismissed.
+ */
+
+function toast() {
+  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      title = _ref.title,
+      _ref$text = _ref.text,
+      text = _ref$text === void 0 ? null : _ref$text,
+      _ref$tone = _ref.tone,
+      tone = _ref$tone === void 0 ? 'neutral' : _ref$tone,
+      _ref$action = _ref.action,
+      action = _ref$action === void 0 ? null : _ref$action,
+      _ref$duration = _ref.duration,
+      duration = _ref$duration === void 0 ? TOAST_DEFAULT_MS : _ref$duration;
+
+  var host = document.getElementById('k-toasts');
+  if (!host || !title) return null;
+  var node = document.createElement('div');
+  node.className = 'k-toast' + (tone !== 'neutral' ? " k-toast--".concat(tone) : '');
+  var body = document.createElement('div');
+  body.className = 'k-toast__body';
+  var heading = document.createElement('div');
+  heading.className = 'k-toast__title';
+  heading.textContent = title;
+  body.appendChild(heading);
+
+  if (text) {
+    var detail = document.createElement('div');
+    detail.className = 'k-toast__text';
+    detail.textContent = text;
+    body.appendChild(detail);
+  }
+
+  if (action && typeof action.onClick === 'function') {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'k-toast__action';
+    button.textContent = action.label;
+    button.addEventListener('click', function () {
+      action.onClick();
+      dismiss();
+    });
+    body.appendChild(button);
+  }
+
+  var close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'k-btn k-btn--ghost k-btn--icon k-btn--sm';
+  close.setAttribute('aria-label', 'Close');
+  close.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  close.addEventListener('click', function () {
+    return dismiss();
+  });
+  node.appendChild(body);
+  node.appendChild(close);
+  host.appendChild(node);
+  var timer = null;
+
+  function dismiss() {
+    if (timer) clearTimeout(timer);
+    node.remove();
+  } // A toast offering an action must not expire before it can be acted on.
+
+
+  if (!action && duration > 0) timer = setTimeout(dismiss, duration);
+  return {
+    dismiss: dismiss
+  };
+}
+/* ---------------------------------------------------------------- drawers */
+
+
+var lastFocused = null;
+
+function openDrawer(id) {
+  var drawer = document.getElementById(id);
+  if (!drawer) return;
+  var backdrop = document.querySelector("[data-k-drawer-backdrop=\"".concat(id, "\"]"));
+  lastFocused = document.activeElement;
+  drawer.classList.add('is-open');
+  if (backdrop) backdrop.classList.add('is-open');
+  document.body.style.overflow = 'hidden'; // Move focus in, or a keyboard user stays stranded on the page behind.
+
+  var target = drawer.querySelector('[autofocus], input, select, textarea, button');
+  if (target) target.focus({
+    preventScroll: true
+  });
+}
+
+function closeDrawer(id) {
+  var drawer = id ? document.getElementById(id) : document.querySelector('.k-drawer.is-open');
+  if (!drawer) return;
+  var backdrop = document.querySelector("[data-k-drawer-backdrop=\"".concat(drawer.id, "\"]"));
+  drawer.classList.remove('is-open');
+  if (backdrop) backdrop.classList.remove('is-open');
+  if (!document.querySelector('.k-drawer.is-open')) document.body.style.overflow = '';
+  if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus({
+    preventScroll: true
+  });
+}
+/* ------------------------------------------------- row selection & bulk bar */
+
+/**
+ * Keep a data-view's bulk bar in step with its checkboxes.
+ *
+ * The count is shown because a bulk action with an unstated count is how people
+ * delete the wrong thing.
+ */
+
+
+function syncSelection(view) {
+  var rows = view.querySelectorAll('[data-k-row-select]');
+
+  var selected = _toConsumableArray(rows).filter(function (box) {
+    return box.checked;
+  });
+
+  var bar = view.querySelector('[data-k-bulk]');
+  var counter = view.querySelector('[data-k-bulk-count]');
+  var master = view.querySelector('[data-k-select-all]');
+  rows.forEach(function (box) {
+    var row = box.closest('tr');
+    if (row) row.setAttribute('aria-selected', box.checked ? 'true' : 'false');
+  });
+  if (counter) counter.textContent = String(selected.length);
+  if (bar) bar.hidden = selected.length === 0;
+
+  if (master) {
+    master.checked = rows.length > 0 && selected.length === rows.length;
+    master.indeterminate = selected.length > 0 && selected.length < rows.length;
+  }
+}
+/** Ids currently ticked in a view — what a bulk action submits. */
+
+
+function selectedIds(view) {
+  return _toConsumableArray(view.querySelectorAll('[data-k-row-select]:checked')).map(function (box) {
+    return box.value;
+  });
+}
+/* ---------------------------------------------------------------- save bar */
+
+/**
+ * Snapshot a form's current values.
+ *
+ * Compared as a string rather than field by field: a settings form has dozens of
+ * inputs, and the only question the bar asks is "does this differ from what was
+ * loaded". File inputs are excluded — their value cannot be restored on discard,
+ * so treating a chosen file as dirty would offer an undo that does not work.
+ */
+
+
+function snapshotForm(form) {
+  var parts = [];
+  form.querySelectorAll('input, select, textarea').forEach(function (field) {
+    if (field.type === 'file' || field.disabled || !field.name) return;
+    parts.push(field.name + '=' + (field.type === 'checkbox' || field.type === 'radio' ? field.checked : field.value));
+  });
+  return parts.join('&');
+}
+
+function initSaveBars() {
+  document.querySelectorAll('form[data-k-save-bar]').forEach(function (form) {
+    var _bar$querySelector, _bar$querySelector2;
+
+    if (form.dataset.kSaveBarReady === '1') return;
+    var bar = form.querySelector('[data-k-savebar]');
+    if (!bar) return;
+    form.dataset.kSaveBarReady = '1';
+    var baseline = snapshotForm(form);
+
+    var refresh = function refresh() {
+      var dirty = snapshotForm(form) !== baseline;
+      bar.classList.toggle('is-dirty', dirty);
+      form.dataset.kDirty = dirty ? '1' : '0';
+    };
+
+    form.addEventListener('input', refresh);
+    form.addEventListener('change', refresh);
+    (_bar$querySelector = bar.querySelector('[data-k-savebar-save]')) === null || _bar$querySelector === void 0 ? void 0 : _bar$querySelector.addEventListener('click', function () {
+      // Clear the dirty flag first: submitting is not abandoning, and the
+      // unload guard must not challenge the navigation it just caused.
+      form.dataset.kDirty = '0';
+
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit(); // runs validation and submit handlers
+      } else {
+        form.submit();
+      }
+    });
+    (_bar$querySelector2 = bar.querySelector('[data-k-savebar-discard]')) === null || _bar$querySelector2 === void 0 ? void 0 : _bar$querySelector2.addEventListener('click', function () {
+      form.reset();
+      baseline = snapshotForm(form);
+      refresh();
+    });
+    form.addEventListener('submit', function () {
+      form.dataset.kDirty = '0';
+    });
+  });
+} // Leaving a page with unsaved settings is the loss this bar exists to prevent, so
+// it is also guarded at the browser level.
+
+
+window.addEventListener('beforeunload', function (event) {
+  if (!document.querySelector('form[data-k-dirty="1"]')) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+document.addEventListener('DOMContentLoaded', initSaveBars);
+if (document.readyState !== 'loading') initSaveBars();
+/* ------------------------------------------------------ delegated bindings */
+
+document.addEventListener('click', function (event) {
+  var opener = event.target.closest('[data-k-drawer-open]');
+
+  if (opener) {
+    event.preventDefault();
+    openDrawer(opener.getAttribute('data-k-drawer-open'));
+    return;
+  }
+
+  if (event.target.closest('[data-k-drawer-close]')) {
+    event.preventDefault();
+    closeDrawer();
+    return;
+  }
+
+  var backdrop = event.target.closest('[data-k-drawer-backdrop]');
+
+  if (backdrop) {
+    closeDrawer(backdrop.getAttribute('data-k-drawer-backdrop'));
+  }
+});
+document.addEventListener('change', function (event) {
+  var master = event.target.closest('[data-k-select-all]');
+
+  if (master) {
+    var view = master.closest('[data-k-selectable]');
+    if (!view) return;
+    view.querySelectorAll('[data-k-row-select]').forEach(function (box) {
+      box.checked = master.checked;
+    });
+    syncSelection(view);
+    return;
+  }
+
+  var box = event.target.closest('[data-k-row-select]');
+
+  if (box) {
+    var _view = box.closest('[data-k-selectable]');
+
+    if (_view) syncSelection(_view);
+  }
+});
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape' && document.querySelector('.k-drawer.is-open')) {
+    closeDrawer();
+  }
+});
+applyStoredTheme();
+window.Kohl = Object.assign(window.Kohl || {}, {
+  version: '0.2.0',
+  setTheme: setTheme,
+  direction: direction,
+  toast: toast,
+  openDrawer: openDrawer,
+  closeDrawer: closeDrawer,
+  selectedIds: selectedIds,
+  initSaveBars: initSaveBars
+});
+
+/***/ }),
+
+/***/ 0:
+/*!*************************************************************************************************************************************************************************************!*\
+  !*** multi ./resources/js/kohl/index.js ./resources/css/kohl/console.scss ./resources/css/kohl/store.scss ./resources/css/kohl/monitoring.scss ./resources/css/kohl/developer.scss ***!
+  \*************************************************************************************************************************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(/*! /home/user/Pharmacy/resources/js/kohl/index.js */"./resources/js/kohl/index.js");
+__webpack_require__(/*! /home/user/Pharmacy/resources/css/kohl/console.scss */"./resources/css/kohl/console.scss");
+__webpack_require__(/*! /home/user/Pharmacy/resources/css/kohl/store.scss */"./resources/css/kohl/store.scss");
+__webpack_require__(/*! /home/user/Pharmacy/resources/css/kohl/monitoring.scss */"./resources/css/kohl/monitoring.scss");
+module.exports = __webpack_require__(/*! /home/user/Pharmacy/resources/css/kohl/developer.scss */"./resources/css/kohl/developer.scss");
+
+
+/***/ })
+
+/******/ });

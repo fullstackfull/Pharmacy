@@ -24,6 +24,7 @@ mix.sass('resources/css/kohl/console.scss', 'assets/kohl/css')
    // Monitoring ships as its own bundle rather than inside the console one: it is a large,
    // single-area stylesheet, and every other admin page would otherwise pay to download it.
    .sass('resources/css/kohl/monitoring.scss', 'assets/kohl/css')
+   .sass('resources/css/kohl/developer.scss', 'assets/kohl/css')
    .js('resources/js/kohl/index.js', 'assets/kohl/js/kohl.js')
    .js('resources/js/kohl/monitoring.js', 'assets/kohl/js')
    .options({

@@ -56,6 +56,15 @@ class SchedulerPanel implements Panel
     ];
 
     /**
+     * The headline readings that are counted off the defined schedule.
+     *
+     * They are only as readable as the schedule itself, and on a page served by a web request the
+     * schedule is empty — which the collector counts as zero defined and zero healthy tasks. Those
+     * zeros are wrong rather than empty, so they are withheld together and the task card says why.
+     */
+    private const SCHEDULE_DERIVED = ['defined_tasks', 'healthy_tasks', 'late_tasks', 'missed_tasks', 'failed_tasks'];
+
+    /**
      * Worst first. An operator opens this page to find what is broken, and a table ordered by task
      * name puts the fifteen healthy rows above the one that has not run since Tuesday.
      */
@@ -72,6 +81,7 @@ class SchedulerPanel implements Panel
         $window = $this->reader->window($range);
         $readings = $this->collectors->collect('scheduler');
         $statistics = $this->statistics($range, $window);
+        $tasks = $this->tasks($readings, $statistics);
 
         return [
             'window' => [
@@ -86,8 +96,9 @@ class SchedulerPanel implements Panel
                 'scheduler_timezone' => (string) config('app.timezone', 'UTC'),
             ],
             'cron' => $this->cron($readings),
-            'headline' => $this->headline($readings),
-            'tasks' => $this->tasks($readings, $statistics),
+            'headline' => $this->headline($readings, scheduleReadable: $tasks['state'] === 'ok'),
+            'tasks' => $tasks,
+            'observed' => $this->observed($statistics),
             'statistics' => $statistics,
             'history' => $this->history($range, $readings),
             'unrendered' => $this->unrendered($readings),
@@ -183,11 +194,15 @@ class SchedulerPanel implements Panel
      * @param  array<string, Metric>  $readings
      * @return array<string, Metric>
      */
-    private function headline(array $readings): array
+    private function headline(array $readings, bool $scheduleReadable): array
     {
         $headline = [];
 
         foreach (self::HEADLINE as $name) {
+            if (!$scheduleReadable && in_array($name, self::SCHEDULE_DERIVED, true)) {
+                continue;
+            }
+
             $metric = $readings[$name] ?? null;
             if (!$metric instanceof Metric) {
                 continue;
@@ -220,27 +235,22 @@ class SchedulerPanel implements Panel
 
         if (!$metric instanceof Metric) {
             return $this->emptyTasks(
-                'no_data',
-                'The scheduler collector returned no task list, so no scheduled task can be named here.',
+                state: 'no_data',
+                note: 'The scheduler collector returned no task list, so no scheduled task can be named here.',
             );
         }
 
         if (!$metric->isOk() || !is_array($metric->value)) {
             return $this->emptyTasks(
-                $metric->isOk() ? 'no_data' : $metric->state,
-                $metric->note ?? 'The scheduler collector could not read the defined schedule.',
-                $metric->remedy,
-                $metric->source,
+                state: $metric->isOk() ? 'no_data' : $metric->state,
+                note: $metric->note ?? 'The scheduler collector could not read the defined schedule.',
+                remedy: $metric->remedy,
+                source: $metric->source,
             );
         }
 
         if ($metric->value === []) {
-            return $this->emptyTasks(
-                'no_data',
-                'This application defines no scheduled task at all, so there is nothing for cron to run.',
-                'Register the schedule in bootstrap/app.php (->withSchedule(...)), then confirm it with `php artisan schedule:list`.',
-                $metric->source,
-            );
+            return $this->emptyTasks(...$this->whyNoDefinedTasks($metric->source));
         }
 
         $rows = [];
@@ -291,9 +301,11 @@ class SchedulerPanel implements Panel
             'schedule' => $this->humanExpression($expression),
             'last_run_at' => $this->displayStamp($lastRunAt),
             'last_run_age_minutes' => $this->minutesSince($lastRunAt),
-            'last_status' => $task['last_status'] === null ? null : (string) $task['last_status'],
+            'last_status' => ($task['last_status'] ?? null) === null ? null : (string) $task['last_status'],
             'last_duration_ms' => isset($task['last_duration_ms']) ? (int) $task['last_duration_ms'] : null,
-            'last_error' => $task['last_error'] === null ? null : (string) $task['last_error'],
+            // First line only, like the history below: a scheduled task's error is regularly a whole
+            // paragraph of exception, and a table cell is not where a stack trace belongs.
+            'last_error' => $this->firstLine($task['last_error'] ?? null),
             'next_due_at' => $this->displayStamp($nextDueAt),
             'next_due_in_minutes' => $this->minutesUntil($nextDueAt),
             'status' => (string) ($task['status'] ?? 'unknown'),
@@ -357,6 +369,36 @@ class SchedulerPanel implements Panel
         ];
     }
 
+    /**
+     * Why the defined schedule is empty, which is not the same question everywhere it is asked.
+     *
+     * Laravel registers the schedule through `Artisan::starting()` — see ->withSchedule() in
+     * bootstrap/app.php — so the callback only fires when the console kernel boots. A page served
+     * by a web request therefore resolves a Schedule with no events in it, and the collector counts
+     * that as zero defined tasks. Zero is the honest count of what this request can see and a false
+     * statement about the application, so it is reported as a gap in the page rather than printed.
+     *
+     * @return array{state: string, note: string, remedy: string, source: string|null}
+     */
+    private function whyNoDefinedTasks(?string $source): array
+    {
+        if (app()->runningInConsole()) {
+            return [
+                'state' => 'no_data',
+                'note' => 'This application defines no scheduled task at all, so there is nothing for cron to run.',
+                'remedy' => 'Register the schedule in bootstrap/app.php (->withSchedule(...)), then confirm it with `php artisan schedule:list`.',
+                'source' => $source,
+            ];
+        }
+
+        return [
+            'state' => 'not_supported',
+            'note' => 'Laravel registers the schedule when the console kernel boots, so a page served by a web request sees an empty Schedule. The defined task list — and the healthy, late and missed counts derived from it — cannot be read here. That is a gap in what this page can see, not an empty schedule.',
+            'remedy' => 'Run `php artisan schedule:list` for the defined schedule. The tasks below are read from the runs that were actually recorded, which needs no console context.',
+            'source' => $source,
+        ];
+    }
+
     // -------------------------------------------------------------------------------------------
     // What the runs say
 
@@ -389,6 +431,11 @@ class SchedulerPanel implements Panel
                     $connection->raw('SUM(duration_ms) AS total_ms'),
                     $connection->raw('MAX(duration_ms) AS max_ms'),
                     $connection->raw('COUNT(duration_ms) AS timed_runs'),
+                    $connection->raw('MAX(started_at) AS last_started'),
+                    $connection->raw('MAX(expression) AS expression'),
+                    // An expression that changed inside the window would make MAX() one of two true
+                    // answers. Counting them is what lets the table say "changed" instead of picking.
+                    $connection->raw('COUNT(DISTINCT expression) AS expressions'),
                 ]);
         } catch (\Throwable $exception) {
             // Caught here rather than left to PanelRegistry: losing this read blanks four columns,
@@ -410,6 +457,8 @@ class SchedulerPanel implements Panel
             $settled = $successes + $failures;
             $timed = (int) $row->timed_runs;
 
+            $expressions = (int) $row->expressions;
+
             $byTask[(string) $row->task] = [
                 'runs' => (int) $row->runs,
                 'successes' => $successes,
@@ -423,6 +472,10 @@ class SchedulerPanel implements Panel
                 'success_rate' => $settled > 0 ? round(100 * $successes / $settled, 1) : null,
                 'avg_duration_ms' => $timed > 0 ? (int) round((int) $row->total_ms / $timed) : null,
                 'max_duration_ms' => $row->max_ms === null ? null : (int) $row->max_ms,
+                'last_started_at' => $this->displayStamp($row->last_started),
+                'last_started_minutes_ago' => $this->minutesSince($row->last_started),
+                'expression' => $expressions === 1 ? (string) $row->expression : null,
+                'expression_changed' => $expressions > 1,
             ];
         }
 
@@ -435,6 +488,45 @@ class SchedulerPanel implements Panel
             'source' => $source,
             'by_task' => $byTask,
             'truncated' => $rows->count() > self::MAX_TASK_GROUPS,
+        ];
+    }
+
+    /**
+     * The tasks that actually reported a run in this window.
+     *
+     * Folded out of the aggregate already read, so it costs nothing extra. It answers a different
+     * question from the table above and must not be confused with it: that one lists what the
+     * application says should run, this one lists what did. When the defined schedule cannot be
+     * read at all — a browser request resolves an empty Schedule — this is the only task list on
+     * the page that is made of measurements, which is why it is built whether or not it is drawn.
+     *
+     * No status is assigned here. On-time, late and missed are judgements against a due date, and
+     * the due date comes from the defined schedule; calling a task healthy because it ran would be
+     * inventing the one verdict this section exists to get right.
+     *
+     * @param  array<string, mixed>  $statistics
+     * @return array<string, mixed>
+     */
+    private function observed(array $statistics): array
+    {
+        $rows = [];
+        foreach ($statistics['by_task'] ?? [] as $task => $counts) {
+            $rows[] = array_merge($counts, [
+                'task' => (string) $task,
+                'schedule' => $counts['expression'] === null ? null : $this->humanExpression($counts['expression']),
+            ]);
+        }
+
+        usort($rows, static fn (array $a, array $b) => [$b['failures'], $b['last_started_at'] ?? '']
+            <=> [$a['failures'], $a['last_started_at'] ?? '']);
+
+        return [
+            'state' => $rows === [] ? ($statistics['state'] === 'ok' ? 'no_data' : $statistics['state']) : 'ok',
+            'note' => $rows === [] ? $statistics['note'] : null,
+            'remedy' => $rows === [] ? $statistics['remedy'] : null,
+            'source' => $statistics['source'] ?? null,
+            'rows' => $rows,
+            'truncated' => (bool) ($statistics['truncated'] ?? false),
         ];
     }
 
