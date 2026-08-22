@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Services\Analytics\Analytics;
 use App\Services\Analytics\AnalyticsEvent;
+use App\Services\Analytics\Support\PathNormalizer;
+use App\Services\Monitoring\Ingest\WebVitalsRecorder;
 use App\Services\Telemetry\TelemetryRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,7 +68,39 @@ class AnalyticsCollectController extends Controller
 
         $analytics->flush($request);
 
+        $this->recordVitals($request);
+
         return $silence;
+    }
+
+    /**
+     * Core Web Vitals, which only the browser can see.
+     *
+     * They arrive on the same beacon as the events because they leave on the same trip — one
+     * request as the page goes away rather than two — but they are NOT analytics events. A vital
+     * is a measurement of this shop's speed, so it goes to monitoring's own series store where the
+     * rollup, the retention and the alert rules already know what to do with a number over time.
+     *
+     * The path is normalised on the server from what the client sent, which is the only field of
+     * the payload the client influences at all: everything else is a bounded number.
+     */
+    private function recordVitals(Request $request): void
+    {
+        $vitals = $request->input('vitals');
+
+        if (!is_array($vitals) || $vitals === [] || !config('monitoring.enabled', true)) {
+            return;
+        }
+
+        try {
+            app(WebVitalsRecorder::class)->record(
+                readings: $vitals,
+                request: $request,
+                path: app(PathNormalizer::class)->normalise((string) $request->input('path', '/')),
+            );
+        } catch (\Throwable) {
+            // A vital that cannot be stored is a gap in a chart, never an error on a page.
+        }
     }
 
     /**

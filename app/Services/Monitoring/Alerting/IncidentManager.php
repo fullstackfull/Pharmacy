@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Alerting;
 
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,10 @@ class IncidentManager
      * tomorrow's unrelated failure does not get filed under today's.
      */
     private const CORRELATION_WINDOW_MINUTES = 30;
+
+    public function __construct(private readonly EventLog $events)
+    {
+    }
 
     private function connection(): \Illuminate\Database\Connection
     {
@@ -71,7 +76,7 @@ class IncidentManager
                 return;
             }
 
-            $this->connection()->table('monitoring_incidents')
+            $closed = $this->connection()->table('monitoring_incidents')
                 ->where('id', $incidentId)
                 ->whereIn('status', ['open', 'investigating', 'monitoring'])
                 ->update([
@@ -79,6 +84,22 @@ class IncidentManager
                     'resolved_at' => Clock::stamp(),
                     'updated_at' => Clock::stamp(),
                 ]);
+
+            // Only when this call is the one that closed it. releaseIfResolved is called by every
+            // recovering rule attached to the incident, and an axis that records the same closure
+            // four times is an axis nobody trusts.
+            if ($closed > 0) {
+                $incident = $this->connection()->table('monitoring_incidents')->where('id', $incidentId)->first(['reference', 'title', 'started_at']);
+
+                $this->events->record(
+                    type: EventLog::INCIDENT,
+                    severity: EventLog::SUCCESS,
+                    title: ($incident->reference ?? 'INC') . ' resolved — ' . ($incident->title ?? ''),
+                    key: $incident->reference ?? null,
+                    context: ['started_at' => $incident->started_at ?? null],
+                    relatedId: $incidentId,
+                );
+            }
         } catch (\Throwable) {
             // As above: bookkeeping failure, not an operational one.
         }
@@ -91,8 +112,10 @@ class IncidentManager
     {
         $now = Clock::stamp();
 
+        $reference = $this->nextReference();
+
         $id = $this->connection()->table('monitoring_incidents')->insertGetId([
-            'reference' => $this->nextReference(),
+            'reference' => $reference,
             'title' => mb_substr($ruleName, 0, 191),
             'severity' => self::SEVERITY[$state] ?? 'minor',
             'status' => 'open',
@@ -105,6 +128,16 @@ class IncidentManager
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+
+        $this->events->record(
+            type: EventLog::INCIDENT,
+            severity: EventLog::CRITICAL,
+            title: $reference . ' opened — ' . mb_substr($ruleName, 0, 140),
+            key: $reference,
+            description: 'First signal: ' . $ruleKey,
+            context: ['severity' => self::SEVERITY[$state] ?? 'minor', 'metric' => $signal['metric'] ?? null],
+            relatedId: (int) $id,
+        );
 
         return (int) $id;
     }

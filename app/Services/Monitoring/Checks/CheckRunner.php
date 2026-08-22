@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Ingest\BucketWriter;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Facades\DB;
@@ -32,8 +33,10 @@ class CheckRunner
         SyntheticCheck::class,
     ];
 
-    public function __construct(private readonly BucketWriter $writer)
-    {
+    public function __construct(
+        private readonly BucketWriter $writer,
+        private readonly EventLog $events,
+    ) {
     }
 
     /**
@@ -111,6 +114,9 @@ class CheckRunner
             ];
         }
 
+        // Read BEFORE the insert, or every check compares itself against the row it just wrote.
+        $previous = $this->previousStatuses(array_map(static fn (CheckResult $r) => $r->key, $results));
+
         try {
             DB::connection(config('monitoring.connection'))->table('monitoring_check_results')->insert($rows);
         } catch (\Throwable) {
@@ -118,7 +124,77 @@ class CheckRunner
             // below is the second copy, and the next run will record again.
         }
 
+        $this->recordTransitions($results, $previous);
         $this->publishSeries($results);
+    }
+
+    /**
+     * What each of these checks said last time.
+     *
+     * @param  array<int, string>  $keys
+     * @return array<string, string>  check key => status
+     */
+    private function previousStatuses(array $keys): array
+    {
+        try {
+            $connection = DB::connection(config('monitoring.connection'));
+            $latest = [];
+
+            foreach (array_unique($keys) as $key) {
+                $row = $connection->table('monitoring_check_results')
+                    ->where('check_key', $key)
+                    ->orderByDesc('id')
+                    ->first(['status']);
+
+                if ($row !== null) {
+                    $latest[$key] = (string) $row->status;
+                }
+            }
+
+            return $latest;
+        } catch (\Throwable) {
+            // No history to compare against is not a transition; it is a first run.
+            return [];
+        }
+    }
+
+    /**
+     * A check crossing between working and not is an event; a check still working is not.
+     *
+     * Recorded on the CHANGE only. A check that runs every five minutes and writes an event each
+     * time would put 288 rows a day on the timeline per check and bury the one that mattered.
+     *
+     * @param  array<int, CheckResult>  $results
+     * @param  array<string, string>  $previous
+     */
+    private function recordTransitions(array $results, array $previous): void
+    {
+        foreach ($results as $result) {
+            $was = $previous[$result->key] ?? null;
+
+            if ($was === null || $was === $result->status) {
+                continue;
+            }
+
+            // Only movement between "this is working" and "this is not". A check going from
+            // not_configured to ok because somebody finally configured it is worth a line;
+            // degraded flapping to failing and back is the alert engine's business, not the axis'.
+            $wasUp = in_array($was, [CheckResult::OK, CheckResult::DEGRADED], true);
+            $isUp = in_array($result->status, [CheckResult::OK, CheckResult::DEGRADED], true);
+
+            if ($wasUp === $isUp) {
+                continue;
+            }
+
+            $this->events->record(
+                type: EventLog::CHECK,
+                severity: $isUp ? EventLog::SUCCESS : EventLog::CRITICAL,
+                title: $result->key . ($isUp ? ' recovered' : ' is failing'),
+                key: $result->key,
+                description: $result->detail,
+                context: ['from' => $was, 'to' => $result->status, 'kind' => $result->kind],
+            );
+        }
     }
 
     /**

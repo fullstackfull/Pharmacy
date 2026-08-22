@@ -97,9 +97,39 @@ if (!function_exists('digital_payment_success')) {
 }
 
 if (!function_exists('digital_payment_fail')) {
-    function digital_payment_fail($payment_data)
+    /**
+     * A gateway said no, and until now nobody was told.
+     *
+     * This hook is the failure half of the pair the payment module calls, and its body was empty.
+     * A declined card, a timed-out gateway and a shopper who closed the tab therefore left three
+     * byte-identical rows: payment_requests with is_paid = 0 and nothing else. That is why no
+     * screen in this system can show a payment success rate — the denominator was never recorded.
+     *
+     * It records the failure and nothing more. It does not retry, does not notify, and does not
+     * touch an order: the customer is looking at the gateway's own error page, and the one thing
+     * this shop needs from that moment is to know it happened.
+     */
+    function digital_payment_fail($payment_data): void
     {
+        try {
+            $data = is_array($payment_data) ? $payment_data : (array) $payment_data;
+            $additional = json_decode($data['additional_data'] ?? '{}', true) ?: [];
 
+            app(\App\Services\Analytics\Analytics::class)->paymentAttempted(
+                gateway: (string) ($data['payment_method'] ?? 'unknown'),
+                outcome: 'failed',
+                amount: (float) ($data['payment_amount'] ?? 0),
+                orderId: isset($additional['order_id']) ? (int) $additional['order_id'] : null,
+                // The gateway's own reason when it gave one. Never the raw callback payload: it
+                // carries card data on some gateways, and analytics never stores that.
+                failureReason: \Illuminate\Support\Str::limit((string) ($data['failure_reason'] ?? 'declined_or_abandoned'), 60, ''),
+            );
+
+            app(\App\Services\Analytics\Analytics::class)->flush();
+        } catch (\Throwable $exception) {
+            // The shopper is already on the gateway's error page. Nothing here may add to that.
+            report($exception);
+        }
     }
 }
 if (!function_exists('customer_order_edit_pay_due_amount_success')) {

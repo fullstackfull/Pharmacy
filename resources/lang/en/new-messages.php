@@ -5351,4 +5351,12 @@ return [
 	'this_writes_to_the_live_shop' => 'This writes to the live shop',
 	'the_console_will_not_send_this_request' => 'The console will not send this request',
 	'the_console_request_did_not_complete' => 'The console request did not complete',
+	'not_installed_in_this_build' => 'Not installed in this build',
+	'Redis_latency_—_Is_not_being_measured' => 'Redis latency — Is not being measured',
+	'what_is_undocumented_and_what_is_unclassified' => 'What is undocumented and what is unclassified',
+	'add_an_apidoc_attribute_to_a_controller_method_to_fix_the_first_two_the_attribute_lives_with_the_code_so_it_is_reviewed_in_the_same_diff_and_disappears_when_the_method_does' => 'Add an apidoc attribute to a controller method to fix the first two the attribute lives with the code so it is reviewed in the same diff and disappears when the method does',
+	'one_point_per_minute_from' => 'One point per minute from',
+	'the_newest_minute_is_usually_still_in_the_buffer' => 'The newest minute is usually still in the buffer',
+	'metric_not_arriving' => 'Metric not arriving',
+	'nothing_has_been_overridden_every_value_above_is_the_one_this_deployment_shipped_with_or_was_given_in_its_environment' => 'Nothing has been overridden every value above is the one this deployment shipped with or was given in its environment',
 ];
