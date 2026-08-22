@@ -678,3 +678,65 @@
 
 .mon-usage__mark { position: absolute; inset-block: 0; inline-size: 1px; background: var(--k-text-muted); opacity: .45; }
 .mon-usage__mark--critical { inline-size: 2px; opacity: .7; }
+
+/* ── Share-of-total bar ────────────────────────────────────────────────────────
+   The live section needs one thing no existing class provides: a single bar that
+   IS the distribution — status classes, platforms, devices — whose segments add
+   up to the window, so the proportion is read rather than worked out from four
+   numbers in a column.
+
+   .mon-waterfall-split__* is the nearest existing pattern and is deliberately not
+   reused: its segment colours are kinds of work (db, cache, http), so borrowing
+   them would teach the same blue to mean "database time" on one page and "2xx" on
+   the next.
+
+   Two palettes, because the two kinds of split are not the same claim. A status
+   class carries a verdict, so it takes the same --mon-* state colours as every
+   card, dot and pill: green 2xx, amber 4xx, red 5xx, and neutral 3xx because a
+   redirect is not a fault. A platform or a device carries no verdict at all, so
+   it takes a neutral ramp — colouring a device green would invent a judgement
+   the data does not make. The ramp is the palette already used by the waterfall
+   kinds, so the area stays one set of colours.
+
+   Sized in logical properties so segments grow from the inline start and the bar
+   reverses correctly in Arabic without a second set of rules. */
+.mon-split {
+    display: flex;
+    inline-size: 100%;
+    block-size: 14px;
+    border-radius: var(--k-radius-sm, 4px);
+    overflow: hidden;
+    background: var(--k-surface-sunk, rgba(128, 138, 157, .1));
+}
+.mon-split__part { display: block; block-size: 100%; }
+
+.mon-split__part--2xx { background: var(--mon-healthy); }
+.mon-split__part--3xx { background: var(--mon-unknown); }
+.mon-split__part--4xx { background: var(--mon-degraded); }
+.mon-split__part--5xx { background: var(--mon-critical); }
+
+.mon-split__part--a { background: var(--k-accent, #3b5bdb); }
+.mon-split__part--b { background: #7048e8; }
+.mon-split__part--c { background: #0c8599; }
+.mon-split__part--d { background: #adb5bd; }
+.mon-split__part--e { background: #868e96; }
+
+.mon-split__legend {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px 18px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    font-size: var(--k-text-xs, 12px);
+}
+.mon-split__key { display: flex; align-items: center; gap: 8px; min-inline-size: 0; }
+.mon-split__key span:nth-child(2) { flex: 1 1 auto; min-inline-size: 0; }
+.mon-split__key i { font-style: normal; color: var(--k-text-muted); margin-inline-start: 4px; }
+.mon-split__swatch {
+    inline-size: 9px;
+    block-size: 9px;
+    flex: 0 0 auto;
+    border-radius: 2px;
+    background: var(--k-border-strong);
+}

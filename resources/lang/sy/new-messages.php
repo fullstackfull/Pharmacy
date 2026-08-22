@@ -1289,4 +1289,8 @@ return [
 	'a_reading_is_only_stored_while_it_is_available_so_a_gauge_with_no_line_on_this_host_is_a_missing_reading_rather_than_a_missing_sampler' => 'A reading is only stored while it is available so a gauge with no line on this host is a missing reading rather than a missing sampler',
 	'dns_ms' => 'Dns ms',
 	'The_scheduler_last_reported_a_run_92_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 92 minutes ago  the server cron appears to have stopped.',
+	'these_gauges_are_sampled_every_minute_and_stored_in' => 'These gauges are sampled every minute and stored in',
+	'fpm_listen_queue' => 'Fpm listen queue',
+	'The_scheduler_last_reported_a_run_96_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 96 minutes ago  the server cron appears to have stopped.',
+	'fpm_active_processes' => 'Fpm active processes',
 ];

@@ -203,6 +203,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             // Named routes first: a {section} catch-all registered before these would swallow them.
             Route::get('live-feed', 'live')->name('live-feed');
             Route::get('export/{dimension}', 'export')->name('export');
+            Route::get('campaign/{id}/qr', 'campaignQr')->name('campaign.qr')->whereNumber('id');
+            // Writes are POSTs: creating a campaign issues a public link, and toggling one takes a
+            // live link out of service. Neither belongs behind a URL a browser can prefetch.
+            Route::post('campaign', 'storeCampaign')->name('campaign.store');
+            Route::post('campaign/{id}/toggle', 'toggleCampaign')->name('campaign.toggle')->whereNumber('id');
             Route::get('{section}', 'index')->name('section');
         });
 

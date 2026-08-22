@@ -4879,4 +4879,8 @@ return [
 	'tasks_that_reported_a_run_in_this_window' => 'Tasks that reported a run in this window',
 	'tcp_active_opens_per_s' => 'Tcp active opens per s',
 	'The_scheduler_last_reported_a_run_92_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 92 minutes ago  the server cron appears to have stopped.',
+	'shown_in' => 'Shown in',
+	'this_is_the_build_that_is_running_right_now' => 'This is the build that is running right now',
+	'The_scheduler_last_reported_a_run_95_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 95 minutes ago  the server cron appears to have stopped.',
+	'clicks_never_became_a_visit_link_previews_and_crawlers_usually_account_for_this' => 'Clicks never became a visit link previews and crawlers usually account for this',
 ];
