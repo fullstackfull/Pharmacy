@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ThemeBuilderService
 {
-    public function __construct(private readonly SectionRegistry $registry)
+    public function __construct(
+        private readonly SectionRegistry $registry,
+        private readonly SectionReadiness $readiness,
+    )
     {
     }
 
@@ -346,6 +349,14 @@ class ThemeBuilderService
                 'is_visible' => $s->is_visible,
                 'settings'   => $s->settings,
                 'accepts'    => $this->registry->blockTypesFor($s->type),
+                // Whether this section will actually appear, decided by the same object the
+                // storefront skips on. A section that will render nothing used to look exactly
+                // like one that works — added, visible, and invisible on the site.
+                'readiness'  => $this->readiness->verdict(
+                    $s->type,
+                    $this->registry->normalizeSettings($s->type, (array) ($s->settings ?? [])),
+                    $s->blocks->map(fn (ThemeBlock $b) => ['settings' => $this->registry->normalizeBlockSettings($b->type, (array) ($b->settings ?? []))])->all(),
+                ),
                 'blocks'     => $s->blocks->map(fn (ThemeBlock $b) => $this->presentBlock($b))->all(),
             ])->all();
     }

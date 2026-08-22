@@ -68,7 +68,7 @@ class ThemeBuilderApiContractTest extends TestCase
 
         $registry = new SectionRegistry();
         $this->controller = new \App\Http\Controllers\Admin\Settings\ThemeBuilderController(
-            new ThemeBuilderService($registry), $registry, new ThemeManager(), new ThemeAssetService()
+            new ThemeBuilderService($registry, app(\App\Services\Theme\SectionReadiness::class)), $registry, new ThemeManager(), new ThemeAssetService()
         );
 
         $theme = Theme::create(['name' => 'T', 'slug' => 't', 'is_active' => true]);

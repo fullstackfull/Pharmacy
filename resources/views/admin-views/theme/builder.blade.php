@@ -58,6 +58,11 @@
         .tb-item__eye:hover { color: #fff; }
         .tb-item__trash:hover { color: #ff9b9b; }
         .tb-item.is-hidden .tb-item__label { color: #6b7480; text-decoration: line-through; }
+        /* "This will not appear yet." Amber when the merchant has a choice to make, grey when the
+           shop simply has nothing for it to show — two different jobs, and only one is theirs. */
+        .tb-item__flag { display: flex; font-size: .7rem; }
+        .tb-item__flag--needs_choice { color: #f0b429; }
+        .tb-item__flag--no_content, .tb-item__flag--not_now { color: #7d8794; }
         .tb-empty { color: #7d8794; font-size: .8rem; text-align: center; padding: 1.5rem .5rem; }
 
         /* canvas */
@@ -405,6 +410,17 @@
                                  aria-selected="false">
                                 <span class="tb-item__grip"><i class="fi fi-rr-menu-burger"></i></span>
                                 <span class="tb-item__label">{{ translate($section['label']) }}</span>
+                                {{-- A section can be added, visible, and still show nothing: a coupon
+                                     strip with no live coupon, a showcase with no category chosen.
+                                     The storefront is right to skip those, but until this badge the
+                                     builder gave no hint, so the merchant either thought the theme
+                                     was broken or thought the section was there. --}}
+                                @if (($section['readiness']['state'] ?? 'ready') !== 'ready')
+                                    <span class="tb-item__flag tb-item__flag--{{ $section['readiness']['state'] }}"
+                                          title="{{ translate($section['readiness']['reason_key']) }}">
+                                        <i class="fi {{ $section['readiness']['state'] === 'needs_choice' ? 'fi-rr-pencil' : 'fi-rr-eye-crossed' }}"></i>
+                                    </span>
+                                @endif
                                 @if (count($section['blocks']))
                                     <span class="tb-item__count">{{ count($section['blocks']) }}</span>
                                 @endif

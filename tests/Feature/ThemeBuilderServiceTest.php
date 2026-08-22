@@ -20,7 +20,7 @@ class ThemeBuilderServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->builder = new ThemeBuilderService(new SectionRegistry());
+        $this->builder = new ThemeBuilderService(new SectionRegistry(), app(\App\Services\Theme\SectionReadiness::class));
 
         foreach (['theme_blocks', 'theme_sections', 'theme_versions', 'themes'] as $t) {
             Schema::dropIfExists($t);

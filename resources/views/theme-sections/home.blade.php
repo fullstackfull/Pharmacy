@@ -10,6 +10,7 @@
 @php
     $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('home');
     $__data = app(\App\Services\Theme\SectionDataResolver::class);
+    $__ready = app(\App\Services\Theme\SectionReadiness::class);
     $__placeholder = dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png');
     // Types this file can draw. A section whose type has no renderer here is skipped entirely
     // rather than emitting an empty padded <section>, which reads on the page as a broken gap.
@@ -669,18 +670,24 @@
             };
         @endphp
 
+        {{-- One rule, asked once. It used to be eleven @continue lines here and nothing anywhere
+             else, so a section that would never render looked identical in the builder to one that
+             works. SectionReadiness holds the rule now; the builder asks the same object WHY, and a
+             test holds the two answers together. Nothing is re-queried: what the view already
+             resolved is handed over. --}}
         @continue(($s['visible'] ?? true) === false || !in_array($type, $__renderable, true))
-        @continue($type === 'flash_deal' && !$deal)
-        @continue($type === 'category_showcase' && !$showcase)
-        @continue($type === 'vendor_slider' && $vendors->isEmpty())
-        @continue($type === 'vendor_showcase' && !$vendorShowcase)
-        @continue($type === 'deal_of_the_day' && !$dotd)
-        @continue(in_array($type, ['featured_deal', 'clearance_sale'], true) && $offerProducts->isEmpty())
-        @continue($type === 'coupon_strip' && $coupons->isEmpty())
-        @continue($type === 'bundle' && !$set)
-        @continue($type === 'blog_posts' && $posts->isEmpty())
-        @continue($type === 'shipping_cutoff' && !$secondsLeft)
-        @continue(in_array($type, ['stats_bar', 'interest_tiles', 'stories', 'branches', 'before_after'], true) && !count($rawBlocks))
+        @continue(!$__ready->willRender($type, $s, $rawBlocks, [
+            'deal' => $deal,
+            'showcase' => $showcase,
+            'vendors' => $vendors->all(),
+            'vendorShowcase' => $vendorShowcase,
+            'dealOfTheDay' => $dotd,
+            'offerProducts' => $offerProducts->all(),
+            'coupons' => $coupons->all(),
+            'bundle' => $set,
+            'posts' => $posts->all(),
+            'secondsLeft' => $secondsLeft,
+        ]))
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
