@@ -17,13 +17,20 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Web visitors are identified by a first-party cookie (k_vid) so visits,
  * sources and sessions can be counted; API traffic (the customer and vendor
- * apps) is identified by the authenticated token user. Product and shop
- * resolution is NOT done here — the raw path/route is stored and the nightly
- * rollup does the joining, keeping the request path free of extra queries.
+ * apps) is identified by ClientIdentity, which holds the one rule both this
+ * and the analytics pipeline follow for callers that cannot hold a cookie.
+ *
+ * Product and shop resolution is NOT done here — the raw path/route is stored
+ * and the nightly rollup does the joining, keeping the request path free of
+ * extra queries.
  */
 class TelemetryRecorder
 {
     public const VISITOR_COOKIE = 'k_vid';
+
+    public function __construct(private readonly ClientIdentity $identity)
+    {
+    }
 
     public function record(Request $request, Response $response, float $startedAt): void
     {
@@ -51,7 +58,12 @@ class TelemetryRecorder
                     $sessionId = $this->touchSession($request, $visitorId, $userType, $userId, $now);
                 }
             } else {
-                $visitorId = $userId ? "api:{$userType}:{$userId}" : 'api:guest:' . $this->hashIp($request);
+                // API callers hold no cookie, so identity is the account, then an id the app sends
+                // for its own installation, then the masked network address — which counts networks
+                // rather than people and expires daily. Nothing at all when none of the three is
+                // there, because one shared placeholder would merge every such request into a
+                // single visitor that does not exist.
+                [$visitorId] = $this->identity->forApi($request, $userType, $userId);
             }
 
             DB::table('telemetry_requests')->insert([
@@ -154,7 +166,7 @@ class TelemetryRecorder
             'utm_medium' => Str::limit((string) $request->query('utm_medium'), 96, '') ?: null,
             'utm_campaign' => Str::limit((string) $request->query('utm_campaign'), 96, '') ?: null,
             'device' => $this->device($request),
-            'ip_hash' => $this->hashIp($request),
+            'ip_hash' => $this->identity->networkHash($request),
             'pageviews' => 1,
             'started_at' => $now,
             'last_activity_at' => $now,
@@ -194,10 +206,5 @@ class TelemetryRecorder
             return 'mobile';
         }
         return 'desktop';
-    }
-
-    private function hashIp(Request $request): string
-    {
-        return substr(hash('sha256', $request->ip() . '|' . config('app.key')), 0, 40);
     }
 }

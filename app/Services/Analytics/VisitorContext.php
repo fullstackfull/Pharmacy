@@ -5,10 +5,12 @@ namespace App\Services\Analytics;
 use App\Services\Analytics\Support\AttributionEngine;
 use App\Services\Analytics\Support\BotDetector;
 use App\Services\Analytics\Support\PathNormalizer;
+use App\Services\Telemetry\ClientIdentity;
 use App\Services\Telemetry\TelemetryRecorder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -22,6 +24,11 @@ use Illuminate\Support\Str;
  * The visitor cookie is deliberately the SAME one the request telemetry already sets. Two cookies
  * for two ids would mean two different populations called "visitors" on two different admin
  * screens, which is how a merchant ends up with two dashboards that disagree.
+ *
+ * API and app callers hold no cookie at all — the api middleware group has none — so their identity
+ * comes from ClientIdentity, which telemetry reads too for the same reason. Every session records
+ * WHICH of those identities it got, because one of them (the masked network address) counts networks
+ * rather than people, and a figure built on it has to be able to say so.
  */
 class VisitorContext
 {
@@ -37,11 +44,14 @@ class VisitorContext
     private ?string $userType = null;
     private ?int $userId = null;
     private bool $isNewVisitor = false;
+    private ?string $identityBasis = null;
+    private ?bool $sessionsCarryBasis = null;
 
     public function __construct(
         private readonly BotDetector $bots,
         private readonly AttributionEngine $attribution,
         private readonly PathNormalizer $paths,
+        private readonly ClientIdentity $identity,
     ) {
     }
 
@@ -73,19 +83,19 @@ class VisitorContext
             return $this->visitorId;
         }
 
-        // API and app clients get an identity that does not depend on a cookie.
-        //
-        // The api middleware group carries no cookie middleware at all — verified: a request to
-        // /api/v1/config returns zero Set-Cookie headers where the storefront returns four. So the
-        // cookie minted below would never come back, and EVERY api request would look like a brand
-        // new visitor. That does not merely lose returning-visitor data, it inflates the visitor
-        // count by the entire api request volume. The authenticated user is the stable identity
-        // when there is one; otherwise the masked-and-salted address, which is the same convention
-        // the existing request telemetry already uses.
         if ($this->isApiClient($request)) {
-            $identity = $this->userId !== null
-                ? "api:{$this->userType}:{$this->userId}"
-                : 'api:guest:' . ($this->hashIp($request) ?? 'unknown');
+            [$identity, $basis] = $this->identity->forApi(
+                request: $request,
+                userType: $this->userType,
+                userId: $this->userId,
+                maskAddress: (bool) config('analytics.privacy.mask_ip', true),
+            );
+
+            if ($identity === null) {
+                return null;
+            }
+
+            $this->identityBasis = $basis;
 
             return $this->visitorId = Str::limit($identity, 60, '');
         }
@@ -94,6 +104,8 @@ class VisitorContext
             ?: $request->attributes->get('telemetry_new_visitor_id');
 
         if (is_string($existing) && $existing !== '') {
+            $this->identityBasis = ClientIdentity::BASIS_COOKIE;
+
             return $this->visitorId = Str::limit($existing, 60, '');
         }
 
@@ -103,6 +115,7 @@ class VisitorContext
         $minted = Str::random(32);
         $request->attributes->set('telemetry_new_visitor_id', $minted);
         $this->isNewVisitor = true;
+        $this->identityBasis = ClientIdentity::BASIS_COOKIE;
 
         try {
             cookie()->queue(cookie(TelemetryRecorder::VISITOR_COOKIE, $minted, 60 * 24 * 365, null, null, null, false));
@@ -199,6 +212,17 @@ class VisitorContext
         return $this->userId;
     }
 
+    /**
+     * What this visit's identity is actually worth: user, cookie, client, or network.
+     *
+     * Reports read it to say so. A count of network-identified sessions is a count of networks, and
+     * the screen that shows it has to be able to admit that rather than print it as people.
+     */
+    public function identityBasis(): ?string
+    {
+        return $this->identityBasis;
+    }
+
     // -------------------------------------------------------------------------------------------
 
     /**
@@ -257,7 +281,7 @@ class VisitorContext
         $known = $this->connection()->table('analytics_visitors')->where('visitor_id', $visitorId)->first();
         $isNew = $known === null;
 
-        $sessionId = (int) $this->connection()->table('analytics_sessions')->insertGetId([
+        $row = [
             'visitor_id' => $visitorId,
             'channel' => $request->is('api/*') ? 'api' : 'web',
             'user_type' => $this->userType,
@@ -278,7 +302,7 @@ class VisitorContext
             'language' => Str::limit((string) $request->getPreferredLanguage(), 12, '') ?: null,
             'country' => $this->country($request),
             'app_version' => $this->appVersion($request),
-            'ip_hash' => $this->hashIp($request),
+            'ip_hash' => $this->identity->networkHash($request, (bool) config('analytics.privacy.mask_ip', true)),
             'pageviews' => 0,
             'events' => 0,
             'duration_seconds' => 0,
@@ -289,11 +313,32 @@ class VisitorContext
             'is_internal' => $this->isInternal,
             'started_at' => $now,
             'last_activity_at' => $now,
-        ]);
+        ];
+
+        if ($this->sessionsCarryBasis()) {
+            $row['identity_basis'] = $this->identityBasis;
+        }
+
+        $sessionId = (int) $this->connection()->table('analytics_sessions')->insertGetId($row);
 
         $this->rememberVisitor($visitorId, $attribution, $request, $now, $isNew);
 
         return $sessionId;
+    }
+
+    /** Installations that have not run the migration yet keep working, without the disclosure. */
+    private function sessionsCarryBasis(): bool
+    {
+        if ($this->sessionsCarryBasis !== null) {
+            return $this->sessionsCarryBasis;
+        }
+
+        try {
+            return $this->sessionsCarryBasis = Schema::connection(config('analytics.connection'))
+                ->hasColumn('analytics_sessions', 'identity_basis');
+        } catch (\Throwable) {
+            return $this->sessionsCarryBasis = false;
+        }
     }
 
     /**
@@ -398,27 +443,6 @@ class VisitorContext
         $version = (string) ($request->headers->get('X-App-Version') ?: $request->header('App-Version', ''));
 
         return preg_match('/^[0-9a-zA-Z.\-+]{1,24}$/', $version) === 1 ? $version : null;
-    }
-
-    /**
-     * An address, masked to its network and then salted — enough to tell two visitors apart for a
-     * day, never enough to recover where either of them was.
-     */
-    private function hashIp(Request $request): ?string
-    {
-        $address = (string) $request->ip();
-
-        if ($address === '') {
-            return null;
-        }
-
-        if (config('analytics.privacy.mask_ip', true)) {
-            $address = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)
-                ? implode(':', array_slice(explode(':', $address), 0, 4)) . '::'
-                : preg_replace('/\.\d+$/', '.0', $address);
-        }
-
-        return substr(hash('sha256', $address . '|' . config('app.key')), 0, 40);
     }
 
     private function connection(): \Illuminate\Database\Connection

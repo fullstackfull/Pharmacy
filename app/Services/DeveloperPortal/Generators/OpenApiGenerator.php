@@ -261,6 +261,14 @@ class OpenApiGenerator
                 'schema' => ['type' => 'string'],
                 'description' => 'The calling app build. Recorded against usage so an endpoint is never removed while an old release still calls it.',
             ];
+
+            $parameters[] = [
+                'name' => 'X-Client-Id',
+                'in' => 'header',
+                'required' => false,
+                'schema' => ['type' => 'string', 'minLength' => 8, 'maxLength' => 64],
+                'description' => 'A random id the app generates once for its own installation and sends on every call. It is what lets analytics count app visitors: without it a signed-out caller can only be identified by network address, so every device behind one carrier NAT counts as a single visitor. Never a device identifier — generate a random value at first launch, store it with the app data, and regenerate it whenever the user clears that data. It is hashed before it is stored.',
+            ];
         }
 
         return $parameters;
