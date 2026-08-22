@@ -175,12 +175,16 @@ class SettingsPanel implements Panel
             }
         }
 
+        // Resolved before the payload is assembled: it can add to the failure list, and a list read
+        // in the same literal that fills it is a trap for whoever reorders these keys next.
+        $self = $this->selfHealth($failures);
+
         return [
             'read_only' => true,
             'groups' => $groups,
             'overrides' => $this->overrideSummary($stored, $groups),
             'environment' => $this->environmentVisibility(),
-            'self' => $this->selfHealth($failures),
+            'self' => $self,
             'failures' => $failures,
             'generated' => [
                 'at' => Clock::display(Clock::now())->toDateTimeString(),
