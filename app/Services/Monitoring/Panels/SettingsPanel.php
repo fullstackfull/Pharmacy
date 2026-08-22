@@ -581,24 +581,24 @@ class SettingsPanel implements Panel
         if ($secret) {
             // Presence is a real reading and a useful one; the value itself is never a row on a
             // page that anybody with dashboard access can open.
-            return $row + [
+            return array_merge($row, [
                 'state' => 'ok',
                 'value' => null,
                 'configured' => $this->isPresent($value),
                 'remedy' => null,
-            ];
+            ]);
         }
 
         $present = $this->isPresent($value);
 
-        return $row + [
+        return array_merge($row, [
             // Empty is not zero. A missing electricity price is a setting nobody has filled in,
             // and rendering it as 0 would put a free-electricity figure on the energy page.
             'state' => $present ? 'ok' : 'not_configured',
             'value' => $present ? $value : null,
             'configured' => $present,
             'remedy' => $present ? null : $this->remedyFor($path, $env),
-        ];
+        ]);
     }
 
     /**
