@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Services\Analytics\Analytics;
 use App\Contracts\Repositories\RobotsMetaContentRepositoryInterface;
 use App\Models\Admin;
 use App\Services\ProductService;
@@ -341,6 +342,11 @@ class WebController extends Controller
             return isset($response['redirect']) ? redirect($response['redirect']) : redirect('/');
         }
 
+        // Analytics: the top of the checkout funnel. Recorded after validation, so a customer
+        // bounced straight back to the cart is not counted as having started checkout — the
+        // difference between a funnel that measures intent and one that measures page loads.
+        app(Analytics::class)->checkoutStep(step: 'started', cartValue: CartManager::cart_grand_total());
+
         $countryRestrictStatus = getWebConfig(name: 'delivery_country_restriction');
         $zipRestrictStatus = getWebConfig(name: 'delivery_zip_code_area_restriction');
         $countries = $countryRestrictStatus ? $this->get_delivery_country_array() : COUNTRIES;
@@ -398,6 +404,13 @@ class WebController extends Controller
             }
             return $response['redirect'] ? redirect($response['redirect']) : redirect('/');
         }
+
+        // Reaching the payment page means the address and shipping steps were completed; recording
+        // them here rather than on their own pages keeps the funnel honest when a returning
+        // customer skips a step they had already filled in.
+        app(Analytics::class)->checkoutStep(step: 'address', cartValue: CartManager::cart_grand_total());
+        app(Analytics::class)->checkoutStep(step: 'shipping', cartValue: CartManager::cart_grand_total());
+        app(Analytics::class)->checkoutStep(step: 'payment', cartValue: CartManager::cart_grand_total());
 
         $stockAvailabilityResponse = OrderManager::validateStockAvailability($request);
         if ($stockAvailabilityResponse['status'] == 0) {

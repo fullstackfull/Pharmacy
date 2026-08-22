@@ -2,6 +2,7 @@
 
 namespace App\Utils;
 
+use App\Services\Analytics\Analytics;
 use App\Events\OrderEditDuePaymentEvent;
 use App\Models\OrderDetailsRewards;
 use App\Models\OrderEditHistory;
@@ -1578,6 +1579,41 @@ class OrderManager
 
             $order = Order::with('customer', 'seller.shop', 'details')->find($order_id);
             OrderManager::getAddOrderTransactionsOnGenerateOrder(order: $order, ordersData: $ordersData);
+
+            // Analytics. Every order in this application is written here, by every caller — the web
+            // checkout, both API versions and the two POS screens — with DB::table()->insertGetId(),
+            // which fires no model event. This is therefore the only place the event can be raised
+            // once and cover all of them.
+            //
+            // afterCommit, not inline: this runs inside a retried transaction, and an order that
+            // rolls back must not leave a sale in the reports that never happened.
+            DB::afterCommit(function () use ($order, $ordersData, $vendorWiseCart) {
+                app(Analytics::class)->orderPlaced(
+                    orderId: (int) $ordersData['id'],
+                    amount: (float) $ordersData['order_amount'],
+                    vendorId: ($ordersData['seller_is'] ?? null) === 'seller' ? (int) $ordersData['seller_id'] : null,
+                    items: $order?->details?->count(),
+                    properties: array_filter([
+                        'payment_method' => $ordersData['payment_method'] ?? null,
+                        'payment_status' => $ordersData['payment_status'] ?? null,
+                        'coupon_code' => $ordersData['coupon_code'] ?? null,
+                        'is_guest' => (bool) ($ordersData['is_guest'] ?? false),
+                        'shipping_cost' => (float) ($ordersData['shipping_cost'] ?? 0),
+                    ], static fn ($value) => $value !== null && $value !== ''),
+                );
+
+                // A paid-on-placement order is a completed payment. Counting only gateway callbacks
+                // would leave every cash-on-delivery and wallet order out of payment analytics —
+                // which, in this shop, is most of them.
+                if (($ordersData['payment_status'] ?? null) === 'paid') {
+                    app(Analytics::class)->paymentAttempted(
+                        gateway: (string) ($ordersData['payment_method'] ?: 'unknown'),
+                        outcome: 'succeeded',
+                        amount: (float) $ordersData['order_amount'],
+                        orderId: (int) $ordersData['id'],
+                    );
+                }
+            });
 
             $orderPlacedNotificationEvents[] = OrderManager::getGenerateOrderNotificationInfo(
                 vendorType: $vendorWiseCart['seller_is'],

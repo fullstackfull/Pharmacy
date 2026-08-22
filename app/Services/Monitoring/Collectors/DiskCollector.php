@@ -27,18 +27,21 @@ use RecursiveIteratorIterator;
  *    because nothing on the dashboard hinted at it. So `df -i` is shelled out to where the host
  *    allows it, and where it does not, the metric says so and carries the fix.
  *
- * 4. It does not present free space as the filesystem sees it. disk_free_space() reports what an
- *    unprivileged process may actually write (statvfs f_bavail), so ext4's reserved blocks count
- *    as used here. That is deliberate: the store cannot write into the reserve, so space it cannot
- *    have is not space it has. This is also why used_pct can read higher than `df` on a filesystem
- *    with a large reservation.
+ * 4. It does not report the root reserve as used space. statvfs — and therefore every PHP disk
+ *    function — exposes only the blocks an unprivileged process may write, so `total - free`
+ *    silently counts the kernel's reservation as consumption. On a filesystem with a large
+ *    reserve that reads as a disk about to fill up while `df` says it is half empty, and the
+ *    thresholds in config/monitoring.php would raise a critical alert on a healthy machine. df
+ *    is asked for the real split where the host allows it, and the fallback says out loud that
+ *    it is approximating.
  */
 class DiskCollector implements Collector
 {
     private const PREVIOUS_KEY = 'monitoring:disk:previous';
 
     private const SPACE_SOURCE = 'PHP disk_total_space()/disk_free_space()';
-    private const INODE_SOURCE = 'Linux df -i';
+    private const DF_SPACE_SOURCE = 'Linux df -Pk';
+    private const INODE_SOURCE = 'Linux df -iP';
     private const DISKSTATS_SOURCE = 'Linux /proc/diskstats';
 
     /** Counters in /proc/diskstats are always in 512-byte sectors, whatever the hardware uses. */
@@ -147,6 +150,11 @@ class DiskCollector implements Collector
      */
     private function space(string $path, ?string $note): array
     {
+        $viaDf = $this->environment->has('shell') ? $this->readSpaceRow($path) : null;
+        if ($viaDf !== null) {
+            return $this->spaceMetrics($viaDf, self::DF_SPACE_SOURCE, $note);
+        }
+
         $total = @disk_total_space($path);
         $free = @disk_free_space($path);
 
@@ -158,14 +166,58 @@ class DiskCollector implements Collector
             ));
         }
 
-        $used = max(0.0, $total - $free);
+        // No df here, so the blocks held back for root cannot be told apart from the blocks in
+        // use and land in "used". The metric says so rather than leaving someone to discover the
+        // gap by running df themselves.
+        return $this->spaceMetrics(
+            [(int) $total, (int) max(0.0, $total - $free), (int) $free],
+            self::SPACE_SOURCE,
+            trim(($note !== null && $note !== '' ? $note . '; ' : '') . 'approximate: counts blocks reserved for root as used'),
+        );
+    }
+
+    /**
+     * @param  array{0: int, 1: int, 2: int}  $row  [size, used, available] in bytes
+     * @return array<string, Metric>
+     */
+    private function spaceMetrics(array $row, string $source, ?string $note): array
+    {
+        [$size, $used, $free] = $row;
+
+        // Fullness is measured against what the filesystem will actually hand out — used plus
+        // available — which is the percentage df prints and the one an operator cross-checks the
+        // dashboard against. Anything the kernel is reserving is neither of those.
+        $addressable = $used + $free;
 
         return [
-            'total' => Metric::of((int) $total, self::SPACE_SOURCE, 'bytes', $note),
-            'used' => Metric::of((int) $used, self::SPACE_SOURCE, 'bytes', $note),
-            'free' => Metric::of((int) $free, self::SPACE_SOURCE, 'bytes', $note),
-            'used_pct' => Metric::of(round(100 * $used / $total, 1), self::SPACE_SOURCE, '%', $note),
+            'total' => Metric::of($size, $source, 'bytes', $note),
+            'used' => Metric::of($used, $source, 'bytes', $note),
+            'free' => Metric::of($free, $source, 'bytes', $note),
+            'used_pct' => $addressable > 0
+                ? Metric::of(round(100 * $used / $addressable, 1), $source, '%', $note)
+                : Metric::noData($source, 'This filesystem reports no addressable blocks.'),
         ];
+    }
+
+    /**
+     * Space as df sees it: the only way to separate blocks that are in use from blocks the kernel
+     * is holding back for root, a split statvfs does not expose at all.
+     *
+     * @return array{0: int, 1: int, 2: int}|null  [size, used, available] in bytes
+     */
+    private function readSpaceRow(string $path): ?array
+    {
+        try {
+            $row = $this->readDfRow('-Pk', $path);
+        } catch (\Throwable) {
+            // Capabilities are cached for minutes, so disable_functions can have grown a
+            // shell_exec since they were probed. statvfs still answers, so this degrades to the
+            // approximation instead of losing the most important number on the page.
+            return null;
+        }
+
+        // -k is POSIX and works on BusyBox and BSD too; GNU's -B1 does not.
+        return $row === null ? null : [$row[0] * 1024, $row[1] * 1024, $row[2] * 1024];
     }
 
     /**
@@ -186,7 +238,7 @@ class DiskCollector implements Collector
         }
 
         try {
-            $row = $this->readInodeRow($path);
+            $row = $this->readDfRow('-iP', $path);
         } catch (\Throwable) {
             // Capability detection is cached for minutes at a time, so disable_functions can have
             // grown a shell_exec since it last ran. The operator gets the same actionable answer
@@ -217,26 +269,34 @@ class DiskCollector implements Collector
     }
 
     /**
-     * @return array{0: int, 1: int}|null  [total inodes, used inodes]
+     * The three numeric columns of a `df -P` row. Both layouts this collector asks for line up:
+     * total, used, free, then a percentage — 1024-blocks/Used/Available for space, Inodes/IUsed/
+     * IFree for inodes.
+     *
+     * @return array{0: int, 1: int, 2: int}|null  [total, used, free]
      */
-    private function readInodeRow(string $path): ?array
+    private function readDfRow(string $flags, string $path): ?array
     {
         $argument = escapeshellarg($path);
 
         // timeout first, because df blocks forever on a hung NFS or CIFS mount and a monitoring
         // page must never be the thing that hangs. The bare retry covers hosts without coreutils'
         // timeout, where the first command exits without producing a line.
-        foreach (["timeout 5 df -iP -- {$argument}", "df -iP -- {$argument}"] as $command) {
+        foreach (["timeout 5 df {$flags} -- {$argument}", "df {$flags} -- {$argument}"] as $command) {
             $output = @shell_exec($command . ' 2>/dev/null');
             if (!is_string($output)) {
                 continue;
             }
 
             foreach (explode("\n", $output) as $line) {
-                // Columns are Filesystem, Inodes, IUsed, IFree, IUse%, Mounted on; a filesystem
-                // without an inode table prints "-" in place of the numbers.
+                // A filesystem that has no such counter prints "-" where the number belongs; the
+                // header row has words there and never matches.
                 if (preg_match('/^\S+\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)\s+(\d+%|-)\s+\S/', trim($line), $match) === 1) {
-                    return [ctype_digit($match[1]) ? (int) $match[1] : 0, ctype_digit($match[2]) ? (int) $match[2] : 0];
+                    return [
+                        ctype_digit($match[1]) ? (int) $match[1] : 0,
+                        ctype_digit($match[2]) ? (int) $match[2] : 0,
+                        ctype_digit($match[3]) ? (int) $match[3] : 0,
+                    ];
                 }
             }
         }
@@ -339,14 +399,16 @@ class DiskCollector implements Collector
      */
     private function deviceReadings(): array
     {
-        if (!$this->environment->has('proc_diskstats')) {
-            return ['device_io' => Metric::notSupported(
-                self::DISKSTATS_SOURCE,
-                'This host does not expose /proc/diskstats, so per-device I/O cannot be measured.',
-            )];
-        }
-
+        // The capability probe is inside the guard too: it reads the filesystem and the cache,
+        // and a collector that throws takes the dashboard down with it.
         try {
+            if (!$this->environment->has('proc_diskstats')) {
+                return ['device_io' => Metric::notSupported(
+                    self::DISKSTATS_SOURCE,
+                    'This host does not expose /proc/diskstats, so per-device I/O cannot be measured.',
+                )];
+            }
+
             $current = $this->readDiskstats();
             if ($current === []) {
                 return ['device_io' => Metric::noData(
@@ -404,7 +466,17 @@ class DiskCollector implements Collector
 
         $delta = [];
         foreach ($counters as $field => $value) {
-            $delta[$field] = $value - ($previous[$field] ?? 0);
+            // Defaulting a missing counter to zero would make the delta the whole since-boot
+            // total, and the machine's lifetime traffic would be published as one window of it.
+            // A previous sample written by an older build is exactly how that happens.
+            if (!isset($previous[$field])) {
+                return array_fill_keys(self::DEVICE_METRICS, Metric::noData(
+                    self::DISKSTATS_SOURCE,
+                    'The previous sample does not carry the same counters as this one.',
+                ));
+            }
+
+            $delta[$field] = $value - $previous[$field];
         }
 
         // Counters only ever climb, so a negative delta means they were reset underneath us — a
@@ -496,9 +568,9 @@ class DiskCollector implements Collector
 
         $physical = [];
         foreach ($devices as $name => $counters) {
-            // Loopback and ramdisk entries are backing files and memory, not disks; on a stock
-            // Ubuntu they alone would fill the table with a dozen idle rows.
-            if (preg_match('/^(loop|ram)\d+$/', $name) === 1 || $this->isPartition($name, $names)) {
+            // Loopback, ramdisk and zram entries are backing files and compressed memory, not
+            // disks; on a stock Ubuntu they alone would fill the table with a dozen idle rows.
+            if (preg_match('/^(loop|z?ram)\d+$/', $name) === 1 || $this->isPartition($name, $names)) {
                 continue;
             }
 

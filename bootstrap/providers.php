@@ -16,6 +16,7 @@ return [
     App\Providers\ObserverServiceProvider::class,
     App\Providers\SeoServiceProvider::class,
     App\Providers\MonitoringServiceProvider::class,
+    App\Providers\AnalyticsServiceProvider::class,
 
     // Third-party packages
     Intervention\Image\ImageServiceProvider::class,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Services\Analytics\Analytics;
 use App\Contracts\Repositories\OrderDetailRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ReviewRepositoryInterface;
@@ -49,6 +50,19 @@ class ProductDetailsController extends Controller
         );
 
         if ($product) {
+            // Analytics. Recorded before anything else on the page can fail: a product view is a
+            // view whether or not the reviews block renders.
+            app(Analytics::class)->productViewed(
+                productId: (int) $product['id'],
+                vendorId: $product['added_by'] === 'seller' ? (int) $product['user_id'] : null,
+                price: (float) $product['unit_price'],
+                properties: array_filter([
+                    'category_id' => $product['category_id'] ?? null,
+                    'brand_id' => $product['brand_id'] ?? null,
+                    'product_type' => $product['product_type'] ?? null,
+                    'in_stock' => (int) ($product['current_stock'] ?? 0) > 0,
+                ], static fn ($value) => $value !== null),
+            );
 
             $initialProductConfig = ProductManager::getInitialProductQuantity($product);
             $initialProductQuantity = $initialProductConfig['quantity'];

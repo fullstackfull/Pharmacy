@@ -58,14 +58,6 @@ class TracesPanel implements Panel
     private const CAPTURED = ['error', 'slow', 'sampled'];
 
     /**
-     * Span kinds in the order they are worth reading, matched to what RequestContext emits.
-     *
-     * Fixed rather than discovered so the waterfall's colours mean the same thing on every trace:
-     * a kind that never appears simply never draws a bar.
-     */
-    private const KINDS = ['db', 'cache', 'http', 'queue', 'view', 'middleware', 'controller', 'auth', 'app'];
-
-    /**
      * Narrowest bar drawn, in percent.
      *
      * A 0.4ms span inside a two-second trace is 0.02% wide, which renders as nothing at all — and
@@ -110,7 +102,6 @@ class TracesPanel implements Panel
             'summary' => $this->summary($options),
             'traces' => $traces,
             'selected' => $filters['trace'] === null ? null : $this->selectedTrace($filters['trace']),
-            'kinds' => self::KINDS,
             'source' => self::SOURCE,
         ];
     }

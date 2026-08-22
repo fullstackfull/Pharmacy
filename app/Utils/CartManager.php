@@ -2,6 +2,7 @@
 
 namespace App\Utils;
 
+use App\Services\Analytics\Analytics;
 use App\Models\DigitalProductVariation;
 use App\Models\ShippingMethod;
 use App\Models\Cart;
@@ -545,6 +546,18 @@ class CartManager
             $cart = Cart::where(['id' => $cartID])->first();
         }
 
+        // Analytics. Recorded here rather than in the controllers because the storefront, both API
+        // versions and the two POS screens all add to the cart through this one function — an event
+        // added to a controller would be missing from the other four callers the day it shipped.
+        // Cart rows are written with insertGetId, which is a query-builder call and fires no model
+        // event, so the hook has to be explicit.
+        app(Analytics::class)->cartAdded(
+            productId: (int) $cartArray['product_id'],
+            quantity: (int) ($cartArray['quantity'] ?? 1),
+            value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
+            vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
+        );
+
         if ($request['buy_now'] == 1) {
             $productTotalPrice = ($price * $request['quantity']) - ($getProductDiscount * $request['quantity']);
             $verifyStatus = OrderManager::checkSingleProductMinimumOrderAmountVerify(request: $request, product: $product, totalAmount: $productTotalPrice);
@@ -699,6 +712,18 @@ class CartManager
             $cartID = Cart::insertGetId($cartArray);
             $cart = Cart::where(['id' => $cartID])->first();
         }
+
+        // Analytics. Recorded here rather than in the controllers because the storefront, both API
+        // versions and the two POS screens all add to the cart through this one function — an event
+        // added to a controller would be missing from the other four callers the day it shipped.
+        // Cart rows are written with insertGetId, which is a query-builder call and fires no model
+        // event, so the hook has to be explicit.
+        app(Analytics::class)->cartAdded(
+            productId: (int) $cartArray['product_id'],
+            quantity: (int) ($cartArray['quantity'] ?? 1),
+            value: (float) ($cartArray['price'] ?? 0) * (int) ($cartArray['quantity'] ?? 1),
+            vendorId: ($cartArray['seller_is'] ?? null) === 'seller' ? (int) $cartArray['seller_id'] : null,
+        );
 
         if ($request['buy_now'] == 1) {
             $productTotalPrice = ($price * $request['quantity']) - ($getProductDiscount * $request['quantity']);

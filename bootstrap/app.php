@@ -65,12 +65,17 @@ return Application::configure(basePath: dirname(__DIR__))
             // a row per request for visits and sources, this one only ever increments counters in
             // the current minute and never writes a row on the request path.
             \App\Http\Middleware\MonitorRequest::class,
+            // Behavioural analytics. The request log above knows how much traffic there was and
+            // how fast it was served; this knows what a person did, on which visit, and whether it
+            // led to a sale. Both writes happen after the response has been sent.
+            \App\Http\Middleware\RecordAnalytics::class,
         ]);
         $middleware->group('api', [
             'throttle:3000,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
             \App\Http\Middleware\MonitorRequest::class,
+            \App\Http\Middleware\RecordAnalytics::class,
         ]);
         /*
         |--------------------------------------------------------------------------
