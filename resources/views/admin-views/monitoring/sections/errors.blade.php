@@ -263,7 +263,10 @@
                                 <span class="mon-pill mon-pill--warning">{{ translate('new') }}</span>
                             @endif
                         </td>
-                        <td title="{{ $group['message'] }}">{{ \Illuminate\Support\Str::limit($group['message'], 90) }}</td>
+                        {{-- One line per group: an exception message is prose, and prose in an
+                             auto-laid-out table wraps to four lines and drags every row with it.
+                             The full text is in the title and in the group card below. --}}
+                        <td class="k-truncate" title="{{ $group['message'] }}">{{ \Illuminate\Support\Str::limit($group['message'], 55) }}</td>
                         <td>{{ $group['route'] ?? translate('no_route') }}</td>
                         <td class="k-table__num k-num">{{ number_format($group['occurrences_all_time']) }}</td>
                         <td class="k-table__num k-num">
