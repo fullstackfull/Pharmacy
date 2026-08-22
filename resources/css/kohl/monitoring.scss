@@ -710,6 +710,16 @@
 }
 .mon-split__part { display: block; block-size: 100%; }
 
+/* Shape only. The colour comes from the same --part modifiers the bar uses, which are
+   defined below so a swatch can never fall back to the neutral default it starts from. */
+.mon-split__swatch {
+    inline-size: 9px;
+    block-size: 9px;
+    flex: 0 0 auto;
+    border-radius: 2px;
+    background: var(--k-border-strong);
+}
+
 .mon-split__part--2xx { background: var(--mon-healthy); }
 .mon-split__part--3xx { background: var(--mon-unknown); }
 .mon-split__part--4xx { background: var(--mon-degraded); }
@@ -733,10 +743,144 @@
 .mon-split__key { display: flex; align-items: center; gap: 8px; min-inline-size: 0; }
 .mon-split__key span:nth-child(2) { flex: 1 1 auto; min-inline-size: 0; }
 .mon-split__key i { font-style: normal; color: var(--k-text-muted); margin-inline-start: 4px; }
-.mon-split__swatch {
-    inline-size: 9px;
-    block-size: 9px;
-    flex: 0 0 auto;
-    border-radius: 2px;
-    background: var(--k-border-strong);
+
+/* ── Log centre ────────────────────────────────────────────────────────────────
+   The logs section needs a row shape nothing else here provides: a fixed level
+   column, a fixed time column, and a message that wraps under neither of them —
+   with a stack trace that opens in place. `.k-table` cannot do it, because a
+   table row cannot hold an expanded <pre> without either a colspan cell that
+   breaks the column rhythm or a second row that breaks the zebra.
+
+   Density is the point. An operator scans this list for the one line that is not
+   like the others, so the level is a coloured block at a fixed position and the
+   eye can run straight down it. Colours are the state palette already defined on
+   `.mon`, never a new one: an error line here has to be the same red as a
+   critical card on the overview.
+
+   Columns are logical (grid, no floats, no directional padding), so the level
+   block stays on the reading edge in Arabic as it does in English. */
+.mon-log__levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px var(--k-size-4, 16px) 0;
+}
+.mon-log__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--k-border);
+    border-radius: 999px;
+    font-size: var(--k-text-xs, 12px);
+    color: var(--k-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    background: var(--k-surface);
+}
+.mon-log__chip:hover { text-decoration: none; color: var(--k-text); border-color: var(--k-border-strong); }
+.mon-log__chip i { font-style: normal; color: var(--k-text-muted); }
+.mon-log__chip.is-active {
+    border-color: currentColor;
+    color: var(--k-text);
+    font-weight: var(--k-weight-medium);
+}
+/* The chip carries its level's colour whether or not it is selected: the count beside
+   "emergency" has to read as serious before anybody clicks it. */
+.mon-log__chip--emergency,
+.mon-log__chip--alert,
+.mon-log__chip--critical,
+.mon-log__chip--error { color: var(--mon-critical); }
+.mon-log__chip--warning { color: var(--mon-degraded); }
+.mon-log__chip--notice,
+.mon-log__chip--info { color: var(--k-accent, #3b5bdb); }
+
+.mon-log { list-style: none; margin: 0; padding: 0; }
+
+.mon-log__day {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px var(--k-size-4, 16px);
+    background: var(--k-surface-sunk);
+    border-block: 1px solid var(--k-border);
+    font-size: var(--k-text-xs, 12px);
+    font-weight: var(--k-weight-medium);
+}
+.mon-log__day small { color: var(--k-text-muted); font-weight: 400; }
+
+.mon-log__row {
+    display: grid;
+    grid-template-columns: 78px 62px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 7px var(--k-size-4, 16px);
+    border-block-end: 1px solid var(--k-border);
+    font-size: var(--k-text-xs, 12px);
+}
+.mon-log__row:last-child { border-block-end: 0; }
+.mon-log__row:hover { background: var(--k-surface-sunk); }
+/* A left rule rather than a tinted row: a hundred tinted rows is a wall, one rule per
+   severity is a scannable edge. */
+.mon-log__row--critical { box-shadow: inset 2px 0 0 var(--mon-critical); }
+.mon-log__row--warning { box-shadow: inset 2px 0 0 var(--mon-degraded); }
+
+.mon-log__level {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: .06em;
+    padding: 3px 4px;
+    border-radius: var(--k-radius-sm, 4px);
+    background: var(--k-surface-sunk);
+    color: var(--k-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mon-log__level--emergency,
+.mon-log__level--alert,
+.mon-log__level--critical { background: var(--mon-critical); color: #fff; }
+.mon-log__level--error { background: rgba(214, 69, 69, .16); color: var(--mon-critical); }
+.mon-log__level--warning { background: rgba(217, 141, 26, .18); color: var(--mon-degraded); }
+.mon-log__level--notice,
+.mon-log__level--info { background: rgba(59, 91, 219, .12); color: var(--k-accent, #3b5bdb); }
+
+.mon-log__time { color: var(--k-text-muted); white-space: nowrap; padding-block-start: 2px; }
+
+.mon-log__body { min-inline-size: 0; display: flex; flex-direction: column; gap: 3px; }
+/* The message keeps its own line breaks and wraps anywhere: a logged path or a serialised
+   payload has no spaces to break on, and one of those must not push the page sideways. */
+.mon-log__message {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--k-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    line-height: 1.45;
+}
+.mon-log__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.mon-log__channel,
+.mon-log__flag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--k-text-muted);
+}
+.mon-log__flag { color: var(--mon-degraded); }
+.mon-log__meta code {
+    font-size: 10px;
+    color: var(--k-text-muted);
+    background: var(--k-surface-sunk);
+    padding: 1px 5px;
+    border-radius: var(--k-radius-sm, 4px);
+    overflow-wrap: anywhere;
+}
+.mon-log__trace summary { font-size: 11px; color: var(--k-accent); cursor: pointer; }
+
+@media (max-width: 640px) {
+    /* The time column is the first to go: the day header above already carries the date,
+       and a wrapped message is still readable where a squeezed one is not. */
+    .mon-log__row { grid-template-columns: 66px minmax(0, 1fr); }
+    .mon-log__time { grid-column: 2; padding-block-start: 0; }
 }

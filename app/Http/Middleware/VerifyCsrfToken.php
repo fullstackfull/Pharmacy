@@ -21,6 +21,10 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         '/pay-via-ajax', '/success', '/cancel', '/fail', '/ipn', '/bkash/*',
         '/paytabs-response', '/customer/choose-shipping-address', '/system_settings',
-        '/paytm*', 'payment/paytabs/callback*'
+        '/paytm*', 'payment/paytabs/callback*',
+        // The analytics beacon. navigator.sendBeacon cannot set a header, so a CSRF token cannot
+        // reach this route — it is protected by an Origin check, an event-name allow-list that
+        // contains nothing money-related, and a per-visitor rate limit instead.
+        'analytics/collect',
     ];
 }

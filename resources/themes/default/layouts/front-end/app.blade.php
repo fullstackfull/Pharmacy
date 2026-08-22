@@ -431,6 +431,14 @@
     </script>
 @endif
 
+{{-- First-party analytics beacon. Loaded last and deferred, so it cannot delay anything a
+     customer is waiting for. It reports only what a server-side page load cannot see: the
+     filter's pushState navigations, and interactions that never navigate. --}}
+@if (config('analytics.enabled', true) && config('analytics.beacon.enabled', true))
+    <div id="analytics-beacon" data-endpoint="{{ route('analytics.collect') }}" hidden></div>
+    <script src="{{ asset('assets/front-end/js/analytics-beacon.js') }}" defer></script>
+@endif
+
 @stack('script')
 </body>
 </html>

@@ -93,22 +93,28 @@ final class AnalyticsEvent
     ];
 
     /**
-     * The events a browser is allowed to send.
+     * The events a browser is allowed to send: ONLY those the server cannot see for itself.
      *
-     * Everything money-related is server-side only. A page that could post "order_placed" with a
-     * value of its choosing would make revenue analytics a suggestion box.
+     * Two rules decide this list, and the second one is easy to get wrong.
+     *
+     * First, nothing money-related is ever accepted from a client. A page that could post
+     * "order_placed" with a value of its choosing would make revenue analytics a suggestion box.
+     *
+     * Second — and this is the one that silently corrupts numbers rather than obviously breaking
+     * them — an event the server ALREADY records must not be accepted from the browser too. A
+     * product view is recorded by ProductDetailsController, a wishlist add by the Wishlist model
+     * event, a checkout start by WebController. Accepting those here would count each of them
+     * twice, and the deduplication would not catch it: the two paths disagree about the path
+     * (a normalised route pattern against the browser's actual URL), so they hash differently.
+     *
+     * What is left is what genuinely has no server-side equivalent: the product filter's
+     * pushState navigations, which return JSON and are correctly not counted as pageviews; the
+     * cart page; and the compare tray, which nothing instruments server-side.
      */
     private const CLIENT_ALLOWED = [
-        self::PAGE_VIEWED,
-        self::PRODUCT_VIEWED,
         self::PRODUCT_LIST_VIEWED,
-        self::CATEGORY_VIEWED,
-        self::SHOP_VIEWED,
-        self::BRAND_VIEWED,
         self::CART_VIEWED,
-        self::WISHLIST_ADDED,
         self::COMPARE_ADDED,
-        self::CHECKOUT_STARTED,
     ];
 
     public function __construct(

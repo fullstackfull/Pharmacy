@@ -33,6 +33,15 @@
     // The neutral ramp for splits that carry no verdict. Status classes take the state palette
     // instead, which is why they are not run through this.
     $tone = ['a', 'b', 'c', 'd', 'e'];
+
+    // A pill reads the same colour as its segment in the bar above it, 3xx included: a redirect is
+    // not a success and not a fault, and a green pill would call it one.
+    $statusTone = static fn (string $class) => match ($class) {
+        '5xx' => 'critical',
+        '4xx' => 'warning',
+        '3xx' => 'info',
+        default => 'ok',
+    };
 @endphp
 
 {{-- Said before any number: on a five-minute window a stopped flush and a quiet shop produce the
@@ -221,7 +230,7 @@
                 @foreach ($statuses['top'] as $status)
                     <tr>
                         <td>
-                            <span class="mon-pill mon-pill--{{ $status['class'] === '5xx' ? 'critical' : ($status['class'] === '4xx' ? 'warning' : 'ok') }}">{{ $status['status'] }}</span>
+                            <span class="mon-pill mon-pill--{{ $statusTone($status['class']) }}">{{ $status['status'] }}</span>
                         </td>
                         <td class="k-table__num k-num">{{ number_format($status['hits']) }}</td>
                         <td class="k-table__num k-num">{{ $status['share_pct'] }}%</td>
@@ -231,8 +240,8 @@
             </table>
         </div>
         <p class="mon-note">
-            {{ translate('counted_from') }} <code>telemetry_requests</code>,
-            {{ translate('which_records_every_response_as_it_is_sent_rather_than_a_minute_later') }}
+            {{ translate('counted_from_the_per_request_log_which_records_every_response_as_it_is_sent_rather_than_a_minute_later') }}:
+            <code>telemetry_requests</code>
         </p>
     @else
         <x-k.empty icon="alert" :title="$stateTitle($statuses['state'] ?? null)" :text="$statuses['note'] ?? ''" />
@@ -281,8 +290,8 @@
                 @endforeach
             </ul>
             <p class="mon-note">
-                {{ number_format($part['total']) }} {{ translate($split['unit']) }} —
-                {{ translate('read_from') }} <code>{{ $part['source'] }}</code>
+                {{ translate($split['unit']) }}: {{ number_format($part['total']) }} —
+                <code>{{ $part['source'] }}</code>
             </p>
         @else
             <x-k.empty icon="reports" :title="$stateTitle($part['state'] ?? null)" :text="$part['note'] ?? ''" />
@@ -354,8 +363,8 @@
 </x-k.card>
 
 <p class="mon-note">
-    {{ translate('this_page_reads_two_recorders_of_the_same_traffic') }}:
-    <code>telemetry_requests</code> {{ translate('written_as_each_response_is_sent') }},
-    {{ translate('and') }} <code>monitoring_request_buckets</code> {{ translate('folded_per_minute_by_the_scheduled_flush') }}.
-    {{ translate('the_two_totals_can_differ_and_a_gap_between_them_is_itself_a_reading') }}
+    {{ translate('this_page_reads_two_recorders_of_the_same_traffic') }}.
+    <code>telemetry_requests</code> — {{ translate('written_as_each_response_is_sent') }}.
+    <code>monitoring_request_buckets</code> — {{ translate('folded_per_minute_by_the_scheduled_flush') }}.
+    {{ translate('the_two_totals_can_differ_and_the_gap_between_them_is_itself_a_reading') }}
 </p>

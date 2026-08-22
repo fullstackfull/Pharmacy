@@ -1293,4 +1293,9 @@ return [
 	'fpm_listen_queue' => 'Fpm listen queue',
 	'The_scheduler_last_reported_a_run_96_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 96 minutes ago  the server cron appears to have stopped.',
 	'fpm_active_processes' => 'Fpm active processes',
+	'The_scheduler_last_reported_a_run_106_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 106 minutes ago  the server cron appears to have stopped.',
+	'the_two_totals_can_differ_and_a_gap_between_them_is_itself_a_reading' => 'The two totals can differ and a gap between them is itself a reading',
+	'The_scheduler_last_reported_a_run_108_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 108 minutes ago  the server cron appears to have stopped.',
+	'an_unrotated_log_file_is_the_most_common_way_a_healthy_server_runs_out_of_disk' => 'An unrotated log file is the most common way a healthy server runs out of disk',
+	'The_scheduler_last_reported_a_run_111_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 111 minutes ago  the server cron appears to have stopped.',
 ];
