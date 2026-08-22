@@ -144,7 +144,12 @@ class RedisCollector implements Collector
         return array_filter([
             'redis.latency_ms' => $collected['latency_ms'],
             'redis.used_memory_mb' => $collected['used_memory_mb'],
-            'redis.hit_ratio' => $collected['hit_ratio'],
+            // The windowed ratio, not the lifetime one. keyspace_hits and keyspace_misses are
+            // totals since the server started, so charting the ratio of them draws a flat line
+            // that a reader takes for the current hit rate — it cannot fall during an afternoon of
+            // solid misses. The stored series keeps its name; only its source changes, and it is
+            // absent rather than flat until there are two samples to subtract.
+            'redis.hit_ratio' => $collected['hit_ratio_interval'],
             'redis.connected_clients' => $collected['connected_clients'],
             'redis.evicted_keys' => $collected['evicted_keys'],
             'redis.ops_per_sec' => $collected['ops_per_sec'],
@@ -269,11 +274,18 @@ class RedisCollector implements Collector
         $message = $this->withoutPassword(trim($exception->getMessage()));
         $target = $this->target();
 
-        if (preg_match('/NOAUTH|WRONGPASS|invalid password|authentication/i', $message) === 1) {
+        // A server that answers and then rejects the credential is a different problem from one
+        // that is not there, and phpredis raises both as the same exception — the error text is
+        // the only thing that separates them. Bare AUTH is in the pattern because a password set
+        // here against a server that has none fails with "ERR AUTH <password> called without any
+        // password configured", which is a credential problem wearing an ERR and would otherwise
+        // be answered with "point REDIS_HOST at a running server" while the server is right there.
+        if (preg_match('/NOAUTH|WRONGPASS|\bAUTH\b|invalid password|authentication/i', $message) === 1) {
             return Metric::permissionDenied(
                 self::INFO_SOURCE,
-                "Redis at {$target} refused the connection: {$message}",
-                'Set REDIS_PASSWORD in .env to the requirepass value from redis.conf (and REDIS_USERNAME too when the server uses ACL users), then run php artisan config:clear.',
+                "Redis at {$target} answered but refused the credential: {$message}",
+                'Set REDIS_PASSWORD in .env to the requirepass value from redis.conf, or leave it empty when the server has none, then run php artisan config:clear. '
+                    . 'An ACL user takes more than an .env line here: config/database.php carries no username key, so add \'username\' => env(\'REDIS_USERNAME\'), to database.redis.default before REDIS_USERNAME can have any effect.',
             );
         }
 
@@ -879,7 +891,7 @@ class RedisCollector implements Collector
         return Metric::of(
             array_slice($commands, 0, self::TOP_COMMANDS),
             self::LATENCYSTATS_SOURCE,
-            note: 'Ranked by p99. Measured by Redis itself, so it excludes the network between this host and the server.',
+            note: 'Ranked by p99. Measured by Redis itself, so it excludes the network between this host and the server. Accumulated since this server started or since the last CONFIG RESETSTAT, so a slow minute stays in the p99 and a recovered one does not clear it.',
         );
     }
 

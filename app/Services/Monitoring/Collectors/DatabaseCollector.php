@@ -56,6 +56,9 @@ class DatabaseCollector implements Collector
     /** Driver error numbers meaning "there is no such schema or table on this server". */
     private const ABSENT_CODES = [1049, 1109, 1146];
 
+    /** Driver error numbers meaning the server refused the login itself, before any statement. */
+    private const LOGIN_DENIED_CODES = [1044, 1045, 1130, 1698];
+
     /** Status counters snapshotted for the delta, in the case the server publishes them. */
     private const COUNTERS = [
         'Uptime', 'Queries', 'Com_select', 'Com_insert', 'Com_update', 'Com_delete',
@@ -87,7 +90,7 @@ class DatabaseCollector implements Collector
         'db.connection_utilisation_pct' => 'connection_utilisation_pct',
         'db.queries_per_s' => 'queries_per_s',
         'db.slow_queries' => 'slow_queries',
-        'db.buffer_pool_hit_ratio' => 'buffer_pool_hit_ratio',
+        'db.buffer_pool_hit_ratio' => 'buffer_pool_hit_ratio_window',
         'db.row_lock_waits' => 'row_lock_waits',
         'db.size_mb' => 'size_mb',
     ];
@@ -105,7 +108,7 @@ class DatabaseCollector implements Collector
         'queries_per_s', 'selects_per_s', 'inserts_per_s', 'updates_per_s', 'deletes_per_s',
         'transactions_per_s',
         'commits', 'rollbacks', 'slow_queries',
-        'buffer_pool_hit_ratio', 'buffer_pool_size_mb', 'buffer_pool_pages_data',
+        'buffer_pool_hit_ratio', 'buffer_pool_hit_ratio_window', 'buffer_pool_size_mb', 'buffer_pool_pages_data',
         'buffer_pool_pages_free', 'buffer_pool_pages_dirty',
         'row_lock_waits', 'row_lock_time_avg_ms', 'deadlocks',
         'tmp_tables_created', 'tmp_disk_tables_created', 'tmp_disk_table_ratio_pct',
@@ -178,7 +181,7 @@ class DatabaseCollector implements Collector
             // would otherwise carry the TCP handshake and the login into the latency reading.
             $connection->getPdo();
         } catch (Throwable $exception) {
-            return array_fill_keys(self::METRICS, Metric::failed($label, $exception));
+            return array_fill_keys(self::METRICS, $this->connectionFailure($connection, $exception, $label));
         }
 
         $variables = $this->readVariables($connection);
@@ -238,6 +241,7 @@ class DatabaseCollector implements Collector
             'slow_queries' => $this->slowQueryCount($status, $variables),
 
             'buffer_pool_hit_ratio' => $this->bufferPoolHitRatio($status, $deltas),
+            'buffer_pool_hit_ratio_window' => $this->bufferPoolHitRatioWindow($status, $deltas),
             'buffer_pool_size_mb' => $this->setting($variables, 'innodb_buffer_pool_size', 'bytes')
                 ->map(fn (int|float $bytes) => $this->toMegabytes($bytes), 'MB'),
             'buffer_pool_pages_data' => $this->counter($status, 'Innodb_buffer_pool_pages_data', 'pages'),
@@ -380,7 +384,7 @@ class DatabaseCollector implements Collector
         try {
             return $this->keyed($connection->select('SHOW GLOBAL STATUS'));
         } catch (Throwable $exception) {
-            return $this->unavailable($exception, $source, 'SHOW GLOBAL STATUS', 'GRANT USAGE ON *.* TO ' . $this->account($connection) . ';');
+            return $this->unavailable($exception, $source, 'SHOW GLOBAL STATUS', $this->showRemedy($connection, 'global_status'));
         }
     }
 
@@ -394,7 +398,7 @@ class DatabaseCollector implements Collector
                 $exception,
                 ($this->flavour ?? 'MySQL/MariaDB') . ' SHOW GLOBAL VARIABLES',
                 'SHOW GLOBAL VARIABLES',
-                'GRANT USAGE ON *.* TO ' . $this->account($connection) . ';',
+                $this->showRemedy($connection, 'global_variables'),
             );
         }
     }
@@ -441,17 +445,24 @@ class DatabaseCollector implements Collector
 
         try {
             $previous = Cache::get(self::PREVIOUS_KEY);
-            Cache::put(self::PREVIOUS_KEY, $sample, self::SAMPLE_TTL_SECONDS);
+            $comparable = is_array($previous) && isset($previous['at']) && is_array($previous['counters'] ?? null);
+            $window = $comparable ? $sampledAt - (float) $previous['at'] : 0.0;
+
+            // The stored sample is only replaced once it is old enough to have been used for
+            // something. Overwriting it on every dashboard refresh would hold the window under a
+            // second for as long as anyone was watching, and the rates would never appear at all.
+            if (!$comparable || $window >= self::MIN_INTERVAL_SECONDS) {
+                Cache::put(self::PREVIOUS_KEY, $sample, self::SAMPLE_TTL_SECONDS);
+            }
         } catch (Throwable) {
             // A cache store that has fallen over costs the rates, not the page.
             return 'The cache store is unavailable, so there is no previous sample to compare against.';
         }
 
-        if (!is_array($previous) || !isset($previous['at']) || !is_array($previous['counters'] ?? null)) {
+        if (!$comparable) {
             return 'Collecting the first sample; rates appear one minute after monitoring starts.';
         }
 
-        $window = $sampledAt - (float) $previous['at'];
         if ($window < self::MIN_INTERVAL_SECONDS) {
             return 'The previous sample is too recent to derive a rate from.';
         }
@@ -573,11 +584,48 @@ class DatabaseCollector implements Collector
             $windowRequests = $deltas['counters']['innodb_buffer_pool_read_requests'] ?? 0.0;
             $windowReads = $deltas['counters']['innodb_buffer_pool_reads'] ?? 0.0;
             $note .= $windowRequests > 0
-                ? ' Over the last ' . round($deltas['window'], 1) . 's it was ' . round(100 * max(0, $windowRequests - $windowReads) / $windowRequests, 2) . '%.'
+                ? ' Over the last ' . round($deltas['window'], 1) . 's it was ' . $this->hitRatio($windowRequests, $windowReads) . '%.'
                 : ' No page was requested from the buffer pool in the last window.';
         }
 
-        return Metric::of(round(100 * max(0, $requests - $reads) / $requests, 2), $source, '%', $note);
+        return Metric::of($this->hitRatio($requests, $reads), $source, '%', $note);
+    }
+
+    /**
+     * The same ratio over the last window, which is the one that belongs on a chart.
+     *
+     * The lifetime figure saturates: after a week of uptime a pool thrashing right now still reads
+     * 99%, so a line drawn from it stays flat straight through the incident it was meant to show.
+     *
+     * @param  array<string, string>|Metric  $status
+     * @param  array{window: float, counters: array<string, float>}|string  $deltas
+     */
+    private function bufferPoolHitRatioWindow(array|Metric $status, array|string $deltas): Metric
+    {
+        if ($status instanceof Metric) {
+            return $status;
+        }
+
+        $source = $this->source('SHOW GLOBAL STATUS');
+        if (is_string($deltas)) {
+            return Metric::noData($source, $deltas);
+        }
+
+        $requests = $deltas['counters']['innodb_buffer_pool_read_requests'] ?? null;
+        $reads = $deltas['counters']['innodb_buffer_pool_reads'] ?? null;
+        if ($requests === null || $reads === null) {
+            return Metric::notSupported($source, 'This server does not publish the InnoDB buffer pool read counters.');
+        }
+        if ($requests <= 0) {
+            return Metric::noData($source, 'No page was requested from the buffer pool in the last window.');
+        }
+
+        return Metric::of($this->hitRatio($requests, $reads), $source, '%', $this->windowNote($deltas));
+    }
+
+    private function hitRatio(float $requests, float $reads): float
+    {
+        return round(100 * max(0, $requests - $reads) / $requests, 2);
     }
 
     /**
@@ -624,7 +672,7 @@ class DatabaseCollector implements Collector
         $threshold = $this->variableString($variables, 'long_query_time');
         $note = 'Since the server started';
         if ($threshold !== null) {
-            $note .= ', counting statements slower than ' . rtrim(rtrim($threshold, '0'), '.') . 's (long_query_time)';
+            $note .= ', counting statements slower than ' . $this->trimSeconds($threshold) . 's (long_query_time)';
         }
 
         return $this->counter($status, 'Slow_queries', 'queries', $note . '.');
@@ -748,6 +796,12 @@ class DatabaseCollector implements Collector
     /**
      * What the server is doing right now, which is the only part of this page that is not history.
      *
+     * Without the PROCESS privilege the server does not refuse this query — it quietly answers with
+     * this login's own threads and nothing else. Threads_connected is what settles it: while the two
+     * agree, every connection really is in view; the moment it is higher, the rest of the server is
+     * hidden and a count of long-running statements taken from what is left would be the reassuring
+     * zero this whole page exists to avoid.
+     *
      * @param  array<string, string>|Metric  $status
      * @return array<string, Metric>
      */
@@ -755,41 +809,49 @@ class DatabaseCollector implements Collector
     {
         $source = $this->source('information_schema.processlist');
         $names = ['processlist_count', 'long_running_queries'];
+        $grant = 'GRANT PROCESS ON *.* TO ' . $this->account($connection) . ';';
 
         try {
-            $row = (array) $connection->selectOne(
+            $row = (array) ($connection->selectOne(
                 'select count(*) as threads,'
                 . ' coalesce(sum(case when command not in (?, ?, ?) and time >= ? then 1 else 0 end), 0) as long_running'
                 . ' from information_schema.processlist',
                 ['Sleep', 'Daemon', 'Binlog Dump', self::LONG_RUNNING_SECONDS],
-            );
+            ) ?? []);
         } catch (Throwable $exception) {
-            return array_fill_keys($names, $this->unavailable(
-                $exception,
-                $source,
-                'information_schema.processlist',
-                'GRANT PROCESS ON *.* TO ' . $this->account($connection) . ';',
-            ));
+            return array_fill_keys($names, $this->unavailable($exception, $source, 'information_schema.processlist', $grant));
         }
 
-        $visible = (int) ($row['threads'] ?? 0);
-        $connected = $this->number(is_array($status) ? $status : [], 'Threads_connected');
+        if (!isset($row['threads'])) {
+            return array_fill_keys($names, Metric::noData($source, 'The server answered the process list query with no row.'));
+        }
 
-        // Without PROCESS the server does not refuse this query, it quietly returns only this
-        // login's own threads — so the count is compared against Threads_connected rather than
-        // presented as the whole picture.
-        $hidden = $connected !== null && $connected > $visible
-            ? " The server reports {$connected} connections but only {$visible} are visible to this login; without the PROCESS privilege other users' threads are hidden."
-            : '';
+        $visible = (int) $row['threads'];
+        $connected = $this->number(is_array($status) ? $status : [], 'Threads_connected');
+        $blind = $connected !== null && $connected > $visible;
+
+        $scope = match (true) {
+            $blind => ' The server reports ' . (int) $connected . " connections but only {$visible} are visible to this login;"
+                . " without the PROCESS privilege other accounts' threads are hidden.",
+            $connected === null => ' Threads_connected is unavailable, so whether this login can see the whole server could not be checked.',
+            default => ' Threads_connected agrees with this count, so nothing is hidden from this login.',
+        };
 
         return [
-            'processlist_count' => Metric::of($visible, $source, 'threads', 'Every connection the server is holding, idle ones included.' . $hidden),
-            'long_running_queries' => Metric::of(
-                (int) ($row['long_running'] ?? 0),
-                $source,
-                'queries',
-                'Statements running longer than ' . self::LONG_RUNNING_SECONDS . 's. The statements themselves are not published here: query text carries customer data.',
-            ),
+            'processlist_count' => Metric::of($visible, $source, 'threads', 'Connections visible to this login, idle ones included.' . $scope),
+            'long_running_queries' => $blind
+                ? Metric::permissionDenied(
+                    $source,
+                    'Only ' . $visible . ' of the ' . (int) $connected . " connections the server is holding are visible to this login,"
+                    . ' so a statement running long on another account would not be counted here.',
+                    $grant,
+                )
+                : Metric::of(
+                    (int) ($row['long_running'] ?? 0),
+                    $source,
+                    'queries',
+                    'Statements running longer than ' . self::LONG_RUNNING_SECONDS . 's. The statements themselves are not published here: query text carries customer data.' . $scope,
+                ),
         ];
     }
 
@@ -920,9 +982,12 @@ class DatabaseCollector implements Collector
         }
 
         if ($enabled === []) {
+            $wanted = implode(',', self::INNODB_METRICS);
+
             return Metric::notConfigured(
                 $source,
-                'SET GLOBAL innodb_monitor_enable = "' . implode(',', self::INNODB_METRICS) . '";',
+                "SET GLOBAL innodb_monitor_enable = '{$wanted}'; (needs SUPER, and is lost on restart — add"
+                . " innodb_monitor_enable = {$wanted} under [mysqld] to make it stick.)",
                 'Every counter asked for is switched off on this server, and a disabled counter still reports 0.',
             );
         }
@@ -956,7 +1021,7 @@ class DatabaseCollector implements Collector
                 true,
                 $source,
                 null,
-                'Logging statements slower than ' . rtrim(rtrim($threshold, '0'), '.') . 's to '
+                'Logging statements slower than ' . $this->trimSeconds($threshold) . 's to '
                 . ($this->variableString($variables, 'slow_query_log_file') ?? 'the configured slow log') . '.',
             );
         }
@@ -969,6 +1034,73 @@ class DatabaseCollector implements Collector
     }
 
     // ---- helpers ------------------------------------------------------------------------------
+
+    /**
+     * A connection that never opened, told apart by the number the server refused it with.
+     *
+     * A wrong password, an account that may not come in from this host and a mistyped DB_DATABASE
+     * all arrive here as one exception, and each is a different one-line fix. Reporting all three
+     * as "failed" hands the operator a PDO message and leaves them to guess which it was.
+     */
+    private function connectionFailure(Connection $connection, Throwable $exception, string $source): Metric
+    {
+        $code = $this->driverErrorCode($exception);
+        $config = $connection->getConfig();
+        $database = is_string($config['database'] ?? null) && $config['database'] !== '' ? $config['database'] : '<database>';
+
+        if (in_array($code, self::LOGIN_DENIED_CODES, true)) {
+            $account = $this->refusedAccount($exception, $connection);
+
+            return Metric::permissionDenied(
+                $source,
+                'The server refused the login: ' . $this->driverMessage($exception),
+                "Check DB_USERNAME and DB_PASSWORD in .env. If those are right the account may not connect from this"
+                . " host, which is a different account row: CREATE USER {$account} IDENTIFIED BY '<password>';"
+                . " GRANT ALL PRIVILEGES ON `{$database}`.* TO {$account}; FLUSH PRIVILEGES;",
+            );
+        }
+
+        if (in_array($code, self::ABSENT_CODES, true)) {
+            return Metric::notConfigured(
+                $source,
+                'Point DB_DATABASE in .env at a schema that exists, or create this one:'
+                . " CREATE DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
+                'The server answered, but has no schema by that name: ' . $this->driverMessage($exception),
+            );
+        }
+
+        return Metric::failed($source, $exception);
+    }
+
+    /**
+     * The account the server itself named while refusing the login.
+     *
+     * It is the grantee a GRANT has to target, and it is not always the one in .env: connecting to
+     * 127.0.0.1 can be matched against 'staging'@'localhost', and granting to the other one of those
+     * changes nothing.
+     */
+    private function refusedAccount(Throwable $exception, Connection $connection): string
+    {
+        if (preg_match("/for user '([^']*)'@'([^']*)'/", $this->driverMessage($exception), $match) === 1) {
+            return "'{$match[1]}'@'{$match[2]}'";
+        }
+
+        return $this->account($connection);
+    }
+
+    /**
+     * SHOW GLOBAL STATUS and SHOW GLOBAL VARIABLES need no privilege of their own.
+     *
+     * So a refusal is either MySQL 8 refusing the performance_schema table the statement reads
+     * underneath, or a proxy in front of the server filtering it. GRANT USAGE — the grant that
+     * grants nothing — would answer neither, which is why it is not offered here.
+     */
+    private function showRemedy(Connection $connection, string $table): string
+    {
+        return 'GRANT SELECT ON performance_schema.' . $table . ' TO ' . $this->account($connection)
+            . '; If the account already has that, the connection is going through a proxy or a managed-database'
+            . ' policy that filters the statement, and it has to be allowed there instead.';
+    }
 
     /**
      * Turn a driver error into the state that names the fix.
@@ -1074,6 +1206,17 @@ class DatabaseCollector implements Collector
         $value = $variables[strtolower($name)] ?? null;
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * long_query_time comes back as "10.000000"; the zeros are noise on a dashboard.
+     *
+     * Only ever trimmed past the decimal point — a server that answers "100" would otherwise be
+     * printed as "1".
+     */
+    private function trimSeconds(string $seconds): string
+    {
+        return str_contains($seconds, '.') ? rtrim(rtrim($seconds, '0'), '.') : $seconds;
     }
 
     private function toMegabytes(int|float $bytes): float
