@@ -26,7 +26,7 @@ class IncidentManager
      * Long enough that a stall which flaps for a few minutes stays one incident; short enough that
      * tomorrow's unrelated failure does not get filed under today's.
      */
-    private const CORRELATION_WINDOW_MINUTES = 30;
+    public const CORRELATION_WINDOW_MINUTES = 30;
 
     public function __construct(private readonly EventLog $events)
     {

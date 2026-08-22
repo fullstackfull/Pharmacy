@@ -737,7 +737,7 @@ class ApplicationPanel implements Panel
                 return [
                     'state' => 'no_data',
                     'note' => 'No deployment has been recorded in the last ' . self::DEPLOYMENT_WINDOW_DAYS . ' days, so nothing here can tie a change in behaviour to a release.',
-                    'remedy' => 'Record each deploy into monitoring_deployments as the last step of the deployment script; the timeline and incident sections read the same table.',
+                    'remedy' => 'Run `php artisan monitoring:deploy-recorded --release=…` as the last step of the deployment script; the timeline and incident sections read the same table.',
                 ];
             }
 

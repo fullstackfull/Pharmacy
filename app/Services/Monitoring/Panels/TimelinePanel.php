@@ -100,10 +100,10 @@ class TimelinePanel implements Panel
             'remedy' => null,
         ],
         EventLog::CONFIG => [
-            'produced' => false,
-            'producer' => null,
-            'note' => 'Nothing in this build writes a config event. Monitoring is read-only here — every route in the section is a GET — so a threshold, a retention window or an alert rule changed directly in the database leaves no mark on this axis.',
-            'remedy' => 'A config event needs the settings write action to hang off. Until it exists, changes made straight to monitoring_settings are invisible here; a row inserted into monitoring_events with type=config is drawn as soon as it exists.',
+            'produced' => true,
+            'producer' => 'php artisan monitoring:synthetic',
+            'note' => 'Written when a synthetic journey is defined or removed. Monitoring has no settings screen that writes — every route in the section is a GET — so a threshold or an alert rule changed straight in the database still leaves no mark here.',
+            'remedy' => null,
         ],
         EventLog::CHECK => [
             'produced' => true,
@@ -112,10 +112,10 @@ class TimelinePanel implements Panel
             'remedy' => null,
         ],
         EventLog::ANNOTATION => [
-            'produced' => false,
-            'producer' => null,
-            'note' => 'No annotation has a producer. Nothing in this build lets a human write a note onto the axis, so "we restarted the database at 14:00" is not on this page next to the traffic it explains.',
-            'remedy' => 'Annotations need a write route; monitoring is GET-only in this build. A row inserted into monitoring_events with type=annotation, severity=info and an occurred_at is drawn here immediately.',
+            'produced' => true,
+            'producer' => 'php artisan monitoring:annotate',
+            'note' => 'The one entry a machine cannot write: "we restarted the database at 14:00", "this spike is the radio advert". Takes --at, so a note typed at 09:00 lands on the axis at 02:00 where the thing actually happened.',
+            'remedy' => null,
         ],
     ];
 

@@ -308,6 +308,13 @@ class MonitoringRollup extends Command
             ['monitoring_check_results', 'checked_at', (int) ($retention['hour_days'] ?? 90)],
             ['monitoring_scheduled_runs', 'started_at', (int) ($retention['hour_days'] ?? 90)],
             ['monitoring_events', 'occurred_at', (int) ($retention['incident_days'] ?? 400)],
+            // The operations history. These three grow one row per backup, per deploy and per
+            // outage — slowly, but forever: without an entry here they were the only monitoring
+            // tables with no lifetime at all, so a shop three years old still carried its first
+            // week of deploys. They share incident_days because they are read together: an
+            // incident whose deployment row has been pruned has lost the answer to "what changed".
+            ['monitoring_backups', 'started_at', (int) ($retention['incident_days'] ?? 400)],
+            ['monitoring_deployments', 'deployed_at', (int) ($retention['incident_days'] ?? 400)],
         ] as [$table, $column, $days]) {
             $deleted += $this->deleteInChunks(
                 fn () => $this->connection()->table($table)->where($column, '<', Clock::daysAgo(max(1, $days))),
@@ -317,6 +324,12 @@ class MonitoringRollup extends Command
         // Spans belong to their trace; orphans would otherwise outlive it forever.
         $deleted += $this->deleteInChunks(fn () => $this->connection()->table('monitoring_spans')
             ->whereNotIn('trace_id', $this->connection()->table('monitoring_traces')->select('trace_id')));
+
+        // An incident that is CLOSED and older than the window. An open one is never pruned,
+        // however old it is — an incident nobody resolved is the one row worth keeping.
+        $deleted += $this->deleteInChunks(fn () => $this->connection()->table('monitoring_incidents')
+            ->whereNotNull('resolved_at')
+            ->where('started_at', '<', Clock::daysAgo(max(1, (int) ($retention['incident_days'] ?? 400)))));
 
         // An error group whose every occurrence has aged out, and which nobody is looking at.
         // Counted, like every other delete here: the command reports how many rows it removed, and

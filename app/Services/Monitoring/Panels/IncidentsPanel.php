@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Alerting\IncidentManager;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
@@ -59,14 +60,6 @@ class IncidentsPanel implements Panel
     /** The comparison operators an alert rule can carry, so a stored one is echoed only if it is ours. */
     private const OPERATORS = ['>', '<', '>=', '<=', '=='];
 
-    /**
-     * How long an open incident keeps absorbing new signals.
-     *
-     * Mirrors IncidentManager::CORRELATION_WINDOW_MINUTES, which is private. It is restated rather
-     * than guessed because the number is the definition of the word "incident" on this page, and a
-     * page that describes the grouping without saying how wide it is has not described it.
-     */
-    private const CORRELATION_WINDOW_MINUTES = 30;
 
     /** The one class that writes this table. Named on the page so the list can be reasoned about. */
     private const WRITER = 'app/Services/Monitoring/Alerting/IncidentManager.php';
@@ -150,7 +143,7 @@ class IncidentsPanel implements Panel
     private function definition(): array
     {
         return [
-            'correlation_window_minutes' => self::CORRELATION_WINDOW_MINUTES,
+            'correlation_window_minutes' => IncidentManager::CORRELATION_WINDOW_MINUTES,
             'writer' => self::WRITER,
             'severities' => self::SEVERITIES,
             'severities_written' => self::SEVERITIES_WRITTEN,
@@ -179,7 +172,7 @@ class IncidentsPanel implements Panel
         $base = [
             'source' => self::RULES_SOURCE . ', ' . self::STATES_SOURCE,
             'schedule' => 'php artisan monitoring:evaluate, scheduled every minute',
-            'correlation_window_minutes' => self::CORRELATION_WINDOW_MINUTES,
+            'correlation_window_minutes' => IncidentManager::CORRELATION_WINDOW_MINUTES,
             'rules_total' => null,
             'rules_enabled' => null,
             'last_evaluated_at' => null,

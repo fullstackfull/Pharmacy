@@ -665,6 +665,8 @@ class AlertsPanel implements Panel
 
     private function failureNote(\Throwable $exception): string
     {
-        return class_basename($exception) . ': ' . $exception->getMessage();
+        // Not the raw message: a QueryException carries the statement with its bound values, so
+        // this used to be able to print a customer's email onto the alerts screen.
+        return Metric::describeFailure($exception);
     }
 }

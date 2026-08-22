@@ -115,7 +115,7 @@ class SettingsPanel implements Panel
         'incident_days' => [
             'env' => 'MONITORING_RETENTION_INCIDENT_DAYS',
             'what' => 'how_long_the_event_stream_behind_incidents_and_the_timeline_is_kept',
-            'note' => 'Prunes monitoring_events. Incident records themselves are never deleted by the pruner.',
+            'note' => 'Prunes monitoring_events, monitoring_backups, monitoring_deployments and RESOLVED incidents. An incident nobody closed is never pruned, however old it is.',
         ],
     ];
 

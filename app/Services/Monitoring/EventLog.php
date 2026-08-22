@@ -53,6 +53,9 @@ class EventLog
     public const WARNING = 'warning';
     public const CRITICAL = 'critical';
 
+    /** @var array<int, string> */
+    public const SEVERITIES = [self::INFO, self::SUCCESS, self::WARNING, self::CRITICAL];
+
     /**
      * @param  array<string, mixed>  $context  redacted before it is stored
      * @param  int|null  $relatedId  the row this event is about (an incident, a deployment, a backup)
@@ -65,6 +68,7 @@ class EventLog
         ?string $description = null,
         array $context = [],
         ?int $relatedId = null,
+        ?string $occurredAt = null,
     ): void {
         try {
             $this->connection()->table('monitoring_events')->insert([
@@ -75,12 +79,24 @@ class EventLog
                 'description' => $description,
                 'context' => $context === [] ? null : json_encode(app(Redactor::class)->array($context)),
                 'related_id' => $relatedId,
-                'occurred_at' => Clock::stamp(),
+                // A note may be written after the fact — "the ISP maintenance was at 02:00" is
+                // typed at 09:00 — so an explicit time lands on the axis where it belongs, while
+                // an unparseable one falls back to now rather than losing the entry.
+                'occurred_at' => $occurredAt !== null ? $this->stampFor($occurredAt) : Clock::stamp(),
                 'created_at' => Clock::stamp(),
             ]);
         } catch (\Throwable) {
             // A timeline that cannot be written is a gap in a chart. An exception here would be an
             // outage caused by the system that exists to notice outages.
+        }
+    }
+
+    private function stampFor(string $occurredAt): string
+    {
+        try {
+            return Clock::parse($occurredAt)->toDateTimeString();
+        } catch (\Throwable) {
+            return Clock::stamp();
         }
     }
 

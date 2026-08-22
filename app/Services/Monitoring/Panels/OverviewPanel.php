@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Collectors\CollectorRegistry;
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\HealthScoreService;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
@@ -396,7 +397,7 @@ class OverviewPanel implements Panel
                     'label' => 'backups',
                     'state' => 'not_configured',
                     'detail' => 'No backup has ever been recorded.',
-                    'remedy' => 'Report each backup to monitoring with `php artisan monitoring:backup-recorded`, or run the bundled backup command from cron.',
+                    'remedy' => 'Report each backup to monitoring with `php artisan monitoring:backup-recorded` as the last line of whatever script takes it; monitoring records backups, it does not take them.',
                     'section' => 'backups',
                     'source' => 'monitoring_backups',
                 ];
@@ -558,6 +559,11 @@ class OverviewPanel implements Panel
                 ->get(['type', 'severity', 'title', 'occurred_at'])
                 ->map(static fn ($row) => [
                     'type' => $row->type,
+                    // `type` is a plain column: a foreign producer can put anything in it, and
+                    // translate() MINTS a language key for whatever it is handed. Without this the
+                    // events strip would write a new key into new-messages.php for every unknown
+                    // value that ever lands in the table.
+                    'type_known' => in_array($row->type, EventLog::TYPES, true),
                     'severity' => $row->severity,
                     'title' => $row->title,
                     'at' => Clock::display($row->occurred_at)->toDateTimeString(),
