@@ -59,8 +59,10 @@ class UserLoyaltyController extends Controller
     {
         $startDate = '';
         $endDate = '';
-        if (isset($request['transaction_range']) && !empty($request['transaction_range'])) {
-            $dates = explode(' - ', $request['transaction_range']);
+        if (!empty($request['transaction_range'])) {
+            // is_string first: explode() rejects an array, so the format check below — which is
+            // the real validation, and which toasts — could never be reached for one.
+            $dates = is_string($request['transaction_range']) ? explode(' - ', $request['transaction_range']) : [];
             if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
                 Toastr::error(translate('Invalid_date_range_format'));
                 return back();

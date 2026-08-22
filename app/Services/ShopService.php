@@ -129,7 +129,10 @@ class ShopService
             return null;
         }
 
-        if ($request->shop_name && !str_contains(strtolower(getInHouseShopConfig('name')), strtolower($request->shop_name))) {
+        // is_string, not truthiness: `?shop_name[]=x` is truthy and strtolower() rejects an array.
+        // A name nobody can spell does not exclude the in-house shop, it simply does not filter.
+        if (is_string($request->shop_name) && $request->shop_name !== ''
+            && !str_contains(strtolower(getInHouseShopConfig('name')), strtolower($request->shop_name))) {
             return null;
         }
 

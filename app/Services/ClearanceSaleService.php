@@ -8,15 +8,19 @@ class ClearanceSaleService
 {
     public function getConfigData(object|array $request, string $setupBy, int|null $vendorId = null, int|null $shopId = null): array|bool
     {
-        $dates = explode(' - ', $request['clearance_sale_duration']);
+        // A duration that is not a string leaves both ends null, which the callers already
+        // treat as "no duration set" — rather than a TypeError out of explode().
+        $dates = is_string($request['clearance_sale_duration'] ?? null) ? explode(' - ', $request['clearance_sale_duration']) : [];
         $durationStartDate = (isset($dates[0]) && $dates[0] != null) ? Carbon::createFromFormat('m/d/Y h:i:s A', $dates[0]) : null;
         $durationEndDate = (isset($dates[1]) && $dates[1] != null) ? Carbon::createFromFormat('m/d/Y h:i:s A', $dates[1]) : null;
         $offerActiveRangeStart = null;
         $offerActiveRangeEnd = null;
         if (!empty($request['offer_active_range'])) {
-            $time = explode(' - ', $request['offer_active_range']);
-            $offerActiveRangeStart = date("H:i:s", strtotime($time[0]));
-            $offerActiveRangeEnd = date("H:i:s", strtotime($time[1]));
+            $time = is_string($request['offer_active_range']) ? explode(' - ', $request['offer_active_range']) : [];
+            if (count($time) === 2) {
+                $offerActiveRangeStart = date("H:i:s", strtotime($time[0]));
+                $offerActiveRangeEnd = date("H:i:s", strtotime($time[1]));
+            }
         }
 
         $data = [

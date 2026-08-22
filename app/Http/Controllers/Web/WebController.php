@@ -97,19 +97,6 @@ class WebController extends Controller
         return redirect()->route('home');
     }
 
-    public function search_shop(Request $request):View
-    {
-        $key = explode(' ', $request['shop_name']);
-        $sellers = Shop::where(function ($q) use ($key) {
-            foreach ($key as $value) {
-                $q->orWhere('name', 'like', "%{$value}%");
-            }
-        })->whereHas('seller', function ($query) {
-            return $query->where(['status' => 'approved']);
-        })->paginate(30);
-        return view(VIEW_FILE_NAMES['all_stores_page'], compact('sellers'));
-    }
-
     public function getAllCategoriesView(Request $request): View|RedirectResponse
     {
         $robotsMetaContentData = $this->robotsMetaContentRepo->getFirstWhere(params: ['page_name' => 'categories']);
@@ -237,6 +224,12 @@ class WebController extends Controller
             'robotsMetaContentData' => $robotsMetaContentData,
             'activeBrands' => $activeBrands,
             'categories'   => $categories,
+            // What the search box and the hidden field echo back. Passed from here rather than
+            // re-read in the view, because `?shop_name[]=x` reaches htmlspecialchars() as an array
+            // and takes the page down — the guard has to be on the value the page prints, not only
+            // on the value the query uses.
+            'shopName'    => is_string($request->shop_name) ? $request->shop_name : '',
+            'storeFilter' => is_string($request->filter) ? $request->filter : '',
         ]);
     }
 
@@ -1027,7 +1020,7 @@ class WebController extends Controller
         }
 
         if ($request['data_from'] == 'search') {
-            $key = explode(' ', $request['name']);
+            $key = searchTerms($request['name']);
             $query = $productData->where(function ($q) use ($key) {
                 foreach ($key as $value) {
                     $q->orWhere('name', 'like', "%{$value}%");

@@ -184,7 +184,7 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function getCustomerNameList(object $request, array|object|null $skipIds = [], int|string $dataLimit = DEFAULT_DATA_LIMIT): object
     {
-        $searchValue = explode(' ', $request['searchValue']);
+        $searchValue = searchTerms($request['searchValue'] ?? null);
         return $this->user->with('storage')
             ->when(!empty($skipIds) && count($skipIds) > 0, function ($query) use ($skipIds) {
                 $query->whereNotIn('id', $skipIds);

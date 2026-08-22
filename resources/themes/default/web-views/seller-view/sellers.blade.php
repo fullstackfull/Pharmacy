@@ -1,6 +1,6 @@
 @extends('layouts.front-end.app')
 
-@section('title', (request('filter') && request('filter') == 'top-vendors' ? translate('top_Stores') : translate('all_Stores')))
+@section('title', ($storeFilter === 'top-vendors' ? translate('top_Stores') : translate('all_Stores')))
 
 @push('css_or_js')
     <meta property="og:image" content="{{$web_config['web_logo']['path']}}"/>
@@ -21,19 +21,19 @@
                 <div class="col-lg-8 col-md-6">
                     <div class="d-flex flex-column gap-1 text-primary">
                         <h4 class="mb-0 text-start fw-bold text-primary text-uppercase">
-                            {{ (request('filter') && request('filter') == 'top-vendors' ? translate('top_Stores') : translate('all_Stores')) }}
+                            {{ $storeFilter === 'top-vendors' ? translate('top_Stores') : translate('all_Stores') }}
                         </h4>
                         <p class="fs-14 fw-semibold mb-0">{{translate('Find_your_desired_stores_and_shop_your_favourite_products')}}</p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <form action="{{ route('vendors') }}" method="get">
-                        @if(request('filter'))
-                            <input type="hidden" name="filter" value="{{ request('filter') }}">
+                        @if($storeFilter !== '')
+                            <input type="hidden" name="filter" value="{{ $storeFilter }}">
                         @endif
                         <div class="d-flex align-items-center gap-2 position-relative">
                             <input class="form-control appended-form-control pe-5rem search-page-button-input" type="search" autocomplete="off"
-                                placeholder="{{ translate('Search_Store') }}" name="shop_name" value="{{ request('shop_name') }}">
+                                placeholder="{{ translate('Search_Store') }}" name="shop_name" value="{{ $shopName }}">
                             <button class="input-group-append-overlay search_button d-md-block search-page-button" data-name="name">
                                 <span class="input-group-text">
                                     <i class="czi-search text-absolute-white"></i>
