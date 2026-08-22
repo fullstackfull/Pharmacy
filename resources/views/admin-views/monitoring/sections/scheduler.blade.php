@@ -48,6 +48,10 @@
         'late' => 'mon-pill--warning',
         'missed' => 'mon-pill--missed',
         'failed' => 'mon-pill--critical',
+        // A skipped run is a definite outcome — the task ran and its own condition told it not to
+        // proceed — so it takes the neutral filled pill. The dashed outline is reserved for the
+        // absence of a reading, and lending it to a measured outcome would read as a gap.
+        'skipped' => 'mon-pill--info',
         default => 'mon-pill--unknown',
     };
 
@@ -70,6 +74,12 @@
     ];
 
     $stoppedTasksShown = 12;
+
+    // A missing success rate has two causes that read as opposites. No settled run inside the
+    // window is a measurement; an aggregate that threw, or that was cut short before this task's
+    // name, is the absence of one. Printing "no runs in window" for the second reports an outage
+    // out of a query that never answered, which is the single mistake this section exists to avoid.
+    $ratesUnread = $statistics['state'] === 'failed' || !empty($statistics['truncated']);
 @endphp
 
 {{-- First, largest, and before any table: the fact that decides whether the rest of this page
@@ -227,6 +237,8 @@
                                 <small class="mon-metric__note" style="display:block">
                                     {{ $task['successes'] }}/{{ $task['settled'] }} {{ translate('runs') }}
                                 </small>
+                            @elseif ($ratesUnread)
+                                <span class="mon-metric__state">{{ translate('could_not_be_read') }}</span>
                             @else
                                 {{-- Zero settled runs is not a zero per cent success rate: it is the
                                      absence of anything to rate, and the two read as opposites. --}}

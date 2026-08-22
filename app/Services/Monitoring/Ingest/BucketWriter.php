@@ -51,13 +51,19 @@ class BucketWriter
     }
 
     /**
-     * Bound the number of distinct series written for one minute.
+     * Bound the number of distinct buckets written for one minute.
      *
      * Route patterns are supposed to be bounded, but a 404 catch-all, a scanner probing random
      * paths, or one unparameterised route is all it takes for "distinct routes" to become
-     * "distinct URLs". Beyond the cap the busiest are kept and the tail is folded into one
-     * `__other__` row — the totals stay correct, and the table cannot be made to explode by
-     * anyone who can send requests.
+     * "distinct URLs". Beyond the cap the busiest are kept and the tail is folded into an
+     * `__other__` row — the totals stay correct, and the table cannot be made to explode by anyone
+     * who can send requests.
+     *
+     * Each family is capped on its own terms, which is the part that used to be wrong. One shared
+     * sort read `hits` or `calls`, and a named series carries neither — it counts samples in `n` —
+     * so every gauge in the system sorted as zero and was evicted before a single-hit scanner
+     * route. And the tail of every family was folded into one `ser|__other__` row, which added CPU
+     * percent to queue-lag seconds and stored the result as a measurement.
      *
      * @param  array<string, array<string, float|int>>  $buckets
      * @return array<string, array<string, float|int>>
@@ -65,25 +71,99 @@ class BucketWriter
     private function capSeries(array $buckets): array
     {
         $limit = max(50, (int) config('monitoring.max_series_per_minute', 400));
+
         if (count($buckets) <= $limit) {
             return $buckets;
         }
 
-        uasort($buckets, static fn ($a, $b) => ($b['hits'] ?? $b['calls'] ?? 0) <=> ($a['hits'] ?? $a['calls'] ?? 0));
-        $kept = array_slice($buckets, 0, $limit, true);
-        $overflow = array_slice($buckets, $limit, null, true);
+        $families = [self::REQUEST_PREFIX => [], self::DEPENDENCY_PREFIX => [], self::SERIES_PREFIX => []];
 
-        foreach ($overflow as $bucket => $fields) {
-            $prefix = str_starts_with($bucket, self::REQUEST_PREFIX) ? self::REQUEST_PREFIX . 'web|GET|' : self::SERIES_PREFIX;
-            $target = $prefix . '__other__';
-            foreach ($fields as $field => $value) {
-                if (str_ends_with($field, ':min')) {
-                    $kept[$target][$field] = isset($kept[$target][$field]) ? min($kept[$target][$field], $value) : $value;
-                } elseif (str_ends_with($field, ':max')) {
-                    $kept[$target][$field] = isset($kept[$target][$field]) ? max($kept[$target][$field], $value) : $value;
-                } else {
-                    $kept[$target][$field] = ($kept[$target][$field] ?? 0) + $value;
+        foreach ($buckets as $identity => $fields) {
+            foreach ($families as $prefix => $_) {
+                if (str_starts_with($identity, $prefix)) {
+                    $families[$prefix][$identity] = $fields;
+                    continue 2;
                 }
+            }
+        }
+
+        return array_merge(
+            $this->capRequests($families[self::REQUEST_PREFIX], $limit),
+            $this->capDependencies($families[self::DEPENDENCY_PREFIX], $limit),
+            // Named series are not capped. Their names come from the collectors in this codebase,
+            // not from anything a visitor can influence, so the cap protects nothing here and
+            // dropping one loses a gauge the whole dashboard is built on.
+            $families[self::SERIES_PREFIX],
+        );
+    }
+
+    /**
+     * @param  array<string, array<string, float|int>>  $buckets
+     * @return array<string, array<string, float|int>>
+     */
+    private function capRequests(array $buckets, int $limit): array
+    {
+        if (count($buckets) <= $limit) {
+            return $buckets;
+        }
+
+        uasort($buckets, static fn ($a, $b) => ($b['hits'] ?? 0) <=> ($a['hits'] ?? 0));
+
+        $kept = array_slice($buckets, 0, $limit, true);
+
+        foreach (array_slice($buckets, $limit, null, true) as $identity => $fields) {
+            // req|channel|method|route — the channel and the method are kept, because folding an
+            // API POST into "web GET" files traffic under a channel and a verb it did not use.
+            $parts = explode('|', $identity, 4);
+            $channel = $parts[1] ?? 'web';
+            $method = $parts[2] ?? 'GET';
+
+            $kept = $this->fold($kept, self::REQUEST_PREFIX . $channel . '|' . $method . '|__other__', $fields);
+        }
+
+        return $kept;
+    }
+
+    /**
+     * @param  array<string, array<string, float|int>>  $buckets
+     * @return array<string, array<string, float|int>>
+     */
+    private function capDependencies(array $buckets, int $limit): array
+    {
+        if (count($buckets) <= $limit) {
+            return $buckets;
+        }
+
+        uasort($buckets, static fn ($a, $b) => ($b['calls'] ?? 0) <=> ($a['calls'] ?? 0));
+
+        $kept = array_slice($buckets, 0, $limit, true);
+
+        foreach (array_slice($buckets, $limit, null, true) as $identity => $fields) {
+            // dep|service|operation
+            $service = explode('|', $identity, 3)[1] ?? 'unknown';
+
+            $kept = $this->fold($kept, self::DEPENDENCY_PREFIX . $service . '|__other__', $fields);
+        }
+
+        return $kept;
+    }
+
+    /**
+     * Add one bucket's fields into another, respecting what each field means.
+     *
+     * @param  array<string, array<string, float|int>>  $kept
+     * @param  array<string, float|int>  $fields
+     * @return array<string, array<string, float|int>>
+     */
+    private function fold(array $kept, string $target, array $fields): array
+    {
+        foreach ($fields as $field => $value) {
+            if (str_ends_with($field, ':min')) {
+                $kept[$target][$field] = isset($kept[$target][$field]) ? min($kept[$target][$field], $value) : $value;
+            } elseif (str_ends_with($field, ':max')) {
+                $kept[$target][$field] = isset($kept[$target][$field]) ? max($kept[$target][$field], $value) : $value;
+            } else {
+                $kept[$target][$field] = ($kept[$target][$field] ?? 0) + $value;
             }
         }
 

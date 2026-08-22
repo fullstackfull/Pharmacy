@@ -321,6 +321,8 @@ class AlertsPanel implements Panel
     private function metricsSeenRecently(): ?array
     {
         try {
+            // available() answers null itself when it could not look, which is the case this
+            // method's own null is for; the catch stays for anything it does not handle.
             return $this->metrics->available();
         } catch (\Throwable) {
             // Silence here must not be reported as "this metric is missing": an unanswered
@@ -460,8 +462,13 @@ class AlertsPanel implements Panel
                 ? Metric::of(value: $engine['rules_enabled'], source: self::RULES_SOURCE)
                 : Metric::noData(source: self::RULES_SOURCE, note: 'No rule has been created yet.'),
             'where_alerts_are_sent' => $this->deliveryReading($rows),
-            'alert_events_recorded' => ($events['state'] ?? null) === 'ok' || ($events['state'] ?? null) === 'no_data'
-                ? Metric::of(value: count($events['rows'] ?? []), source: self::EVENTS_SOURCE, note: 'In the last ' . $events['window_days'] . ' days, newest ' . self::EVENT_LIMIT . ' shown.')
+            'alert_events_recorded' => ($events['total_in_window'] ?? null) !== null
+                ? Metric::of(
+                    value: $events['total_in_window'],
+                    source: self::EVENTS_SOURCE,
+                    note: 'In the last ' . $events['window_days'] . ' days'
+                        . ($events['total_in_window'] > self::EVENT_LIMIT ? ', newest ' . self::EVENT_LIMIT . ' shown below' : ''),
+                )
                 : Metric::noData(source: self::EVENTS_SOURCE, note: $events['note'] ?? null),
         ];
     }
@@ -560,9 +567,23 @@ class AlertsPanel implements Panel
             array_filter($rules['rows'] ?? [], static fn (array $rule) => $rule['exists']),
         ));
 
-        $base = ['window_days' => $days, 'limit' => self::EVENT_LIMIT, 'firings_recorded_in_state' => $recorded, 'rows' => []];
+        $base = [
+            'window_days' => $days,
+            'limit' => self::EVENT_LIMIT,
+            'firings_recorded_in_state' => $recorded,
+            // How many there ARE, which is not how many are shown. The reading below used to be
+            // count($rows) — a page size hard-capped at fifty, so a deployment with three thousand
+            // alert events in the window reported fifty.
+            'total_in_window' => null,
+            'rows' => [],
+        ];
 
         try {
+            $base['total_in_window'] = (int) $this->reader->connection()->table(self::EVENTS_SOURCE)
+                ->where('type', 'alert')
+                ->where('occurred_at', '>=', Clock::daysAgo($days))
+                ->count();
+
             $rows = $this->reader->connection()->table(self::EVENTS_SOURCE)
                 ->where('type', 'alert')
                 ->where('occurred_at', '>=', Clock::daysAgo($days))

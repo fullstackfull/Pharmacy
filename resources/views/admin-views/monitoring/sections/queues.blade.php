@@ -73,6 +73,16 @@
     $failures = $panel['failures'];
     $throughput = $panel['throughput'];
 
+    // Column gaps that share a reason are stated once between them. Four columns blank because the
+    // workers recorded nothing is one fact about this deployment, and four identical paragraphs
+    // under the table read as four separate faults — the same trap the backend banner avoids.
+    $columnGaps = [];
+    foreach ($queues['columns'] as $column => $gap) {
+        $key = $gap['state'] . '|' . ($gap['note'] ?? '') . '|' . ($gap['remedy'] ?? '');
+        $columnGaps[$key]['gap'] = $gap;
+        $columnGaps[$key]['columns'][] = translate($column);
+    }
+
     $verdictTone = match ($workers['verdict']) {
         'consuming' => 'ok',
         'stalled' => 'critical',
@@ -206,7 +216,11 @@
                             @else
                                 {{ $rate($row['per_minute']) }}
                                 <small class="mon-metric__note" style="display:block">
-                                    {{ $count($row['processed']) }} {{ translate('in_this_window') }}
+                                    {{-- The failures the workers recorded inside this window, which
+                                         is a different question from the backend's rolling 24h
+                                         count beside it. Computed either way, so drawing it
+                                         nowhere would make a measured number look unmeasured. --}}
+                                    {{ $count($row['processed']) }} {{ translate('in_this_window') }}@if ($row['failed_in_window'] !== null), {{ $count($row['failed_in_window']) }} {{ translate('of_them_failed') }}@endif
                                 </small>
                             @endif
                         </td>
@@ -249,14 +263,15 @@
 
         {{-- A column blank on every row is a fact about the driver, not about a queue — so it says
              which reading is missing and what would make it real. --}}
-        @foreach ($queues['columns'] as $column => $gap)
+        @foreach ($columnGaps as $group)
             <p class="mon-note">
-                <strong>{{ translate($column) }}</strong>: {{ $stateTitle($gap['state']) }} — {{ $gap['note'] }}
+                <strong>{{ implode(', ', $group['columns']) }}</strong>:
+                {{ $stateTitle($group['gap']['state']) }} — {{ $group['gap']['note'] }}
             </p>
-            @if (!empty($gap['remedy']))
+            @if (!empty($group['gap']['remedy']))
                 <details class="mon-metric__remedy">
                     <summary>{{ translate('how_to_enable_this') }}</summary>
-                    <code>{{ $gap['remedy'] }}</code>
+                    <code>{{ $group['gap']['remedy'] }}</code>
                 </details>
             @endif
         @endforeach
@@ -337,6 +352,13 @@
 <x-k.card :title="translate('jobs_completed_over_time')">
     @if (($panel['timeline']['state'] ?? '') === 'ok')
         <div class="mon-chart" data-mon-chart='@json(['points' => $panel['timeline']['points']])'></div>
+        @if (!empty($panel['timeline']['truncated']))
+            {{-- A line that stops before the window does reads as workers that stopped, so the cut
+                 is named rather than drawn. --}}
+            <p class="mon-note mon-note--critical">
+                {{ translate('this_window_holds_more_buckets_than_the_chart_reads_so_the_line_ends_before_the_window_does') }}
+            </p>
+        @endif
         <p class="mon-note">
             {{ translate('the_line_is_completed_jobs_per_bucket_the_red_line_is_the_failures_among_them') }}
             <code>{{ $throughput['source'] }}</code>, {{ translate('resolution') }}:
@@ -395,8 +417,9 @@
             </table>
         </div>
         <p class="mon-note">
-            {{ translate('only_the_first_line_of_each_exception_is_kept_and_it_has_been_redacted') }}
-            {{ translate('times_are_shown_in') }} {{ $failures['timezone'] }}.
+            {{ translate('only_the_first_line_of_each_exception_is_kept_and_it_has_been_redacted') }}.
+            {{ translate('times_are_shown_in') }} {{ $failures['timezone'] }},
+            {{ translate('converted_from_the_timezone_the_worker_stamped_them_in') }}.
         </p>
     @elseif ($failures['state'] === 'ok' || $failures['state'] === 'no_data')
         <x-k.empty icon="alert" :title="translate('no_failed_job_is_recorded')" :text="$failures['note'] ?? ''" />

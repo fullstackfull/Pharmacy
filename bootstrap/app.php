@@ -49,6 +49,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ConvertEmptyStringsToNull::class,
             DatabaseRefreshMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
+            // Global, not group-scoped: a request that matches no route never enters the web or api
+            // group, so every 404 — a broken link, a scanner sweeping the site — was invisible to
+            // monitoring, and the __unmatched__ series the recorder documents could not be reached.
+            // Out here it also measures the whole pipeline rather than the part inside the group.
+            // It binds a context on first pass and skips on the second, so the group entries below
+            // cost a container lookup and record nothing twice.
+            \App\Http\Middleware\MonitorRequest::class,
         ]);
         $middleware->group('web', [
             \App\Http\Middleware\EncryptCookies::class,

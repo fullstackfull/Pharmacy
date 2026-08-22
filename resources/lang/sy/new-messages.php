@@ -1322,4 +1322,9 @@ return [
 	'no_failed_job_is_recorded' => 'No failed job is recorded',
 	'laravel_populates_it_only_when_the_console_kernel_boots_which_is_why' => 'Laravel populates it only when the console kernel boots which is why',
 	'only_the_first_line_of_each_exception_is_kept_and_it_has_been_redacted' => 'Only the first line of each exception is kept and it has been redacted',
+	'the_defined_task_list_and_its_due_times_come_from_the_applications_own_schedule_object_registered_in' => 'The defined task list and its due times come from the applications own schedule object registered in',
+	'converted_from_the_timezone_the_worker_stamped_them_in' => 'Converted from the timezone the worker stamped them in',
+	'error_text_is_redacted_and_shortened_where_it_is_written_a_scheduled_task_message_is_a_reliable_place_to_find_a_token_or_a_customer_address' => 'Error text is redacted and shortened where it is written a scheduled task message is a reliable place to find a token or a customer address',
+	'recent_failed_jobs' => 'Recent failed jobs',
+	'state' => 'State',
 ];

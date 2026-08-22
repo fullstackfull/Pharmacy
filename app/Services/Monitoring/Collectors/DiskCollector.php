@@ -37,6 +37,8 @@ use RecursiveIteratorIterator;
  */
 class DiskCollector implements Collector
 {
+    private ?bool $hasTimeout = null;
+
     private const PREVIOUS_KEY = 'monitoring:disk:previous';
 
     private const SPACE_SOURCE = 'PHP disk_total_space()/disk_free_space()';
@@ -216,8 +218,14 @@ class DiskCollector implements Collector
             return null;
         }
 
+        // A row missing any of the three is not a usable space reading — the caller falls back to
+        // statvfs rather than publishing a size of zero.
+        if ($row === null || $row[0] === null || $row[1] === null || $row[2] === null) {
+            return null;
+        }
+
         // -k is POSIX and works on BusyBox and BSD too; GNU's -B1 does not.
-        return $row === null ? null : [$row[0] * 1024, $row[1] * 1024, $row[2] * 1024];
+        return [$row[0] * 1024, $row[1] * 1024, $row[2] * 1024];
     }
 
     /**
@@ -254,6 +262,14 @@ class DiskCollector implements Collector
         }
 
         [$total, $used] = $row;
+
+        if ($total === null || $used === null) {
+            return array_fill_keys(self::INODE_METRICS, Metric::notSupported(
+                self::INODE_SOURCE,
+                'This filesystem does not publish inode counts — df printed "-" where the numbers belong.',
+            ));
+        }
+
         if ($total <= 0) {
             return array_fill_keys(self::INODE_METRICS, Metric::notSupported(
                 self::INODE_SOURCE,
@@ -279,29 +295,50 @@ class DiskCollector implements Collector
     {
         $argument = escapeshellarg($path);
 
-        // timeout first, because df blocks forever on a hung NFS or CIFS mount and a monitoring
-        // page must never be the thing that hangs. The bare retry covers hosts without coreutils'
-        // timeout, where the first command exits without producing a line.
-        foreach (["timeout 5 df {$flags} -- {$argument}", "df {$flags} -- {$argument}"] as $command) {
-            $output = @shell_exec($command . ' 2>/dev/null');
-            if (!is_string($output)) {
-                continue;
-            }
+        // ONE command, and it is the bounded one wherever coreutils has it. Trying `timeout 5 df`
+        // and then falling back to a bare `df` defeated the guard entirely: on a hung NFS or CIFS
+        // mount the timeout does its job, the retry runs the same blocked call with no limit, and
+        // the dashboard hangs for as long as the mount does. The bare form is used only where
+        // there is no timeout binary to use.
+        $command = $this->hasTimeoutBinary()
+            ? "timeout 5 df {$flags} -- {$argument}"
+            : "df {$flags} -- {$argument}";
 
-            foreach (explode("\n", $output) as $line) {
-                // A filesystem that has no such counter prints "-" where the number belongs; the
-                // header row has words there and never matches.
-                if (preg_match('/^\S+\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)\s+(\d+%|-)\s+\S/', trim($line), $match) === 1) {
-                    return [
-                        ctype_digit($match[1]) ? (int) $match[1] : 0,
-                        ctype_digit($match[2]) ? (int) $match[2] : 0,
-                        ctype_digit($match[3]) ? (int) $match[3] : 0,
-                    ];
-                }
+        $output = @shell_exec($command . ' 2>/dev/null');
+
+        if (!is_string($output)) {
+            return null;
+        }
+
+        foreach (explode("\n", $output) as $line) {
+            // A filesystem that has no such counter prints "-" where the number belongs; the
+            // header row has words there and never matches. Null, not zero: "this filesystem does
+            // not publish a used figure" and "nothing is used" are different claims, and the
+            // second one sizes a disk wrongly.
+            if (preg_match('/^\S+\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)\s+(\d+%|-)\s+\S/', trim($line), $match) === 1) {
+                return [
+                    ctype_digit($match[1]) ? (int) $match[1] : null,
+                    ctype_digit($match[2]) ? (int) $match[2] : null,
+                    ctype_digit($match[3]) ? (int) $match[3] : null,
+                ];
             }
         }
 
         return null;
+    }
+
+    /**
+     * Is coreutils' timeout available? Probed once per process, with its own bounded call.
+     */
+    private function hasTimeoutBinary(): bool
+    {
+        if ($this->hasTimeout !== null) {
+            return $this->hasTimeout;
+        }
+
+        $found = @shell_exec('command -v timeout 2>/dev/null');
+
+        return $this->hasTimeout = is_string($found) && trim($found) !== '';
     }
 
     /**

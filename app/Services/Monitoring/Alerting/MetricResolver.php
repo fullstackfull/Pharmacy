@@ -40,10 +40,8 @@ class MetricResolver
     }
 
     /** @return array<int, string> every metric a rule may be written against, for the editor */
-    public function available(): array
+    public function available(): ?array
     {
-        $metrics = array_keys(self::REQUEST_METRICS);
-
         try {
             $stored = $this->reader->connection()->table('monitoring_series')
                 ->where('bucket_at', '>=', Clock::daysAgo(2))
@@ -52,9 +50,22 @@ class MetricResolver
                 ->limit(500)
                 ->pluck('metric')
                 ->all();
+
+            // The http.* metrics are derived from the request buckets rather than stored as series,
+            // so their presence has to be checked where they actually come from. Prepending them
+            // unconditionally — which is what this used to do — meant every rule about latency or
+            // error rate reported "the metric is arriving" on a deployment that had never recorded
+            // a single request, which is precisely the silence the column exists to expose.
+            $hasRequests = $this->reader->connection()->table('monitoring_request_buckets')
+                ->where('bucket_at', '>=', Clock::daysAgo(2))
+                ->exists();
         } catch (\Throwable) {
-            $stored = [];
+            // Null, not an empty list: an unanswered question is not a negative answer, and the
+            // panel renders the two differently.
+            return null;
         }
+
+        $metrics = $hasRequests ? array_keys(self::REQUEST_METRICS) : [];
 
         return array_values(array_unique(array_merge($metrics, $stored)));
     }

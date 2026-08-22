@@ -5229,4 +5229,9 @@ return [
 	'changed_within_this_window' => 'Changed within this window',
 	'nothing_settled_yet' => 'Nothing settled yet',
 	'failed_at' => 'Failed at',
+	'converted_from_the_timezone_the_worker_stamped_them_in' => 'Converted from the timezone the worker stamped them in',
+	'job' => 'Job',
+	'stored_history_also_exists_for_labels_this_host_no_longer_reports' => 'Stored history also exists for labels this host no longer reports',
+	'the_line_is_completed_jobs_per_bucket_the_red_line_is_the_failures_among_them' => 'The line is completed jobs per bucket the red line is the failures among them',
+	'processed' => 'Processed',
 ];
