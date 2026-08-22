@@ -133,6 +133,38 @@ class RedactorTest extends TestCase
         $this->assertNull($this->redactor->ip(null));
     }
 
+    public function test_a_compressed_ipv6_address_is_actually_masked(): void
+    {
+        // The mask used to split the TEXT on ':' and keep the first four groups, which is only ever
+        // right for a fully expanded address. 2001:db8::1 became "2001:db8::1::" — not an address,
+        // and still carrying the interface identifier the mask exists to remove.
+        config()->set('monitoring.privacy.mask_ip', true);
+
+        $this->assertSame('2001:db8::', $this->redactor->ip('2001:db8::1'));
+        $this->assertSame('::', $this->redactor->ip('::1'));
+        $this->assertSame('fe80::', $this->redactor->ip('fe80::abcd'));
+    }
+
+    public function test_one_address_written_two_ways_masks_to_one_value(): void
+    {
+        // The reason this is a counting bug and not only a formatting one: these are the same
+        // address, and anything that groups by the masked value used to see two.
+        config()->set('monitoring.privacy.mask_ip', true);
+
+        $this->assertSame(
+            $this->redactor->ip('2001:0db8:0000:0000:0000:0000:0000:0001'),
+            $this->redactor->ip('2001:db8::1'),
+        );
+    }
+
+    public function test_something_that_is_not_an_address_is_not_recorded_as_one(): void
+    {
+        config()->set('monitoring.privacy.mask_ip', true);
+
+        $this->assertNull($this->redactor->ip('nonsense'));
+        $this->assertNull($this->redactor->ip('192.168.11.55.9'));
+    }
+
     public function test_ip_masking_can_be_switched_off_deliberately(): void
     {
         config()->set('monitoring.privacy.mask_ip', false);

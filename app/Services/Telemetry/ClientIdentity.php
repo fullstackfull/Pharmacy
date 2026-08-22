@@ -2,6 +2,7 @@
 
 namespace App\Services\Telemetry;
 
+use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -117,9 +118,10 @@ class ClientIdentity
         }
 
         if ($mask) {
-            $address = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)
-                ? implode(':', array_slice(explode(':', $address), 0, 4)) . '::'
-                : preg_replace('/\.\d+$/', '.0', $address);
+            // Redactor holds the one masking rule, written against the address's bytes: the same
+            // IPv6 address can be spelled several ways, and masking the TEXT hashed 2001:db8::1 and
+            // 2001:0db8:0000:0000:0000:0000:0000:0001 — one address — to two different visitors.
+            $address = Redactor::networkOf($address) ?? $address;
         }
 
         return $this->salted($address, rotateDaily: true);
