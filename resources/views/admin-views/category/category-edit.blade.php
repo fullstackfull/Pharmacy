@@ -141,17 +141,22 @@
                                     </div>
                                 </div>
 
-                                @if ($category['parent_id'] == 0)
+                                {{-- Sub-categories get an icon of their own: the storefront draws them as an
+                                     entry strip under the category banner, and without artwork they fall back
+                                     to a letter chip. Optional below the top level. --}}
+                                @php($iconRequired = $category['parent_id'] == 0)
                                 <div class="col-lg-6 mt-4 mt-lg-0 from_part_2">
                                     <div
                                         class="d-flex justify-content-center align-items-center bg-section rounded-8 p-20 w-100 h-100">
                                         <div class="d-flex flex-column gap-30 error-wrapper">
                                             <div class="text-center">
                                                 <label for="" class="form-label fw-semibold mb-1">
-                                                    {{ translate('category_Logo') }}
-                                                    <span class="text-danger">*</span>
+                                                    {{ $iconRequired ? translate('category_Logo') : translate('category_icon') }}
+                                                    @if ($iconRequired)<span class="text-danger">*</span>@endif
                                                 </label>
-                                                <p class="fs-12 mb-0"> {{ translate('Upload_image') }}</p>
+                                                <p class="fs-12 mb-0">
+                                                    {{ $iconRequired ? translate('Upload_image') : translate('optional_shown_in_the_sub_category_strip_on_the_storefront') }}
+                                                </p>
                                             </div>
                                             <div class="upload-file">
                                                 {{-- Editing: an image already exists, so native `required` must not block the
@@ -200,7 +205,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                             </div>
 
                             @include('admin-views.partials._page-banner-field', ['currentBanner' => app(\App\Services\EntityPageBannerService::class)->current('category', (int) ($category['id'] ?? 0))])

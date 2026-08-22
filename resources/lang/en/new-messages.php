@@ -3819,4 +3819,7 @@ return [
 	'the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU' => 'The barcode printed on the product box (EAN or UPC). Leave it empty to print the SKU instead.',
 	'this_barcode_belongs_to_another_product' => 'This barcode belongs to another product',
 	'add_your_first_product_to_see_it_here' => 'Add your first product to see it here',
+	'optional_shown_in_the_sub_category_strip_on_the_storefront' => 'Optional shown in the sub category strip on the storefront',
+	'category_icon' => 'Category icon',
+	'no_icon_uploaded_yet' => 'No icon uploaded yet',
 ];

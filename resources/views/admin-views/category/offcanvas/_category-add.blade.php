@@ -220,20 +220,26 @@
                         @endif
                     @endif
 
-                    @if ($categoryType == 'category')
-                        <div class="d-flex flex-column gap-20">
+                    {{-- Every level gets an icon, not just the top one: the storefront draws
+                         sub-categories as an entry strip under the category banner, and without
+                         artwork they fall back to a letter chip. Required only for a main
+                         category, so adding a sub-category stays a two-field job. --}}
+                    @php($iconRequired = $categoryType == 'category')
+                    <div class="d-flex flex-column gap-20">
                             <div class="text-center">
                                 <label for="" class="form-label fw-semibold mb-1">
-                                    {{ translate('category_Logo') }}
-                                    <span class="text-danger">*</span>
+                                    {{ $iconRequired ? translate('category_Logo') : translate('category_icon') }}
+                                    @if ($iconRequired)<span class="text-danger">*</span>@endif
                                 </label>
-                                <p class="fs-12 mb-0"> {{ translate('Upload_image') }}</p>
+                                <p class="fs-12 mb-0">
+                                    {{ $iconRequired ? translate('Upload_image') : translate('optional_shown_in_the_sub_category_strip_on_the_storefront') }}
+                                </p>
                             </div>
                             <div class="upload-file">
                                 <input type="file" name="image" id="category-image"
                                     class="upload-file__input single_file_input"
                                     data-max-size="{{ getFileUploadMaxSize() }}"
-                                    data-required-msg="{{ translate('category_Logo_is_required') }}"
+                                    @if ($iconRequired) data-required-msg="{{ translate('category_Logo_is_required') }}" @endif
                                     accept="{{getFileUploadFormats(skip: '.svg,.gif')}},image/*">
                                 <label class="upload-file__wrapper">
                                     <div class="upload-file-textbox text-center">
@@ -268,8 +274,7 @@
                                     {{ THEME_RATIO[theme_root_path()]['Category Image'] }}
                                 </span>
                             </p>
-                        </div>
-                    @endif
+                    </div>
                 </div>
 
 

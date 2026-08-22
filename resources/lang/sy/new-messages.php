@@ -1070,4 +1070,7 @@ return [
 	"product_barcode" => "باركود المنتج",
 	"the_barcode_printed_on_the_product_box_EAN_or_UPC_leave_it_empty_to_print_the_SKU" => "الباركود المطبوع على علبة المنتج (EAN أو UPC). اتركه فارغًا ليُطبع رمز SKU بدلاً منه.",
 	"this_barcode_belongs_to_another_product" => "هذا الباركود مسجَّل لمنتج آخر",
+	"category_icon" => "أيقونة التصنيف",
+	"optional_shown_in_the_sub_category_strip_on_the_storefront" => "اختياري — تظهر في شريط التصنيفات الفرعية على المتجر",
+	"no_icon_uploaded_yet" => "لم تُرفع أيقونة بعد",
 ];

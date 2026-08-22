@@ -192,20 +192,25 @@
                         @endif
                     @endif
 
-                    @if ($category->position == 0)
-                        <div class="d-flex flex-column gap-20">
+                    {{-- Sub-categories carry an icon too: the storefront's category page draws them
+                         as an entry strip and falls back to a letter chip without one. Optional
+                         below the top level, so an existing sub-category can be saved untouched. --}}
+                    @php($iconRequired = $category->position == 0)
+                    <div class="d-flex flex-column gap-20">
                             <div class="text-center">
                                 <label for="" class="form-label fw-semibold mb-1">
-                                    {{ translate('category_Logo') }}
-                                    <span class="text-danger">*</span>
+                                    {{ $iconRequired ? translate('category_Logo') : translate('category_icon') }}
+                                    @if ($iconRequired)<span class="text-danger">*</span>@endif
                                 </label>
-                                <p class="fs-12 mb-0"> {{ translate('Upload_image') }}</p>
+                                <p class="fs-12 mb-0">
+                                    {{ $iconRequired ? translate('Upload_image') : translate('optional_shown_in_the_sub_category_strip_on_the_storefront') }}
+                                </p>
                             </div>
                             <div class="upload-file">
                                 <input type="file" name="image" id="category-image"
                                        class="upload-file__input single_file_input"
                                        data-max-size="{{ getFileUploadMaxSize() }}"
-                                       data-required-msg="{{ translate('category_Logo_is_required') }}"
+                                       @if ($iconRequired) data-required-msg="{{ translate('category_Logo_is_required') }}" @endif
                                        accept="{{getFileUploadFormats(skip: '.svg,.gif')}}">
                                 <label class="upload-file__wrapper">
                                     <div class="upload-file-textbox text-center">
@@ -243,8 +248,7 @@
                                     {{ THEME_RATIO[theme_root_path()]['Category Image'] }}
                                 </span>
                             </p>
-                        </div>
-                    @endif
+                    </div>
                 </div>
 
                 <div class="p-12 p-sm-20 bg-section rounded">
