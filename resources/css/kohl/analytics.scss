@@ -323,6 +323,8 @@
 }
 
 .ana-note { font-size: var(--k-text-sm, 13px); color: var(--k-text-muted); }
+/* A note that is a problem rather than an aside: the app is set up but the link will not open it. */
+.ana-note--warning { color: var(--k-warning-text); }
 .ana-muted { color: var(--k-text-muted); }
 .ana-warn { color: var(--k-warning, #d98d1a); }
 .ana-export { margin-top: var(--k-size-2, 8px); }

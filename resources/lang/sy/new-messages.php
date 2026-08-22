@@ -1287,4 +1287,12 @@ return [
 	'rules_without_a_recent_sample' => 'Rules without a recent sample',
 	'no_data_is_not_zero' => 'No data is not zero',
 	'folded_per_minute_per_route_percentiles_are_interpolated_from_the_stored_latency_histogram_not_from_sampled_requests' => 'Folded per minute per route percentiles are interpolated from the stored latency histogram not from sampled requests',
+	'total_time' => 'Total time',
+	'rules_that_fire_within_the_same_window_attach_to_one_incident_so_a_single_stall_arrives_as_one_problem_rather_than_six_alerts' => 'Rules that fire within the same window attach to one incident so a single stall arrives as one problem rather than six alerts',
+	'incident_grouping' => 'Incident grouping',
+	'recovery_sits_inside_the_firing_line_so_a_metric_resting_exactly_on_the_threshold_cannot_alternate_between_firing_and_recovering_every_minute' => 'Recovery sits inside the firing line so a metric resting exactly on the threshold cannot alternate between firing and recovering every minute',
+	'db_ms' => 'Db ms',
+	'count' => 'Count',
+	'route' => 'Route',
+	'what_the_shop_spends_its_day_answering_the_context_the_other_three_tables_are_read_against' => 'What the shop spends its day answering the context the other three tables are read against',
 ];

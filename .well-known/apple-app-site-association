@@ -7,7 +7,10 @@
                 "paths": [
                     "/",
                     "/product/*",
-                    "/track-order/*"
+                    "/brand/*",
+                    "/products",
+                    "/track-order/*",
+                    "/go/*"
                 ]
             }
         ]

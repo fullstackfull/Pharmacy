@@ -299,10 +299,9 @@
 
             const REOPEN_DELAY = 10 * 60 * 1000; // re-show 10 minutes after user closes
             const INITIAL_DELAY = 3000;
-            const STORE_URL = '{{ $isAndroid
-                ? (getWebConfig(name: "app_deep_link")["playstore_redirect_url"] ?? "")
-                : (getWebConfig(name: "app_deep_link")["app_store_redirect_url"] ?? "")
-            }}';
+            // Built by DetectMobile so it carries the campaign this visit arrived on: an install
+            // that came from a campaign is attributed to it instead of appearing out of nowhere.
+            const STORE_URL = @json($appInstallUrl ?? '');
 
             let reopenTimer = null;
 
@@ -334,6 +333,7 @@
             });
 
             installBtn.addEventListener("click", function () {
+                if (!STORE_URL) return;
                 window.location.href = STORE_URL;
             });
         });

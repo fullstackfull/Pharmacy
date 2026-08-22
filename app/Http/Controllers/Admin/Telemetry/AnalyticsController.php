@@ -203,6 +203,9 @@ class AnalyticsController extends BaseController
                 'campaigns' => $this->campaigns->all(),
                 'allowed_hosts' => app(\App\Services\Analytics\Support\CampaignDestination::class)->allowedHosts(),
                 'ready' => $this->campaigns->ready(),
+                // Whether a short link opens the app on a phone that has it. Without this the
+                // section could not tell a merchant why their QR code opens a browser.
+                'app_links' => $this->appLinkState(),
             ],
             'acquisition' => [
                 'sources' => $this->reporting->breakdown($window, 'source', 30),
@@ -313,4 +316,32 @@ class AnalyticsController extends BaseController
 
         return $breakdown;
     }
+
+    /**
+     * Whether campaign short links currently open the mobile app.
+     *
+     * Three things have to line up: the app has to be set up at all, /go/* has to be on the
+     * published path list, and the file on disk has to actually carry that list. Any one of them
+     * missing means a QR code on a poster opens a browser, and the campaigns section is where a
+     * merchant would look to find out why.
+     *
+     * @return array<string, mixed>
+     */
+    private function appLinkState(): array
+    {
+        $links = app(\App\Services\DeepLink\AppLinkService::class);
+        $writer = app(\App\Services\DeepLink\AssociationFileWriter::class);
+
+        $path = '/' . trim((string) config('analytics.campaigns.path', 'go'), '/') . '/x';
+        $published = $writer->published();
+
+        return [
+            'configured' => $links->isConfiguredForAnyPlatform(),
+            'campaign_path_is_published' => $links->opensTheApp($path),
+            'files_are_current' => !$published['exists']
+                || $published['paths'] === $links->paths(\App\Services\DeepLink\AppLinkService::PLATFORM_IOS),
+            'setup_url' => route('admin.system-setup.app-deep-link'),
+        ];
+    }
+
 }

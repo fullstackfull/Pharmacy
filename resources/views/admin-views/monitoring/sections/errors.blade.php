@@ -82,12 +82,14 @@
 @endif
 
 <div class="k-stats mon-stats">
+    {{-- The fallback prints the state the panel reported, not "no data": a window that could not
+         be read and a window that held nothing are different answers. --}}
     <x-k.stat :label="translate('error_groups_in_this_window')"
-              :value="$summary['state'] === 'ok' ? $count($summary['groups']) : translate('no_data')"
+              :value="$summary['state'] === 'ok' ? $count($summary['groups']) : translate($summary['state'])"
               icon="alert" :caption="translate('grouped_by_fingerprint')" />
 
     <x-k.stat :label="translate('new_groups')"
-              :value="$summary['state'] === 'ok' ? $count($summary['new_groups']) : translate('no_data')"
+              :value="$summary['state'] === 'ok' ? $count($summary['new_groups']) : translate($summary['state'])"
               icon="sparkles"
               :caption="$summary['state'] === 'ok'
                     ? $count($summary['recurring_groups']) . ' ' . translate('recurring')

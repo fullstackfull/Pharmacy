@@ -11,6 +11,8 @@ use App\Contracts\Repositories\VendorRepositoryInterface;
 use App\Enums\GlobalConstant;
 use App\Http\Requests\Admin\DeepLinkRequest;
 use App\Http\Requests\Admin\ProductSettingsUpdateRequest;
+use App\Services\DeepLink\AppLinkService;
+use App\Services\DeepLink\AssociationFileWriter;
 use App\Services\SettingService;
 use App\Traits\CalculatorTrait;
 use App\Traits\PaymentGatewayTrait;
@@ -312,7 +314,7 @@ class BusinessSettingsController extends BaseController
         return back();
     }
 
-    public function getAppDeepLinkView(): View
+    public function getAppDeepLinkView(AppLinkService $appLinks, AssociationFileWriter $writer): View
     {
         $getDeeplink = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'app_deep_link']);
         $deeplink = json_decode($getDeeplink?->value ?? '[]', true);
@@ -322,7 +324,20 @@ class BusinessSettingsController extends BaseController
             'base_writable' => is_writable(base_path()),
             'public_writable' => is_writable(public_path()),
         ];
-        return view('admin-views.system-setup.app-deep-link', compact('deeplink', 'fileStatus'));
+
+        // Which paths open the app, and which of them the file on disk actually claims. The two
+        // drift apart the moment the published list changes in code, which is exactly what
+        // happened when campaign short links became app links, so the screen shows both.
+        $linkPaths = [
+            'ios' => $appLinks->paths(AppLinkService::PLATFORM_IOS),
+            'android' => $appLinks->paths(AppLinkService::PLATFORM_ANDROID),
+        ];
+        $published = $writer->published();
+        $publishedIsStale = $published['exists'] && $published['paths'] !== $linkPaths['ios'];
+
+        return view('admin-views.system-setup.app-deep-link', compact(
+            'deeplink', 'fileStatus', 'linkPaths', 'published', 'publishedIsStale'
+        ));
     }
 
     public function updateAppDeepLink(DeepLinkRequest $request): RedirectResponse
@@ -344,80 +359,22 @@ class BusinessSettingsController extends BaseController
                 ])
             );
 
-            $this->createDeepLinkFiles($request);
+            $failed = array_filter(
+                app(AssociationFileWriter::class)->publish($request->all()),
+                static fn (array $result): bool => !$result['written'] && $result['reason'] !== 'not_configured'
+            );
+
+            if ($failed !== []) {
+                ToastMagic::error(translate('the_settings_were_saved_but_the_app_association_files_could_not_be_written'));
+                return back();
+            }
+
             ToastMagic::success(translate('updated_successfully'));
         } catch (\Exception $e) {
             ToastMagic::error(translate('update_failed') . ': ' . $e->getMessage());
         }
 
         return back();
-    }
-
-    /**
-     * Create deep link files in both base and public directories
-     * @throws \Exception
-     */
-    protected function createDeepLinkFiles($request): void
-    {
-        $filePaths = [
-            base_path('.well-known'),
-            public_path('.well-known')
-        ];
-
-        foreach ($filePaths as $wellKnownPath) {
-            if (!file_exists($wellKnownPath)) {
-                if (!mkdir($wellKnownPath, 0755, true)) {
-                    throw new \Exception('Failed to create .well-known directory at: ' . $wellKnownPath);
-                }
-            }
-            if (!is_writable($wellKnownPath)) {
-                throw new \Exception('.well-known directory is not writable at: ' . $wellKnownPath);
-            }
-            $this->createAssetLinksFile($wellKnownPath, $request);
-            $this->createAppleAppSiteAssociation($wellKnownPath, $request);
-        }
-    }
-
-    protected function createAssetLinksFile($path, $request): void
-    {
-        $assetLinks = [
-            [
-                'relation' => ['delegate_permission/common.handle_all_urls'],
-                'target' => [
-                    'namespace' => 'android_app',
-                    'package_name' => $request['android_package_name'],
-                    'sha256_cert_fingerprints' => [
-                        $request['android_sha256_fingerprint']
-                    ]
-                ]
-            ]
-        ];
-        $filePath = $path . '/assetlinks.json';
-        if (file_put_contents($filePath, json_encode($assetLinks, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) === false) {
-            throw new \Exception('Failed to create assetlinks.json at: ' . $filePath);
-        }
-        chmod($filePath, 0644);
-    }
-
-    protected function createAppleAppSiteAssociation($path, $request): void
-    {
-        $appleAppSiteAssociation = [
-            'applinks' => [
-                'apps' => [],
-                'details' => [
-                    [
-                        'appID' => $request['ios_team_id'] . '.' . $request['ios_bundle_id'],
-                        'paths' => config('deeplinks.ios_paths', ['*'])
-                    ]
-                ]
-            ]
-        ];
-
-        $filePath = $path . '/apple-app-site-association';
-        if (file_put_contents($filePath, json_encode($appleAppSiteAssociation, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) === false) {
-            throw new \Exception('Failed to create apple-app-site-association at: ' . $filePath);
-        }
-        chmod($filePath, 0644);
     }
 
     public function updateCookieSetting(Request $request): RedirectResponse

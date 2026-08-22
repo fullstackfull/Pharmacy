@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
  */
 class CampaignService
 {
+    private ?bool $hasSurfaceColumn = null;
+
     /** Short enough to type off a poster, long enough not to be guessable in bulk. */
     private const CODE_LENGTH = 7;
 
@@ -109,6 +111,11 @@ class CampaignService
 
     public function findByCode(string $code): ?object
     {
+        // Codes are minted from a lowercase alphabet, so folding case here can never collide with
+        // a different campaign — and it is the difference between a code read off a poster in
+        // capitals working and quietly landing on the home page.
+        $code = strtolower(trim($code));
+
         if (!$this->ready() || !preg_match('/^[a-z0-9]{4,24}$/', $code)) {
             return null;
         }
@@ -174,7 +181,7 @@ class CampaignService
         try {
             $now = Carbon::now();
 
-            $this->connection()->table('analytics_campaign_clicks')->insert([
+            $row = [
                 'campaign_id' => $campaign->id,
                 'visitor_id' => $context['visitor_id'] ?? null,
                 'ip_hash' => $context['ip_hash'] ?? null,
@@ -183,7 +190,17 @@ class CampaignService
                 'referrer_domain' => $context['referrer_domain'] ?? null,
                 'is_bot' => (bool) ($context['is_bot'] ?? false),
                 'clicked_at' => $now,
-            ]);
+            ];
+
+            // Whether the link opened in the app or a browser. Guarded on the column existing
+            // because code reaches a server before its migration does, and a campaign link that
+            // stops working during a deployment is worse than one that briefly stops saying where
+            // it was opened.
+            if ($this->hasSurfaceColumn()) {
+                $row['surface'] = $context['surface'] ?? 'web';
+            }
+
+            $this->connection()->table('analytics_campaign_clicks')->insert($row);
 
             // Bot clicks are recorded but never inflate the headline count on the campaign row,
             // which is the number a merchant judges the campaign by.
@@ -209,14 +226,23 @@ class CampaignService
             return [];
         }
 
+        // One grouped query rather than one per campaign: the list is rendered in full on every
+        // visit to the section, and a per-row count would be an N+1 the moment a shop has a dozen
+        // links.
+        $bySurface = $this->clicksBySurface();
+
         return $this->connection()->table('analytics_campaigns')
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (object $campaign) {
+            ->map(function (object $campaign) use ($bySurface) {
                 return [
                     'row' => $campaign,
                     'short_url' => $this->shortUrl($campaign->code),
                     'tagged_url' => $this->resolve($campaign->code)['url'] ?? null,
+                    // Where the link was opened. Null — not zero — when the column predates this
+                    // shop's deployment, because "we never recorded it" is not "it never happened".
+                    'app_clicks' => $bySurface === null ? null : (int) ($bySurface[$campaign->id]['app'] ?? 0),
+                    'web_clicks' => $bySurface === null ? null : (int) ($bySurface[$campaign->id]['web'] ?? 0),
                     // Clicks that never became a visit: an ad network's own crawler, a link
                     // checker, or a preview fetch. A large gap here is the sign that a click count
                     // from any shortener would have been badly misleading.
@@ -230,6 +256,35 @@ class CampaignService
                     'expired' => $campaign->expires_at !== null && Carbon::parse($campaign->expires_at)->isPast(),
                 ];
             })->all();
+    }
+
+    /**
+     * Clicks per campaign, split by where the link was opened.
+     *
+     * Null when the surface has never been recorded, so a screen can say so instead of drawing a
+     * bar chart of zeroes that reads as "nobody ever opened this in the app".
+     *
+     * @return array<int, array<string, int>>|null
+     */
+    private function clicksBySurface(): ?array
+    {
+        if (!$this->hasSurfaceColumn()) {
+            return null;
+        }
+
+        $rows = $this->connection()->table('analytics_campaign_clicks')
+            ->selectRaw('campaign_id, surface, COUNT(*) as total')
+            ->where('is_bot', false)
+            ->groupBy('campaign_id', 'surface')
+            ->get();
+
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $counts[(int) $row->campaign_id][$row->surface ?? 'web'] = (int) $row->total;
+        }
+
+        return $counts;
     }
 
     public function setActive(int $id, bool $active): void
@@ -318,5 +373,16 @@ class CampaignService
     private function connection(): \Illuminate\Database\Connection
     {
         return DB::connection(config('analytics.connection'));
+    }
+
+    /**
+     * Memoised for the request: recordClick runs on the redirect path and a schema lookup per click
+     * would put an information_schema query in front of every campaign link.
+     */
+    private function hasSurfaceColumn(): bool
+    {
+        return $this->hasSurfaceColumn ??= $this->connection()
+            ->getSchemaBuilder()
+            ->hasColumn('analytics_campaign_clicks', 'surface');
     }
 }

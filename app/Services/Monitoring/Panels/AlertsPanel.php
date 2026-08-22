@@ -55,6 +55,14 @@ class AlertsPanel implements Panel
     ) {
     }
 
+    /**
+     * The window selector is deliberately ignored here.
+     *
+     * A rule and its state are current facts with no window to read them over, and alert history
+     * is sparse by design — narrowing it to the selected five minutes would show an empty list on
+     * a system that alerted twice this morning. The history is bounded by the retention window
+     * instead, and says which one it used.
+     */
     public function data(string $range, Request $request): array
     {
         $rules = $this->rules();

@@ -226,7 +226,7 @@
             <table class="k-table">
                 <thead>
                 <tr>
-                    {{-- Ten columns of nowrap headers would otherwise squeeze the rule name to one
+                    {{-- Nine columns of nowrap headers would otherwise squeeze the rule name to one
                          word per line; the name and its description are what the table is read by. --}}
                     <th style="min-inline-size:230px">{{ translate('rule') }}</th>
                     <th>{{ translate('state') }}</th>
