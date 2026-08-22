@@ -206,7 +206,7 @@ class IncidentsPanel implements Panel
             // while letting it escape would blank an incident list that reads perfectly well.
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'remedy' => 'The alert tables are created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
             ]);
         }
@@ -347,7 +347,8 @@ class IncidentsPanel implements Panel
                 value: $resolution['mttd_seconds'],
                 source: self::SOURCE,
                 unit: 's',
-                note: 'Mean over ' . $resolution['mttd_samples'] . ' incidents. This measures the rule hold time, not human reaction.',
+                note: 'Mean over ' . $this->incidentCount($resolution['mttd_samples'])
+                    . '. This measures the rule hold time, not human reaction.',
             );
 
         $headline['mean_time_to_resolve'] = $resolution['mttr_seconds'] === null
@@ -361,11 +362,17 @@ class IncidentsPanel implements Panel
                 value: $resolution['mttr_seconds'],
                 source: self::SOURCE,
                 unit: 's',
-                note: 'Mean over ' . $resolution['mttr_samples'] . ' resolved incidents'
+                note: 'Mean over ' . $this->incidentCount($resolution['mttr_samples'], 'resolved ')
                     . ($resolution['still_open'] > 0 ? '; ' . $resolution['still_open'] . ' from this window are still open and are not in it.' : '.'),
             );
 
         return $headline;
+    }
+
+    /** "1 incident" rather than "1 incidents": the count is a sentence, not a column. */
+    private function incidentCount(int $count, string $qualifier = ''): string
+    {
+        return $count . ' ' . $qualifier . ($count === 1 ? 'incident' : 'incidents');
     }
 
     // -------------------------------------------------------------------------------------------
@@ -381,12 +388,12 @@ class IncidentsPanel implements Panel
      */
     private function filters(Request $request): array
     {
-        $severity = (string) $request->query('severity', 'all');
+        $severity = $this->queryString($request, 'severity');
         if (!in_array($severity, self::SEVERITIES, true)) {
             $severity = 'all';
         }
 
-        $status = (string) $request->query('status', 'all');
+        $status = $this->queryString($request, 'status');
         if (!in_array($status, array_merge(self::STATUSES, ['open_only']), true)) {
             $status = 'all';
         }
@@ -396,6 +403,20 @@ class IncidentsPanel implements Panel
             'status' => $status,
             'narrowed' => $severity !== 'all' || $status !== 'all',
         ];
+    }
+
+    /**
+     * One query value, or 'all' when it is not a single string.
+     *
+     * `?severity[]=a` hands the request an array, and casting one to string is a PHP warning that
+     * the error handler turns into a throw — which would take the whole section down with an
+     * "Array to string conversion" card. A filter nobody can spell is simply not applied.
+     */
+    private function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key, 'all');
+
+        return is_string($value) ? trim($value) : 'all';
     }
 
     /**
@@ -468,7 +489,7 @@ class IncidentsPanel implements Panel
         } catch (\Throwable $exception) {
             $failure = $this->emptyIncidents(
                 state: 'failed',
-                note: class_basename($exception) . ': ' . $exception->getMessage(),
+                note: $this->failureNote($exception),
                 remedy: 'The incident table is created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
             );
 
@@ -534,7 +555,7 @@ class IncidentsPanel implements Panel
         } catch (\Throwable $exception) {
             return $this->emptyIncidents(
                 state: 'failed',
-                note: class_basename($exception) . ': ' . $exception->getMessage(),
+                note: $this->failureNote($exception),
                 remedy: 'The incident table is created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
             );
         }
@@ -616,6 +637,12 @@ class IncidentsPanel implements Panel
             'resolved_at' => $this->displayStamp($row->resolved_at),
             'resolve_seconds' => $this->elapsedSeconds($row->started_at, $row->resolved_at),
             'updated_at' => $this->displayStamp($row->updated_at),
+            // Read rather than assumed empty. Nothing in this build writes either column — that is
+            // what the unconfigured readings at the foot of the page say — but "nothing writes it"
+            // is a statement about the code, and a value put there by hand or by a later writer
+            // must appear on the incident rather than be hidden by a claim made about the code.
+            'probable_cause' => $this->shortText($row->probable_cause, 191),
+            'acknowledged_at' => $this->displayStamp($row->acknowledged_at),
             'affected_services' => $this->services($row->affected_services),
             'signals' => $this->signals($row->signals, $states, $id),
             'holding_open' => $this->holdingOpen($states, $id),
@@ -783,7 +810,7 @@ class IncidentsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'source' => self::STATES_SOURCE,
                 'by_incident' => [],
                 'truncated' => false,
@@ -833,7 +860,7 @@ class IncidentsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'source' => self::SOURCE,
                 'rows' => [],
                 'truncated' => false,
@@ -973,7 +1000,7 @@ class IncidentsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'remedy' => 'The event table is created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
                 'source' => self::EVENTS_SOURCE,
                 'rows' => [],
@@ -1031,7 +1058,7 @@ class IncidentsPanel implements Panel
         return [
             'state' => 'not_configured',
             'source' => self::SOURCE,
-            'note' => 'These columns exist in the schema and are written by nothing on this deployment. They are shown as unconfigured readings rather than as empty cells, because a blank cause column reads as a cause that was looked for and not found.',
+            'note' => 'These columns exist in the schema and are written by nothing on this deployment. They are shown as unconfigured readings rather than as empty cells, because a blank cause column reads as a cause that was looked for and not found. The two that a row could carry readably — probable_cause and acknowledged_at — are still read from every incident this page lists, and are drawn on the incident if one ever holds a value.',
             'fields' => [
                 'probable_cause' => Metric::notConfigured(
                     source: self::SOURCE . '.probable_cause',
@@ -1068,6 +1095,19 @@ class IncidentsPanel implements Panel
     }
 
     // -------------------------------------------------------------------------------------------
+
+    /**
+     * A failed read, said in one line that is safe to print.
+     *
+     * A QueryException carries the statement and its bindings, and an exception message is one of
+     * the most reliable places in an application to find a token or a customer's address — so it
+     * goes through the redactor and is bounded before it reaches a page an operator can screenshot.
+     */
+    private function failureNote(\Throwable $exception): string
+    {
+        return class_basename($exception) . ': '
+            . $this->redactor->text(mb_substr($exception->getMessage(), 0, 400));
+    }
 
     /**
      * A stored UTC stamp, in the timezone the dashboard renders in.

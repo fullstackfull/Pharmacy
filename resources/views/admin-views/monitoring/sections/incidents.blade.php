@@ -219,6 +219,15 @@
                 @elseif ($incident['affected_services']['state'] === 'failed')
                     — {{ translate('affected_services_could_not_be_read') }}
                 @endif
+                {{-- Nothing in this build writes either of these, which the card at the foot of the
+                     page states. They are still drawn when a row holds one, because a value put
+                     there by hand must not be hidden by a claim made about the code. --}}
+                @if ($incident['acknowledged_at'])
+                    — {{ translate('acknowledged') }}: {{ $incident['acknowledged_at'] }}
+                @endif
+                @if ($incident['probable_cause'])
+                    — {{ translate('probable_cause') }}: {{ $incident['probable_cause'] }}
+                @endif
             </p>
 
             @if ($incident['signals']['state'] === 'ok')
@@ -420,6 +429,11 @@
                     {{ translate('incidents_started_in_this_window') }}
                 @endif
                 — {{ $window['since'] }} → {{ $window['until'] }} ({{ $window['timezone'] }}).
+                @if ($filters['narrowed'])
+                    {{-- Said out loud, because a filtered table under unfiltered totals reads as two
+                         numbers on one screen disagreeing with each other. --}}
+                    {{ translate('the_filter_narrows_this_table_only_the_counts_and_mean_times_on_this_page_cover_every_incident_in_the_window') }}.
+                @endif
             </p>
         @else
             <x-k.empty icon="alert" :title="$stateTitle($history['state'])" :text="$history['note'] ?? ''" />

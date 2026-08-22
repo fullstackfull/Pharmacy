@@ -94,6 +94,8 @@ class SectionRegistry
                     // categories by priority, which is what the section did before.
                     'category_ids' => ['type' => 'resource', 'label' => 'choose_categories', 'default' => null,
                                        'resource' => 'category', 'multiple' => true],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'circles',
+                                  'options' => ['circles', 'cards', 'tiles', 'chips']],
                     'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 12],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 6, 'responsive' => true],
                 ],
@@ -115,7 +117,7 @@ class SectionRegistry
                                       'resource' => 'product', 'multiple' => true,
                                       'depends_on' => ['source' => ['manual']]],
                     'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
-                                      'options' => ['rail', 'grid']],
+                                      'options' => ['rail', 'grid', 'carousel', 'spotlight', 'list']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
                     'columns'     => ['type' => 'number', 'label' => 'columns', 'default' => 5, 'responsive' => true],
                     'autoplay'    => ['type' => 'boolean','label' => 'autoplay', 'default' => false],
@@ -129,6 +131,8 @@ class SectionRegistry
             'promotional_banner' => [
                 'preview' => 'tiles', 'label' => 'promotional_banner', 'pages' => ['home'], 'blocks' => ['banner'], 'hint' => 'equal_banner_tiles_side_by_side',
                 'schema' => [
+                    'style'    => ['type' => 'select',  'label' => 'display_style', 'default' => 'tiles',
+                                   'options' => ['tiles', 'rail', 'overlap']],
                     'columns'  => ['type' => 'number',  'label' => 'columns', 'default' => 2, 'responsive' => true],
                     'gap'      => ['type' => 'number',  'label' => 'gap', 'default' => 24],
                     'ratio'    => ['type' => 'select',  'label' => 'image_ratio', 'default' => 'wide',
@@ -214,6 +218,8 @@ class SectionRegistry
                     'deal_id'   => ['type' => 'resource', 'label' => 'choose_flash_deal', 'default' => null,
                                     'resource' => 'flash_deal',
                                     'hint' => 'only_one_deal_can_be_active_at_a_time_pick_a_deal_here_to_show_a_different_one'],
+                    'style'     => ['type' => 'select',  'label' => 'display_style', 'default' => 'strip',
+                                    'options' => ['strip', 'banner', 'grid']],
                     'countdown' => ['type' => 'boolean', 'label' => 'show_countdown', 'default' => true],
                     'products'  => ['type' => 'boolean', 'label' => 'show_the_deals_products', 'default' => true],
                     'limit'     => ['type' => 'number',  'label' => 'max_products', 'default' => 10],
@@ -248,6 +254,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'       => ['type' => 'text',   'label' => 'title_leave_empty_for_the_deal_title', 'default' => ''],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'split',
+                                      'options' => ['split', 'banner', 'card']],
                     'countdown'   => ['type' => 'boolean','label' => 'show_countdown', 'default' => true],
                     'add_to_cart' => ['type' => 'boolean','label' => 'add_to_cart_button_on_each_card', 'default' => true],
                 ],
@@ -284,6 +292,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'tickets',
+                                  'options' => ['tickets', 'cards', 'strip']],
                     'limit'   => ['type' => 'number', 'label' => 'max_items', 'default' => 4],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
                 ],
@@ -324,6 +334,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'tiles',
+                                  'options' => ['tiles', 'circles', 'rail']],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
                     'gap'     => ['type' => 'number', 'label' => 'gap', 'default' => 16],
                     'height'  => ['type' => 'number', 'label' => 'tile_height', 'default' => 260, 'responsive' => true],
@@ -336,6 +348,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'bubbles',
+                                  'options' => ['bubbles', 'cards']],
                 ],
             ],
             'blog_posts' => [
@@ -344,6 +358,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow'  => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'    => ['type' => 'select', 'label' => 'display_style', 'default' => 'cards',
+                                   'options' => ['cards', 'list', 'featured']],
                     'limit'    => ['type' => 'number', 'label' => 'max_items', 'default' => 3],
                     'columns'  => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
                     'view_all' => ['type' => 'boolean','label' => 'view_all_button', 'default' => true],
@@ -356,6 +372,8 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow' => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'   => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'   => ['type' => 'select', 'label' => 'display_style', 'default' => 'cards',
+                                  'options' => ['cards', 'list']],
                     'columns' => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
                 ],
             ],
@@ -425,7 +443,10 @@ class SectionRegistry
                 'schema' => [
                     'eyebrow'    => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'      => ['type' => 'text',   'label' => 'title', 'default' => ''],
+                    'style'      => ['type' => 'select', 'label' => 'display_style', 'default' => 'cards',
+                                     'options' => ['cards', 'wall', 'compact']],
                     'limit'      => ['type' => 'number', 'label' => 'max_items', 'default' => 3],
+                    'columns'    => ['type' => 'number', 'label' => 'columns', 'default' => 3, 'responsive' => true],
                     'min_rating' => ['type' => 'number', 'label' => 'minimum_rating', 'default' => 4],
                 ],
             ],
@@ -435,6 +456,8 @@ class SectionRegistry
                     'eyebrow'     => ['type' => 'text', 'label' => 'eyebrow', 'default' => ''],
                     'title'       => ['type' => 'text', 'label' => 'title', 'default' => ''],
                     'subtitle'    => ['type' => 'text', 'label' => 'subtitle', 'default' => ''],
+                    'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'panel',
+                                      'options' => ['panel', 'two_column', 'cards']],
                     'button_text' => ['type' => 'text', 'label' => 'button_text', 'default' => ''],
                     'link'        => ['type' => 'link', 'label' => 'link', 'default' => ''],
                 ],
@@ -448,6 +471,8 @@ class SectionRegistry
                 'schema' => [
                     'title'    => ['type' => 'text', 'label' => 'title', 'default' => ''],
                     'subtitle' => ['type' => 'text', 'label' => 'subtitle', 'default' => ''],
+                    'style'    => ['type' => 'select', 'label' => 'display_style', 'default' => 'panel',
+                                   'options' => ['panel', 'inline', 'split']],
                 ],
             ],
             'spacer' => [

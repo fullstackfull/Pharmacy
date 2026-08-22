@@ -13,8 +13,15 @@
     };
 @endphp
 
+@php
+    // Three arrangements of the same tiles: a grid, a scrolling rail for more banners than fit, and
+    // an overlapping stagger that reads as a composition instead of a table.
+    $style = $style ?? ($settings['style'] ?? 'tiles');
+@endphp
+
 @if (count($cards))
-    <div class="ml-mosaic" style="grid-template-columns:repeat(var(--tb-cols,{{ $columns }}),minmax(0,1fr));gap:{{ $gap }}px">
+    <div class="{{ $style === 'rail' ? 'ml-rail' : 'ml-mosaic' }} ml-banners--{{ $style }}"
+         @if ($style !== 'rail') style="grid-template-columns:repeat(var(--tb-cols,{{ $columns }}),minmax(0,1fr));gap:{{ $gap }}px" @endif>
         @foreach ($cards as $card)
             <a class="ml-tile ml-reveal" data-delay="{{ $loop->index % 6 }}"
                href="{{ ($card['link'] ?? null) ?: 'javascript:void(0)' }}"
