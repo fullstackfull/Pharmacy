@@ -6,7 +6,6 @@ use App\Http\Controllers\BaseController;
 use App\Services\Monitoring\MonitoringNavigation;
 use App\Services\Monitoring\MonitoringPermissionService;
 use App\Services\Monitoring\Panels\PanelRegistry;
-use App\Services\Telemetry\SystemHealthService;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -30,7 +29,6 @@ class MonitoringController extends BaseController
     public function __construct(
         private readonly MonitoringPermissionService $permissions,
         private readonly PanelRegistry $panels,
-        private readonly SystemHealthService $legacyHealth,
     ) {
     }
 
@@ -101,21 +99,6 @@ class MonitoringController extends BaseController
         }
 
         return response()->json($this->panels->pulse());
-    }
-
-    /**
-     * The previous dashboard's feed, kept working.
-     *
-     * The old Monitoring page and the dashboard's system-health partial both read this shape. It
-     * costs one method to keep them alive rather than breaking two screens for the sake of tidiness.
-     */
-    public function legacyPulse(): JsonResponse
-    {
-        if (!$this->permissions->canView()) {
-            return response()->json(['error' => 'forbidden'], 403);
-        }
-
-        return response()->json($this->legacyHealth->snapshot());
     }
 
     /**

@@ -144,12 +144,42 @@ class SystemHealthService
         ];
     }
 
+    /**
+     * The busiest routes right now.
+     *
+     * Grouped by ROUTE PATTERN, not by raw URI. Every product page and every order is its own
+     * path, so grouping on the address meant a genuinely hot or slow route never rose into a
+     * twelve-row list — it arrived as a thousand rows of one hit each, and the list showed
+     * whichever thousand happened to sort first.
+     */
     private function topPathsNow(): array
     {
+        $paths = app(\App\Services\Analytics\Support\PathNormalizer::class);
+
         return DB::table('telemetry_requests')
             ->where('created_at', '>=', now()->subMinutes(15))
             ->selectRaw('path, channel, COUNT(*) hits, AVG(duration_ms) avg_ms, SUM(CASE WHEN status >= 500 THEN 1 ELSE 0 END) errors')
-            ->groupBy('path', 'channel')->orderByDesc('hits')->limit(12)->get()
+            ->groupBy('path', 'channel')
+            ->get()
+            ->groupBy(fn ($row) => $paths->normalise((string) $row->path) . '|' . $row->channel)
+            ->map(function ($group, $key) {
+                $hits = (int) $group->sum('hits');
+
+                return (object) [
+                    'path' => explode('|', (string) $key)[0],
+                    'channel' => $group->first()->channel,
+                    'hits' => $hits,
+                    // Weighted, because averaging a set of averages gives the quiet URL the same
+                    // say as the busy one.
+                    'avg_ms' => $hits > 0
+                        ? $group->sum(fn ($row) => (float) $row->avg_ms * (int) $row->hits) / $hits
+                        : 0,
+                    'errors' => (int) $group->sum('errors'),
+                ];
+            })
+            ->sortByDesc('hits')
+            ->take(12)
+            ->values()
             ->map(fn ($row) => [
                 'path' => $row->path,
                 'channel' => $row->channel,

@@ -219,10 +219,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     Route::group(['prefix' => 'monitoring', 'as' => 'monitoring.', 'middleware' => ['module:system_settings']], function () {
         Route::controller(\App\Http\Controllers\Admin\Telemetry\MonitoringController::class)->group(function () {
             Route::get('', 'index')->name('index');
-            // The header strip's own feed, and the previous dashboard's, kept apart: one is polled
-            // every few seconds and must stay cheap, the other is a section's full payload.
+            // The header strip's own feed: polled every few seconds, so it stays cheap and
+            // separate from a section's full payload.
             Route::get('pulse', 'pulse')->name('pulse');
-            Route::get('legacy-pulse', 'legacyPulse')->name('legacy-pulse');
             // Every section on one route. A new section needs an entry in MonitoringNavigation and
             // a panel class — nothing here changes, so the two can never drift apart.
             Route::get('{section}', 'index')->name('section')->where('section', '[a-z0-9\-]+');

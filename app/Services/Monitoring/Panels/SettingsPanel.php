@@ -45,8 +45,13 @@ class SettingsPanel implements Panel
      * Everything else is read straight from config() by whatever consumes it — the sink, the
      * rollup command, the recorders — so a database row for those keys would be stored and then
      * ignored. Checked against the callers: Checks/*, StoragePanel and EnergyCollector.
+     *
+     * `ssl_url` and `synthetics` are not prefixes but whole keys, and both are genuinely read back
+     * — SslCheck and SyntheticCheck ask MonitoringSettings for them — so omitting them told an
+     * operator their stored rows were dead weight when those rows are the only way to configure
+     * either check.
      */
-    private const OVERRIDABLE_PREFIXES = ['thresholds.', 'energy.'];
+    private const OVERRIDABLE_PREFIXES = ['thresholds.', 'energy.', 'ssl_url', 'synthetics'];
 
     /** The settings table is bounded by its unique key; this is the guard against a surprise. */
     private const MAX_STORED_ROWS = 200;
@@ -237,7 +242,10 @@ class SettingsPanel implements Panel
                 label: 'flush_interval',
                 what: 'how_often_the_buffered_counters_are_drained_into_rows_by_the_scheduled_flush_command',
                 unit: 'seconds',
-                note: 'Draining is done by `php artisan monitoring:flush` on the schedule, so this only matches reality while the scheduler runs.',
+                // Stated as documentation rather than as a control: the cadence is everyMinute() in
+                // bootstrap/app.php and nothing reads this value, so an operator who changed it
+                // would have got a number that changed nothing.
+                note: 'Documentation only. The cadence is the schedule: `monitoring:flush` runs every minute in bootstrap/app.php, and changing this value does not move it.',
             ),
             $this->displayTimezoneRow($stored),
             $this->row(
@@ -393,6 +401,10 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'tracing.otlp_endpoint',
                 label: 'otlp_endpoint',
+                // No OTLP exporter exists in this codebase: these three keys are the shape a future
+                // one would read, and nothing sends anywhere today. Said here, because a row that
+                // reads like a live export path is a claim that traces are leaving this server.
+                note: 'Reserved. No exporter is installed in this build, so nothing is posted anywhere whatever this is set to.',
                 what: 'where_finished_traces_are_posted_as_otlp_over_http_and_while_it_is_empty_tracing_stays_entirely_inside_this_application',
                 env: 'OTEL_EXPORTER_OTLP_ENDPOINT',
             ),

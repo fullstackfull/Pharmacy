@@ -108,6 +108,10 @@ Route::get('/image-proxy', function (\App\Services\Security\OutboundUrlGuard $gu
 | Public and unauthenticated, because the storefront is. It is safe to be so: only allow-listed
 | event names are accepted, none of them carry money, and nothing the client sends is trusted for
 | anything but a page identity. It always answers 204, so a prober learns nothing from it.
+|
+| The rate limit is PER IP, which is what an unnamed throttle does — not per visitor. On a network
+| behind one address, an office or a campus, the limit is shared. That is the right trade for a
+| beacon: keying on the visitor cookie would let anyone lift the ceiling by clearing it.
 */
 Route::post(trim((string) config('analytics.beacon.path', 'analytics/collect'), '/'),
     \App\Http\Controllers\Web\AnalyticsCollectController::class)

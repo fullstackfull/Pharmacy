@@ -445,10 +445,26 @@ class ApiManifest
         $signature = [];
 
         foreach (RouteFacade::getRoutes() as $route) {
-            $signature[] = implode(',', $route->methods()) . ' ' . $route->uri() . ' ' . (string) $route->getName();
+            // The controller and the middleware belong in here too. Hashing only the method, the
+            // uri and the name meant the cache survived every change that does not move a route —
+            // pointing a route at a different controller, adding auth middleware, changing a
+            // FormRequest — so the portal kept describing an endpoint the application no longer
+            // served, and the documentation drifted exactly where it is most dangerous.
+            $action = $route->getActionName();
+            $middleware = $route->gatherMiddleware();
+
+            $signature[] = implode(',', $route->methods())
+                . ' ' . $route->uri()
+                . ' ' . (string) $route->getName()
+                . ' ' . $action
+                . ' ' . implode(',', array_map(static fn ($one) => is_string($one) ? $one : gettype($one), $middleware));
         }
 
         sort($signature);
+
+        // The application's own version too, so a deploy that changes a FormRequest's rules without
+        // touching the route table still rebuilds.
+        $signature[] = 'app:' . (string) $this->appVersion();
 
         return count($signature) . ':' . substr(sha1(implode("\n", $signature)), 0, 32);
     }

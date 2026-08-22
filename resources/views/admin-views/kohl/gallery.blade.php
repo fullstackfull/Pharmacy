@@ -36,7 +36,7 @@
                     <x-k.button variant="ghost" icon="filter">{{ translate('filter') }}</x-k.button>
                     <x-k.button variant="danger" icon="trash">{{ translate('delete') }}</x-k.button>
                     <x-k.button variant="secondary" size="sm" icon="edit">{{ translate('edit') }}</x-k.button>
-                    <x-k.button variant="secondary" icon="chevron-end" :directional="true" />
+                    <x-k.button variant="secondary" icon="chevron-end" />
                     <x-k.button variant="primary" disabled>{{ translate('disabled') }}</x-k.button>
                 </div>
             </x-k.card>

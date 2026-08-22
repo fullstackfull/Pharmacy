@@ -19,10 +19,18 @@ class ExampleTest extends TestCase
      */
     public function testBasicTest()
     {
+        // Asserted in every environment: the home route exists and points somewhere real. That much
+        // needs no schema, and a test whose only assertion is behind a skip asserts nothing at all
+        // in the environment the suite actually runs in.
+        $route = app('router')->getRoutes()->getByName('home');
+
+        $this->assertNotNull($route, 'the storefront home route is not registered');
+        $this->assertSame('/', $route->uri());
+
         if (!Schema::hasTable('guest_users')) {
             $this->markTestSkipped(
-                'Requires the core 6Valley schema (installation/backup/database.sql). '
-                . 'Import it into the test database to enable this smoke test.'
+                'The request itself requires the core 6Valley schema '
+                . '(installation/backup/database.sql). Import it into the test database to enable it.'
             );
         }
 

@@ -149,6 +149,11 @@
 .mon-rail__body { max-block-size: calc(100vh - 120px); overflow-y: auto; padding: 8px; }
 .mon-rail__group { padding-block: 6px; }
 .mon-rail__group + .mon-rail__group { border-block-start: 1px solid var(--k-border); }
+/* A section with no panel behind it yet. Dimmed rather than hidden: an operator looking for
+   "backups" should see that it exists and is not built, not that it is missing. */
+.mon-rail__link.is-unbuilt { opacity: .5; }
+.mon-rail__link.is-unbuilt:hover { opacity: .75; }
+
 .mon-rail__group-title {
     display: block;
     padding: 6px 10px 4px;

@@ -31,12 +31,25 @@ return new class extends Migration
         // Raw DDL rather than Schema::table()->change(): doctrine/dbal's change() rebuilds the
         // column definition from its own introspection, which on this table has historically
         // dropped the nullability. One statement, one change, nothing else touched.
-        DB::statement('ALTER TABLE `admin_roles` MODIFY `module_access` TEXT NULL');
+        //
+        // Written per driver, because MODIFY is MySQL's spelling: on any other database this
+        // migration would have failed on a table it was supposed to be widening. sqlite has no
+        // varchar length limit at all, so there is nothing to widen there.
+        match (DB::connection()->getDriverName()) {
+            'sqlite' => null,
+            'pgsql' => DB::statement('ALTER TABLE admin_roles ALTER COLUMN module_access TYPE TEXT'),
+            'sqlsrv' => DB::statement('ALTER TABLE admin_roles ALTER COLUMN module_access NVARCHAR(MAX) NULL'),
+            default => DB::statement('ALTER TABLE `admin_roles` MODIFY `module_access` TEXT NULL'),
+        };
     }
 
     public function down(): void
     {
         if (!Schema::hasTable('admin_roles') || !Schema::hasColumn('admin_roles', 'module_access')) {
+            return;
+        }
+
+        if (DB::connection()->getDriverName() !== 'mysql') {
             return;
         }
 

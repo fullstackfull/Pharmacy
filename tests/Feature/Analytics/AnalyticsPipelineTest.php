@@ -213,18 +213,38 @@ class AnalyticsPipelineTest extends TestCase
             array_keys(AnalyticsPermissionService::all()),
         );
 
-        if (!\Illuminate\Support\Facades\Schema::hasTable('admin_roles')) {
-            $this->markTestSkipped('admin_roles is not present in this test schema.');
-        }
+        $encodedLength = strlen((string) json_encode($everything));
 
-        $type = collect(\Illuminate\Support\Facades\DB::select('SHOW COLUMNS FROM admin_roles LIKE ?', ['module_access']))
-            ->first()?->Type ?? '';
-
-        $this->assertMatchesRegularExpression(
-            '/^(text|mediumtext|longtext)$/i',
-            strtolower($type),
-            'admin_roles.module_access is ' . $type . ', which cannot hold ' . strlen(json_encode($everything)) . ' characters',
+        // Asserted from the SHIPPED MIGRATION, not from whatever schema this suite happens to have.
+        // The check used to skip when admin_roles was absent, which is every run in this repo — so
+        // the thing it protects against was never actually checked anywhere.
+        $migration = file_get_contents(
+            (string) collect(glob(database_path('migrations/*_widen_admin_role_module_access.php')))->first()
         );
+
+        $this->assertStringContainsString(
+            'TEXT',
+            $migration,
+            "admin_roles.module_access must be widened to TEXT: the full permission set is {$encodedLength} characters",
+        );
+        $this->assertGreaterThan(
+            250,
+            $encodedLength,
+            'if the permission set now fits varchar(250) this guard can go, but check it against every panel area first',
+        );
+
+        // And where the table IS present, the column has to be what the migration says.
+        if (\Illuminate\Support\Facades\Schema::hasTable('admin_roles')
+            && \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'mysql') {
+            $type = collect(\Illuminate\Support\Facades\DB::select('SHOW COLUMNS FROM admin_roles LIKE ?', ['module_access']))
+                ->first()?->Type ?? '';
+
+            $this->assertMatchesRegularExpression(
+                '/^(text|mediumtext|longtext)$/i',
+                strtolower($type),
+                'admin_roles.module_access is ' . $type . ', which cannot hold ' . $encodedLength . ' characters',
+            );
+        }
     }
 
     // ── Windows ──────────────────────────────────────────────────────────────────────────────
