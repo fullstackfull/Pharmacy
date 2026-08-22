@@ -17,11 +17,11 @@ use Illuminate\Support\Facades\DB;
  * buffer pool, waiting on row locks. The slow-query ledger says which individual statement is
  * expensive enough to be worth an index. And the request buckets say which ROUTE is spending the
  * database's time — which is the only one of the three that finds an N+1, because an N+1 is a
- * hundred and forty-five perfectly fast queries and every per-statement view calls it healthy.
+ * couple of hundred perfectly fast queries and every per-statement view calls each one healthy.
  *
- * This shop has exactly that: the storefront home issues roughly 145 statements per request, none
- * of them slow. It is invisible in the slow-query table by construction, and it is the first row of
- * the query-heavy-routes table. Both are on this page so the absence in one explains the other.
+ * This shop has exactly that, and the storefront home is the route it lives on. It cannot appear in
+ * the slow-query ledger by construction — no single statement is slow — and it is the first row of
+ * the query-heavy table. Both are on this page so the absence in one explains the other.
  *
  * Nothing here is inferred from anything else. Where the login may not read a counter — this
  * deployment has performance_schema OFF and no PROCESS privilege — the metric arrives from the
@@ -48,7 +48,7 @@ class DatabasePanel implements Panel
             ],
         ],
         'throughput' => [
-            'why' => 'rates_are_deltas_between_two_samples_not_lifetime_counters_divided_by_uptime',
+            'why' => 'rates_are_the_change_between_two_samples_never_a_lifetime_counter_divided_by_uptime',
             'metrics' => [
                 'queries_per_s', 'selects_per_s', 'inserts_per_s', 'updates_per_s', 'deletes_per_s',
                 'transactions_per_s', 'commits', 'rollbacks', 'slow_queries',
@@ -389,6 +389,18 @@ class DatabasePanel implements Panel
             ];
         }
 
+        // Checked before the resolution, because one stored point is a different fact from an
+        // empty rollup and saying the wrong one sends somebody to fix a job that is working.
+        if ($points === 1) {
+            return [
+                'state' => 'no_data',
+                'note' => 'Only one sample of this gauge falls inside this window, and one point is not a line.',
+                'remedy' => $resolution === 'minute'
+                    ? 'Wait for the next minute sample, or choose a longer range.'
+                    : 'Choose a shorter range to read the minute samples directly.',
+            ];
+        }
+
         if ($resolution !== 'minute') {
             // Gauges are written once a minute. Longer ranges read rolled-up rows, which the rollup
             // produces — so this window can be empty while the minute rows under it are full.
@@ -401,9 +413,7 @@ class DatabasePanel implements Panel
 
         return [
             'state' => 'no_data',
-            'note' => $points === 1
-                ? 'Only one sample has been taken in this window, and one point is not a line.'
-                : 'No sample of this gauge has been stored in this window.',
+            'note' => 'No sample of this gauge has been stored in this window.',
             'remedy' => 'Gauges are sampled by `php artisan monitoring:sample`, scheduled every minute. Check the Laravel scheduler is running: `php artisan schedule:list`.',
         ];
     }

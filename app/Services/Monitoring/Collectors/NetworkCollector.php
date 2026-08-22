@@ -81,6 +81,15 @@ class NetworkCollector implements Collector
         'rx_bytes_per_s', 'tx_bytes_per_s', 'tcp_established', 'tcp_retrans_per_s', 'dns_ms',
     ];
 
+    /**
+     * Interfaces a container runtime mints and tears down per workload, named after an id it
+     * assigned. Their traffic is real and stays in collect(), but as a chart dimension each one
+     * is a series name that never comes back: a Kubernetes node would open a fresh pair of them
+     * for every pod that has ever started on it, and the time series table would carry the
+     * cluster's whole scheduling history a minute at a time.
+     */
+    private const EPHEMERAL_INTERFACE = '/^(?:veth|cali|cni|flannel|tap|dummy)|^br-[0-9a-f]{12}$/';
+
     /** @var array<string, Metric>|null */
     private ?array $readings = null;
 
@@ -107,8 +116,11 @@ class NetworkCollector implements Collector
         $gauges = [];
 
         foreach ($this->collect() as $name => $metric) {
-            $base = explode('@', $name, 2)[0];
+            [$base, $label] = array_pad(explode('@', $name, 2), 2, null);
             if (!in_array($base, self::GAUGE_METRICS, true) || !$metric->isOk() || !is_numeric($metric->value)) {
+                continue;
+            }
+            if ($label !== null && preg_match(self::EPHEMERAL_INTERFACE, $label) === 1) {
                 continue;
             }
 
@@ -247,7 +259,19 @@ class NetworkCollector implements Collector
 
         $delta = [];
         foreach ($counters as $field => $value) {
-            $delta[$field] = $value - ($previous[$field] ?? 0);
+            // A previous sample written before this list of counters changed — an upgrade lands
+            // while the cached sample is still warm — has nothing to subtract for the new field.
+            // Standing in a zero there would publish the interface's entire since-boot total
+            // divided by the window: a lifetime average wearing the costume of a current rate,
+            // and a spectacular one, since that total is measured in gigabytes.
+            if (!array_key_exists($field, $previous)) {
+                return array_fill_keys(self::INTERFACE_METRICS, Metric::noData(
+                    self::NETDEV_SOURCE,
+                    "The previous sample carries no {$field} counter for this interface to subtract.",
+                ));
+            }
+
+            $delta[$field] = $value - $previous[$field];
         }
 
         // These counters only ever climb, so a negative delta means they were reset underneath us
@@ -328,7 +352,10 @@ class NetworkCollector implements Collector
     {
         return Metric::probe(self::OPERSTATE_SOURCE, function () use ($interface) {
             $path = '/sys/class/net/' . $interface . '/operstate';
-            if (!is_readable($path)) {
+            // Suppressed like every other probe here: an open_basedir that stops short of /sys
+            // makes the stat itself raise, and the answer to that is "no operstate to read", not
+            // a stack trace where the link state belongs.
+            if (!@is_readable($path)) {
                 return Metric::notSupported(
                     self::OPERSTATE_SOURCE,
                     "This host does not expose an operstate file for {$interface}.",
@@ -498,9 +525,21 @@ class NetworkCollector implements Collector
      */
     private function sockets(): array
     {
+        // open_basedir is settled before the filesystem is touched at all, because it refuses the
+        // stat as loudly as the read and Laravel promotes that warning to an exception. Asking
+        // second would report the shared host's php.ini as a kernel missing /proc/net/sockstat,
+        // and send the operator hunting somewhere the problem has never been.
+        if ($this->outsideOpenBasedir('/proc/net/sockstat')) {
+            return array_fill_keys(self::SOCKET_METRICS, Metric::permissionDenied(
+                self::SOCKSTAT_SOURCE,
+                'open_basedir does not cover /proc, so PHP is not allowed to look at /proc/net/sockstat.',
+                'Add /proc to open_basedir in php.ini: open_basedir = "' . ini_get('open_basedir') . ':/proc" — or clear the setting entirely.',
+            ));
+        }
+
         // Environment does not probe this file, and it is genuinely absent on kernels built
         // without CONFIG_PROC_FS niceties and inside some restricted container runtimes.
-        if (!is_readable('/proc/net/sockstat')) {
+        if (!@is_readable('/proc/net/sockstat')) {
             return array_fill_keys(self::SOCKET_METRICS, Metric::notSupported(
                 self::SOCKSTAT_SOURCE,
                 'This host does not expose /proc/net/sockstat, so socket counts cannot be read.',
@@ -512,7 +551,7 @@ class NetworkCollector implements Collector
             return array_fill_keys(self::SOCKET_METRICS, Metric::permissionDenied(
                 self::SOCKSTAT_SOURCE,
                 'The PHP user may not read /proc/net/sockstat.',
-                'Remove /proc from open_basedir in php.ini, or mount /proc without hidepid for the web user.',
+                'Let the PHP worker read /proc/net: drop the deny rule from its AppArmor profile in /etc/apparmor.d/ (or the equivalent SELinux policy), then reload it with apparmor_parser -r.',
             ));
         }
 
@@ -539,6 +578,24 @@ class NetworkCollector implements Collector
             'tcp_alloc' => $read('TCP.alloc', 'sockets'),
             'udp_inuse' => $read('UDP.inuse', 'sockets'),
         ];
+    }
+
+    /** Whether open_basedir is in force and leaves $path outside every allowed tree. */
+    private function outsideOpenBasedir(string $path): bool
+    {
+        $setting = trim((string) ini_get('open_basedir'));
+        if ($setting === '') {
+            return false;
+        }
+
+        foreach (explode(PATH_SEPARATOR, $setting) as $allowed) {
+            $tree = rtrim(trim($allowed), '/');
+            if ($tree !== '' && ($path === $tree || str_starts_with($path, $tree . '/'))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -572,15 +629,18 @@ class NetworkCollector implements Collector
                 $started = microtime(true);
                 $records = function_exists('dns_get_record') ? @dns_get_record($host, DNS_A | DNS_AAAA) : false;
                 $elapsedMs = round((microtime(true) - $started) * 1000, 1);
+
+                if (is_array($records) && $records !== []) {
+                    return Metric::of($elapsedMs, self::DNS_SOURCE, 'ms', 'Resolved ' . $host . ' to ' . count($records) . ' record' . (count($records) === 1 ? '' : 's') . '.');
+                }
+
+                // The fallback stays inside the marker: gethostbyname() blocks on the same dead
+                // resolver for the same untimeoutable stretch, so releasing the breaker before it
+                // would leave the one lookup most likely to hang with nothing guarding it.
+                return $this->resolverLatency($host);
             } finally {
                 Cache::forget(self::DNS_INFLIGHT_KEY);
             }
-
-            if (is_array($records) && $records !== []) {
-                return Metric::of($elapsedMs, self::DNS_SOURCE, 'ms', 'Resolved ' . $host . ' to ' . count($records) . ' record' . (count($records) === 1 ? '' : 's') . '.');
-            }
-
-            return $this->resolverLatency($host);
         });
     }
 
@@ -629,11 +689,16 @@ class NetworkCollector implements Collector
             );
         }
 
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+        // parse_url() hands back an IPv6 literal still wearing its brackets, and "[::1]" is
+        // neither an address filter_var() will accept nor a name any resolver will answer for.
+        // A colon left after the port has been stripped can only be IPv6: hostnames cannot hold
+        // one, so anything with a colon is an address rather than a name that failed to resolve.
+        $address = trim($host, '[]');
+        if (filter_var($address, FILTER_VALIDATE_IP) !== false || str_contains($address, ':')) {
             return Metric::notConfigured(
                 self::DNS_SOURCE,
-                "Set APP_URL to the hostname customers use instead of the address {$host}; resolution time is only measurable for a name.",
-                "APP_URL points straight at an IP address, so no name is ever resolved to reach this store.",
+                "Set APP_URL to the hostname customers use instead of the address {$address}; resolution time is only measurable for a name.",
+                'APP_URL points straight at an IP address, so no name is ever resolved to reach this store.',
             );
         }
 

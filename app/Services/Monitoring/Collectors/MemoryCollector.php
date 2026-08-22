@@ -44,6 +44,14 @@ class MemoryCollector implements Collector
      */
     private const MINIMUM_SAMPLE_SECONDS = 0.5;
 
+    /**
+     * Past this the previous reading no longer describes the present. A burst nine minutes ago,
+     * averaged over nine minutes, lands on the chart as a calm machine — a number ending in "/s"
+     * is read as "now", so beyond a few missed collection rounds the rate is withdrawn rather
+     * than quietly smoothed.
+     */
+    private const MAXIMUM_SAMPLE_SECONDS = 300;
+
     /** Everything /proc/meminfo feeds, so one unreadable file marks exactly these unavailable. */
     private const MEMINFO_METRICS = [
         'total', 'host_total', 'used', 'available', 'free', 'cached', 'buffers', 'shared',
@@ -123,12 +131,12 @@ class MemoryCollector implements Collector
      */
     private function memory(): array
     {
-        $meminfo = $this->meminfo();
-        if ($meminfo instanceof Metric) {
-            return array_fill_keys(self::MEMINFO_METRICS, $meminfo);
-        }
-
         try {
+            $meminfo = $this->meminfo();
+            if ($meminfo instanceof Metric) {
+                return array_fill_keys(self::MEMINFO_METRICS, $meminfo);
+            }
+
             $hostTotal = $meminfo['MemTotal'] ?? 0;
             if ($hostTotal <= 0) {
                 return array_fill_keys(
@@ -349,14 +357,14 @@ class MemoryCollector implements Collector
      */
     private function paging(): array
     {
-        if (!$this->environment->has('proc_vmstat')) {
-            return array_fill_keys(self::VMSTAT_METRICS, Metric::notSupported(
-                self::VMSTAT_SOURCE,
-                'This host does not expose /proc/vmstat, so paging activity cannot be measured.',
-            ));
-        }
-
         try {
+            if (!$this->environment->has('proc_vmstat')) {
+                return array_fill_keys(self::VMSTAT_METRICS, Metric::notSupported(
+                    self::VMSTAT_SOURCE,
+                    'This host does not expose /proc/vmstat, so paging activity cannot be measured.',
+                ));
+            }
+
             $counters = $this->vmstat();
             if ($counters === []) {
                 return array_fill_keys(self::VMSTAT_METRICS, Metric::permissionDenied(
@@ -367,30 +375,39 @@ class MemoryCollector implements Collector
             }
 
             $now = microtime(true);
-            $previous = Cache::get(self::PREVIOUS_KEY);
+            $previous = $this->previousSample();
             Cache::put(self::PREVIOUS_KEY, ['at' => $now, 'counters' => $counters], 600);
 
-            $elapsed = is_array($previous) ? $now - (float) ($previous['at'] ?? 0) : 0.0;
-            $comparable = is_array($previous) && isset($previous['counters']) && $elapsed >= self::MINIMUM_SAMPLE_SECONDS;
+            $elapsed = $previous === null ? null : $now - $previous['at'];
 
             $counter = fn (string $field, string $unit, string $note) => isset($counters[$field])
                 ? Metric::of($counters[$field], self::VMSTAT_SOURCE, $unit, $note)
                 : Metric::notSupported(self::VMSTAT_SOURCE, "This kernel does not report {$field} in /proc/vmstat.");
 
-            $rate = function (string $field, string $unit) use ($counters, $previous, $elapsed, $comparable) {
+            $rate = function (string $field, string $unit) use ($counters, $previous, $elapsed) {
                 if (!isset($counters[$field])) {
                     return Metric::notSupported(self::VMSTAT_SOURCE, "This kernel does not report {$field} in /proc/vmstat.");
                 }
-                if (!$comparable) {
-                    return Metric::noData(
-                        self::VMSTAT_SOURCE,
-                        $elapsed > 0
-                            ? 'The previous sample is too recent to measure a rate against.'
-                            : 'Collecting the first sample; paging rates appear one minute after monitoring starts.',
-                    );
+                if ($elapsed === null) {
+                    return Metric::noData(self::VMSTAT_SOURCE, 'Collecting the first sample; paging rates appear one minute after monitoring starts.');
+                }
+                if ($elapsed < 0) {
+                    return Metric::noData(self::VMSTAT_SOURCE, 'The clock stepped backwards between the two samples, so they span no measurable interval.');
+                }
+                if ($elapsed < self::MINIMUM_SAMPLE_SECONDS) {
+                    return Metric::noData(self::VMSTAT_SOURCE, 'The previous sample is too recent to measure a rate against.');
+                }
+                if ($elapsed > self::MAXIMUM_SAMPLE_SECONDS) {
+                    return Metric::noData(self::VMSTAT_SOURCE, 'The previous sample is too old to describe the present; the rate returns at the next collection.');
+                }
+                if (!isset($previous['counters'][$field])) {
+                    // Nothing to subtract from. Reading the absence as zero would make the delta
+                    // the entire since-boot total and publish the machine's whole lifetime of
+                    // faults as if they had all happened in the last few seconds.
+                    return Metric::noData(self::VMSTAT_SOURCE, "The previous sample did not record {$field}, so there is nothing to subtract.");
                 }
 
-                $delta = $counters[$field] - (int) ($previous['counters'][$field] ?? 0);
+                $delta = $counters[$field] - $previous['counters'][$field];
                 if ($delta < 0) {
                     // vmstat counters only ever climb, so a fall means the host rebooted between
                     // the two samples and the older one describes a machine that no longer exists.
@@ -417,6 +434,28 @@ class MemoryCollector implements Collector
         } catch (\Throwable $exception) {
             return array_fill_keys(self::VMSTAT_METRICS, Metric::failed(self::VMSTAT_SOURCE, $exception));
         }
+    }
+
+    /**
+     * The last reading, or null when the cache holds nothing sound to subtract from.
+     *
+     * Anything half-shaped — an entry from an older build, a truncated write — is treated as no
+     * previous sample at all rather than being patched up with defaults. A missing timestamp read
+     * as zero puts the previous sample at the epoch, and every rate measured against it divides by
+     * fifty-odd years and rounds to a calm 0.0/s.
+     *
+     * @return array{at: float, counters: array<string, int>}|null
+     */
+    private function previousSample(): ?array
+    {
+        $previous = Cache::get(self::PREVIOUS_KEY);
+        if (!is_array($previous) || !is_array($previous['counters'] ?? null) || !is_numeric($previous['at'] ?? null)) {
+            return null;
+        }
+
+        $at = (float) $previous['at'];
+
+        return $at > 0 ? ['at' => $at, 'counters' => $previous['counters']] : null;
     }
 
     /** @return array<string, int> */

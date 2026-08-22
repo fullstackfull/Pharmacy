@@ -65,12 +65,17 @@ return Application::configure(basePath: dirname(__DIR__))
             // a row per request for visits and sources, this one only ever increments counters in
             // the current minute and never writes a row on the request path.
             \App\Http\Middleware\MonitorRequest::class,
+            // Behavioural analytics. The request log above knows how much traffic there was and
+            // how fast it was served; this knows what a person did, on which visit, and whether it
+            // led to a sale. Both writes happen after the response has been sent.
+            \App\Http\Middleware\RecordAnalytics::class,
         ]);
         $middleware->group('api', [
             'throttle:3000,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
             \App\Http\Middleware\MonitorRequest::class,
+            \App\Http\Middleware\RecordAnalytics::class,
         ]);
         /*
         |--------------------------------------------------------------------------
@@ -158,6 +163,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // Minutes into hours into days, and prune past each resolution's retention.
         $schedule->command('monitoring:rollup')->hourlyAt(3)->withoutOverlapping();
         $schedule->command('monitoring:rollup --prune')->dailyAt('01:45')->withoutOverlapping();
+
+        /*
+        | Analytics.
+        |
+        | Hourly so today's charts are never more than an hour behind, and a nightly pass that
+        | rebuilds yesterday (late events, an order paid after midnight) and prunes raw rows past
+        | their retention. Rollups are a rebuild of the day, so running them repeatedly is safe.
+        */
+        $schedule->command('analytics:rollup')->hourlyAt(12)->withoutOverlapping();
+        $schedule->command('analytics:rollup --days=2 --prune')->dailyAt('02:15')->withoutOverlapping();
 
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.

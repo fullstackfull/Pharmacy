@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Services\Analytics\Analytics;
 use App\Models\Author;
 use App\Models\BusinessSetting;
 use App\Models\FlashDeal;
@@ -212,6 +213,13 @@ class ProductListController extends Controller
         $data = self::getProductListRequestData(request: $request);
         $productListData = ProductManager::getProductListData(request: $request);
         $products = $productListData->paginate(20)->appends($data);
+
+        // Analytics. Every product list in the storefront — search, category, brand, offers, the
+        // ajax filter refresh — comes through here, which is also the only place the RESULT COUNT
+        // is known. That count is the point: a search term with healthy volume and zero results is
+        // a product the shop should be stocking, and it is invisible to any report that counts
+        // searches without counting what they found.
+        $this->recordListView(request: $request, pageType: $pageType, results: $products->total());
 
         if ($request->ajax()) {
             return response()->json([
@@ -481,5 +489,38 @@ class ProductListController extends Controller
             'products' => $products,
             'singlePageProductCount' => $singlePageProductCount,
         ]);
+    }
+
+    /**
+     * Record what this list page was: a search, a category, a brand, or a plain browse.
+     *
+     * @param  object|array  $request
+     */
+    private function recordListView(object|array $request, string $pageType, int $results): void
+    {
+        $analytics = app(Analytics::class);
+        $term = trim((string) ($request['name'] ?? $request['product_name'] ?? $request['search'] ?? ''));
+
+        if ($term !== '') {
+            $analytics->searchPerformed(term: $term, results: $results, properties: [
+                'category' => $request['search_category_value'] ?? null,
+                'sort_by' => $request['sort_by'] ?? null,
+            ]);
+
+            return;
+        }
+
+        if ($pageType === 'category') {
+            $categoryId = $request['sub_sub_category_id'] ?? $request['sub_category_id'] ?? $request['category_id'] ?? null;
+            if ($categoryId) {
+                $analytics->categoryViewed(categoryId: (int) $categoryId, properties: ['results' => $results]);
+
+                return;
+            }
+        }
+
+        if ($pageType === 'brand' && ($request['brand_id'] ?? null)) {
+            $analytics->brandViewed(brandId: (int) $request['brand_id']);
+        }
     }
 }

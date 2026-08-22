@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Services\Analytics\Analytics;
 use App\Http\Controllers\Controller;
 use App\Models\Author;
 use App\Models\Brand;
@@ -80,6 +81,14 @@ class ShopViewController extends Controller
     public function default_theme($request, $shop): View|JsonResponse|Redirector|RedirectResponse
     {
         self::checkShopExistence($shop);
+
+        // Analytics. A shop page view belongs to the vendor whose shop it is, which is what lets a
+        // vendor be shown their own traffic without ever being shown anybody else's.
+        app(Analytics::class)->shopViewed(
+            shopId: (int) $shop['id'],
+            vendorId: $shop['author_type'] === 'admin' ? null : (int) $shop['seller_id'],
+        );
+
         $productAddedBy = $shop['author_type'] == 'admin' ? 'admin' : 'seller';
         $productUserID = $shop['seller_id'] == 0 ? 0 : $shop['seller_id'];
         $shopId = $shop['author_type'] == 'admin' ? 0 : $shop['id'];

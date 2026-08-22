@@ -2,8 +2,8 @@
     Database: the server's own counters, the statements that are slow, and the routes that talk to
     it too often.
 
-    The third table is the one that is easy to leave out and the only one that finds an N+1. A route
-    issuing a hundred and forty-five perfectly fast queries has no slow query to show, so every
+    The last table is the one that is easy to leave out and the only one that finds an N+1. A route
+    issuing a couple of hundred perfectly fast queries has no slow query to show, so every
     per-statement view on this page calls it healthy. The slow-query ledger being empty and the
     query-heavy table being alarming is not a contradiction — it is the diagnosis.
 --}}
@@ -78,7 +78,7 @@
      its own state, so a counter this login may not read can never be drawn as a zero. --}}
 @foreach ($panel['groups'] as $group)
     <x-k.card :title="translate($group['key'])">
-        <p class="mon-note" style="margin-block-start:0">{{ translate($group['why']) }}</p>
+        <p class="mon-note" style="margin-block-start:0">{{ translate($group['why']) }}.</p>
         <div class="mon-grid">
             @foreach ($group['metrics'] as $name => $metric)
                 @include('admin-views.monitoring.partials._metric', ['metric' => $metric, 'label' => translate($name)])
@@ -182,15 +182,15 @@
 @php
     $slow = $panel['slow_queries'];
     $slowTables = [
-        ['key' => 'by_total_ms', 'title' => 'slowest_statements_by_total_time', 'why' => 'executions_multiplied_by_duration_the_statement_costing_the_database_the_most_wall_clock_time'],
-        ['key' => 'by_executions', 'title' => 'most_executed_slow_statements', 'why' => 'the_same_ledger_ranked_by_how_often_it_ran_which_is_where_a_statement_called_in_a_loop_surfaces'],
+        ['key' => 'by_total_ms', 'title' => 'slowest_statements_by_total_time', 'why' => 'executions_multiplied_by_duration', 'then' => 'the_statement_costing_the_database_the_most_wall_clock_time'],
+        ['key' => 'by_executions', 'title' => 'most_executed_slow_statements', 'why' => 'the_same_ledger_ranked_by_how_often_each_statement_ran', 'then' => 'where_one_called_repeatedly_surfaces_even_though_no_single_run_is_expensive'],
     ];
 @endphp
 
 @if (($slow['state'] ?? '') === 'ok')
     @foreach ($slowTables as $slowTable)
         <x-k.card :title="translate($slowTable['title'])">
-            <p class="mon-note" style="margin-block-start:0">{{ translate($slowTable['why']) }}</p>
+            <p class="mon-note" style="margin-block-start:0">{{ translate($slowTable['why']) }} — {{ translate($slowTable['then']) }}.</p>
             <div class="k-table-wrap">
                 <table class="k-table k-table--compact">
                     <thead>
@@ -229,7 +229,8 @@
             </div>
             @if ($loop->last)
                 <p class="mon-note">
-                    {{ translate('the_route_column_is_the_caller_recorded_against_the_statement_most_often_a_place_to_start_not_a_claim_that_nothing_else_runs_it') }}
+                    {{ translate('the_route_column_is_the_caller_recorded_against_the_statement_most_often') }}.
+                    {{ translate('it_is_a_place_to_start_not_a_claim_that_nothing_else_runs_it') }}.
                 </p>
             @endif
         </x-k.card>
@@ -247,20 +248,19 @@
 @endif
 
 {{-- The N+1 detector. An empty ledger above and a loud table here is the shape of a route loading
-     rows in a loop: every individual statement is fast, and there are a hundred and forty-five of
-     them. --}}
+     rows in a loop: every individual statement is fast, and there are hundreds of them. --}}
 @php
     $heavy = $panel['query_heavy_routes'];
     $heavyTables = [
-        ['key' => 'by_db_time', 'title' => 'routes_spending_the_most_database_time', 'why' => 'total_database_time_in_this_window_where_the_server_is_actually_being_spent'],
-        ['key' => 'by_queries_per_request', 'title' => 'routes_issuing_the_most_queries_per_request', 'why' => 'statements_divided_by_requests_so_a_busy_page_cannot_top_this_list_simply_by_being_busy_this_is_where_an_n_plus_one_is_found'],
+        ['key' => 'by_db_time', 'title' => 'routes_spending_the_most_database_time', 'why' => 'total_database_time_in_this_window', 'then' => 'where_the_server_is_actually_being_spent_rather_than_where_it_is_slowest'],
+        ['key' => 'by_queries_per_request', 'title' => 'routes_issuing_the_most_queries_per_request', 'why' => 'statements_divided_by_requests_so_a_busy_page_cannot_reach_the_top_simply_by_being_busy', 'then' => 'this_is_the_ranking_that_finds_an_n_plus_one'],
     ];
 @endphp
 
 @if (($heavy['state'] ?? '') === 'ok')
     @foreach ($heavyTables as $heavyTable)
         <x-k.card :title="translate($heavyTable['title'])">
-            <p class="mon-note" style="margin-block-start:0">{{ translate($heavyTable['why']) }}</p>
+            <p class="mon-note" style="margin-block-start:0">{{ translate($heavyTable['why']) }} — {{ translate($heavyTable['then']) }}.</p>
             <div class="k-table-wrap">
                 <table class="k-table k-table--compact">
                     <thead>
@@ -306,8 +306,10 @@
             </div>
             @if ($loop->last)
                 <p class="mon-note">
-                    {{ translate('rows_marked_above') }} {{ $panel['queries_per_request_suspect'] }}
-                    {{ translate('queries_per_request_are_loading_rows_in_a_loop_that_line_is_a_reading_aid_not_a_measurement') }}
+                    {{ translate('a_route_marked_amber_is_issuing_more_than') }}
+                    {{ $panel['queries_per_request_suspect'] }}
+                    {{ translate('statements_for_a_single_request_which_is_the_shape_of_rows_being_loaded_in_a_loop') }}.
+                    {{ translate('that_line_is_a_reading_aid_not_a_measurement') }}.
                 </p>
             @endif
         </x-k.card>
