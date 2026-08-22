@@ -83,6 +83,15 @@ class DatabasePanel implements Panel
     private const TABLE_ROWS = 15;
 
     /**
+     * Routes read per ordering, per bucket resolution, before the sources are added together.
+     *
+     * Wider than the table so a route that sits mid-table in the folded buckets and mid-table again
+     * in the minutes since the last fold still ranks correctly once the two are summed, and narrow
+     * enough that every one of these queries stays a bounded index read.
+     */
+    private const ROUTE_CANDIDATES = 60;
+
+    /**
      * Above this many statements for one request, the route is loading rows in a loop.
      *
      * A display threshold, not a measurement: it decides whether a row is drawn with a warning
@@ -124,7 +133,7 @@ class DatabasePanel implements Panel
             'largest_tables' => $this->largestTables($readings),
             'query_digests' => $this->queryDigests($readings),
             'charts' => $this->charts($range, $window['resolution']),
-            'slow_queries' => $this->slowQueries($slowQueriesFrom, $window['minutes']),
+            'slow_queries' => $this->slowQueries($slowQueriesFrom),
             'query_heavy_routes' => $this->queryHeavyRoutes($range, $window['resolution']),
             'queries_per_request_suspect' => self::QUERIES_PER_REQUEST_SUSPECT,
         ];
@@ -259,12 +268,17 @@ class DatabasePanel implements Panel
         $rows = [];
         foreach ((array) $metric->value as $table) {
             $table = (array) $table;
+            $data = $this->reading($table['data_mb'] ?? null);
+            $index = $this->reading($table['index_mb'] ?? null);
+
             $rows[] = [
-                'table' => (string) ($table['table'] ?? ''),
-                'data_mb' => (float) ($table['data_mb'] ?? 0),
-                'index_mb' => (float) ($table['index_mb'] ?? 0),
-                'total_mb' => round((float) ($table['data_mb'] ?? 0) + (float) ($table['index_mb'] ?? 0), 2),
-                'rows' => (int) ($table['rows'] ?? 0),
+                'table' => $this->name($table['table'] ?? null),
+                'data_mb' => $data,
+                'index_mb' => $index,
+                // A total needs both halves. Adding a missing one in as zero would publish a table
+                // as smaller than it is, which is the reading somebody sizes a disk against.
+                'total_mb' => $data === null || $index === null ? null : round($data + $index, 2),
+                'rows' => $this->reading($table['rows'] ?? null) === null ? null : (int) $table['rows'],
             ];
         }
 
@@ -294,14 +308,32 @@ class DatabasePanel implements Panel
         foreach ((array) $metric->value as $digest) {
             $digest = (array) $digest;
             $rows[] = [
-                'statement' => (string) ($digest['statement'] ?? ''),
-                'calls' => (int) ($digest['calls'] ?? 0),
-                'avg_ms' => (float) ($digest['avg_ms'] ?? 0),
-                'rows_examined' => (int) ($digest['rows_examined'] ?? 0),
+                'statement' => $this->name($digest['statement'] ?? null),
+                'calls' => $this->reading($digest['calls'] ?? null) === null ? null : (int) $digest['calls'],
+                'avg_ms' => $this->reading($digest['avg_ms'] ?? null),
+                'rows_examined' => $this->reading($digest['rows_examined'] ?? null) === null ? null : (int) $digest['rows_examined'],
             ];
         }
 
         return ['state' => 'ok', 'note' => $metric->note, 'remedy' => null, 'source' => $metric->source, 'rows' => $rows];
+    }
+
+    /**
+     * One cell of a table row, or null where the server did not publish that part of it.
+     *
+     * The zero this replaces is the whole reason this system exists: a column the catalogue did not
+     * answer for renders as "0 MB" or "0 calls", which reads as a measurement of nothing rather than
+     * as nothing measured. The view draws null as a dash.
+     */
+    private function reading(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    /** The same rule for the label a row is named by: an empty name is not a name. */
+    private function name(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**
@@ -426,7 +458,7 @@ class DatabasePanel implements Panel
      *
      * @return array<string, mixed>
      */
-    private function slowQueries(\Illuminate\Support\Carbon $from, int $windowMinutes): array
+    private function slowQueries(\Illuminate\Support\Carbon $from): array
     {
         $threshold = (int) config('monitoring.tracing.slow_query_ms', 200);
         $covers = Clock::display($from)->toDateTimeString();
@@ -469,7 +501,6 @@ class DatabasePanel implements Panel
             'remedy' => null,
             'threshold_ms' => $threshold,
             'covers_from' => $covers,
-            'window_minutes' => $windowMinutes,
             'by_total_ms' => $byTotalMs,
             'by_executions' => $byExecutions,
         ];
@@ -496,7 +527,6 @@ class DatabasePanel implements Panel
                 DB::raw('SUM(executions) as executions'),
                 DB::raw('SUM(total_ms) as total_ms'),
                 DB::raw('MAX(max_ms) as max_ms'),
-                DB::raw('SUM(rows_examined_sum) as rows_examined_sum'),
             ]);
 
         if ($rows->isEmpty()) {
@@ -518,7 +548,9 @@ class DatabasePanel implements Panel
                 // it, so this guard protects against a hand-edited row rather than a real division.
                 'avg_ms' => $executions > 0 ? round((int) $row->total_ms / $executions, 1) : null,
                 'max_ms' => (int) $row->max_ms,
-                'rows_examined' => (int) $row->rows_examined_sum,
+                // rows_examined_sum is deliberately absent: the application's own recorder cannot
+                // read how many rows a statement touched, so it stores 0 on every row, and a
+                // published "0 rows examined" is a measurement nobody took.
                 'route' => $routes[(string) $row->fingerprint] ?? null,
             ];
         })->all();
@@ -571,8 +603,7 @@ class DatabasePanel implements Panel
     private function queryHeavyRoutes(string $range, string $resolution): array
     {
         try {
-            $byDbTime = $this->routeRows($range, $resolution, 'db_ms_total');
-            $byQueriesPerRequest = $this->routeRows($range, $resolution, 'queries_per_request');
+            $routes = $this->routeTotals($range, $resolution);
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
@@ -583,7 +614,7 @@ class DatabasePanel implements Panel
             ];
         }
 
-        if ($byDbTime === []) {
+        if ($routes === []) {
             return array_merge(
                 ['by_db_time' => [], 'by_queries_per_request' => []],
                 $this->requestGap($resolution),
@@ -594,62 +625,186 @@ class DatabasePanel implements Panel
             'state' => 'ok',
             'note' => null,
             'remedy' => null,
-            'by_db_time' => $byDbTime,
-            'by_queries_per_request' => $byQueriesPerRequest,
+            'by_db_time' => $this->rankRoutes($routes, 'db_ms_total'),
+            'by_queries_per_request' => $this->rankRoutes($routes, 'queries_per_request'),
         ];
     }
 
     /**
+     * Every route in the window, summed across every bucket that covers it.
+     *
+     * @return array<string, array<string, int|string>>  raw totals keyed by channel, method and route
+     */
+    private function routeTotals(string $range, string $resolution): array
+    {
+        $since = $this->reader->since($range);
+        $totals = $this->routeCandidates($resolution, $since);
+
+        // The tail. Rollups fold minutes into hours on a schedule, so a 24-hour window read from
+        // hour buckets alone is blind to every request recorded since the last fold — which, an
+        // hour after a busy release, is the exact window somebody is looking at. Reading only the
+        // folded rows under-reported this shop's storefront home by 44% of its traffic, and made
+        // the 30-day table show less than the 24-hour one inside it.
+        // SeriesReader::requestSummary() closes the same gap the same way, and a bucket only ever
+        // belongs to one of the sets, so nothing is counted twice.
+        foreach ($this->unfoldedSources($resolution, $since) as $source => $from) {
+            foreach ($this->routeCandidates($source, $from) as $key => $route) {
+                foreach (['hits', 'db_ms_total', 'db_query_total', 'duration_total'] as $field) {
+                    $route[$field] += (int) ($totals[$key][$field] ?? 0);
+                }
+                $totals[$key] = $route;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * The finer buckets this range's own resolution cannot see yet, each with the moment it starts.
+     *
+     * @return array<string, \Illuminate\Support\Carbon>
+     */
+    private function unfoldedSources(string $resolution, \Illuminate\Support\Carbon $since): array
+    {
+        // The rollup folds minutes into hours and hours into days, so a day range has two blind
+        // spots: the hours no day row covers yet, and the minutes no hour row covers yet.
+        $chain = match ($resolution) {
+            'day' => ['hour' => 'day', 'minute' => 'hour'],
+            'hour' => ['minute' => 'hour'],
+            default => [],
+        };
+
+        $sources = [];
+        foreach ($chain as $source => $folded) {
+            $sources[$source] = $this->unfoldedFrom($folded, $since);
+        }
+
+        return $sources;
+    }
+
+    /**
+     * The routes worth ranking at one resolution, read in both orders.
+     *
+     * Two bounded queries rather than one: the ranking that finds an N+1 must not be capped by the
+     * ranking that finds the expensive route, or a cheap endpoint issuing two hundred statements
+     * would never be read at all.
+     *
+     * @return array<string, array<string, int|string>>
+     */
+    private function routeCandidates(string $resolution, \Illuminate\Support\Carbon $from): array
+    {
+        $candidates = [];
+
+        foreach (['db_ms_total', 'queries_per_request'] as $order) {
+            $query = $this->reader->connection()->table(self::REQUEST_SOURCE)
+                ->where('resolution', $resolution)
+                ->where('bucket_at', '>=', $from)
+                ->groupBy('channel', 'method', 'route')
+                ->havingRaw('SUM(hits) > 0')
+                ->limit(self::ROUTE_CANDIDATES);
+
+            // Per request, not in total: the ranking that finds an N+1 is the one a busy homepage
+            // cannot win simply by being busy.
+            if ($order === 'queries_per_request') {
+                $query->orderByRaw('SUM(db_query_count) / SUM(hits) DESC');
+            } else {
+                $query->orderByDesc('db_ms_total');
+            }
+
+            $rows = $query->get([
+                'channel', 'method', 'route',
+                DB::raw('SUM(hits) as hits'),
+                DB::raw('SUM(db_ms_sum) as db_ms_total'),
+                DB::raw('SUM(db_query_count) as db_query_total'),
+                DB::raw('SUM(duration_sum_ms) as duration_total'),
+            ]);
+
+            foreach ($rows as $row) {
+                // The two orderings return the same totals for a route they both name, so a second
+                // sighting replaces the first rather than being added to it.
+                $candidates[$row->channel . ' ' . $row->method . ' ' . $row->route] = [
+                    'channel' => (string) $row->channel,
+                    'method' => (string) $row->method,
+                    'route' => (string) $row->route,
+                    'hits' => (int) $row->hits,
+                    'db_ms_total' => (int) $row->db_ms_total,
+                    'db_query_total' => (int) $row->db_query_total,
+                    'duration_total' => (int) $row->duration_total,
+                ];
+            }
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * The first moment the rollup has not folded into the given resolution yet.
+     *
+     * Never earlier than the window itself, so the tail query stays inside the range the operator
+     * asked for.
+     */
+    private function unfoldedFrom(string $resolution, \Illuminate\Support\Carbon $since): \Illuminate\Support\Carbon
+    {
+        $newestFolded = $this->reader->connection()->table(self::REQUEST_SOURCE)
+            ->where('resolution', $resolution)
+            ->max('bucket_at');
+
+        // Where nothing has been folded at all, every bucket in the window is the tail.
+        $boundary = $newestFolded !== null
+            ? Clock::parse($newestFolded)->addMinutes($resolution === 'day' ? 1440 : 60)
+            : $since;
+
+        return $boundary->max($since);
+    }
+
+    /**
+     * One ranking of the merged totals, cut to the rows the table shows.
+     *
+     * @param  array<string, array<string, int|string>>  $routes
      * @param  string  $order  db_ms_total | queries_per_request
      * @return array<int, array<string, mixed>>
      */
-    private function routeRows(string $range, string $resolution, string $order): array
+    private function rankRoutes(array $routes, string $order): array
     {
-        $query = $this->reader->connection()->table(self::REQUEST_SOURCE)
-            ->where('resolution', $resolution)
-            ->where('bucket_at', '>=', $this->reader->since($range))
-            ->groupBy('channel', 'method', 'route')
-            ->havingRaw('SUM(hits) > 0')
-            ->limit(self::TABLE_ROWS);
+        $rows = array_map(fn (array $route) => $this->routeRow($route), array_values($routes));
 
-        // Per request, not in total: the ranking that finds an N+1 is the one a busy homepage
-        // cannot win simply by being busy.
-        if ($order === 'queries_per_request') {
-            $query->orderByRaw('SUM(db_query_count) / SUM(hits) DESC');
-        } else {
-            $query->orderByDesc('db_ms_total');
-        }
+        usort($rows, static fn (array $first, array $second) => $second[$order] <=> $first[$order]);
 
-        $rows = $query->get([
-            'channel', 'method', 'route',
-            DB::raw('SUM(hits) as hits'),
-            DB::raw('SUM(db_ms_sum) as db_ms_total'),
-            DB::raw('SUM(db_query_count) as db_query_total'),
-            DB::raw('SUM(duration_sum_ms) as duration_total'),
-        ]);
+        return array_slice($rows, 0, self::TABLE_ROWS);
+    }
 
-        return $rows->map(function ($row) {
-            $hits = (int) $row->hits;
-            $dbMs = (int) $row->db_ms_total;
-            $duration = (int) $row->duration_total;
-            $queriesPerRequest = round((int) $row->db_query_total / $hits, 1);
+    /**
+     * One route's totals as the table states them.
+     *
+     * Dividing is safe here and only here: every candidate came back through `SUM(hits) > 0`, so a
+     * per-request figure always has requests behind it.
+     *
+     * @param  array<string, int|string>  $route
+     * @return array<string, mixed>
+     */
+    private function routeRow(array $route): array
+    {
+        $hits = (int) $route['hits'];
+        $dbMs = (int) $route['db_ms_total'];
+        $queries = (int) $route['db_query_total'];
+        $duration = (int) $route['duration_total'];
+        $queriesPerRequest = round($queries / $hits, 1);
 
-            return [
-                'channel' => (string) $row->channel,
-                'method' => (string) $row->method,
-                'route' => (string) $row->route,
-                'hits' => $hits,
-                'db_ms_total' => $dbMs,
-                'db_ms_per_request' => round($dbMs / $hits, 1),
-                'queries_total' => (int) $row->db_query_total,
-                'queries_per_request' => $queriesPerRequest,
-                'ms_per_query' => (int) $row->db_query_total > 0 ? round($dbMs / (int) $row->db_query_total, 2) : null,
-                // Without a measured total duration there is no share to state, and a share of the
-                // unknown is not zero.
-                'db_share_pct' => $duration > 0 ? round(100 * $dbMs / $duration, 1) : null,
-                'suspect' => $queriesPerRequest >= self::QUERIES_PER_REQUEST_SUSPECT,
-            ];
-        })->all();
+        return [
+            'channel' => (string) $route['channel'],
+            'method' => (string) $route['method'],
+            'route' => (string) $route['route'],
+            'hits' => $hits,
+            'db_ms_total' => $dbMs,
+            'db_ms_per_request' => round($dbMs / $hits, 1),
+            'queries_total' => $queries,
+            'queries_per_request' => $queriesPerRequest,
+            'ms_per_query' => $queries > 0 ? round($dbMs / $queries, 2) : null,
+            // Without a measured total duration there is no share to state, and a share of the
+            // unknown is not zero.
+            'db_share_pct' => $duration > 0 ? round(100 * $dbMs / $duration, 1) : null,
+            'suspect' => $queriesPerRequest >= self::QUERIES_PER_REQUEST_SUSPECT,
+        ];
     }
 
     /**
@@ -668,10 +823,14 @@ class DatabasePanel implements Panel
         }
 
         if ($resolution !== 'minute') {
+            // The tables read the folded rows AND the minutes since the last fold, so an empty
+            // result no longer means "the rollup has not caught up"; it means neither source has a
+            // request in this window. Minute rows are only kept for a week, though, which is the one
+            // way a long range can look empty while the traffic did happen.
             return [
                 'state' => 'no_data',
-                'note' => 'This range reads ' . $resolution . ' buckets, which the monitoring rollup builds rather than traffic writing directly.',
-                'remedy' => 'Choose a shorter range to read the minute buckets, or check the hourly monitoring rollup is running: `php artisan schedule:list`.',
+                'note' => 'Neither the ' . $resolution . ' buckets this range reads nor the minutes recorded since the last rollup hold a request in this window.',
+                'remedy' => 'Check the monitoring rollup is building the ' . $resolution . ' rows: `php artisan schedule:list`. For a window inside the last week, a shorter range reads the minute buckets directly.',
             ];
         }
 

@@ -58,6 +58,24 @@ class TracesPanel implements Panel
     private const CAPTURED = ['error', 'slow', 'sampled'];
 
     /**
+     * The vocabularies this system writes, published so the view can tell its own words apart from
+     * stored ones.
+     *
+     * translate() persists any key it has not already seen into resources/lang/*\/new-messages.php,
+     * so a value read out of a column must never reach it — one unrecognised span kind mints a
+     * language key per value, which is the leak the settings section was fixed for. These columns
+     * are free strings at the database level, so knowing which values are ours is the only way the
+     * view can translate a label without translating whatever happened to be stored.
+     */
+    private const KINDS = ['db', 'cache', 'http', 'queue', 'view', 'middleware', 'controller', 'auth', 'app'];
+
+    /** The account kinds TraceRecorder labels a request with. */
+    private const USER_TYPES = ['admin', 'vendor', 'customer', 'guest'];
+
+    /** The counters TraceRecorder stores in a trace's meta blob. */
+    private const META_KEYS = ['jobs_dispatched', 'external_calls', 'cache_hits', 'cache_misses'];
+
+    /**
      * Narrowest bar drawn, in percent.
      *
      * A 0.4ms span inside a two-second trace is 0.02% wide, which renders as nothing at all — and
@@ -99,6 +117,12 @@ class TracesPanel implements Panel
             'filters' => $filters,
             'options' => $options,
             'capture' => $capture,
+            'vocabulary' => [
+                'captured' => self::CAPTURED,
+                'kinds' => self::KINDS,
+                'user_types' => self::USER_TYPES,
+                'meta' => self::META_KEYS,
+            ],
             'summary' => $this->summary($options),
             'traces' => $traces,
             'selected' => $filters['trace'] === null ? null : $this->selectedTrace($filters['trace']),
@@ -117,14 +141,18 @@ class TracesPanel implements Panel
      */
     private function filters(Request $request): array
     {
-        $captured = (string) $request->query('captured', 'all');
+        $captured = $this->queryText($request, 'captured') ?? 'all';
         if (!in_array($captured, array_merge(self::CAPTURED, ['all']), true)) {
             $captured = 'all';
         }
 
-        $minMs = (int) $request->query('min_ms', 0);
+        // Only something that reads as a number is a threshold. A word, a blank or an array is
+        // nobody asking for a floor, and turning one into an integer would filter the list against
+        // a millisecond figure the operator never typed.
+        $minMs = $this->queryText($request, 'min_ms');
+        $minMs = $minMs !== null && is_numeric($minMs) ? (int) $minMs : 0;
 
-        $trace = strtolower(trim((string) $request->query('trace', '')));
+        $trace = strtolower($this->queryText($request, 'trace') ?? '');
 
         return [
             'captured' => $captured,
@@ -138,9 +166,25 @@ class TracesPanel implements Panel
         ];
     }
 
+    /**
+     * One query value as trimmed text, or null when the URL did not carry a scalar there.
+     *
+     * A query string is whatever shape somebody put in it: `?captured[]=x` hands PHP an array, and
+     * casting that to string raises a warning which Laravel turns into an ErrorException — which
+     * blanked this entire section behind the registry's generic failure card, from a URL anyone who
+     * can open the page could type. A value that is not a scalar is not a filter, so it is dropped
+     * here rather than coerced into one.
+     */
+    private function queryText(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) || is_int($value) || is_float($value) ? trim((string) $value) : null;
+    }
+
     private function trimmed(Request $request, string $key, int $maxLength): ?string
     {
-        $value = trim((string) $request->query($key, ''));
+        $value = $this->queryText($request, $key) ?? '';
 
         return $value === '' ? null : mb_substr($value, 0, $maxLength);
     }
@@ -478,8 +522,10 @@ class TracesPanel implements Panel
                 'left_pct' => round($left, 3),
                 'width_pct' => round($width, 3),
                 // True when the bar had to be widened to stay visible, so the view can avoid
-                // implying a length the span did not have.
-                'widened' => $duration > 0 && (100 * $duration / $scale) < self::MIN_BAR_PCT,
+                // implying a length the span did not have. The zero-length case counts: a span
+                // that took no measurable time is exactly where a floor-width bar claims the most
+                // that was never recorded, and on a real trace most of the rows are that case.
+                'widened' => (100 * $duration / $scale) < self::MIN_BAR_PCT,
                 'attributes' => $this->attributes($row->attributes ?? null),
             ];
 

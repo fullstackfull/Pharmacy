@@ -9,9 +9,23 @@
 --}}
 
 @php
-    $count = static fn ($value) => $value === null
-        ? '—'
-        : number_format((float) $value, fmod((float) $value, 1) == 0 ? 0 : 2);
+    // A measured value below the two decimals this page shows is rendered as "< 0.01" rather than
+    // as "0.00". Sub-microsecond percentiles are real readings, and on a page whose whole argument
+    // is that zero means zero, rounding one down to it is the same lie as inventing it.
+    $count = static function ($value) {
+        if ($value === null) {
+            return '—';
+        }
+
+        $value = (float) $value;
+
+        return match (true) {
+            fmod($value, 1) == 0 => number_format($value),
+            $value > 0 && $value < 0.01 => '< 0.01',
+            $value < 0 && $value > -0.01 => '> -0.01',
+            default => number_format($value, 2),
+        };
+    };
 
     $microseconds = static fn (int $value) => $value >= 1000
         ? number_format($value / 1000, 1) . ' ms'
@@ -94,6 +108,16 @@
 {{-- The drivers as they are configured right now, read from the live config rather than from a
      picture of what a deployment usually looks like. --}}
 <x-k.card :title="translate('what_uses_redis_on_this_deployment')">
+    {{-- Beside the table, never instead of it. Monitoring's own row is always present, so the
+         table can never be empty — and a table listing only the monitoring buffer, with nothing
+         saying the shop's three drivers could not be read, reads as a shop that has no cache, no
+         queue and no session store at all. --}}
+    @if (($usage['state'] ?? 'ok') !== 'ok')
+        <p class="mon-note mon-note--critical">
+            {{ translate('the_cache_queue_and_session_drivers_could_not_be_read') }}: {{ $usage['reason'] }}
+        </p>
+    @endif
+
     @if (!empty($usage['rows']))
         <div class="k-table-wrap">
             <table class="k-table k-table--compact">
@@ -129,7 +153,7 @@
             </table>
         </div>
     @else
-        <x-k.empty icon="settings" :title="$stateTitle($usage['state'] ?? 'no_data')" :text="$usage['note'] ?? ''" />
+        <x-k.empty icon="settings" :title="$stateTitle($usage['state'] ?? 'no_data')" :text="$usage['reason'] ?? ''" />
     @endif
 
     @if ($nothingUsesIt && !empty($usage['caveats']))
@@ -194,7 +218,7 @@
                 <th>{{ translate('gauge') }}</th>
                 <th>{{ translate('series') }}</th>
                 <th class="k-table__num">{{ translate('latest') }}</th>
-                <th class="k-table__num">{{ translate('samples_in_window') }}</th>
+                <th class="k-table__num">{{ translate('stored_points_in_window') }}</th>
                 <th>{{ translate('state') }}</th>
             </tr>
             </thead>
@@ -207,7 +231,9 @@
                     <td class="k-table__num k-num">
                         {{ $chart['latest'] === null ? '—' : $count($chart['latest']) . ' ' . $chart['unit'] }}
                     </td>
-                    <td class="k-table__num k-num">{{ number_format($chart['samples']) }}</td>
+                    <td class="k-table__num k-num">
+                        {{ $chart['stored_points'] === null ? '—' : number_format($chart['stored_points']) }}
+                    </td>
                     <td>
                         @if ($chart['state'] === 'ok')
                             <span class="mon-pill mon-pill--ok">{{ translate('recorded') }}</span>
