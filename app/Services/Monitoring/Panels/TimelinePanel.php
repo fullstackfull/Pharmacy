@@ -184,10 +184,21 @@ class TimelinePanel implements Panel
      *
      * @return array<string, mixed>
      */
+    /** One query value, or an empty string when it is not a single string. */
+    private function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key, '');
+
+        return is_string($value) ? trim($value) : '';
+    }
+
     private function filters(Request $request): array
     {
-        $type = trim((string) $request->query('type', ''));
-        $severity = trim((string) $request->query('severity', ''));
+        // `?type[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — which took this whole section down with an "Array to
+        // string conversion" card. A filter nobody can spell is simply not applied.
+        $type = $this->queryString($request, 'type');
+        $severity = $this->queryString($request, 'severity');
 
         $type = in_array($type, EventLog::TYPES, true) ? $type : null;
         $severity = in_array($severity, self::SEVERITIES, true) ? $severity : null;

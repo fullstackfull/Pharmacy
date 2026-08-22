@@ -110,12 +110,17 @@ class ErrorsPanel implements Panel
      */
     private function filters(Request $request): array
     {
-        $status = (string) $request->query('status', 'open');
+        // `?status[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — which takes the whole section down with an "Array to
+        // string conversion" card. A filter that cannot be spelled is simply not applied.
+        $status = $request->query('status', 'open');
+        $status = is_string($status) ? $status : 'open';
+
         if (!in_array($status, array_merge(self::STATUSES, ['all']), true)) {
             $status = 'open';
         }
 
-        $group = (int) $request->query('group', 0);
+        $group = (int) $this->scalar($request, 'group', 0);
 
         return [
             'q' => $this->trimmed($request, 'q', 120),
@@ -129,13 +134,27 @@ class ErrorsPanel implements Panel
             // link rather than a search. 191 is the column width in the migration.
             'route' => $this->trimmed($request, 'route', 191),
             'group' => $group > 0 ? $group : null,
-            'page' => max(1, min(self::MAX_PAGE, (int) $request->query('page', 1))),
+            'page' => max(1, min(self::MAX_PAGE, (int) $this->scalar($request, 'page', 1))),
         ];
+    }
+
+    /** A query value that can be cast to a number, or the fallback when it is an array. */
+    private function scalar(Request $request, string $key, int|string $fallback): int|string
+    {
+        $value = $request->query($key, $fallback);
+
+        return is_scalar($value) ? $value : $fallback;
     }
 
     private function trimmed(Request $request, string $key, int $maxLength): ?string
     {
-        $value = trim((string) $request->query($key, ''));
+        $value = $request->query($key, '');
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
 
         return $value === '' ? null : mb_substr($value, 0, $maxLength);
     }

@@ -291,12 +291,23 @@ class LogsPanel implements Panel
      * @param  array<string, mixed>  $files
      * @return array<string, mixed>
      */
+    /** One query value, trimmed — or an empty string when it is not a single string. */
+    private function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key, '');
+
+        return is_string($value) ? trim($value) : '';
+    }
+
     private function filters(Request $request, array $files): array
     {
-        $level = strtolower(trim((string) $request->query('level', '')));
-        $query = trim((string) $request->query('q', ''));
-        $date = trim((string) $request->query('date', ''));
-        $requestedFile = basename(trim((string) $request->query('file', '')));
+        // `?level[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — which takes the whole section down with an "Array to
+        // string conversion" card. A filter that cannot be spelled is simply not applied.
+        $level = strtolower($this->queryString($request, 'level'));
+        $query = $this->queryString($request, 'q');
+        $date = $this->queryString($request, 'date');
+        $requestedFile = basename($this->queryString($request, 'file'));
 
         $names = array_column((array) ($files['items'] ?? []), 'name');
 

@@ -100,6 +100,9 @@ class SyntheticsPanel implements Panel
      */
     private const CHECK_CADENCE_MINUTES = 5;
 
+    /** Ceiling on a failure message drawn on the page, in characters. */
+    private const NOTE_LIMIT = 300;
+
     /** Readings drawn as single values above the tables. */
     private const HEADLINE = [
         'journeys_defined', 'journeys_probed', 'probes_in_window', 'pass_rate',
@@ -148,9 +151,6 @@ class SyntheticsPanel implements Panel
         CheckResult::UNKNOWN, CheckResult::NOT_CONFIGURED, CheckResult::NOT_SUPPORTED,
     ];
 
-    /** Statuses that mean a probe actually fetched the page and graded what came back. */
-    private const GRADED = [CheckResult::OK, CheckResult::DEGRADED, CheckResult::FAILING];
-
     /** Context keys SyntheticCheck attaches to a result, in the order they are worth reading. */
     private const CONTEXT_FIELDS = ['name', 'url', 'status', 'expected_status', 'expect_text', 'bytes'];
 
@@ -179,10 +179,12 @@ class SyntheticsPanel implements Panel
     public function data(string $range, Request $request): array
     {
         $window = $this->reader->window($range);
-        $targets = $this->targets();
         $history = $this->history($range, $window);
-        $runner = $this->runner($history, $window);
-        $series = $this->series($range, $window, $this->journeyKeys($history));
+        $targets = $this->qualifyTargets($this->targets(), $history);
+        $runner = $this->runner($history, $window, $targets);
+        $keys = $this->journeyKeys($history);
+        $unreadable = $history['state'] === 'failed';
+        $series = $this->series($range, $window, $keys, $unreadable);
         $journeys = $this->journeys($targets, $history, $series);
 
         return [
@@ -199,8 +201,12 @@ class SyntheticsPanel implements Panel
             'headline' => $this->headline($targets, $history, $runner),
             'journeys' => $journeys,
             'series' => $series,
-            'timeline' => $this->timeline($range, $window, $this->journeyKeys($history)),
+            'timeline' => $this->timeline($range, $window, $keys, $unreadable),
             'failures' => $this->failures($range),
+            // The status vocabulary, published rather than restated in the view: check_key and
+            // status are free strings at the database level, and translate() persists any key it
+            // has not seen, so a stored value is only translated when it is one of these six.
+            'statuses' => self::STATUSES,
             // What a target looks like, so the section can describe one without a form to draw.
             'shape' => $this->shape(),
             // This panel reads stored tables rather than a collector, so there is no reading it
@@ -230,17 +236,12 @@ class SyntheticsPanel implements Panel
         } catch (\Throwable $exception) {
             return $this->emptyTargets(
                 state: 'failed',
-                note: class_basename($exception) . ': ' . $exception->getMessage(),
+                note: $this->failureNote($exception),
                 failure: Metric::failed(self::SETTINGS_SOURCE, $exception),
             );
         }
 
-        // MonitoringSettings casts a `json` row for us, but a row stored with any other type comes
-        // back as the raw string. SyntheticCheck decodes it the same way; so does this.
-        if (is_string($configured)) {
-            $configured = json_decode($configured, true);
-        }
-
+        // Nothing stored at all. The one state this section exists to render honestly.
         if ($configured === null || $configured === [] || $configured === '') {
             return $this->emptyTargets(
                 state: 'not_configured',
@@ -249,10 +250,20 @@ class SyntheticsPanel implements Panel
             );
         }
 
+        // MonitoringSettings casts a `json` row for us, but a row stored under any other type comes
+        // back as the raw string. SyntheticCheck decodes it the same way; so does this.
+        if (is_string($configured)) {
+            $configured = json_decode($configured, true);
+        }
+
+        // Something IS stored and it is not a list of targets. The check reads exactly the same
+        // value and falls back to probing nothing, so this is a broken setting rather than an
+        // absent one — and reporting it as "not configured" would hide the difference between
+        // somebody who has not set this up and somebody whose setup stopped working.
         if (!is_array($configured)) {
             return $this->emptyTargets(
                 state: 'failed',
-                note: 'The stored synthetics setting is not a list of targets, so nothing can be read from it and nothing is being probed.',
+                note: 'A synthetics setting is stored but it is not a list of targets, so the check reads it as no targets and probes nothing.',
                 remedy: self::CONFIGURE_REMEDY,
             );
         }
@@ -293,6 +304,38 @@ class SyntheticsPanel implements Panel
             'truncated' => is_countable($configured) && count($configured) > self::MAX_TARGETS_LISTED,
             'limit' => self::MAX_TARGETS_LISTED,
         ];
+    }
+
+    /**
+     * "No journey is defined" is only sayable when the store could be read.
+     *
+     * MonitoringSettings swallows its own read failure and returns defaults — deliberately, so a
+     * missing table cannot take the dashboard down — which means an unreadable settings table and
+     * an empty one arrive here as the same empty array. On its own that is unrecoverable, but the
+     * result history is read from the same connection on the same request: when THAT failed, the
+     * store was not readable and "nothing is defined" is a claim this page has not earned. It is
+     * downgraded to an unread reading rather than asserted, because asserting it would tell an
+     * operator their configuration is missing when their database is.
+     *
+     * @param  array<string, mixed>  $targets
+     * @param  array<string, mixed>  $history
+     * @return array<string, mixed>
+     */
+    private function qualifyTargets(array $targets, array $history): array
+    {
+        if ($targets['state'] !== 'not_configured' || $history['state'] !== 'failed') {
+            return $targets;
+        }
+
+        return array_merge($targets, [
+            'state' => 'no_data',
+            'note' => 'Nothing could be read from the monitoring store on this request, so whether a journey is defined is unknown rather than answered. The settings reader reports an unreadable table as "no setting stored", which is indistinguishable here from an empty one. The read that failed said: ' . $history['note'],
+            'remedy' => 'Fix the monitoring connection first — confirm the database named by config(\'monitoring.connection\') is reachable and migrated: `php artisan migrate --database=' . (string) config('monitoring.connection', 'monitoring') . '`.',
+            'defined' => null,
+            'probeable' => null,
+            'skipped' => null,
+            'probed' => null,
+        ]);
     }
 
     /**
@@ -482,7 +525,7 @@ class SyntheticsPanel implements Panel
             // well — and the target list is the half that says what should be happening.
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'remedy' => null,
                 'source' => self::RESULTS_SOURCE,
                 'failure' => Metric::failed(self::RESULTS_SOURCE, $exception),
@@ -625,7 +668,17 @@ class SyntheticsPanel implements Panel
             };
         }
 
-        return $context;
+        // The fields the check writes come first and in a fixed order, so two failures of the same
+        // journey read the same way down the column. Anything else follows rather than being lost.
+        $ordered = [];
+        foreach (self::CONTEXT_FIELDS as $field) {
+            if (array_key_exists($field, $context)) {
+                $ordered[$field] = $context[$field];
+                unset($context[$field]);
+            }
+        }
+
+        return $ordered + $context;
     }
 
     /**
@@ -637,9 +690,10 @@ class SyntheticsPanel implements Panel
      *
      * @param  array<string, mixed>  $history
      * @param  array{minutes: int, resolution: string, points: int}  $window
+     * @param  array<string, mixed>  $targets
      * @return array<string, mixed>
      */
-    private function runner(array $history, array $window): array
+    private function runner(array $history, array $window, array $targets): array
     {
         $expected = intdiv($window['minutes'], self::CHECK_CADENCE_MINUTES);
         $shape = [
@@ -647,6 +701,7 @@ class SyntheticsPanel implements Panel
             'cadence_minutes' => self::CHECK_CADENCE_MINUTES,
             'expected_runs' => $expected,
             'window_shorter_than_cadence' => $window['minutes'] < self::CHECK_CADENCE_MINUTES * 3,
+            'disagrees_with_targets' => false,
         ];
 
         if ($history['state'] === 'failed') {
@@ -688,10 +743,24 @@ class SyntheticsPanel implements Panel
             ];
         }
 
-        return $shape + [
+        // Two independent records of the same fact, and they can disagree: this page decides
+        // which targets are probeable by mirroring rules that are private to SyntheticCheck, so a
+        // stored target this page calls probeable and the check then refuses is exactly the drift
+        // a mirrored rule invites. Named rather than resolved — an empty journey table under a
+        // full target list is otherwise unexplainable from the screen.
+        $disagrees = $row['last_status'] === CheckResult::NOT_CONFIGURED
+            && $targets['state'] === 'ok'
+            && (int) ($targets['probed'] ?? 0) > 0;
+
+        return array_merge($shape, [
+            'disagrees_with_targets' => $disagrees,
             'state' => 'ok',
-            'note' => null,
-            'remedy' => null,
+            'note' => $disagrees
+                ? 'The most recent run of the check reported having nothing to probe, while ' . $targets['probed'] . ' of the stored targets are listed here as ones it would fetch. Either the setting changed after that run, or the check rejects a target this page accepts.'
+                : null,
+            'remedy' => $disagrees
+                ? 'Run the checks now and compare: `php artisan monitoring:check`.'
+                : null,
             'runs' => $row['runs'],
             'last_checked_at' => $row['last_checked_at'],
             'last_checked_minutes_ago' => $row['last_checked_minutes_ago'],
@@ -705,7 +774,7 @@ class SyntheticsPanel implements Panel
                 CheckResult::NOT_CONFIGURED => $row['not_configured'],
                 CheckResult::NOT_SUPPORTED => $row['not_supported'],
             ], static fn (int $count) => $count > 0),
-        ];
+        ]);
     }
 
     /**
@@ -889,9 +958,11 @@ class SyntheticsPanel implements Panel
      *
      * @param  array{minutes: int, resolution: string, points: int}  $window
      * @param  array<int, string>  $keys
+     * @param  bool  $unreadable  the journey list could not be read, so an empty key set is not a
+     *                            measurement of no journeys — it is the absence of one
      * @return array<string, mixed>
      */
-    private function series(string $range, array $window, array $keys): array
+    private function series(string $range, array $window, array $keys, bool $unreadable): array
     {
         $folded = $window['resolution'] !== 'minute';
         $shape = [
@@ -906,6 +977,16 @@ class SyntheticsPanel implements Panel
                 ? 'These figures read the ' . $window['resolution'] . ' rows the rollup builds, so the newest minutes may not be folded into them yet. The journey history above is read row by row and has no such gap.'
                 : null,
         ];
+
+        if ($unreadable) {
+            return $shape + [
+                'state' => 'failed',
+                'note' => 'The journey list could not be read, so this page does not know which series to ask for. This is not a reading of no availability.',
+                'remedy' => null,
+                'by_journey' => [],
+                'truncated' => false,
+            ];
+        }
 
         if ($keys === []) {
             return $shape + [
@@ -936,7 +1017,7 @@ class SyntheticsPanel implements Panel
         } catch (\Throwable $exception) {
             return $shape + [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'remedy' => null,
                 'by_journey' => [],
                 'truncated' => false,
@@ -984,10 +1065,21 @@ class SyntheticsPanel implements Panel
      *
      * @param  array{minutes: int, resolution: string, points: int}  $window
      * @param  array<int, string>  $keys
+     * @param  bool  $unreadable  the journey list could not be read; an empty key set is then the
+     *                            absence of a reading rather than a measurement of no probes
      * @return array<string, mixed>
      */
-    private function timeline(string $range, array $window, array $keys): array
+    private function timeline(string $range, array $window, array $keys, bool $unreadable): array
     {
+        if ($unreadable) {
+            return [
+                'state' => 'failed',
+                'note' => 'The journey list could not be read, so this page does not know which series to draw. An empty chart here would read as an outage that has not been measured.',
+                'points' => [],
+                'truncated' => false,
+            ];
+        }
+
         if ($keys === []) {
             return [
                 'state' => 'no_data',
@@ -1017,7 +1109,7 @@ class SyntheticsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'points' => [],
                 'truncated' => false,
             ];
@@ -1086,13 +1178,12 @@ class SyntheticsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => $this->failureNote($exception),
                 'remedy' => null,
                 'source' => self::RESULTS_SOURCE,
                 'rows' => [],
                 'truncated' => false,
                 'limit' => self::MAX_FAILURES,
-                'context_fields' => self::CONTEXT_FIELDS,
             ];
         }
 
@@ -1118,7 +1209,6 @@ class SyntheticsPanel implements Panel
             'rows' => $failures,
             'truncated' => $rows->count() > self::MAX_FAILURES,
             'limit' => self::MAX_FAILURES,
-            'context_fields' => self::CONTEXT_FIELDS,
         ];
     }
 
@@ -1135,12 +1225,16 @@ class SyntheticsPanel implements Panel
     {
         $undefined = $targets['state'] === 'not_configured'
             || ($targets['state'] === 'ok' && (int) ($targets['probeable'] ?? 0) === 0);
+        // On a failed read every one of these is missing for the same single reason, which the
+        // runner card and the banner above it already state. Repeating it five more times turns
+        // one broken query into six faults.
+        $suppressed = $undefined || $history['state'] === 'failed';
 
         $totals = $this->totals($history);
         $headline = [];
 
         foreach (self::HEADLINE as $name) {
-            if ($undefined && in_array($name, self::PROBE_DERIVED, true)) {
+            if ($suppressed && in_array($name, self::PROBE_DERIVED, true)) {
                 continue;
             }
 
@@ -1249,6 +1343,22 @@ class SyntheticsPanel implements Panel
     }
 
     // -------------------------------------------------------------------------------------------
+
+    /**
+     * A caught failure, safe and short enough to put on the page.
+     *
+     * A driver exception carries the whole statement and its bound values, which is one of the
+     * most reliable places in an application to find a token or a customer's address — and an
+     * eight-hundred-character SQL dump repeated under three cards is unreadable besides. Redacted
+     * and bounded once here rather than at each catch.
+     */
+    private function failureNote(\Throwable $exception): string
+    {
+        return Str::limit(
+            $this->redactor->text(class_basename($exception) . ': ' . $exception->getMessage()),
+            self::NOTE_LIMIT,
+        );
+    }
 
     /**
      * A stored UTC stamp, in the timezone the dashboard renders in.

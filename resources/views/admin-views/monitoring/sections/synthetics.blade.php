@@ -59,7 +59,7 @@
     // check_key and status are free strings at the database level, and translate() writes any key
     // it has not seen into the language file. So a stored value is only ever translated when it is
     // one of the six this application authored, and echoed as stored otherwise.
-    $knownStatuses = ['ok', 'degraded', 'failing', 'unknown', 'not_configured', 'not_supported'];
+    $knownStatuses = $panel['statuses'];
 
     $statusLabel = static fn (?string $status) => $status === null
         ? null
@@ -145,6 +145,21 @@
             <span class="mon-attention__body">
                 <strong>{{ translate('the_synthetic_probe_history_could_not_be_read') }}</strong>
                 <small>{{ $runner['note'] }}</small>
+            </span>
+        </div>
+    </div>
+@elseif (!empty($runner['disagrees_with_targets']))
+    {{-- Two independent records of the same fact, disagreeing. Named rather than resolved: an
+         empty journey table under a full target list is otherwise unexplainable from the screen. --}}
+    <div class="mon-attention">
+        <div class="mon-attention__item mon-attention__item--warning">
+            <x-k.icon name="alert" :size="16" />
+            <span class="mon-attention__body">
+                <strong>{{ translate('the_target_list_and_the_last_run_of_the_check_do_not_agree') }}</strong>
+                <small>{{ $runner['note'] }}</small>
+                @if (!empty($runner['remedy']))
+                    <code>{{ $runner['remedy'] }}</code>
+                @endif
             </span>
         </div>
     </div>
