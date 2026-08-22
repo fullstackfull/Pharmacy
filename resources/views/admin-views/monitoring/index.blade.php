@@ -30,13 +30,13 @@
 
         {{-- Status header. `data-mon-*` attributes are what the pulse feed refreshes, so the
              markup is written once and updated in place rather than re-rendered. --}}
-        <div class="mon-status" id="mon-status" data-state="{{ $panel['health']['status'] ?? 'unknown' }}">
+        <div class="mon-status" id="mon-status" data-state="{{ $pulse['status'] ?? 'unknown' }}">
             <div class="mon-status__verdict">
                 <span class="mon-status__dot" aria-hidden="true"></span>
                 <div>
-                    <strong data-mon="status">{{ translate($panel['health']['status'] ?? 'unknown') }}</strong>
+                    <strong data-mon="status">{{ translate($pulse['status'] ?? 'unknown') }}</strong>
                     <small data-mon="status-detail">
-                        @if (($panel['health']['status'] ?? null) === 'unknown')
+                        @if (($pulse['status'] ?? null) === 'unknown')
                             {{ translate('monitoring_is_not_receiving_data_so_the_state_of_the_shop_is_unknown') }}
                         @else
                             {{ translate('across_all_measured_signals') }}
@@ -46,10 +46,10 @@
             </div>
 
             <div class="mon-status__score">
-                <span class="k-num" data-mon="score">{{ $panel['health']['score'] ?? '—' }}</span><i>/100</i>
+                <span class="k-num" data-mon="score">{{ $pulse['score'] ?? '—' }}</span><i>/100</i>
                 <small data-mon="coverage">
                     {{ translate('from') }}
-                    {{ $panel['health']['coverage']['measured'] ?? 0 }}/{{ $panel['health']['coverage']['total'] ?? 0 }}
+                    {{ $pulse['coverage']['measured'] ?? 0 }}/{{ $pulse['coverage']['total'] ?? 0 }}
                     {{ translate('measured_signals') }}
                 </small>
             </div>

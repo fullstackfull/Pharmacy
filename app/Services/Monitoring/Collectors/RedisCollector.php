@@ -18,10 +18,11 @@ use Illuminate\Support\Facades\Cache;
  * the person reading it:
  *
  * 1. It does not let a green Redis stand in for a fast shop. Redis is only ever as important as
- *    the subsystems pointed at it, and on this deployment CACHE_DRIVER, QUEUE_CONNECTION and
- *    SESSION_DRIVER are file, database and file — so a perfect hit ratio here says nothing about
- *    how the store caches, queues or logs anyone in. The drivers are read from the live config and
- *    reported beside the server, so the page can never imply a connection that does not exist.
+ *    the subsystems pointed at it, and where CACHE_DRIVER, QUEUE_CONNECTION and SESSION_DRIVER are
+ *    file, database and file, a perfect hit ratio here says nothing about how the store caches,
+ *    queues or logs anyone in — Redis is not on the request path at all. The three drivers are
+ *    read from the live config and reported beside the server, so the page cannot imply a
+ *    dependency that does not exist.
  *
  * 2. It does not report a hit ratio that cannot move. keyspace_hits and keyspace_misses are totals
  *    since the server started; on a Redis up for a month, the lifetime ratio is a monument to last
@@ -95,6 +96,11 @@ class RedisCollector implements Collector
         'command_latency_percentiles',
     ];
 
+    /** Everything the application's own configuration feeds, answerable with Redis down. */
+    private const APPLICATION_METRICS = [
+        'subsystems', 'serves_app', 'cache_driver', 'queue_driver', 'session_driver',
+    ];
+
     private Connection|Metric|null $connection = null;
 
     /** @var array<string, Metric>|null */
@@ -111,10 +117,24 @@ class RedisCollector implements Collector
 
     public function collect(): array
     {
-        // Sampled once per instance. The interval hit ratio is a delta against a cached previous
-        // reading, so collecting twice in one request — once for the panel, once for gauges() —
-        // would leave the second pass with a few microseconds of window and no ratio at all.
-        return $this->readings ??= $this->read();
+        if ($this->readings !== null) {
+            return $this->readings;
+        }
+
+        try {
+            // Sampled once per instance. The interval hit ratio is a delta against a cached
+            // previous reading, so collecting twice in one request — once for the panel, once for
+            // gauges() — would leave the second pass with a few microseconds of window and no
+            // ratio at all.
+            return $this->readings = $this->read();
+        } catch (\Throwable $exception) {
+            $failed = Metric::failed(self::INFO_SOURCE, $exception);
+
+            return $this->readings = array_fill_keys(
+                [...self::SERVER_METRICS, 'client', ...self::APPLICATION_METRICS],
+                $failed,
+            );
+        }
     }
 
     public function gauges(): array

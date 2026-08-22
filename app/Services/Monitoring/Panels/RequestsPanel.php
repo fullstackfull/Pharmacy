@@ -222,7 +222,12 @@ class RequestsPanel implements Panel
 
             $total += (int) $summary['hits'];
             $rows[] = array_merge(
-                ['channel' => $channel, 'summary' => $summary, 'share' => null],
+                [
+                    'channel' => $channel,
+                    'summary' => $summary,
+                    'share' => null,
+                    'severity' => $this->errorSeverity($summary['error_rate']),
+                ],
                 $summary['has_data']
                     ? ['state' => 'ok', 'note' => null, 'remedy' => null]
                     : $this->emptyReason($collection, $resolution, 'No request reached this channel in this window.'),
@@ -324,7 +329,23 @@ class RequestsPanel implements Panel
             'error_rate' => $route['error_rate'],
             'db_ms_avg' => $route['db_ms_avg'],
             'total_time_ms' => $route['total_time_ms'],
+            'severity' => $this->errorSeverity($route['error_rate']),
         ];
+    }
+
+    /**
+     * How loudly a failure rate should be drawn, against the same thresholds the overview scores
+     * against — so a route called amber here is not called green two clicks away.
+     */
+    private function errorSeverity(?float $errorRate): string
+    {
+        return match (true) {
+            // Null is "not measured", which is not a quiet reading and must not be styled as one.
+            $errorRate === null => 'info',
+            $errorRate >= (float) config('monitoring.thresholds.error_rate_critical', 5.0) => 'critical',
+            $errorRate >= (float) config('monitoring.thresholds.error_rate_warning', 1.0) => 'warning',
+            default => 'ok',
+        };
     }
 
     /**

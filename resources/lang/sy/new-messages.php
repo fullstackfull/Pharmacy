@@ -1221,4 +1221,5 @@ return [
 	'shoppers' => 'المتسوّقون',
 	'unavailable' => 'غير متاح',
 	'No_scheduled_task_has_ever_reported_a_run.' => 'No scheduled task has ever reported a run.',
+	'92.6_%' => '92.6 %',
 ];

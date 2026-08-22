@@ -80,6 +80,10 @@ class MonitoringController extends BaseController
             // Rendered server-side as well as polled: the header must state the truth on first
             // paint rather than showing placeholder chips until the first poll lands.
             'self' => $this->panels->selfHealth(),
+            // The status header belongs to the SHELL, not to the overview panel. Reading it out of
+            // $panel meant every other section rendered "0/0 measured signals" and a blank score —
+            // a fabricated zero on thirty-two pages, which is the one thing this system must not do.
+            'pulse' => $this->panels->pulse(),
         ]);
     }
 
