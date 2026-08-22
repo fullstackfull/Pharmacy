@@ -36,10 +36,16 @@ class HardwareCollector implements Collector
     private const SENSOR_REMEDY = 'On bare metal these appear once the platform driver is loaded: modprobe coretemp (Intel), k10temp (AMD) or drivetemp (SATA), then install lm-sensors and run sensors-detect. No hypervisor forwards the host sensors to a guest, so a virtual machine cannot be made to answer.';
     private const FAN_REMEDY = 'Fan tachometers come from the board Super-I/O chip: on bare metal, modprobe the driver sensors-detect names (nct6775, it87, w83627ehf). A virtual machine has no fan to measure.';
     private const VOLTAGE_REMEDY = 'Voltage rails come from the same Super-I/O or PMBus chip as the fans: on bare metal, modprobe the driver sensors-detect names (nct6775, it87). A virtual machine has no rails to measure.';
-    private const SENSOR_ACCESS_REMEDY = 'Give the web user read access to /sys/class/hwmon and /sys/class/thermal. They are world-readable by default, so a hardened /sys mount, a systemd ProtectKernelTunables setting or an AppArmor profile is the usual cause.';
-    private const SMART_REMEDY = 'Install smartmontools (apt install smartmontools) or nvme-cli, then let the web user open the device: add AmbientCapabilities=CAP_SYS_RAWIO to the PHP-FPM unit (systemctl edit php8.2-fpm), or add a NOPASSWD sudoers rule for smartctl, or run a privileged collector — a root cron writing "smartctl --json=c -H -A /dev/sda" to a file this collector reads.';
+    private const SENSOR_ACCESS_REMEDY = 'Give the web user read access to /sys/class/hwmon and /sys/class/thermal. Those files are world-readable by default, so something is hiding them rather than the permissions being wrong: a systemd sandbox on the PHP-FPM unit (InaccessiblePaths= or TemporaryFileSystem= covering /sys), an AppArmor or SELinux profile, or a container that masks /sys. ProtectKernelTunables= only makes /sys read-only and is never the cause.';
+    private const SMART_REMEDY = 'Install smartmontools (apt install smartmontools) or nvme-cli, then give the web user the privilege the ioctl needs: SMART rides an ATA/NVMe passthrough command, so read access to the device node alone never grants it. Either setcap cap_sys_rawio,cap_sys_admin+ep /usr/sbin/smartctl (and /usr/sbin/nvme), or add AmbientCapabilities=CAP_SYS_RAWIO CAP_SYS_ADMIN to the PHP-FPM unit with systemctl edit php-fpm and reload it.';
     private const EDAC_REMEDY = 'ECC error counting needs ECC DIMMs, CONFIG_EDAC in the kernel and the memory controller driver for the CPU (modprobe amd64_edac, skx_edac or i10nm_edac). A virtual machine is not shown the host memory controller.';
     private const IPMI_REMEDY = 'Install ipmitool (apt install ipmitool), load the BMC drivers (modprobe ipmi_si ipmi_devintf) and give the web user access to /dev/ipmi0, or query the BMC over the network with ipmitool -H. Only a server with a baseboard management controller has one.';
+
+    /** Long enough for a spun-down disk to answer, short enough that nobody watches it. */
+    private const PROBE_TIMEOUT_SECONDS = 5;
+
+    /** A ceiling on the whole drive sweep: eight wedged disks must not add up to eight timeouts. */
+    private const DRIVE_SCAN_BUDGET_SECONDS = 15;
 
     private const DRIVE_CACHE_KEY = 'monitoring:hardware:drives';
     private const DRIVE_CACHE_SECONDS = 300;
@@ -48,6 +54,8 @@ class HardwareCollector implements Collector
 
     /** Enough to cover a real server's disks without turning a page render into a shell storm. */
     private const MAX_DRIVES = 8;
+
+    private ?bool $timeoutAvailable = null;
 
     public function __construct(private readonly Environment $environment)
     {
@@ -96,8 +104,9 @@ class HardwareCollector implements Collector
     /**
      * One reading of every sensor the kernel exposes, taken once per collection.
      *
-     * `unreadable` counts files that exist but could not be opened, which is what separates "this
-     * machine has no sensors" from "this process may not look at them" further down.
+     * `unreadable` counts only the inputs this process is not allowed to open, which is what
+     * separates "this machine has no sensors" from "this process may not look at them" further
+     * down.
      *
      * @return array{temperatures: list<array<string, mixed>>, fans: list<array<string, mixed>>, voltages: list<array<string, mixed>>, unreadable: int}
      */
@@ -180,7 +189,13 @@ class HardwareCollector implements Collector
     {
         $contents = @file_get_contents($path);
         if ($contents === false) {
-            $scan['unreadable']++;
+            // A file this process may not open is the operator's to fix; one that opens and then
+            // errors is the driver saying no — a disabled thermal zone answers -EINVAL — and
+            // counting that as a permission fault would send them to change permissions that were
+            // never wrong.
+            if (!is_readable($path)) {
+                $scan['unreadable']++;
+            }
 
             return null;
         }
@@ -340,7 +355,7 @@ class HardwareCollector implements Collector
             return $this->noDrives(Metric::permissionDenied(
                 self::SMART_SOURCE,
                 'This PHP may not run smartctl or nvme, and no PHP function reports drive health.',
-                'Remove exec and shell_exec from disable_functions in php.ini and reload PHP-FPM, or have a root cron write "smartctl --json=c -H -A /dev/sda" to a file this collector reads. ' . self::SMART_REMEDY,
+                'Remove exec and shell_exec from disable_functions in php.ini and reload PHP-FPM. ' . self::SMART_REMEDY,
             ));
         }
 
@@ -385,7 +400,10 @@ class HardwareCollector implements Collector
             }
         }
 
-        return ['health' => Metric::of($report['devices'], $source), 'temps' => $temps];
+        return [
+            'health' => Metric::of($report['devices'], $source, null, $report['detail'] !== '' ? $report['detail'] : null),
+            'temps' => $temps,
+        ];
     }
 
     /** @return array{health: Metric, temps: list<array<string, mixed>>} */
@@ -406,8 +424,15 @@ class HardwareCollector implements Collector
 
         $rows = [];
         $denied = null;
+        $deadline = microtime(true) + self::DRIVE_SCAN_BUDGET_SECONDS;
+        $unscanned = [];
 
         foreach ($devices as $device) {
+            if (microtime(true) >= $deadline) {
+                $unscanned[] = $device;
+                continue;
+            }
+
             $output = $this->run($tool === 'smartctl'
                 ? 'smartctl --json=c -H -A ' . escapeshellarg($device)
                 : 'nvme smart-log -o json ' . escapeshellarg($device));
@@ -416,8 +441,8 @@ class HardwareCollector implements Collector
                 continue;
             }
 
-            if (preg_match('/permission denied|operation not permitted|requires root|must be run as root|failed to open|open device.*failed/i', $output) === 1) {
-                $denied = $this->firstLine($output);
+            if (preg_match('/permission denied|operation not permitted|requires root|must be run as root|failed to open|open device.*failed/i', $output, $refusal) === 1) {
+                $denied = $this->reasonLine($output, $refusal[0]);
                 continue;
             }
 
@@ -429,6 +454,15 @@ class HardwareCollector implements Collector
 
         if ($rows === [] && $denied !== null) {
             return ['status' => 'denied', 'detail' => $denied, 'devices' => []];
+        }
+
+        if ($unscanned !== []) {
+            $detail = $tool . ' ran out of the ' . self::DRIVE_SCAN_BUDGET_SECONDS . 's scan budget; '
+                . implode(', ', $unscanned) . ' were not asked. A disk that never answers is usually spun down or wedged.';
+
+            return $rows === []
+                ? ['status' => 'no_data', 'detail' => $detail, 'devices' => []]
+                : ['status' => 'partial', 'detail' => $detail, 'devices' => $rows];
         }
 
         if ($rows === []) {
@@ -471,7 +505,9 @@ class HardwareCollector implements Collector
                 'device' => $device,
                 'model' => $json['model_name'] ?? null,
                 'passed' => $json['smart_status']['passed'] ?? null,
-                'temp_c' => isset($json['temperature']['current']) ? (float) $json['temperature']['current'] : null,
+                'temp_c' => isset($json['temperature']['current']) && is_numeric($json['temperature']['current'])
+                    ? $this->driveCelsius((float) $json['temperature']['current'])
+                    : null,
                 'power_on_hours' => $json['power_on_time']['hours'] ?? null,
                 'reallocated_sectors' => $attributes[5] ?? null,
                 'pending_sectors' => $attributes[197] ?? null,
@@ -487,10 +523,30 @@ class HardwareCollector implements Collector
             $row['passed'] = strtoupper($match[1]) === 'PASSED';
         }
         if (preg_match('/Temperature_Celsius.*?-\s+(\d+)/i', $output, $match) === 1) {
-            $row['temp_c'] = (float) $match[1];
+            $celsius = $this->driveCelsius((float) $match[1]);
+            if ($celsius !== null) {
+                $row['temp_c'] = $celsius;
+            }
         }
 
         return isset($row['passed']) || isset($row['temp_c']) ? $row : null;
+    }
+
+    /**
+     * A drive temperature, but only when the drive actually supplied one.
+     *
+     * Both tools have a "nothing here" value that reads like a measurement. nvme-cli prints the raw
+     * register in JSON, which is kelvin — and 0 there is an unpopulated sensor, not absolute zero —
+     * while its human output prints celsius, so anything above 200 is the kelvin form. smartctl
+     * passes a 0 straight through from a USB bridge that never asked the disk. A powered drive sits
+     * above room temperature, so 0 °C is the absence of a sensor, and charting it as an ice-cold
+     * disk is precisely the good news this collector exists not to invent.
+     */
+    private function driveCelsius(float $reading): ?float
+    {
+        $celsius = $reading > 200 ? $reading - 273.15 : $reading;
+
+        return $celsius > 0 && $celsius < 150 ? round($celsius, 1) : null;
     }
 
     /**
@@ -522,11 +578,10 @@ class HardwareCollector implements Collector
         $row = ['device' => $device];
 
         if (isset($json['temperature']) && is_numeric($json['temperature'])) {
-            // nvme-cli prints the raw register value in JSON, which is kelvin, while its
-            // human-readable output converts it. Nothing survives 200 °C, so anything above that
-            // is the kelvin form.
-            $temperature = (float) $json['temperature'];
-            $row['temp_c'] = round($temperature > 200 ? $temperature - 273.15 : $temperature, 1);
+            $celsius = $this->driveCelsius((float) $json['temperature']);
+            if ($celsius !== null) {
+                $row['temp_c'] = $celsius;
+            }
         }
         if (isset($json['critical_warning']) && is_numeric($json['critical_warning'])) {
             $row['passed'] = (int) $json['critical_warning'] === 0;
@@ -601,10 +656,10 @@ class HardwareCollector implements Collector
                 return Metric::noData(self::IPMI_SOURCE, 'ipmitool returned nothing for the temperature sensor list.');
             }
 
-            if (preg_match('/could not open device|permission denied|operation not permitted|driver.*not (?:loaded|present)/i', $output) === 1) {
+            if (preg_match('/could not open device|permission denied|operation not permitted|driver.*not (?:loaded|present)/i', $output, $refusal) === 1) {
                 return Metric::permissionDenied(
                     self::IPMI_SOURCE,
-                    'ipmitool cannot reach the BMC: ' . $this->firstLine($output),
+                    'ipmitool cannot reach the BMC: ' . $this->reasonLine($output, $refusal[0]),
                     self::IPMI_REMEDY,
                 );
             }
@@ -648,20 +703,32 @@ class HardwareCollector implements Collector
      * Run a hardware probe, bounded.
      *
      * smartctl against a spun-down disk and ipmitool against a wedged BMC both block for a long
-     * time, and monitoring must never be the thing that hangs the page; the bare retry covers hosts
-     * without coreutils' timeout. stderr is folded in deliberately — on these tools "Permission
-     * denied" is the answer, and it only ever arrives there.
+     * time, and monitoring must never be the thing that hangs the page. Where coreutils' timeout
+     * exists every command goes through it and is never retried bare afterwards: a killed probe
+     * returns nothing, so retrying on empty output would hand back the unbounded wait the wrapper
+     * was there to prevent. stderr is folded in deliberately — on these tools "Permission denied"
+     * is the answer, and it only ever arrives there.
      */
     private function run(string $command): ?string
     {
-        foreach (["timeout 5 {$command}", $command] as $attempt) {
-            $output = @shell_exec($attempt . ' 2>&1');
-            if (is_string($output) && trim($output) !== '') {
-                return $output;
-            }
+        if ($this->timeoutAvailable()) {
+            $command = 'timeout ' . self::PROBE_TIMEOUT_SECONDS . ' ' . $command;
         }
 
-        return null;
+        $output = @shell_exec($command . ' 2>&1');
+
+        return is_string($output) && trim($output) !== '' ? $output : null;
+    }
+
+    /** Asked once per request: whether a probe can be bounded decides how every probe is run. */
+    private function timeoutAvailable(): bool
+    {
+        if ($this->timeoutAvailable === null) {
+            $path = @shell_exec('command -v timeout 2>/dev/null');
+            $this->timeoutAvailable = is_string($path) && trim($path) !== '';
+        }
+
+        return $this->timeoutAvailable;
     }
 
     /**
@@ -677,11 +744,21 @@ class HardwareCollector implements Collector
         }
     }
 
-    private function firstLine(string $output): string
+    /**
+     * The line that actually refused, since a tool's version banner is not a reason.
+     *
+     * These notes are what an operator reads to decide what to change, and smartctl prints its
+     * build header before saying why it could not open the device.
+     */
+    private function reasonLine(string $output, string $refusal): string
     {
-        $lines = preg_split('/\r?\n/', trim($output)) ?: [];
+        foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
+            if (stripos($line, $refusal) !== false) {
+                return mb_substr(trim($line), 0, 200);
+            }
+        }
 
-        return mb_substr(trim((string) ($lines[0] ?? '')), 0, 200);
+        return mb_substr(trim($output), 0, 200);
     }
 
     /**

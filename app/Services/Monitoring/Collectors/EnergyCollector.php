@@ -5,6 +5,7 @@ namespace App\Services\Monitoring\Collectors;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Environment;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -45,10 +46,12 @@ class EnergyCollector implements Collector
     private const ESTIMATED = 'Estimated';
 
     private const RAPL_SOURCE = 'Linux /sys/class/powercap (Intel RAPL)';
-    private const ESTIMATE_SOURCE = 'config/monitoring.php energy estimate + Linux /proc/stat';
+    private const ESTIMATE_SOURCE = 'Monitoring → Settings energy estimate + Linux /proc/stat';
     private const SERIES_SOURCE = 'monitoring_series (energy.watts)';
-    private const PRICE_SOURCE = 'config/monitoring.php (energy.price_per_kwh)';
-    private const CURRENCY_SOURCE = 'config/monitoring.php (energy.currency)';
+    private const ESTIMATE_MODE_SOURCE = 'Monitoring → Settings / config/monitoring.php (energy.estimated_mode)';
+    private const BAND_SOURCE = 'Monitoring → Settings / config/monitoring.php (energy.estimate_idle_watts, energy.estimate_max_watts)';
+    private const PRICE_SOURCE = 'Monitoring → Settings / config/monitoring.php (energy.price_per_kwh)';
+    private const CURRENCY_SOURCE = 'Monitoring → Settings / config/monitoring.php (energy.currency)';
 
     /**
      * A package counter wraps roughly every twenty minutes at a couple of hundred watts, and the
@@ -60,13 +63,26 @@ class EnergyCollector implements Collector
     /** Below this, a month projected from the average draw so far is arithmetic, not a forecast. */
     private const MINIMUM_PROJECTION_MINUTES = 60;
 
-    private const RAPL_REMEDY = 'Real power telemetry needs Intel RAPL/powercap (/sys/class/powercap, bare metal only) or a BMC reachable over IPMI. Where neither exists, an estimate from CPU load can be switched on deliberately in Monitoring → Settings, or with MONITORING_ENERGY_ESTIMATED=true in .env followed by php artisan config:clear.';
+    private const RAPL_REMEDY = 'Real power telemetry needs Intel RAPL/powercap (/sys/class/powercap, bare metal only) or a BMC reachable over IPMI. Where neither exists, an estimate from CPU load can be switched on deliberately in Monitoring → Settings → Energy, or with MONITORING_ENERGY_ESTIMATED=true in .env followed by php artisan config:clear.';
 
-    private const PRICE_REMEDY = 'Set the electricity price in Monitoring → Settings, or MONITORING_ENERGY_PRICE=0.28 with MONITORING_ENERGY_CURRENCY=EUR in .env, then run php artisan config:clear.';
+    /**
+     * udev runs RUN+= programs directly, with no shell, so a rule containing intel-rapl:* would
+     * chmod a path with a literal asterisk in it and change nothing. The glob has to be expanded by
+     * an explicit /bin/sh -c, which is the difference between this rule working and looking like it
+     * should.
+     */
+    private const RAPL_ACCESS_REMEDY = 'Grant read access with a udev rule in /etc/udev/rules.d/99-rapl.rules: SUBSYSTEM=="powercap", ACTION=="add", RUN+="/bin/sh -c \'chmod -R a+r /sys/class/powercap/intel-rapl*/energy_uj\'" — then run sudo udevadm control --reload and sudo udevadm trigger --subsystem-match=powercap. Running sudo chmod -R a+r /sys/class/powercap by hand fixes it now but only until the next reboot.';
+
+    private const PRICE_REMEDY = 'Set the electricity price in Monitoring → Settings → Energy, or MONITORING_ENERGY_PRICE=0.28 with MONITORING_ENERGY_CURRENCY=EUR in .env, then run php artisan config:clear.';
 
     public function __construct(
         private readonly Environment $environment,
         private readonly CpuCollector $cpu,
+        // The price, the currency and the estimate switch are things an operator changes while
+        // looking at the panel, so they are read the way every other check reads them: the stored
+        // setting first, config/monitoring.php as the floor. Reading config() directly would make
+        // every "set this in Monitoring → Settings" remedy on this panel a lie.
+        private readonly MonitoringSettings $settings,
     ) {
     }
 
@@ -114,9 +130,12 @@ class EnergyCollector implements Collector
             return self::MEASURED;
         }
 
-        // Checked with ===, not truthiness: a leftover "0" or "off" in .env must not be enough to
-        // start inventing watts. The estimate is opt-in and has to be turned on in so many words.
-        return config('monitoring.energy.estimated_mode') === true ? self::ESTIMATED : null;
+        // Read as an explicit boolean rather than for truthiness: a leftover MONITORING_ENERGY=0 or
+        // =off arrives here as a non-empty string, which PHP calls true, and that must not be
+        // enough to start inventing watts. The estimate has to be turned on in so many words.
+        $enabled = filter_var($this->settings->get('energy.estimated_mode'), FILTER_VALIDATE_BOOLEAN);
+
+        return $enabled ? self::ESTIMATED : null;
     }
 
     private function basisMetric(?string $basis): Metric
@@ -130,16 +149,37 @@ class EnergyCollector implements Collector
             ),
             self::ESTIMATED => Metric::of(
                 self::ESTIMATED,
-                'config/monitoring.php (energy.estimated_mode)',
+                self::ESTIMATE_MODE_SOURCE,
                 null,
                 'Estimated mode is on: every energy and cost figure here is modelled from CPU utilisation, not measured.',
             ),
-            default => Metric::notSupported(
-                self::RAPL_SOURCE,
-                'This host exposes no RAPL/powercap energy counters and no estimate has been switched on, so there is no basis for a power figure.',
-                self::RAPL_REMEDY,
-            ),
+            default => $this->noBasis(self::RAPL_SOURCE, 'There is no basis for a power figure.'),
         };
+    }
+
+    /**
+     * Why this host cannot be asked for watts — and the two answers need different fixes.
+     *
+     * Counters that exist but cannot be read is a permission the operator can grant; no counters at
+     * all is the hardware, and no amount of chmod will produce them. Telling someone whose machine
+     * has RAPL that it has none sends them looking for the wrong thing entirely, so the distinction
+     * is made once here and every metric on the panel inherits it.
+     */
+    private function noBasis(string $source, string $consequence): Metric
+    {
+        if ($this->environment->has('rapl')) {
+            return Metric::permissionDenied(
+                $source,
+                'This host has RAPL energy counters but this process may not read them; energy_uj has been root-only since Linux 5.10, because at high resolution it leaks a side channel. ' . $consequence,
+                self::RAPL_ACCESS_REMEDY,
+            );
+        }
+
+        return Metric::notSupported(
+            $source,
+            'This host exposes no RAPL/powercap energy counters, which is normal on a virtual machine: the hypervisor owns the hardware and does not pass its meters through. No estimate has been switched on either. ' . $consequence,
+            self::RAPL_REMEDY,
+        );
     }
 
     /** @return array<string, Metric> */
@@ -150,22 +190,17 @@ class EnergyCollector implements Collector
         }
 
         if ($basis === self::ESTIMATED) {
-            return $this->estimatedPower();
+            // The estimate reads the CPU collector, which is a whole second collector's worth of
+            // probes. measuredPower() guards itself; this branch has to as well, or one throw down
+            // there leaves the panel by way of a collector that promised never to throw.
+            try {
+                return $this->estimatedPower();
+            } catch (\Throwable $exception) {
+                return $this->everyPowerMetric(Metric::failed(self::ESTIMATE_SOURCE, $exception));
+            }
         }
 
-        // The counters exist but are unreadable is a different fact from no counters at all, and
-        // only one of the two is something the operator can fix.
-        return $this->everyPowerMetric($this->environment->has('rapl')
-            ? Metric::permissionDenied(
-                self::RAPL_SOURCE,
-                'This host has RAPL energy counters but this process may not read them; energy_uj has been root-only since Linux 5.10, because at high resolution it leaks a side channel.',
-                'Grant read access with a udev rule in /etc/udev/rules.d/99-rapl.rules: SUBSYSTEM=="powercap", ACTION=="add", RUN+="/bin/chmod -R a+r /sys/class/powercap/intel-rapl:*/energy_uj" — then run sudo udevadm trigger. A bare chmod works only until the next reboot.',
-            )
-            : Metric::notSupported(
-                self::RAPL_SOURCE,
-                'This host exposes no RAPL/powercap energy counters, which is normal on a virtual machine: the hypervisor owns the hardware and does not pass its meters through.',
-                self::RAPL_REMEDY,
-            ));
+        return $this->everyPowerMetric($this->basisMetric(null));
     }
 
     /**
@@ -326,13 +361,13 @@ class EnergyCollector implements Collector
      */
     private function estimatedPower(): array
     {
-        $idle = config('monitoring.energy.estimate_idle_watts');
-        $peak = config('monitoring.energy.estimate_max_watts');
+        $idle = $this->settings->get('energy.estimate_idle_watts');
+        $peak = $this->settings->get('energy.estimate_max_watts');
 
         if (!is_numeric($idle) || !is_numeric($peak) || (float) $peak <= (float) $idle) {
             return $this->everyPowerMetric(Metric::notConfigured(
-                'config/monitoring.php (energy.estimate_idle_watts, energy.estimate_max_watts)',
-                'Set energy.estimate_idle_watts and energy.estimate_max_watts to this machine draw at idle and at full load, with the maximum above the idle figure.',
+                self::BAND_SOURCE,
+                'Set energy.estimate_idle_watts and energy.estimate_max_watts in Monitoring → Settings → Energy to this machine draw at idle and at full load, with the maximum above the idle figure.',
                 'Estimated mode is on, but the band it interpolates across is unusable.',
             ));
         }
@@ -468,14 +503,14 @@ class EnergyCollector implements Collector
     /** @return array<string, Metric> */
     private function cost(?string $basis, array $today, array $month): array
     {
-        $price = config('monitoring.energy.price_per_kwh');
-        $currency = trim((string) config('monitoring.energy.currency'));
+        $price = $this->settings->get('energy.price_per_kwh');
+        $currency = trim((string) $this->settings->get('energy.currency'));
 
         $currencyMetric = $currency !== ''
             ? Metric::of($currency, self::CURRENCY_SOURCE)
             : Metric::notConfigured(
                 self::CURRENCY_SOURCE,
-                'Set MONITORING_ENERGY_CURRENCY to the currency the price is entered in, for example MONITORING_ENERGY_CURRENCY=KWD, then run php artisan config:clear.',
+                'Set the currency the price is entered in under Monitoring → Settings → Energy, or MONITORING_ENERGY_CURRENCY=KWD in .env followed by php artisan config:clear.',
                 'No currency is set, so a cost can only be shown as a bare number.',
             );
 
@@ -553,8 +588,15 @@ class EnergyCollector implements Collector
             return null;
         }
 
+        // Deliberately config and not the stored setting: this has to be the same number the
+        // pruner uses, and MonitoringRollup prunes on config('monitoring.retention').
         $minuteFloor = $now->copy()->subDays(max(1, (int) config('monitoring.retention.minute_days', 7)));
-        $boundary = $from->greaterThan($minuteFloor) ? $from : $minuteFloor;
+
+        // The seam between the two resolutions has to land on an hour edge. An hour bucket is only
+        // ever whole, so cutting mid-hour counts the minutes between the seam and the end of that
+        // hour twice — once inside the hour bucket, once as the minute buckets it was rolled up
+        // from — and quietly inflates every month total by up to an hour of draw.
+        $boundary = $from->greaterThan($minuteFloor) ? $from->copy() : $minuteFloor->copy()->startOfHour()->addHour();
 
         $coarse = $boundary->greaterThan($from) ? $this->sumSeries('hour', $from, $boundary) : ['wh' => 0.0, 'minutes' => 0];
         $fine = $this->sumSeries('minute', $boundary, $now);
@@ -571,27 +613,44 @@ class EnergyCollector implements Collector
         ];
     }
 
-    /** @return array{wh: float, minutes: int} */
+    /**
+     * Energy and coverage from one resolution of the series.
+     *
+     * A bucket holds the sum of its samples, so the average watts in it is the only figure that may
+     * be multiplied by time to get energy — and the time is how long the bucket was actually
+     * sampled for, not how long it spans. One gauge sample is written per minute, which makes
+     * `samples` the count of minutes the bucket really covers: an hour bucket rolled up from ten
+     * minutes of collection holds ten minutes of energy, and charging it for a full hour would turn
+     * every gap in collection into consumption. Capping at the bucket length stops a bucket sampled
+     * more often than once a minute from claiming more time than it spans.
+     *
+     * A bucket with no samples therefore contributes neither energy nor coverage, which is what
+     * keeps an empty or half-written window reporting no_data instead of a confident 0 Wh.
+     *
+     * @return array{wh: float, minutes: int}
+     */
     private function sumSeries(string $resolution, Carbon $from, Carbon $until): array
     {
         $bucketMinutes = $resolution === 'hour' ? 60 : 1;
+        $covered = "CASE WHEN samples > {$bucketMinutes} THEN {$bucketMinutes} ELSE samples END";
 
         $row = $this->monitoring()->table('monitoring_series')
             ->where('metric', self::WATTS_METRIC)
             ->where('resolution', $resolution)
+            // The watts gauge is published without a dimension, so its rows all carry the empty
+            // label. Summing across labels would add some future per-domain series to the machine.
+            ->where('label', '')
             ->where('bucket_at', '>=', Clock::stamp($from))
             ->where('bucket_at', '<', Clock::stamp($until))
-            // A bucket holds the sum of its samples, so the average watts in it is the only figure
-            // that may be multiplied by the bucket length to get energy.
-            ->selectRaw('SUM(value_sum / NULLIF(samples, 0)) AS average_sum, COUNT(*) AS buckets')
+            ->selectRaw("SUM(value_sum / NULLIF(samples, 0) * ({$covered})) AS watt_minutes, SUM({$covered}) AS covered_minutes")
             ->first();
 
-        $buckets = (int) ($row->buckets ?? 0);
+        $minutes = (int) ($row->covered_minutes ?? 0);
+        if ($minutes === 0 || ($row->watt_minutes ?? null) === null) {
+            return ['wh' => 0.0, 'minutes' => 0];
+        }
 
-        return [
-            'wh' => $buckets === 0 ? 0.0 : (float) $row->average_sum * $bucketMinutes / 60,
-            'minutes' => $buckets * $bucketMinutes,
-        ];
+        return ['wh' => (float) $row->watt_minutes / 60, 'minutes' => $minutes];
     }
 
     /**
@@ -633,11 +692,7 @@ class EnergyCollector implements Collector
 
     private function nothingMeasuring(): Metric
     {
-        return Metric::notSupported(
-            self::SERIES_SOURCE,
-            'Nothing is measuring power on this host, so no energy is accumulating to report.',
-            self::RAPL_REMEDY,
-        );
+        return $this->noBasis(self::SERIES_SOURCE, 'Nothing is measuring power here, so no energy is accumulating to report.');
     }
 
     private function monitoring(): Connection
