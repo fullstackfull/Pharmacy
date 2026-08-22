@@ -169,6 +169,18 @@ class SeriesReader
         }
     }
 
+    /** A minute bucket's timestamp, rounded down to the bucket this window draws. */
+    private function truncateToWindow(string $bucketAt, string $resolution): string
+    {
+        $moment = Clock::parse($bucketAt);
+
+        return match ($resolution) {
+            'day' => $moment->startOfDay()->toDateTimeString(),
+            'hour' => $moment->startOfHour()->toDateTimeString(),
+            default => $moment->startOfMinute()->toDateTimeString(),
+        };
+    }
+
     /**
      * Where the folded buckets stop and the raw minutes take over.
      *
@@ -294,11 +306,28 @@ class SeriesReader
         $window = $this->window($range);
 
         try {
+            $from = $this->since($range);
+
+            // The same seam requestSummary() reads across. Without it the headline on the page
+            // counted everything since the last fold and the table underneath it did not, so the
+            // two numbers on one screen disagreed — and the busiest route of the last hour was
+            // missing from the list of the busiest routes.
+            $seam = $window['resolution'] === 'minute' ? null : $this->foldSeam($window['resolution'], $from);
+
             $rows = $this->connection()->table('monitoring_request_buckets')
                 ->where('resolution', $window['resolution'])
-                ->where('bucket_at', '>=', $this->since($range))
+                ->where('bucket_at', '>=', $from)
+                ->when($seam !== null, fn ($query) => $query->where('bucket_at', '<', $seam))
                 ->when($channel !== null, fn ($query) => $query->where('channel', $channel))
                 ->get();
+
+            if ($seam !== null) {
+                $rows = $rows->concat($this->connection()->table('monitoring_request_buckets')
+                    ->where('resolution', 'minute')
+                    ->where('bucket_at', '>=', $seam->max($from))
+                    ->when($channel !== null, fn ($query) => $query->where('channel', $channel))
+                    ->get());
+            }
 
             $byRoute = [];
             foreach ($rows as $row) {
@@ -346,19 +375,49 @@ class SeriesReader
         $window = $this->window($range);
 
         try {
+            $from = $this->since($range);
+            $seam = $window['resolution'] === 'minute' ? null : $this->foldSeam($window['resolution'], $from);
+
+            $columns = [
+                'bucket_at',
+                DB::raw('SUM(hits) as hits'),
+                DB::raw('SUM(errors) as errors'),
+                DB::raw('SUM(client_errors) as client_errors'),
+                DB::raw('SUM(duration_sum_ms) as duration_sum_ms'),
+            ];
+
             $rows = $this->connection()->table('monitoring_request_buckets')
                 ->where('resolution', $window['resolution'])
-                ->where('bucket_at', '>=', $this->since($range))
+                ->where('bucket_at', '>=', $from)
+                ->when($seam !== null, fn ($query) => $query->where('bucket_at', '<', $seam))
                 ->groupBy('bucket_at')
                 ->orderBy('bucket_at')
                 ->limit(max(1, $window['points']) * 4)
-                ->get([
-                    'bucket_at',
-                    DB::raw('SUM(hits) as hits'),
-                    DB::raw('SUM(errors) as errors'),
-                    DB::raw('SUM(client_errors) as client_errors'),
-                    DB::raw('SUM(duration_sum_ms) as duration_sum_ms'),
-                ]);
+                ->get($columns);
+
+            // The tail, so the line ends where the traffic does rather than where the last rollup
+            // ran. Read at minute resolution and folded to this window's own buckets, so the shape
+            // of the chart does not change halfway along it.
+            if ($seam !== null) {
+                $tail = $this->connection()->table('monitoring_request_buckets')
+                    ->where('resolution', 'minute')
+                    ->where('bucket_at', '>=', $seam->max($from))
+                    ->groupBy('bucket_at')
+                    ->orderBy('bucket_at')
+                    ->limit(max(1, $window['points']) * 4)
+                    ->get($columns)
+                    ->groupBy(fn ($row) => $this->truncateToWindow($row->bucket_at, $window['resolution']))
+                    ->map(fn ($group, $bucket) => (object) [
+                        'bucket_at' => $bucket,
+                        'hits' => $group->sum('hits'),
+                        'errors' => $group->sum('errors'),
+                        'client_errors' => $group->sum('client_errors'),
+                        'duration_sum_ms' => $group->sum('duration_sum_ms'),
+                    ])
+                    ->values();
+
+                $rows = $rows->concat($tail);
+            }
 
             $points = [];
             foreach ($rows as $row) {

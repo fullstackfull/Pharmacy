@@ -82,6 +82,35 @@ class FoldSeamTest extends TestCase
         $this->assertSame(143, (int) $summary['hits']);
     }
 
+    public function test_the_headline_the_route_table_and_the_chart_all_agree(): void
+    {
+        // Three readers of the same buckets on the same page. Only the summary crossed the seam, so
+        // the headline counted the last hour and the table under it did not — and the busiest route
+        // of that hour was missing from the list of the busiest routes.
+        $hourAgo = now()->subHour()->startOfHour();
+        $thisHour = now()->startOfHour();
+
+        $this->bucket('hour', $hourAgo->toDateTimeString(), 100);
+        $this->bucket('hour', $thisHour->toDateTimeString(), 3);
+
+        for ($minute = 0; $minute < 3; $minute++) {
+            $this->bucket('minute', $thisHour->copy()->addMinutes($minute)->toDateTimeString(), 1);
+        }
+        for ($minute = 3; $minute < 23; $minute++) {
+            $this->bucket('minute', $thisHour->copy()->addMinutes($minute)->toDateTimeString(), 2);
+        }
+
+        $reader = app(SeriesReader::class);
+
+        $summary = (int) $reader->requestSummary('24h')['hits'];
+        $table = (int) array_sum(array_column($reader->routeBreakdown('24h', 'hits', 500), 'hits'));
+        $chart = (int) array_sum(array_column($reader->requestTimeline('24h')['points'] ?? [], 'hits'));
+
+        $this->assertSame(143, $summary);
+        $this->assertSame($summary, $table, 'the route table has to add up to the headline above it');
+        $this->assertSame($summary, $chart, 'the chart has to end where the traffic does');
+    }
+
     public function test_a_window_with_nothing_folded_yet_reads_every_minute(): void
     {
         $start = now()->startOfHour();
