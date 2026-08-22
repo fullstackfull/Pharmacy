@@ -3822,4 +3822,7 @@ return [
 	'optional_shown_in_the_sub_category_strip_on_the_storefront' => 'Optional shown in the sub category strip on the storefront',
 	'category_icon' => 'Category icon',
 	'no_icon_uploaded_yet' => 'No icon uploaded yet',
+	'a_signal_that_cannot_be_measured_is_excluded_from_the_score_rather_than_counted_as_healthy' => 'A signal that cannot be measured is excluded from the score rather than counted as healthy',
+	'not_measured' => 'Not measured',
+	'how_to_enable_this' => 'How to enable this',
 ];
