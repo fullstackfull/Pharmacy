@@ -37,8 +37,13 @@ class AdvancedSearchController extends BaseController
     {
         $userId = auth('admin')->user()->id;
         $userType = 'admin';
-        $keyword = $request->input('keyword', '');
-        $advanceSearch = new AdvanceSearch('admin', $keyword ?? '');
+        // `?keyword[]=x` makes AdvanceSearch's `?string $keyword` a TypeError, and `?? ''`
+        // never catches it because an array is not null. This omnibox lives in the admin
+        // header, so a 500 here is one crafted link away from any admin — a keyword nobody
+        // can spell is simply not searched for, and the panel falls back to recent searches.
+        $value = $request->input('keyword');
+        $keyword = is_string($value) ? trim($value) : '';
+        $advanceSearch = new AdvanceSearch('admin', $keyword);
 
         if (!empty($keyword)) {
             $result = collect($advanceSearch->searchAllList());

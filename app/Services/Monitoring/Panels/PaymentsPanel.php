@@ -150,6 +150,15 @@ class PaymentsPanel implements Panel
      */
     private ?array $configured = null;
 
+    /**
+     * The exception the volume read threw, kept because a Metric wants the throwable itself.
+     *
+     * The read hands its failure to the tables as a note. Re-wrapping that note to build a failed
+     * card would print the word RuntimeException in front of the QueryException the operator has
+     * to act on, so the original is carried across instead.
+     */
+    private ?\Throwable $volumeFailure = null;
+
     public function __construct(
         private readonly SeriesReader $reader,
         private readonly Redactor $redactor,
@@ -734,6 +743,8 @@ class PaymentsPanel implements Panel
                     $connection->raw('SUM(value) AS amount'),
                 ]);
         } catch (\Throwable $exception) {
+            $this->volumeFailure = $exception;
+
             return [
                 'state' => 'failed',
                 'note' => $this->failureNote($exception),
@@ -1072,6 +1083,11 @@ class PaymentsPanel implements Panel
             }
         }
 
+        // Whether this window's payment events were read at all. A read that threw and a deployment
+        // that writes no payment event both leave nothing known about a gateway's traffic, which is
+        // a different statement from "it took no payments" — so neither may be folded into a zero.
+        $counted = in_array($volume['state'], ['ok', 'no_data'], true);
+
         $rows = [];
         $testActive = [];
         $liveCount = 0;
@@ -1086,10 +1102,8 @@ class PaymentsPanel implements Panel
             }
 
             $rows[] = array_merge($gateway, [
-                // Null, not zero: when the volume read failed nothing is known about this gateway's
-                // traffic, which is a different statement from "it took no payments".
-                'succeeded' => $volume['state'] === 'failed' ? null : (int) ($seen['succeeded'] ?? 0),
-                'failed' => $volume['state'] === 'failed' ? null : (int) ($seen['failed'] ?? 0),
+                'succeeded' => $counted ? (int) ($seen['succeeded'] ?? 0) : null,
+                'failed' => $counted ? (int) ($seen['failed'] ?? 0) : null,
             ]);
         }
 
@@ -1154,7 +1168,7 @@ class PaymentsPanel implements Panel
             'note' => $gateways === []
                 ? 'No payment gateway is configured on this deployment, so no payment method can be classified as a gateway and no gateway success rate can be computed.'
                 : null,
-            'remedy' => $gateways === [] ? 'Configure a gateway in Admin → Business Settings → Payment Methods. Each one writes a row in addon_settings with settings_type=payment_config.' : null,
+            'remedy' => $gateways === [] ? 'Configure a gateway in Admin → 3rd Party Setup → Payment Methods. Each one writes a row in addon_settings with settings_type=payment_config.' : null,
             'source' => $source,
             'rows' => $gateways,
             'truncated' => $rows->count() > self::MAX_GATEWAY_SETTINGS,
@@ -1680,7 +1694,7 @@ class PaymentsPanel implements Panel
                 means: $means,
                 action: $action,
                 note: 'No order in this window carries a per-line commission row, so there is nothing to reconcile the order commission against. The line-level commission ledger is not in use here.',
-                remedy: 'Per-line commissions are written by the commission-rules path at checkout. Configure a rule in Admin → Business Settings → Commission, or ignore this check if commission is not split per line on this shop.',
+                remedy: 'Per-line commissions are written by the commission-rules path at checkout. Configure a rule in Admin → Marketplace → Marketplace Finance → Commission Rules, or ignore this check if commission is not split per line on this shop.',
             );
         }
 
@@ -1936,33 +1950,42 @@ class PaymentsPanel implements Panel
                     : 'Counted over all ' . count(self::FINDINGS) . ' reconciliations, within the orders this page examined.',
             );
 
-        if ($volume['state'] === 'ok' || $volume['state'] === 'no_data') {
-            $headline['payments_recorded'] = Metric::of(
+        // These three are published whatever the volume read did. They used to appear only when it
+        // produced counts, so switching analytics off deleted them from the page — and a card that
+        // is not there says nothing at all, where one that names the switch says everything.
+        $counted = in_array($volume['state'], ['ok', 'no_data'], true);
+
+        $headline['payments_recorded'] = $counted
+            ? Metric::of(
                 value: $volume['totals']['succeeded'],
                 source: self::EVENTS_SOURCE,
                 unit: null,
                 note: $volume['totals']['offline_succeeded'] > 0
                     ? $volume['totals']['offline_succeeded'] . ' of them are cash, wallet or offline payments, which never travel through a gateway.'
                     : null,
-            );
+            )
+            : $this->volumeUnavailable($volume);
 
-            $headline['payment_failures_recorded'] = $recording['first_failure_at'] === null
-                ? Metric::noData(
-                    source: self::EVENTS_SOURCE,
-                    note: 'No payment failure has ever been recorded on this deployment. Before the failure hook was implemented nothing was written at all, so this is not a reading of zero declines.',
-                )
-                : Metric::of(
-                    value: $volume['totals']['failed'],
-                    source: self::EVENTS_SOURCE,
-                    unit: null,
-                    note: 'Failures have been recorded since ' . $recording['first_failure_at'] . ' (' . Clock::displayTimezone() . ').',
-                );
+        $headline['payment_failures_recorded'] = match (true) {
+            !$counted => $this->volumeUnavailable($volume),
+            $recording['first_failure_at'] === null => Metric::noData(
+                source: self::EVENTS_SOURCE,
+                note: 'No payment failure has ever been recorded on this deployment. Before the failure hook was implemented nothing was written at all, so this is not a reading of zero declines.',
+            ),
+            default => Metric::of(
+                value: $volume['totals']['failed'],
+                source: self::EVENTS_SOURCE,
+                unit: null,
+                note: 'Failures have been recorded since ' . $recording['first_failure_at'] . ' (' . Clock::displayTimezone() . ').',
+            ),
+        };
 
-            $headline['gateways_with_activity'] = Metric::of(
+        $headline['gateways_with_activity'] = $counted
+            ? Metric::of(
                 value: count($volume['rows']),
                 source: self::EVENTS_SOURCE,
-            );
-        }
+            )
+            : $this->volumeUnavailable($volume);
 
         $headline['settled_success_rate'] = $rate['rate'] === null
             ? Metric::noData(source: self::EVENTS_SOURCE, note: $rate['note'] ?? $rate['basis'])
@@ -1974,6 +1997,31 @@ class PaymentsPanel implements Panel
             );
 
         return $headline;
+    }
+
+    /**
+     * The volume read's unavailability, lifted into a Metric so a card carries the table's reason.
+     *
+     * Each state is a different sentence to the operator: analytics switched off is something they
+     * can turn on and the card says where, whereas a read that threw is nobody's setting. Both are
+     * kept out of NO_DATA, which on this page means "the probe worked and found nothing".
+     *
+     * @param  array<string, mixed>  $volume
+     */
+    private function volumeUnavailable(array $volume): Metric
+    {
+        return match ($volume['state']) {
+            'not_configured' => Metric::notConfigured(
+                source: self::EVENTS_SOURCE,
+                remedy: (string) $volume['remedy'],
+                note: $volume['note'],
+            ),
+            'failed' => Metric::failed(
+                source: self::EVENTS_SOURCE,
+                exception: $this->volumeFailure ?? new \RuntimeException((string) $volume['note']),
+            ),
+            default => Metric::noData(source: self::EVENTS_SOURCE, note: $volume['note']),
+        };
     }
 
     // -------------------------------------------------------------------------------------------
@@ -2003,7 +2051,7 @@ class PaymentsPanel implements Panel
                 'gateway_latency' => Metric::notConfigured(
                     source: 'monitoring_dependency_buckets',
                     remedy: 'Register one Http::globalMiddleware in MonitoringServiceProvider::boot() and increment MetricSink under BucketWriter::DEPENDENCY_PREFIX. The table, its writer, its rollup and the Overview cards that read it are already built.',
-                    note: 'Nothing times an outbound call to a gateway. Thirteen of the fourteen payment controllers use raw curl_exec, which no Laravel HTTP event can see, so those need wrapping individually even after the middleware exists.',
+                    note: 'Nothing times an outbound call to a gateway. Thirteen of the fourteen payment controllers are invisible to an Http:: middleware, but not for one reason: nine use raw curl_exec, three drive a vendor SDK (Stripe, Razorpay, MercadoPago) and SenangPay makes no outbound call at all. Only Paymera goes out through Http::, so the other twelve need instrumenting one at a time even after the middleware exists — and wrapping an SDK is not the same job as wrapping curl.',
                 ),
                 'webhook_receipts' => Metric::notConfigured(
                     source: 'no table',

@@ -69,7 +69,12 @@ class V2AdvancedSearchController extends BaseController
     {
         $userId = auth('admin')->id();
         $userType = 'admin';
-        $keyword = (string)$request->input('keyword', '');
+        // `?keyword[]=x` hands the request an ARRAY, and casting one to string is a PHP
+        // warning the error handler turns into a throw. This omnibox lives in the admin
+        // header, so a 500 here is one crafted link away from any admin — a keyword nobody
+        // can spell is simply not searched for, and the panel falls back to recent searches.
+        $value = $request->input('keyword');
+        $keyword = is_string($value) ? trim($value) : '';
 
         $auctionAvailable = function_exists('getCheckAddonPublishedStatus')
             && (bool)getCheckAddonPublishedStatus(moduleName: 'Auction');

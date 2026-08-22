@@ -28,7 +28,7 @@
                                         type="text"
                                         class="js-daterangepicker form-control previous-date-true placeholder-mode-true"
                                         name="date"
-                                        value="{{ request('date') }}"
+                                        value="{{ $dateRange }}"
                                         placeholder="{{ translate('Start_date') . ' - ' . translate('End_date') }}"
                                     >
                                 </div>

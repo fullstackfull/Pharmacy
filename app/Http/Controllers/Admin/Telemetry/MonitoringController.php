@@ -109,7 +109,12 @@ class MonitoringController extends BaseController
      */
     private function range(Request $request): string
     {
-        $requested = (string) $request->query('range', '1h');
+        // `?range[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — array_key_exists() would fault on it too. This read
+        // happens before any panel's catch, so an unusable window has to fall back to the default
+        // here or it takes the whole console down instead of degrading one card.
+        $value = $request->query('range', '1h');
+        $requested = is_string($value) ? trim($value) : '1h';
 
         return array_key_exists($requested, $this->availableRanges()) ? $requested : '1h';
     }

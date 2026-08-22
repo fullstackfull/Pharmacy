@@ -16,6 +16,7 @@ use App\Http\Requests\Admin\AddFundRequest;
 use App\Http\Requests\Admin\BonusSetupRequest;
 use App\Services\CustomerWalletService;
 use App\Traits\PaginatorTrait;
+use Carbon\Carbon;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -48,10 +49,18 @@ class CustomerWalletController extends BaseController
         $from = null;
         $to = null;
 
-        if ($request->filled('date')) {
-            $dates = explode(' - ', $request->date);
-            $from = \Carbon\Carbon::createFromFormat('d M Y', $dates[0])->startOfDay();
-            $to   = \Carbon\Carbon::createFromFormat('d M Y', $dates[1])->endOfDay();
+        // `?date[]=x` hands the request an ARRAY, which explode() rejects outright, and a half-typed
+        // range leaves the second end undefined at Carbon — either one takes the whole report down.
+        // A range that cannot be read is simply not applied.
+        $range = $request->query('date');
+        $dates = is_string($range) ? explode(' - ', $range) : [];
+        $isReadableRange = count($dates) === 2
+            && Carbon::canBeCreatedFromFormat(date: $dates[0], format: 'd M Y')
+            && Carbon::canBeCreatedFromFormat(date: $dates[1], format: 'd M Y');
+
+        if ($isReadableRange) {
+            $from = Carbon::createFromFormat('d M Y', $dates[0])->startOfDay();
+            $to = Carbon::createFromFormat('d M Y', $dates[1])->endOfDay();
         }
         $customerStatus = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'wallet_status'])['value'];
         $filters = [
@@ -77,7 +86,11 @@ class CustomerWalletController extends BaseController
         $sidebarCustomers = $customers;
         array_unshift($customers, ['id' => 'all', 'text' => translate('All_Customer')]);
 
-        return view('admin-views.customer.wallet.report', compact('data', 'transactions', 'customerStatus', 'customer','customers','sidebarCustomers'));
+        // The range the report was actually drawn for, so the picker echoes what was applied
+        // rather than re-reading the raw query — which is where the array reached htmlspecialchars().
+        $dateRange = $isReadableRange ? $range : '';
+
+        return view('admin-views.customer.wallet.report', compact('data', 'transactions', 'customerStatus', 'customer','customers','sidebarCustomers','dateRange'));
     }
 
     public function addFund(AddFundRequest $request, CustomerWalletService $customerWalletService): JsonResponse

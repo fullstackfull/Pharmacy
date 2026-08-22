@@ -2,7 +2,7 @@
      system has thrown the sequence away by design. --}}
 <x-k.card :title="translate('follow_one_visitor')">
     <form method="GET" action="{{ route('admin.analytics.section', ['section' => 'journeys']) }}" class="ana-inline-form">
-        <input type="text" name="visitor" value="{{ request()->query('visitor') }}"
+        <input type="text" name="visitor" value="{{ $data['visitor'] }}"
                placeholder="{{ translate('visitor_id') }}" maxlength="64" autocomplete="off">
         <input type="hidden" name="range" value="{{ $window->key }}">
         <button type="submit" class="k-btn k-btn--sm">{{ translate('look_up') }}</button>

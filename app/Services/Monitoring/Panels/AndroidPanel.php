@@ -3,15 +3,14 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Metric;
-use App\Services\Monitoring\Support\Clock;
-use Illuminate\Http\Request;
 
 /**
  * The Android app, seen from the only place this shop can see it: the requests it sends.
  *
- * Traffic, latency and version mix are shared with iOS and live in MobileAppPanel — the two
- * sections ask the same questions of the same series one platform apart, and two copies of that
- * would drift the first time either was fixed. What is added here is what is NOT the same:
+ * Traffic, latency, the request chart, the version mix and the self-reported stability counters
+ * are shared with iOS and live in MobileAppPanel — the two sections ask the same questions of the
+ * same series one platform apart, and the copy that used to sit here drifted from the iOS one the
+ * first time either was fixed. What is left is what is genuinely NOT the same:
  *
  * WHAT "ANDROID" MEANS. Every figure on this page is the subset of requests that MonitorRequest
  * decided was Android, and that decision is a header first and a user-agent guess second. The
@@ -21,13 +20,6 @@ use Illuminate\Http\Request;
  * middleware actually takes, so the number can be challenged rather than merely believed, and the
  * share of it that rests on the guess is published as an unconfigured reading, because nothing
  * records which branch fired.
- *
- * THE REQUEST TIMELINE. monitoring_series stores a counter's request count in `samples` and its
- * millisecond total in `value_sum`; SeriesReader::series() returns `value_sum` for a counter,
- * which is the right answer for a summed gauge and the wrong one for a request count. Drawing it
- * under a chart labelled "requests" put 11,788 requests on a minute that had 62. So the chart is
- * read here from `samples`, with the 5xx counter as a second line — and the two lines are two
- * counters over one bucket key, not a ratio computed anywhere.
  *
  * WHAT THIS PAGE CANNOT SEE. Start-up time, crash detail, per-version 4xx and requests that never
  * left the handset are named as unconfigured readings with the exact change each needs. They are
@@ -39,29 +31,6 @@ use Illuminate\Http\Request;
  */
 class AndroidPanel extends MobileAppPanel
 {
-    /** Requests per bucket for one platform: `samples` is the count, `value_sum` the millisecond total. */
-    private const TRAFFIC = 'requests.by_platform';
-
-    /** 5xx responses to the same platform, counted in `samples`. */
-    private const TRAFFIC_ERRORS = 'requests.by_platform.errors';
-
-    /**
-     * Buckets the chart draws, newest first, before the tail is dropped.
-     *
-     * Two metrics per bucket, so the row cap is twice the point cap. Read newest-first and
-     * reversed for display: ordering oldest-first and truncating would drop the newest buckets,
-     * which is the half of the chart anybody opened it for.
-     */
-    private const MAX_TIMELINE_POINTS = 200;
-
-    private const TIMELINE_SOURCE = 'monitoring_series (requests.by_platform, requests.by_platform.errors)';
-
-    private const MIDDLEWARE = 'app/Http/Middleware/MonitorRequest.php';
-
-    private const RECORDER = 'app/Services/Monitoring/Ingest/RequestRecorder.php';
-
-    private const INGEST = 'app/Services/Monitoring/Ingest/AppHealthRecorder.php';
-
     protected function platform(): string
     {
         return 'android';
@@ -72,78 +41,6 @@ class AndroidPanel extends MobileAppPanel
         // What MonitorRequest::platform() looks for when no X-Platform header arrives — okhttp is
         // the default client for Retrofit, which is what most Android shopping apps are built on.
         return 'okhttp, android';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function data(string $range, Request $request): array
-    {
-        $window = $this->reader->window($range);
-
-        return array_merge($this->shared($range, $request), [
-            'window' => [
-                'range' => $range,
-                'minutes' => $window['minutes'],
-                'resolution' => $window['resolution'],
-                'since' => Clock::display($this->reader->since($range))->toDateTimeString(),
-                'until' => Clock::display(Clock::now())->toDateTimeString(),
-                'timezone' => Clock::displayTimezone(),
-            ],
-            'identification' => $this->identification(),
-            // Replaces the shared timeline, which reads the millisecond total where the chart
-            // expects a request count. See the class doc.
-            'timeline' => $this->requestTimeline($range, $window),
-            'not_measured' => $this->notMeasured(),
-        ]);
-    }
-
-    /**
-     * The half of the page Android and iOS share, with two readings corrected on the way through.
-     *
-     * `app_versions_seen` is published by the shared panel only when there is NO traffic, so the
-     * card vanishes at the exact moment it has something to say. It is a count of what the version
-     * table below already lists, so putting it back costs no read.
-     *
-     * The version table takes its state from whether it has rows, which is right when the reads
-     * behind it succeeded and a lie when they did not: two failed reads produce an empty table
-     * captioned "no app version has identified itself", which is a measurement nobody took. An
-     * empty table standing on a failed read says so instead.
-     *
-     * @return array<string, mixed>
-     */
-    private function shared(string $range, Request $request): array
-    {
-        $data = parent::data($range, $request);
-
-        $versions = $data['traffic']['versions'] ?? [];
-
-        if (($data['traffic']['state'] ?? null) === 'ok' && !isset($data['traffic']['metrics']['app_versions_seen'])) {
-            $data['traffic']['metrics']['app_versions_seen'] = Metric::of(
-                value: count($versions),
-                source: 'monitoring_series (requests.by_app_version)',
-                unit: null,
-                note: $versions === []
-                    ? 'This app sent traffic but no request carried an X-App-Version header, so none of it can be attributed to a release.'
-                    : null,
-            );
-        }
-
-        $failure = match (true) {
-            ($data['traffic']['state'] ?? null) === 'failed' => $data['traffic']['note'] ?? null,
-            ($data['stability']['state'] ?? null) === 'failed' => $data['stability']['note'] ?? null,
-            default => null,
-        };
-
-        if ($failure !== null && ($data['versions']['rows'] ?? []) === []) {
-            $data['versions'] = array_merge($data['versions'], [
-                'state' => 'failed',
-                'note' => 'This table is empty because the reads behind it failed, not because no release reported: ' . $failure,
-                'remedy' => 'The series table is created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
-            ]);
-        }
-
-        return $data;
     }
 
     // -------------------------------------------------------------------------------------------
@@ -158,7 +55,7 @@ class AndroidPanel extends MobileAppPanel
      *
      * @return array<string, mixed>
      */
-    private function identification(): array
+    protected function identification(): array
     {
         return [
             'source' => self::MIDDLEWARE . '::platform()',
@@ -215,148 +112,6 @@ class AndroidPanel extends MobileAppPanel
     }
 
     // -------------------------------------------------------------------------------------------
-    // The chart
-
-    /**
-     * Requests and 5xx responses from this app, one point per bucket.
-     *
-     * Read straight from the two counters rather than through SeriesReader::series(), which
-     * returns `value_sum` for a counter — correct for a summed gauge, and the millisecond total
-     * rather than the request count for this one.
-     *
-     * Bounded three ways: the window, the indexed bucket_at it is bounded on, and a hard row cap.
-     * Rides monitoring_series_lookup (metric, resolution, bucket_at); the label is filtered after
-     * the index has already narrowed the read to two metrics inside one window.
-     *
-     * @param  array{minutes: int, resolution: string, points: int}  $window
-     * @return array<string, mixed>
-     */
-    private function requestTimeline(string $range, array $window): array
-    {
-        $resolution = (string) $window['resolution'];
-        $rowLimit = self::MAX_TIMELINE_POINTS * 2;
-
-        try {
-            $rows = $this->reader->connection()->table('monitoring_series')
-                ->whereIn('metric', [self::TRAFFIC, self::TRAFFIC_ERRORS])
-                ->where('label', $this->platform())
-                ->where('resolution', $resolution)
-                ->where('bucket_at', '>=', $this->reader->since($range))
-                // Newest first, and sorted back into time order below. Ordering oldest-first and
-                // cutting at the limit would drop the most recent buckets, which is the end of the
-                // chart anybody opened it for.
-                ->orderByDesc('bucket_at')
-                ->limit($rowLimit + 1)
-                ->get(['bucket_at', 'metric', 'samples', 'value_sum']);
-        } catch (\Throwable $exception) {
-            // Caught here rather than left to PanelRegistry: losing the chart must not blank the
-            // traffic, version and stability cards, which were read perfectly well.
-            return [
-                'state' => 'failed',
-                'note' => Metric::describeFailure($exception),
-                'remedy' => 'The series table is created by `php artisan migrate`. Check the monitoring connection is reachable and migrated.',
-                'source' => self::TIMELINE_SOURCE,
-                'resolution' => $resolution,
-                'points' => [],
-                'truncated' => false,
-                'limit' => self::MAX_TIMELINE_POINTS,
-            ];
-        }
-
-        $truncated = $rows->count() > $rowLimit;
-        $buckets = [];
-
-        foreach ($rows->take($rowLimit) as $row) {
-            $at = $this->isoStamp($row->bucket_at);
-            if ($at === null) {
-                continue;
-            }
-
-            // hits starts null, not 0: a bucket holding only an error row would otherwise claim a
-            // measured zero requests beside a non-zero error count.
-            $buckets[$at] ??= ['t' => $at, 'hits' => null, 'errors' => 0, 'avg_ms' => null];
-
-            $samples = (int) $row->samples;
-
-            if ($row->metric === self::TRAFFIC) {
-                $buckets[$at]['hits'] = $samples;
-                $buckets[$at]['avg_ms'] = $samples > 0 ? round((float) $row->value_sum / $samples, 1) : null;
-
-                continue;
-            }
-
-            $buckets[$at]['errors'] = $samples;
-        }
-
-        // Keyed by the ISO stamp, which Clock always renders in UTC — so one lexical sort is a
-        // chronological one, and two rows for the same bucket meet in the same point.
-        ksort($buckets);
-
-        $orphans = count(array_filter($buckets, static fn (array $point) => $point['hits'] === null));
-        $points = array_values(array_filter($buckets, static fn (array $point) => $point['hits'] !== null));
-
-        return [
-            // A single reading is not a line, and the chart renderer needs two points to draw one.
-            'state' => count($points) >= 2 ? 'ok' : 'no_data',
-            'note' => $this->timelineNote($points, $resolution, $orphans),
-            // The counts above this chart are read across the fold seam and this chart is not, so
-            // the one thing an empty chart must never imply is that the counts are wrong.
-            'remedy' => count($points) >= 2 || $resolution === 'minute'
-                ? null
-                : 'Choose a shorter range to read the minute samples directly, or check that the rollup is running: `php artisan schedule:list`.',
-            'source' => self::TIMELINE_SOURCE,
-            'resolution' => $resolution,
-            'points' => $points,
-            'truncated' => $truncated,
-            'limit' => self::MAX_TIMELINE_POINTS,
-        ];
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $points
-     */
-    private function timelineNote(array $points, string $resolution, int $orphans): ?string
-    {
-        $note = match (count($points)) {
-            0 => 'No ' . $resolution . ' bucket in this window holds a request from this app, so there is no line to draw.',
-            1 => 'Only one ' . $resolution . ' bucket in this window holds a request from this app. One reading is a value, not a trend.',
-            default => $resolution === 'minute'
-                ? null
-                : 'The newest ' . $resolution . ' bucket is still filling, so its point covers a part of that ' . $resolution . ' rather than all of it.',
-        };
-
-        // An empty chart on a coarse range is regularly not an empty window. Requests are counted
-        // into minute rows on the hot path and folded into hour and day parents by the rollup, so
-        // this read can find nothing while the minute rows under it are full — and the counts above
-        // the chart are read across both, which is why they can disagree with it in exactly this
-        // one direction. Left unsaid, the empty chart reads as a contradiction of the cards.
-        if (count($points) < 2 && $resolution !== 'minute') {
-            $note .= ' This range draws ' . $resolution . ' rows, which the monitoring rollup builds from the minute'
-                . ' samples the request path writes directly — so it can be empty while the counts above it, which are'
-                . ' read from both, are not.';
-        }
-
-        if ($orphans > 0) {
-            // Never silently dropped: a bucket with an error count and no request count means the
-            // two counters disagree, which is a finding about the writer rather than about the app.
-            $note = trim(($note ?? '') . ' ' . $orphans . ' bucket(s) recorded a failed response with no matching request count and are not drawn.');
-        }
-
-        return $note === '' ? null : $note;
-    }
-
-    private function isoStamp(mixed $stored): ?string
-    {
-        try {
-            return Clock::parse($stored)->toIso8601String();
-        } catch (\Throwable) {
-            // A bucket whose stamp cannot be parsed has no place on a time axis, and guessing one
-            // would put a real measurement at an invented moment.
-            return null;
-        }
-    }
-
-    // -------------------------------------------------------------------------------------------
     // What this section cannot see
 
     /**
@@ -368,17 +123,17 @@ class AndroidPanel extends MobileAppPanel
      *
      * @return array<string, mixed>
      */
-    private function notMeasured(): array
+    protected function notMeasured(): array
     {
         return [
             'state' => 'not_configured',
-            'source' => self::TIMELINE_SOURCE . ', ' . self::INGEST,
+            'source' => self::TIMELINE_SOURCE . ', ' . self::HEALTH_RECORDER,
             'note' => 'These are not empty measurements. Nothing on this deployment produces them at all, so each names the'
                 . ' exact change that would, and none of them is drawn as a zero or a percentage.',
             'fields' => [
                 'app_start_time' => Metric::notConfigured(
                     source: 'no start-up ingest',
-                    remedy: 'Extend the app-health report with a start-up distribution: ' . self::INGEST . ' accepts three'
+                    remedy: 'Extend the app-health report with a start-up distribution: ' . self::HEALTH_RECORDER . ' accepts three'
                         . ' integer counters today, so add bucketed fields (start_ms_le_500, start_ms_le_1000, start_ms_le_2000, …)'
                         . ' written into monitoring_series exactly as sessions and crashes are. Store the distribution, not a'
                         . ' mean — a mean start-up time hides the cold starts that are the whole complaint.',

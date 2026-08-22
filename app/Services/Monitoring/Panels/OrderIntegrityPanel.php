@@ -1394,7 +1394,10 @@ class OrderIntegrityPanel implements Panel
                 ),
                 'per_status_sla_targets' => Metric::notConfigured(
                     source: 'monitoring_settings (thresholds.stuck_order_hours)',
-                    remedy: 'Set thresholds.stuck_order_hours in Monitoring → Settings; a per-status target needs a column on the shop side that does not exist yet.',
+                    remedy: 'Move the one threshold with `php artisan tinker`: '
+                        . "app(App\\Services\\Monitoring\\Support\\MonitoringSettings::class)->put('thresholds.stuck_order_hours', 12); "
+                        . '— or change thresholds.stuck_order_hours in config/monitoring.php to move what a fresh install starts from. '
+                        . 'Monitoring → Settings prints the value in force but has no form that writes it. A per-status target needs a column on the shop side that does not exist yet.',
                     note: 'The shop stores no promise about how long a status may take, so one threshold is applied to all of them.',
                 ),
                 'stored_integrity_history' => Metric::notConfigured(
