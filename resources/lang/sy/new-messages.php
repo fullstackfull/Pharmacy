@@ -1261,4 +1261,5 @@ return [
 	'any_of_them_can_be_charted_over_any_window_on_this_page' => 'Any of them can be charted over any window on this page',
 	'The_scheduler_last_reported_a_run_56_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 56 minutes ago  the server cron appears to have stopped.',
 	'every_one_of_these_gauges_is_sampled_every_minute_and_stored_in' => 'Every one of these gauges is sampled every minute and stored in',
+	'memory_pressure_some_avg10' => 'Memory pressure some avg10',
 ];

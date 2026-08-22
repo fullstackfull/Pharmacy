@@ -4584,4 +4584,7 @@ return [
 	'breaking' => 'Breaking',
 	'missing' => 'Missing',
 	'full_is_the_share_in_which_every_task_was_stalled_at_once' => 'Full is the share in which every task was stalled at once',
+	'some_is_the_share_of_time_in_which_at_least_one_task_was_stalled' => 'Some is the share of time in which at least one task was stalled',
+	'steal_is_time_the_hypervisor_handed_to_somebody_else_on_the_same_machine' => 'Steal is time the hypervisor handed to somebody else on the same machine',
+	'The_scheduler_last_reported_a_run_59_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 59 minutes ago  the server cron appears to have stopped.',
 ];
