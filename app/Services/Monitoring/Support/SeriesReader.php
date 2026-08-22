@@ -127,18 +127,53 @@ class SeriesReader
         $window = $this->window($range);
 
         try {
-            $rows = $this->connection()->table('monitoring_request_buckets')
+            $narrow = fn ($query) => $query
+                ->when($until !== null, fn ($inner) => $inner->where('bucket_at', '<', $until))
+                ->when($route !== null, fn ($inner) => $inner->where('route', $route))
+                ->when($channel !== null, fn ($inner) => $inner->where('channel', $channel));
+
+            $from = $since ?? $this->since($range);
+
+            $rows = $narrow($this->connection()->table('monitoring_request_buckets')
                 ->where('resolution', $window['resolution'])
-                ->where('bucket_at', '>=', $since ?? $this->since($range))
-                ->when($until !== null, fn ($query) => $query->where('bucket_at', '<', $until))
-                ->when($route !== null, fn ($query) => $query->where('route', $route))
-                ->when($channel !== null, fn ($query) => $query->where('channel', $channel))
+                ->where('bucket_at', '>=', $from))
                 ->get();
+
+            // The tail. Rollups fold minutes into hours on a schedule, so a 24-hour window read
+            // from hourly buckets alone is blind to everything since the last fold — which, an
+            // hour after a busy release, is the exact window somebody is looking at. The minute
+            // buckets newer than the newest folded one close that gap without double counting,
+            // because a minute is only ever in one of the two sets.
+            if ($window['resolution'] !== 'minute') {
+                $rows = $rows->concat($this->unfoldedTail($window['resolution'], $from, $until, $narrow));
+            }
 
             return $this->summariseBuckets($rows, $window['minutes']);
         } catch (\Throwable) {
             return $this->emptySummary();
         }
+    }
+
+    /**
+     * Minute buckets that no rollup has folded into the given resolution yet.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function unfoldedTail(string $resolution, \Illuminate\Support\Carbon $from, ?\Illuminate\Support\Carbon $until, callable $narrow): \Illuminate\Support\Collection
+    {
+        $newestFolded = $this->connection()->table('monitoring_request_buckets')
+            ->where('resolution', $resolution)
+            ->max('bucket_at');
+
+        // Where nothing has been folded at all, every minute in the window is the tail.
+        $boundary = $newestFolded !== null
+            ? Clock::parse($newestFolded)->addMinutes($resolution === 'day' ? 1440 : 60)
+            : $from;
+
+        return $narrow($this->connection()->table('monitoring_request_buckets')
+            ->where('resolution', 'minute')
+            ->where('bucket_at', '>=', $boundary->max($from)))
+            ->get();
     }
 
     /**
