@@ -4,6 +4,7 @@ namespace App\Services\Telemetry;
 
 use App\Services\DeveloperPortal\ApiManifest;
 use App\Services\DeveloperPortal\ApiSnapshotService;
+use App\Services\DeveloperPortal\ConsoleGuard;
 use App\Services\DeveloperPortal\EndpointHealthService;
 use App\Services\DeveloperPortal\Generators\CodeExampleGenerator;
 use App\Services\DeveloperPortal\Generators\OpenApiGenerator;
@@ -158,8 +159,35 @@ class DeveloperPortalService
             // responses because the controllers return JSON directly and there is no type to
             // reflect — keys and types only, never a value.
             'observed' => $this->observedResponses($endpoint),
+            // Whether the console may send each of this endpoint's methods, and what it needs
+            // first. Decided here so the page draws the answer rather than deciding it: a button
+            // that appears when it should not is how a guard gets discovered by being bypassed.
+            'console' => $this->consoleVerdicts($endpoint),
             'full_url' => rtrim($baseUrl, '/') . $endpoint['path'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $endpoint
+     * @return array<string, array<string, mixed>>
+     */
+    private function consoleVerdicts(array $endpoint): array
+    {
+        $guard = app(ConsoleGuard::class);
+        $verdicts = [];
+
+        foreach ($endpoint['methods'] as $method) {
+            $verdict = $guard->verdict($endpoint, $method);
+
+            $verdicts[$method] = $verdict + [
+                'confirmation' => $guard->confirmationFor($method),
+                // Translated here rather than in the page: the page receives these as JSON and a
+                // sentence built in JavaScript would mint a language key per endpoint.
+                'message' => $verdict['reason_key'] !== null ? translate($verdict['reason_key']) : null,
+            ];
+        }
+
+        return $verdicts;
     }
 
     /**

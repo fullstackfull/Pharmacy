@@ -171,6 +171,91 @@
             @endforeach
         </x-k.card>
 
+        {{-- Try it. The one part of this page that DOES something, so it says what it will do
+             before it does it: which of the three tiers this endpoint falls in, and what is
+             missing when it is refused. The verdict is the server's — this only draws it. --}}
+        @php($methods = array_keys($endpoint['console']))
+        @php($firstVerdict = $endpoint['console'][$methods[0]] ?? ['allowed' => false])
+        <x-k.card :title="translate('try_it')" id="dev-console">
+            <div class="dev-console" data-console
+                 data-url="{{ route('admin.developer.try', ['id' => $endpoint['id']]) }}"
+                 data-verdicts="{{ json_encode($endpoint['console']) }}">
+
+                <div class="dev-console__row">
+                    <label class="dev-console__field">
+                        <span>{{ translate('method') }}</span>
+                        <select data-console-method>
+                            @foreach ($methods as $method)
+                                <option value="{{ $method }}">{{ $method }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <code class="dev-console__path">{{ $endpoint['path'] }}</code>
+                </div>
+
+                {{-- Refusals are shown in place of the send button, never beside it. --}}
+                <p class="dev-callout dev-callout--warn" data-console-refusal hidden></p>
+
+                <div data-console-form>
+                    @if ($endpoint['path_parameters'] !== [])
+                        <h4 class="dev-subhead">{{ translate('path_parameters') }}</h4>
+                        <div class="dev-console__grid">
+                            @foreach ($endpoint['path_parameters'] as $parameter)
+                                <label class="dev-console__field">
+                                    <span>{{ $parameter['name'] }}@if (($parameter['required'] ?? true))<i>*</i>@endif</span>
+                                    <input type="text" data-console-path="{{ $parameter['name'] }}"
+                                           placeholder="{{ $parameter['type'] ?? 'string' }}">
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if ($endpoint['body'] !== [])
+                        <h4 class="dev-subhead">
+                            {{ in_array('GET', $endpoint['methods'], true) ? translate('query_parameters') : translate('body') }}
+                        </h4>
+                        <div class="dev-console__grid">
+                            @foreach ($endpoint['body'] as $field)
+                                <label class="dev-console__field">
+                                    <span>{{ $field['name'] }}@if (!empty($field['required']))<i>*</i>@endif</span>
+                                    <input type="text" data-console-field="{{ $field['name'] }}"
+                                           placeholder="{{ $field['type'] }}">
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="dev-console__grid">
+                        <label class="dev-console__field">
+                            {{-- Typed for one call and never stored: it is not saved, not logged,
+                                 and redacted out of the transcript that comes back. --}}
+                            <span>{{ translate('access_token_optional') }}</span>
+                            <input type="password" autocomplete="off" data-console-token
+                                   placeholder="{{ translate('sent_once_never_stored') }}">
+                        </label>
+                        <label class="dev-console__field" data-console-confirm-field hidden>
+                            <span>{{ translate('type_the_method_to_confirm') }}</span>
+                            <input type="text" autocomplete="off" data-console-confirm placeholder="POST">
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn btn--primary dev-console__send" data-console-send>
+                        {{ translate('send') }}
+                    </button>
+                    <span class="dev-muted dev-console__tier" data-console-tier></span>
+                </div>
+
+                <div class="dev-console__result" data-console-result hidden>
+                    <h4 class="dev-subhead">
+                        <span data-console-status></span>
+                        <small class="dev-muted"><span data-console-duration></span>ms</small>
+                    </h4>
+                    <pre class="dev-code"><code data-console-body></code></pre>
+                    <p class="dev-note">{{ translate('secrets_are_removed_from_what_is_shown_here') }}</p>
+                </div>
+            </div>
+        </x-k.card>
+
         {{-- What it actually answers with. Nothing in this API declares a response type — the
              controllers return JSON directly — so the only honest source is what the endpoint has
              been seen answering. Keys and types are recorded; no value ever is. --}}
@@ -303,6 +388,102 @@
             if (panel) panel.classList.add('is-active');
         });
     });
+
+    // The console. It does not decide anything: every refusal below was decided on the server and
+    // is decided AGAIN there when send is pressed, so a console with its buttons re-enabled from a
+    // developer console is a console that still cannot send what it may not send.
+    (function () {
+        var root = document.querySelector('[data-console]');
+        if (!root) return;
+
+        var verdicts = JSON.parse(root.dataset.verdicts || '{}');
+        var methodSelect = root.querySelector('[data-console-method]');
+        var refusal = root.querySelector('[data-console-refusal]');
+        var form = root.querySelector('[data-console-form]');
+        var confirmField = root.querySelector('[data-console-confirm-field]');
+        var tierLabel = root.querySelector('[data-console-tier]');
+        var result = root.querySelector('[data-console-result]');
+
+        function verdict() {
+            return verdicts[methodSelect.value] || {allowed: false};
+        }
+
+        function render() {
+            var current = verdict();
+
+            form.hidden = !current.allowed;
+            refusal.hidden = !!current.allowed;
+            confirmField.hidden = !current.needs_confirmation;
+            tierLabel.textContent = current.tier === 'write' ? '{{ translate('this_writes_to_the_live_shop') }}' : '';
+
+            if (!current.allowed) {
+                refusal.textContent = current.message
+                    || '{{ translate('the_console_will_not_send_this_request') }}';
+                if (current.remedy) refusal.textContent += ' — ' + current.remedy;
+            }
+        }
+
+        methodSelect.addEventListener('change', render);
+        render();
+
+        root.querySelector('[data-console-send]').addEventListener('click', function (button) {
+            var payload = {};
+            root.querySelectorAll('[data-console-field]').forEach(function (input) {
+                if (input.value !== '') payload[input.dataset.consoleField] = input.value;
+            });
+
+            var path = {};
+            root.querySelectorAll('[data-console-path]').forEach(function (input) {
+                path[input.dataset.consolePath] = input.value;
+            });
+
+            var token = root.querySelector('[data-console-token]');
+            var confirm = root.querySelector('[data-console-confirm]');
+
+            fetch(root.dataset.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    method: methodSelect.value,
+                    path: path,
+                    payload: payload,
+                    token: token.value,
+                    confirm: confirm.value
+                })
+            }).then(function (response) {
+                return response.json().then(function (data) { return {status: response.status, data: data}; });
+            }).then(function (answer) {
+                // The token is used for one request and is not kept around afterwards, in the page
+                // any more than on the server.
+                token.value = '';
+
+                result.hidden = false;
+
+                if (!answer.data.ok) {
+                    root.querySelector('[data-console-status]').textContent = answer.status;
+                    root.querySelector('[data-console-duration]').textContent = '0';
+                    root.querySelector('[data-console-body]').textContent =
+                        (answer.data.message || '') + (answer.data.remedy ? ' — ' + answer.data.remedy : '');
+                    return;
+                }
+
+                var sent = answer.data.response;
+                root.querySelector('[data-console-status]').textContent = sent.status;
+                root.querySelector('[data-console-duration]').textContent = sent.duration_ms;
+                root.querySelector('[data-console-body]').textContent = sent.json !== null
+                    ? JSON.stringify(sent.json, null, 2)
+                    : (sent.text || '');
+            }).catch(function () {
+                result.hidden = false;
+                root.querySelector('[data-console-body]').textContent =
+                    '{{ translate('the_console_request_did_not_complete') }}';
+            });
+        });
+    })();
 
     document.querySelectorAll('[data-copy-target]').forEach(function (button) {
         button.addEventListener('click', function () {

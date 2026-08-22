@@ -2,6 +2,7 @@
 
 namespace App\Services\Telemetry;
 
+use App\Services\DeveloperPortal\ApiConsole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,14 @@ class TelemetryRecorder
     {
         try {
             if (!config('telemetry.enabled')) {
+                return;
+            }
+
+            // A request the API console sent from the admin panel is the panel testing an endpoint,
+            // not a customer using it. Counting it would put deliberately malformed probes into the
+            // route timings and the error rate that an operator reads to decide whether the shop is
+            // healthy.
+            if ($request->headers->has(ApiConsole::MARKER_HEADER)) {
                 return;
             }
 

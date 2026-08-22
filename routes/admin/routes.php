@@ -189,6 +189,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('lookup', 'lookup')->name('lookup');
             // Writes, so they are POSTs: capturing a snapshot records history, and rebuilding the
             // manifest discards a cache. Neither belongs behind a link a browser can prefetch.
+            // The console is a POST for the same reason and a stronger one — it SENDS a request at
+            // the live API, which is not something a prefetch, a crawler or a shared link may do.
+            Route::post('try/{id}', 'try')->name('try');
             Route::post('snapshot', 'snapshot')->name('snapshot');
             Route::post('refresh', 'refresh')->name('refresh');
             // Last, so it cannot swallow the named routes above.
