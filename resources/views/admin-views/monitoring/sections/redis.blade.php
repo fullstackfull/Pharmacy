@@ -77,10 +77,10 @@
                 <strong>{{ translate('redis_is_running_but_no_part_of_the_shop_is_pointed_at_it') }}</strong>
                 <small>{{ $usage['note'] }}</small>
                 @if ($usage['serves_monitoring'])
-                    <small>{{ translate('the_keys_and_lookups_on_this_page_are_monitorings_own_request_buffer_not_shop_traffic') }}</small>
+                    <small>{{ translate('the_keys_and_lookups_on_this_page_belong_to_the_monitoring_buffer_rather_than_to_shop_traffic') }}.</small>
                 @endif
                 @if (!empty($usage['env_lines']))
-                    <small>{{ translate('these_lines_in_env_would_change_that') }}</small>
+                    <small>{{ translate('these_lines_would_change_that_in') }} <code>.env</code></small>
                     @foreach ($usage['env_lines'] as $line)
                         <code>{{ $line }}</code>
                     @endforeach
@@ -133,7 +133,7 @@
     @endif
 
     @if ($nothingUsesIt && !empty($usage['caveats']))
-        <p class="mon-note">{{ translate('before_moving_any_of_them_onto_this_server') }}</p>
+        <p class="mon-note">{{ translate('before_moving_any_of_them_onto_this_server') }}:</p>
         <ul class="mon-note">
             @foreach ($usage['caveats'] as $caveat)
                 <li>{{ $caveat }}</li>
@@ -222,8 +222,8 @@
         </table>
     </div>
     <p class="mon-note">
-        {{ translate('every_gauge_here_is_stored_in') }} <code>monitoring_series</code>
-        {{ translate('and_can_be_charted_over_any_window_on_this_page') }}.
+        {{ translate('every_one_of_these_gauges_is_sampled_every_minute_and_stored_in') }}
+        <code>monitoring_series</code>. {{ translate('any_of_them_can_be_charted_over_any_window_on_this_page') }}.
     </p>
 </x-k.card>
 
@@ -412,11 +412,11 @@
 @endif
 
 <p class="mon-note">
-    {{ translate('server_readings_are_taken_live_from') }} <code>INFO</code>, <code>PING</code>,
-    <code>SLOWLOG</code> {{ translate('and') }} <code>INFO commandstats</code>;
-    {{ translate('the_charts_from') }} <code>monitoring_series</code>
-    {{ translate('for_the_selected_window') }};
-    {{ translate('and_the_driver_table_from') }} <code>cache.default</code>,
-    <code>queue.default</code>, <code>session.driver</code> {{ translate('and') }}
+    {{ translate('the_server_readings_above_are_taken_live_from') }}
+    <code>INFO</code>, <code>PING</code>, <code>SLOWLOG</code>, <code>INFO commandstats</code>.
+    {{ translate('the_charts_are_read_from_the_stored_series_in') }} <code>monitoring_series</code>
+    ({{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} {{ $panel['window']['timezone'] }}).
+    {{ translate('the_driver_table_is_read_from_the_live_configuration') }}:
+    <code>cache.default</code>, <code>queue.default</code>, <code>session.driver</code>,
     <code>monitoring.buffer</code>.
 </p>

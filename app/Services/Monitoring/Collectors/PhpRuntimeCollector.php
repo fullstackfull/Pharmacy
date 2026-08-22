@@ -343,7 +343,15 @@ class PhpRuntimeCollector implements Collector
     /** @return array<string, mixed>|Metric */
     private function opcacheStatus(): array|Metric
     {
-        return $this->opcache ??= $this->readOpcacheStatus();
+        if ($this->opcache === null) {
+            try {
+                $this->opcache = $this->readOpcacheStatus();
+            } catch (\Throwable $exception) {
+                $this->opcache = Metric::failed(self::OPCACHE_SOURCE, $exception);
+            }
+        }
+
+        return $this->opcache;
     }
 
     /**
@@ -456,8 +464,8 @@ class PhpRuntimeCollector implements Collector
      * FPM reads the backlog out of the kernel with TCP_INFO, and the kernel answers that only for
      * a TCP listener. On a UNIX socket — nginx's default and this application's likely setup — the
      * call fails and FPM writes a plain 0 into all three fields. Published as readings they draw a
-     * queue that is永 empty, so the one chart that would show requests piling up in front of the
-     * pool is a flat line on exactly the pools where the pile-up is otherwise invisible. The
+     * queue that is never busy, so the one chart that would show requests piling up in front of
+     * the pool is a flat line on exactly the pools where the pile-up is otherwise invisible. The
      * backlog capacity is the tell: no pool listens with a backlog of nothing.
      *
      * @param  array<string, mixed>  $pool
@@ -517,24 +525,28 @@ class PhpRuntimeCollector implements Collector
      */
     private function readFpmStatus(): array|Metric
     {
-        $url = trim((string) config('monitoring.php_fpm_status_url', ''));
+        // config() returns whatever is in the file, and casting a non-string to string is a fatal
+        // rather than a bad reading — an array left here took the whole dashboard down, not just
+        // this panel.
+        $configured = config('monitoring.php_fpm_status_url');
+        $url = is_string($configured) ? trim($configured) : '';
+
         if ($url === '') {
-            return Metric::notConfigured(
-                self::FPM_SOURCE,
-                $this->fpmRemedy(),
-                'PHP-FPM publishes pool state only over its status page, and no status URL is set.',
-            );
+            return $configured === null || $configured === ''
+                ? Metric::notConfigured(
+                    self::FPM_SOURCE,
+                    $this->fpmRemedy(),
+                    'PHP-FPM publishes pool state only over its status page, and no status URL is set.',
+                )
+                : $this->malformedUrl();
         }
 
-        // A URL the HTTP client cannot parse would come back as an exception quoting the string it
-        // was given, which is both unhelpful and the one place a credentialed URL could escape
-        // into a note. It is answered as the configuration mistake it is instead.
-        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
-            return Metric::notConfigured(
-                self::FPM_SOURCE,
-                'Set MONITORING_PHP_FPM_STATUS_URL to a full URL, for example http://127.0.0.1/fpm-status.',
-                'MONITORING_PHP_FPM_STATUS_URL is set to something that is not a URL.',
-            );
+        // A URL the HTTP client cannot use comes back as an exception quoting the string it was
+        // given, which is both unhelpful and the one place a credentialed URL could escape into a
+        // note. The scheme is checked too: filter_var passes gopher:// and ftp:// happily, and the
+        // client's refusal of them reads as a pool that is down.
+        if (!$this->isHttpUrl($url)) {
+            return $this->malformedUrl();
         }
 
         // Notes are stored and drawn on a page, and a status URL may carry basic-auth credentials.
@@ -542,9 +554,11 @@ class PhpRuntimeCollector implements Collector
         // HTTP client quotes back.
         $safeUrl = Redactor::make()->url($url);
 
-        $endpoint = str_contains($url, 'json')
-            ? $url
-            : $url . (str_contains($url, '?') ? '&' : '?') . 'json&full';
+        // pm.status_path answers HTML unless the json flag is on the query string, and the operator
+        // may have put it there already. Matching on the query rather than on the whole URL keeps
+        // a host or path that merely contains "json" from suppressing the flag.
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $endpoint = array_key_exists('json', $query) ? $url : $url . ($query === [] ? '?' : '&') . 'json';
 
         try {
             $response = Http::connectTimeout(1)->timeout(2)->acceptJson()->get($endpoint);
@@ -561,9 +575,7 @@ class PhpRuntimeCollector implements Collector
         if (!$response->successful()) {
             return Metric::notConfigured(
                 self::FPM_SOURCE,
-                $response->status() === 404
-                    ? 'The web server does not route ' . $safeUrl . ' to the pool. ' . $this->fpmRemedy()
-                    : 'The status page answered HTTP ' . $response->status() . '; check the access rules on the status location.',
+                $this->statusRemedy($response->status(), $safeUrl),
                 'MONITORING_PHP_FPM_STATUS_URL is set but the status page returned HTTP ' . $response->status() . '.',
             );
         }
@@ -572,7 +584,7 @@ class PhpRuntimeCollector implements Collector
         if (!is_array($payload) || !array_key_exists('pool', $payload)) {
             return Metric::notConfigured(
                 self::FPM_SOURCE,
-                'Point MONITORING_PHP_FPM_STATUS_URL at pm.status_path itself; the collector appends ?json&full to it.',
+                'Point MONITORING_PHP_FPM_STATUS_URL at pm.status_path itself; the collector appends ?json to it.',
                 'The URL answered, but not with FPM status JSON — it is reaching something other than the pool status page.',
             );
         }
@@ -580,14 +592,46 @@ class PhpRuntimeCollector implements Collector
         return $payload;
     }
 
+    /**
+     * Each way the status URL answers wrongly has its own fix, and "check the access rules" is
+     * none of them: a 404 is a routing mistake, a 403 is the allow list, a 502 is the pool itself.
+     */
+    private function statusRemedy(int $status, string $safeUrl): string
+    {
+        return match (true) {
+            $status === 404 => 'The web server does not route ' . $safeUrl . ' to the pool. ' . $this->fpmRemedy(),
+            $status === 401 || $status === 403 => 'The status location refuses this request. Give it "allow 127.0.0.1; deny all;" with no auth_basic, and set MONITORING_PHP_FPM_STATUS_URL to the 127.0.0.1 form so the request comes from the machine itself.',
+            $status >= 500 => 'The web server reached the status location but not the pool behind it. Check php-fpm is running (systemctl status php' . $this->phpSeries() . '-fpm) and that fastcgi_pass in that location matches the listen = line in ' . $this->poolConfigPath() . '.',
+            default => 'Something in front of the pool answered instead of it — a redirect, a cache or an auth gate on the path. Point MONITORING_PHP_FPM_STATUS_URL straight at pm.status_path on 127.0.0.1.',
+        };
+    }
+
+    private function malformedUrl(): Metric
+    {
+        return Metric::notConfigured(
+            self::FPM_SOURCE,
+            'Set MONITORING_PHP_FPM_STATUS_URL to a full http:// or https:// URL, for example http://127.0.0.1/fpm-status.',
+            'MONITORING_PHP_FPM_STATUS_URL is not an http(s) URL, so no request was made.',
+        );
+    }
+
+    private function isHttpUrl(string $url): bool
+    {
+        return filter_var($url, FILTER_VALIDATE_URL) !== false
+            && in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true);
+    }
+
     private function fpmRemedy(): string
     {
-        $series = $this->phpSeries();
-
-        return 'Set pm.status_path = /fpm-status in the pool config (/etc/php/' . $series . '/fpm/pool.d/www.conf) and reload php-fpm. '
+        return 'Set pm.status_path = /fpm-status in the pool config (' . $this->poolConfigPath() . ') and reload php-fpm. '
             . 'Expose it to this host only — nginx: location = /fpm-status { access_log off; allow 127.0.0.1; deny all; include fastcgi_params; '
-            . 'fastcgi_param SCRIPT_FILENAME $fastcgi_script_name; fastcgi_pass unix:/run/php/php' . $series . '-fpm.sock; } '
+            . 'fastcgi_param SCRIPT_FILENAME $fastcgi_script_name; fastcgi_pass unix:/run/php/php' . $this->phpSeries() . '-fpm.sock; } '
             . 'Then set MONITORING_PHP_FPM_STATUS_URL=http://127.0.0.1/fpm-status in .env.';
+    }
+
+    private function poolConfigPath(): string
+    {
+        return '/etc/php/' . $this->phpSeries() . '/fpm/pool.d/www.conf';
     }
 
     /** The running major.minor, so the paths in a remedy match the PHP that is actually installed. */

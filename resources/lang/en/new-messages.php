@@ -4260,4 +4260,12 @@ return [
 	'The_scheduler_last_reported_a_run_17_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 17 minutes ago  the server cron appears to have stopped.',
 	'The_scheduler_last_reported_a_run_18_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 18 minutes ago  the server cron appears to have stopped.',
 	'The_scheduler_last_reported_a_run_19_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 19 minutes ago  the server cron appears to have stopped.',
+	'the_driver_table_is_read_from_the_live_configuration' => 'The driver table is read from the live configuration',
+	'the_charts_are_read_from_the_stored_series_in' => 'The charts are read from the stored series in',
+	'the_server_readings_above_are_taken_live_from' => 'The server readings above are taken live from',
+	'any_of_them_can_be_charted_over_any_window_on_this_page' => 'Any of them can be charted over any window on this page',
+	'every_one_of_these_gauges_is_sampled_every_minute_and_stored_in' => 'Every one of these gauges is sampled every minute and stored in',
+	'these_lines_would_change_that_in' => 'These lines would change that in',
+	'The_scheduler_last_reported_a_run_25_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 25 minutes ago  the server cron appears to have stopped.',
+	'the_keys_and_lookups_on_this_page_belong_to_the_monitoring_buffer_rather_than_to_shop_traffic' => 'The keys and lookups on this page belong to the monitoring buffer rather than to shop traffic',
 ];

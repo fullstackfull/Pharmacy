@@ -1244,4 +1244,7 @@ return [
 	'and_the_driver_table_from' => 'And the driver table from',
 	'The_scheduler_last_reported_a_run_19_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 19 minutes ago  the server cron appears to have stopped.',
 	'server_counters_are_read_live_from' => 'Server counters are read live from',
+	'the_driver_table_is_read_from_the_live_configuration' => 'The driver table is read from the live configuration',
+	'The_scheduler_last_reported_a_run_25_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 25 minutes ago  the server cron appears to have stopped.',
+	'the_charts_are_read_from_the_stored_series_in' => 'The charts are read from the stored series in',
 ];
