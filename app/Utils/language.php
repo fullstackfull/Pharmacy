@@ -28,9 +28,14 @@ if (!function_exists('translate')) {
             if (!array_key_exists($key, $translatedMessagesArray) && !array_key_exists($key, $newMessagesArray)) {
                 $newMessagesArray[$key] = $processedKey;
 
+                // var_export, not string concatenation: a translation carrying a quote, a
+                // backslash or a $ used to be written into a double-quoted PHP string as-is, which
+                // made the file unparsable — and this file is included on EVERY translate() call,
+                // so one such value took the whole site down with a fatal on every request.
                 $languageFileContents = "<?php\n\nreturn [\n";
                 foreach ($newMessagesArray as $languageKey => $value) {
-                    $languageFileContents .= "\t\"" . $languageKey . "\" => \"" . $value . "\",\n";
+                    $languageFileContents .= "\t" . var_export((string) $languageKey, true)
+                        . ' => ' . var_export((string) $value, true) . ",\n";
                 }
                 $languageFileContents .= "];\n";
 
@@ -44,7 +49,11 @@ if (!function_exists('translate')) {
             } else {
                 $message = __('messages.' . $key);
             }
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
+            // A corrupt or unreadable language file is a ParseError, which is an Error and not an
+            // Exception: it used to escape this handler and fatal the request. Falling back to the
+            // humanised key keeps the page up while the file is repaired.
+            report($exception);
             $message = ucfirst(str_replace('_', ' ', removeSpecialCharacters(str_replace("\'", "'", $key))));
         }
         return $local == 'en' ? ucfirst($message) : $message;
