@@ -490,7 +490,10 @@ class StoragePanel implements Panel
             'unit' => $definition['unit'],
             'title' => $definition['title'],
             'latest' => $points === [] ? null : end($points)['v'],
-            'samples' => count($points),
+            // Stored points, not stored samples. At hour and day resolution one row is a rollup of
+            // many samples — its own `samples` column — so counting rows and calling the answer
+            // "samples" printed 24 over a window that holds about 1,440 of them.
+            'stored_points' => count($points),
             'points' => $points,
         ];
 
@@ -501,7 +504,7 @@ class StoragePanel implements Panel
         // One point is a reading; a line needs two. Saying which of those it is stops a single
         // sample being read as a flat trend.
         if (count($points) < 2) {
-            return array_merge($chart, $this->gaugeGap($resolution, count($points), $live));
+            return array_merge($chart, $this->gaugeGap($resolution, count($points), $live, $stored['truncated']));
         }
 
         return array_merge($chart, [
@@ -516,12 +519,12 @@ class StoragePanel implements Panel
     /**
      * Why a gauge has no line.
      *
-     * Four different silences with four different answers, and the empty chart they all draw looks
+     * Five different silences with five different answers, and the empty chart they all draw looks
      * identical.
      *
      * @return array{state: string, note: string, remedy: string|null}
      */
-    private function gaugeGap(string $resolution, int $points, ?Metric $live): array
+    private function gaugeGap(string $resolution, int $points, ?Metric $live, bool $truncated): array
     {
         if (!config('monitoring.enabled', true)) {
             return [
@@ -539,6 +542,17 @@ class StoragePanel implements Panel
                 'note' => 'This gauge is only stored while the reading behind it is available, and it is not on this host. '
                     . ($live->note ?? 'The collector returned no value for it.'),
                 'remedy' => $live->remedy,
+            ];
+        }
+
+        if ($truncated) {
+            // This render threw the older rows away itself. Reporting that as "nothing was stored"
+            // would be a claim about the store that this panel never checked — and the charts that
+            // did survive the same read are, two cards up, saying the opposite.
+            return [
+                'state' => 'no_data',
+                'note' => 'This render hit its ' . self::MAX_SERIES_ROWS . '-row read cap and dropped the oldest rows first, so whether this gauge has points earlier in the window is unknown rather than answered.',
+                'remedy' => 'Choose a shorter range, which reads fewer rows per gauge and leaves the cap unreached.',
             ];
         }
 
@@ -582,8 +596,15 @@ class StoragePanel implements Panel
             );
 
             // A reading that is OK but not scalar has no honest one-line rendering, and handing an
-            // array to the metric partial prints a PHP warning where a value should be.
-            $metrics = array_filter($metrics, static fn (Metric $metric) => !$metric->isOk() || is_scalar($metric->value));
+            // array to the metric partial prints a PHP warning where a value should be. It is said
+            // rather than dropped: a measurement this page silently removes is indistinguishable
+            // from one nobody ever took, which is the confusion the whole section exists to avoid.
+            $metrics = array_map(
+                static fn (Metric $metric) => $metric->isOk() && !is_scalar($metric->value)
+                    ? Metric::noData($metric->source, 'This reading is not a single value, so this page cannot draw it as one.')
+                    : $metric,
+                $metrics,
+            );
 
             if ($metrics === []) {
                 continue;
@@ -690,12 +711,14 @@ class StoragePanel implements Panel
      */
     private function deviceIoGap(array $disk, array $devices): ?array
     {
-        $reading = $disk['device_io'] ?? null;
-
-        if ($devices !== [] && !$reading instanceof Metric) {
+        // Devices on the page answer the question themselves. Drawing a gap as well — which the
+        // collector can do, since `device_io` and a stale per-device set can both survive one
+        // collect() — put "per-device I/O could not be derived" directly above six live cards.
+        if ($devices !== []) {
             return null;
         }
 
+        $reading = $disk['device_io'] ?? null;
         if ($reading instanceof Metric) {
             return [
                 'state' => $reading->isOk() ? 'no_data' : $reading->state,
@@ -705,9 +728,31 @@ class StoragePanel implements Panel
             ];
         }
 
+        // No devices, no `device_io`, and the reason is one the top of the page already carries:
+        // the collector is missing or it threw. Saying "no reason for its absence" underneath it
+        // was a second, contradictory explanation of the same fault — and a false one.
+        $failure = $disk['__collector'] ?? null;
+        if ($failure instanceof Metric) {
+            return [
+                'state' => 'failed',
+                'note' => 'The disk collector threw before it reached /proc/diskstats, so nothing about the block devices was measured. ' . ($failure->note ?? ''),
+                'remedy' => null,
+                'source' => $failure->source,
+            ];
+        }
+
+        if ($disk === []) {
+            return [
+                'state' => 'not_supported',
+                'note' => 'The disk collector is not installed in this build, so per-device I/O is not measured on this deployment at all.',
+                'remedy' => null,
+                'source' => null,
+            ];
+        }
+
         return [
             'state' => 'no_data',
-            'note' => 'The disk collector returned no per-device reading and no reason for its absence.',
+            'note' => 'The disk collector answered, but published neither per-device readings nor a reason for their absence.',
             'remedy' => null,
             'source' => null,
         ];

@@ -1337,4 +1337,7 @@ return [
 	'other_stored_gauges' => 'Other stored gauges',
 	'cloud_endpoint' => 'Cloud endpoint',
 	'dns' => 'Dns',
+	'cloud_region' => 'Cloud region',
+	'cloud_bucket' => 'Cloud bucket',
+	'default_disk' => 'Default disk',
 ];

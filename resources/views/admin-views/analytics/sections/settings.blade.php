@@ -14,8 +14,29 @@
     <ul class="ana-list">
         <li><span>{{ translate('ip_addresses') }}</span><strong>{{ config('analytics.privacy.mask_ip') ? translate('masked_to_the_network_then_hashed') : translate('hashed_only') }}</strong></li>
         <li><span>{{ translate('precise_location') }}</span><strong>{{ translate('never_stored') }}</strong></li>
-        <li><span>{{ translate('country') }}</span><strong>{{ config('analytics.privacy.country_header') ?: translate('not_configured') }}</strong></li>
+        {{-- The header name is only meaningful when the country is actually stored; printing it
+             beside a switch that is off told an operator a country was being recorded. --}}
+        <li>
+            <span>{{ translate('country') }}</span>
+            <strong>
+                @if (!config('analytics.privacy.store_country'))
+                    {{ translate('not_stored') }}
+                @else
+                    {{ config('analytics.privacy.country_header') ?: translate('not_configured') }}
+                @endif
+            </strong>
+        </li>
         <li><span>{{ translate('fingerprinting') }}</span><strong>{{ translate('none_identity_is_a_random_first_party_cookie_the_visitor_can_clear') }}</strong></li>
+        {{-- Both of these were declared in config and read by nothing, so a shop that switched
+             them on believed it was honouring a signal nobody looked at. --}}
+        <li>
+            <span>{{ translate('do_not_track_and_global_privacy_control') }}</span>
+            <strong>{{ config('analytics.privacy.respect_do_not_track') ? translate('honoured_such_visits_are_not_recorded') : translate('not_honoured') }}</strong>
+        </li>
+        <li>
+            <span>{{ translate('cookie_consent') }}</span>
+            <strong>{{ config('analytics.privacy.require_consent') ? translate('required_before_anything_is_recorded') : translate('not_required') }}</strong>
+        </li>
     </ul>
     <p class="ana-note">{{ translate('event_properties_pass_through_the_same_redactor_the_monitoring_system_uses_so_a_password_an_otp_a_token_or_a_card_number_cannot_reach_these_tables') }}</p>
 </x-k.card>

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\Analytics\Analytics;
 use App\Services\Analytics\Support\PathNormalizer;
+use App\Services\Analytics\Support\PrivacyGate;
 use App\Services\Analytics\VisitorContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -26,12 +27,15 @@ class RecordAnalytics
         private readonly Analytics $analytics,
         private readonly VisitorContext $context,
         private readonly PathNormalizer $paths,
+        private readonly PrivacyGate $privacy,
     ) {
     }
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('analytics.enabled', true)) {
+        // Not measured means not identified either: minting a visitor cookie for somebody who
+        // has asked not to be tracked is the tracking they asked not to have.
+        if (config('analytics.enabled', true) && $this->privacy->allows($request)) {
             // Resolving here, inside the request, is what allows the cookie to be queued onto the
             // outgoing response — by terminate() the response has already gone.
             $this->context->resolve($request);
@@ -43,7 +47,7 @@ class RecordAnalytics
     public function terminate(Request $request, Response $response): void
     {
         try {
-            if (!config('analytics.enabled', true)) {
+            if (!config('analytics.enabled', true) || !$this->privacy->allows($request)) {
                 return;
             }
 

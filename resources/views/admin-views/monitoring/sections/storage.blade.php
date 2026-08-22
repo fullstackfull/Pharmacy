@@ -282,7 +282,7 @@
                     <th>{{ translate('device') }}</th>
                     <th>{{ translate('series') }}</th>
                     <th class="k-table__num">{{ translate('latest') }}</th>
-                    <th class="k-table__num">{{ translate('samples_in_window') }}</th>
+                    <th class="k-table__num">{{ translate('stored_points_in_window') }}</th>
                     <th>{{ translate('state') }}</th>
                 </tr>
                 </thead>
@@ -295,7 +295,7 @@
                             <td class="k-table__num k-num">
                                 {{ $chart['latest'] === null ? '—' : $count($chart['latest']) . ' ' . $chart['unit'] }}
                             </td>
-                            <td class="k-table__num k-num">{{ number_format($chart['samples']) }}</td>
+                            <td class="k-table__num k-num">{{ number_format($chart['stored_points']) }}</td>
                             <td>
                                 @if ($chart['state'] === 'ok')
                                     <span class="mon-pill mon-pill--ok">{{ translate('recorded') }}</span>

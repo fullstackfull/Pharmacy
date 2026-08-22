@@ -42,6 +42,7 @@ class EventRecorder
     public function __construct(
         private readonly VisitorContext $context,
         private readonly PathNormalizer $paths,
+        private readonly \App\Services\Analytics\Support\PrivacyGate $privacy,
     ) {
     }
 
@@ -56,6 +57,15 @@ class EventRecorder
             }
 
             $request ??= request();
+
+            // Asked here as well as in the middleware, because commerce instrumentation records
+            // from services that never pass through it — an order placed from the POS, a status
+            // change made by an administrator — and a privacy setting that half the callers honour
+            // is not a privacy setting.
+            if (!$this->privacy->allows($request)) {
+                return;
+            }
+
             $this->context->resolve($request);
 
             $visitorId = $this->context->visitorId($request);

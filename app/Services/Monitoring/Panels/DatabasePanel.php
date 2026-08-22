@@ -638,48 +638,65 @@ class DatabasePanel implements Panel
     private function routeTotals(string $range, string $resolution): array
     {
         $since = $this->reader->since($range);
-        $totals = $this->routeCandidates($resolution, $since);
+        $totals = [];
 
-        // The tail. Rollups fold minutes into hours on a schedule, so a 24-hour window read from
-        // hour buckets alone is blind to every request recorded since the last fold — which, an
-        // hour after a busy release, is the exact window somebody is looking at. Reading only the
-        // folded rows under-reported this shop's storefront home by 44% of its traffic, and made
-        // the 30-day table show less than the 24-hour one inside it.
-        // SeriesReader::requestSummary() closes the same gap the same way, and a bucket only ever
-        // belongs to one of the sets, so nothing is counted twice.
-        foreach ($this->unfoldedSources($resolution, $since) as $source => $from) {
-            foreach ($this->routeCandidates($source, $from) as $key => $route) {
+        /*
+         * One pass per resolution, coarsest first, each covering exactly the span the next one
+         * cannot see yet.
+         *
+         * The rollup folds the parent that is still in progress — a run at 10:03 writes an hour
+         * bucket holding three minutes of it — so a boundary at the END of the newest folded parent
+         * loses everything between the run and the end of that hour. On this installation that was
+         * 17% of a day's requests, missing from both sides of the seam. Each level therefore stops
+         * where the next one starts: the newest folded parent is skipped and read from its own
+         * finer buckets instead. A bucket belongs to exactly one pass, so nothing is counted twice.
+         */
+        $before = null;
+
+        foreach ($this->resolutionChain($resolution) as $level) {
+            $seam = $level === 'minute' ? null : $this->unfoldedFrom($level, $since);
+
+            foreach ($this->routeCandidates($level, $before ?? $since, $seam) as $key => $route) {
                 foreach (['hits', 'db_ms_total', 'db_query_total', 'duration_total'] as $field) {
                     $route[$field] += (int) ($totals[$key][$field] ?? 0);
                 }
                 $totals[$key] = $route;
             }
+
+            if ($seam === null) {
+                break;
+            }
+
+            $before = $seam;
         }
 
         return $totals;
     }
 
     /**
-     * The finer buckets this range's own resolution cannot see yet, each with the moment it starts.
+     * This range's own resolution, then every finer one down to minutes.
      *
-     * @return array<string, \Illuminate\Support\Carbon>
+     * @return array<int, string>
      */
-    private function unfoldedSources(string $resolution, \Illuminate\Support\Carbon $since): array
+    private function resolutionChain(string $resolution): array
     {
-        // The rollup folds minutes into hours and hours into days, so a day range has two blind
-        // spots: the hours no day row covers yet, and the minutes no hour row covers yet.
-        $chain = match ($resolution) {
-            'day' => ['hour' => 'day', 'minute' => 'hour'],
-            'hour' => ['minute' => 'hour'],
-            default => [],
+        return match ($resolution) {
+            'day' => ['day', 'hour', 'minute'],
+            'hour' => ['hour', 'minute'],
+            default => ['minute'],
         };
+    }
 
-        $sources = [];
-        foreach ($chain as $source => $folded) {
-            $sources[$source] = $this->unfoldedFrom($folded, $since);
-        }
+    /**
+     * The first moment the rollup has not folded into the given resolution yet.
+     */
+    private function unfoldedFrom(string $resolution, \Illuminate\Support\Carbon $since): \Illuminate\Support\Carbon
+    {
+        $newestFolded = $this->reader->connection()->table(self::REQUEST_SOURCE)
+            ->where('resolution', $resolution)
+            ->max('bucket_at');
 
-        return $sources;
+        return $newestFolded !== null ? Clock::parse($newestFolded)->max($since) : $since;
     }
 
     /**
@@ -691,7 +708,7 @@ class DatabasePanel implements Panel
      *
      * @return array<string, array<string, int|string>>
      */
-    private function routeCandidates(string $resolution, \Illuminate\Support\Carbon $from): array
+    private function routeCandidates(string $resolution, \Illuminate\Support\Carbon $from, ?\Illuminate\Support\Carbon $before = null): array
     {
         $candidates = [];
 
@@ -699,6 +716,9 @@ class DatabasePanel implements Panel
             $query = $this->reader->connection()->table(self::REQUEST_SOURCE)
                 ->where('resolution', $resolution)
                 ->where('bucket_at', '>=', $from)
+                // The in-progress parent is read from its own minutes instead, so it is excluded
+                // here rather than counted twice.
+                ->when($before !== null, fn ($inner) => $inner->where('bucket_at', '<', $before))
                 ->groupBy('channel', 'method', 'route')
                 ->havingRaw('SUM(hits) > 0')
                 ->limit(self::ROUTE_CANDIDATES);
@@ -735,26 +755,6 @@ class DatabasePanel implements Panel
         }
 
         return $candidates;
-    }
-
-    /**
-     * The first moment the rollup has not folded into the given resolution yet.
-     *
-     * Never earlier than the window itself, so the tail query stays inside the range the operator
-     * asked for.
-     */
-    private function unfoldedFrom(string $resolution, \Illuminate\Support\Carbon $since): \Illuminate\Support\Carbon
-    {
-        $newestFolded = $this->reader->connection()->table(self::REQUEST_SOURCE)
-            ->where('resolution', $resolution)
-            ->max('bucket_at');
-
-        // Where nothing has been folded at all, every bucket in the window is the tail.
-        $boundary = $newestFolded !== null
-            ? Clock::parse($newestFolded)->addMinutes($resolution === 'day' ? 1440 : 60)
-            : $since;
-
-        return $boundary->max($since);
     }
 
     /**

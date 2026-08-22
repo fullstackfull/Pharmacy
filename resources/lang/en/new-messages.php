@@ -5266,4 +5266,11 @@ return [
 	'by_hour_of_day' => 'By hour of day',
 	'active_opens_are_connections_this_host_dialled_out_and_passive_opens_are_the_ones_it_accepted' => 'Active opens are connections this host dialled out and passive opens are the ones it accepted',
 	'connection_churn' => 'Connection churn',
+	'not_writable' => 'Not writable',
+	'a_directory_here_refused_a_write_the_note_beside_it_carries_what_the_kernel_said_and_the_fix_for_that_particular_failure' => 'A directory here refused a write the note beside it carries what the kernel said and the fix for that particular failure',
+	'the_stored_history_for_this_section_could_not_be_read' => 'The stored history for this section could not be read',
+	'do_not_track_and_global_privacy_control' => 'Do not track and global privacy control',
+	'not_honoured' => 'Not honoured',
+	'cookie_consent' => 'Cookie consent',
+	'not_required' => 'Not required',
 ];

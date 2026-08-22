@@ -247,9 +247,10 @@ class NetworkPanel implements Panel
      * @param  array<string, array<string, Metric>>  $labelled
      * @param  array<int, string>|null  $published
      * @param  array<string, mixed>  $stored
+     * @param  array<int, array<string, mixed>>  $faults  the collector failing to answer at all
      * @return array<string, mixed>
      */
-    private function interfaces(array $labelled, ?array $published, array $stored, string $resolution): array
+    private function interfaces(array $labelled, ?array $published, array $stored, string $resolution, array $faults): array
     {
         $cards = [];
         foreach ($labelled as $label => $metrics) {
@@ -520,6 +521,8 @@ class NetworkPanel implements Panel
             static fn (array $point) => $point['v'] !== null,
         ));
 
+        $read = $stored['state'] === 'ok';
+
         $chart = [
             'key' => $key,
             'metric' => $definition['metric'],
@@ -527,11 +530,16 @@ class NetworkPanel implements Panel
             'unit' => $definition['unit'],
             'title' => $definition['title'],
             'latest' => $points === [] ? null : end($points)['v'],
-            'samples' => count($points),
+            // Points, not samples: at hour or day resolution one stored row is a rollup of sixty
+            // or of fourteen hundred readings, so calling this a sample count would understate a
+            // week's collection by two orders of magnitude. Null rather than zero when the read
+            // failed — it did not find nothing, it did not look, and the JSON refresh reads this
+            // key without the note beside it that would have said so.
+            'stored_points' => $read ? count($points) : null,
             'points' => $points,
         ];
 
-        if ($stored['state'] !== 'ok') {
+        if (!$read) {
             return array_merge($chart, ['state' => 'failed', 'note' => $stored['note'], 'remedy' => null]);
         }
 
@@ -569,9 +577,17 @@ class NetworkPanel implements Panel
             ];
         }
 
-        if ($live instanceof Metric && !$live->isOk()) {
-            // The sampler only stores a reading that is OK, so an unreadable metric has never been
-            // written. The gap is this host, not the scheduler, and the reading says which.
+        // The sampler only stores a reading that is OK, so a metric this host cannot produce has
+        // never been written. The gap is the host, not the scheduler, and the reading says which.
+        //
+        // Only a reading that is structurally unavailable earns that answer. NO_DATA means the
+        // opposite — the probe works here and has simply not recorded yet — and every rate in this
+        // section is NO_DATA on the first sample of a process, because bytes per second is a delta
+        // against a cached previous reading. Blaming "not on this host" for that printed "it is not
+        // on this host" over eth0 with rx_bytes_per_s history sitting in monitoring_series
+        // underneath it.
+        $unavailable = [Metric::NOT_SUPPORTED, Metric::NOT_CONFIGURED, Metric::PERMISSION_DENIED, Metric::COLLECTOR_OFFLINE, Metric::FAILED];
+        if ($live instanceof Metric && in_array($live->state, $unavailable, true)) {
             return [
                 'state' => $live->state,
                 'note' => 'This gauge is only stored while the reading behind it is available, and it is not on this host. '
@@ -580,7 +596,10 @@ class NetworkPanel implements Panel
             ];
         }
 
-        if ($live instanceof Metric && $published !== null && !$this->isPublished($metric, $label, $published)) {
+        // "Available live but never stored" is a claim only a readable reading can carry. Without
+        // isOk() this branch caught the first-sample NO_DATA above and told the operator their
+        // primary NIC was a container's throwaway veth.
+        if ($live instanceof Metric && $live->isOk() && $published !== null && !$this->isPublished($metric, $label, $published)) {
             // Readable right now, and deliberately never stored: container runtimes mint an
             // interface per workload, and each one is a series name that never comes back.
             return [
