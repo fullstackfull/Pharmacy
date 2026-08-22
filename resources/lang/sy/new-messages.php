@@ -1318,4 +1318,6 @@ return [
 	'per_call' => 'Per call',
 	'statements_divided_by_requests_so_a_busy_page_cannot_reach_the_top_simply_by_being_busy' => 'Statements divided by requests so a busy page cannot reach the top simply by being busy',
 	'calls' => 'Calls',
+	'routes_issuing_the_most_queries_per_request' => 'Routes issuing the most queries per request',
+	'no_failed_job_is_recorded' => 'No failed job is recorded',
 ];

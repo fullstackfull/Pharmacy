@@ -204,8 +204,8 @@
                         {{ translate('all_route_timings') }}
                     </a>
                     ·
-                    <a href="{{ route('admin.monitoring.section', ['section' => 'errors', 'range' => '24h']) }}">
-                        {{ translate('errors') }}
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'errors', 'route' => $endpoint['path'], 'status' => 'all', 'range' => '24h']) }}">
+                        {{ translate('errors_on_this_route') }}
                     </a>
                 </p>
             </x-k.card>

@@ -298,8 +298,13 @@
                                class="k-num" title="{{ $trace['trace_id'] }}">{{ $trace['short_id'] }}</a>
                         </td>
                         <td>
-                            <span class="k-truncate" style="display:block;max-inline-size:240px"
-                                  title="{{ $trace['route'] ?? translate('no_route') }}">{{ $trace['route'] ?? translate('no_route') }}</span>
+                            @if (!empty($trace['route']))
+                                <a class="k-truncate" style="display:block;max-inline-size:240px"
+                                   href="{{ route('admin.developer.lookup', ['path' => $trace['route'], 'method' => $trace['method'] ?? null]) }}"
+                                   title="{{ $trace['route'] }} — {{ translate('open_this_endpoint_in_the_developer_portal') }}">{{ $trace['route'] }}</a>
+                            @else
+                                <span class="k-truncate" style="display:block;max-inline-size:240px">{{ translate('no_route') }}</span>
+                            @endif
                         </td>
                         <td>{{ $trace['method'] ?? '—' }}</td>
                         <td class="k-table__num">

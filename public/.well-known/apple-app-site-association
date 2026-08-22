@@ -1,18 +1,6 @@
 {
     "applinks": {
         "apps": [],
-        "details": [
-            {
-                "appID": ".",
-                "paths": [
-                    "/",
-                    "/product/*",
-                    "/brand/*",
-                    "/products",
-                    "/track-order/*",
-                    "/go/*"
-                ]
-            }
-        ]
+        "details": []
     }
 }

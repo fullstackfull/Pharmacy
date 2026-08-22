@@ -124,7 +124,10 @@ Route::post(trim((string) config('analytics.beacon.path', 'analytics/collect'), 
 */
 Route::get(trim((string) config('analytics.campaigns.path', 'go'), '/') . '/{code}',
     \App\Http\Controllers\Web\CampaignRedirectController::class)
-    ->where('code', '[a-z0-9]{4,24}')
+    // Case-insensitive on purpose: codes are minted lowercase, and CampaignService folds case
+    // on lookup, so a code read off a poster in capitals has to reach the controller rather
+    // than being refused by the router before the folding can happen.
+    ->where('code', '[A-Za-z0-9]{4,24}')
     ->middleware('throttle:' . (int) config('analytics.campaigns.click_rate_limit', 120) . ',1')
     ->name('campaign.go');
 

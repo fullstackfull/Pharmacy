@@ -60,6 +60,30 @@ class AssociationFileTest extends TestCase
         }
     }
 
+    public function test_a_file_that_names_no_app_is_not_reported_as_published(): void
+    {
+        // What the project ships: valid JSON, the full path list, and an appID of "." — which iOS
+        // discards. Every screen used to call this published and up to date.
+        $published = app(AssociationFileWriter::class)->published();
+
+        $this->assertFalse(
+            $published['claims_an_app'],
+            'the shipped association files must not claim to publish an app'
+        );
+        $this->assertFalse(app(AssociationFileWriter::class)->isCurrent(self::SETTINGS));
+    }
+
+    public function test_the_campaign_prefix_is_published_even_when_it_is_not_the_default(): void
+    {
+        config()->set('analytics.campaigns.path', 'c');
+
+        $paths = app(\App\Services\DeepLink\AppLinkService::class)->paths(
+            \App\Services\DeepLink\AppLinkService::PLATFORM_IOS
+        );
+
+        $this->assertContains('/c/*', $paths, 'a deployment that renamed the prefix must publish the prefix it serves');
+    }
+
     public function test_the_publish_command_survives_a_database_it_cannot_read(): void
     {
         // A deploy step runs before migrations as often as after them. It must report the problem,

@@ -5213,4 +5213,9 @@ return [
 	'where_one_called_repeatedly_surfaces_even_though_no_single_run_is_expensive' => 'Where one called repeatedly surfaces even though no single run is expensive',
 	'stored_points_in_window' => 'Stored points in window',
 	'the_cache_queue_and_session_drivers_could_not_be_read' => 'The cache queue and session drivers could not be read',
+	'avg_runtime_ms' => 'Avg runtime ms',
+	'errors_on_this_route' => 'Errors on this route',
+	'slowest_run' => 'Slowest run',
+	'recorded_schedule' => 'Recorded schedule',
+	'average_duration' => 'Average duration',
 ];

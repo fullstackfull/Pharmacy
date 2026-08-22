@@ -125,6 +125,9 @@ class ErrorsPanel implements Panel
             'severity' => $this->trimmed($request, 'severity', 12),
             'channel' => $this->trimmed($request, 'channel', 12),
             'release' => $this->trimmed($request, 'release', 40),
+            // The route an endpoint's page links in with, so "the errors on this endpoint" is a
+            // link rather than a search. 191 is the column width in the migration.
+            'route' => $this->trimmed($request, 'route', 191),
             'group' => $group > 0 ? $group : null,
             'page' => max(1, min(self::MAX_PAGE, (int) $request->query('page', 1))),
         ];
@@ -657,6 +660,7 @@ class ErrorsPanel implements Panel
             || $filters['severity'] !== null
             || $filters['channel'] !== null
             || $filters['release'] !== null
+            || $filters['route'] !== null
             || $filters['status'] !== 'all';
 
         if ((int) $options['groups_in_window'] > 0 && $narrowed) {
@@ -694,7 +698,7 @@ class ErrorsPanel implements Panel
             $query->where($table . '.status', $filters['status']);
         }
 
-        foreach (['severity', 'channel', 'release'] as $column) {
+        foreach (['severity', 'channel', 'release', 'route'] as $column) {
             if ($filters[$column] !== null) {
                 $query->where($table . '.' . $column, $filters[$column]);
             }

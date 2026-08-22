@@ -75,6 +75,11 @@
             {{ translate('the_app_is_set_up_but_short_links_are_not_on_its_published_path_list_so_they_open_the_browser') }}
             <a href="{{ $appLinks['setup_url'] }}">{{ translate('review_the_published_paths') }}</a>.
         </p>
+    @elseif (!$appLinks['published_claims_an_app'])
+        <p class="ana-note ana-note--warning">
+            {{ translate('the_app_is_set_up_but_nothing_has_been_published_for_the_phone_to_read_so_no_link_opens_the_app_yet') }}
+            <code>php artisan deeplinks:publish</code>
+        </p>
     @elseif (!$appLinks['files_are_current'])
         <p class="ana-note ana-note--warning">
             {{ translate('short_links_are_on_the_published_path_list_but_the_file_the_phone_reads_is_older_than_that_list') }}

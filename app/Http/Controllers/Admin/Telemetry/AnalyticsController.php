@@ -334,12 +334,16 @@ class AnalyticsController extends BaseController
 
         $path = '/' . trim((string) config('analytics.campaigns.path', 'go'), '/') . '/x';
         $published = $writer->published();
+        $settings = $links->settings();
 
         return [
             'configured' => $links->isConfiguredForAnyPlatform(),
             'campaign_path_is_published' => $links->opensTheApp($path),
-            'files_are_current' => !$published['exists']
-                || $published['paths'] === $links->paths(\App\Services\DeepLink\AppLinkService::PLATFORM_IOS),
+            // A file that does not exist, or exists and names no app, is not "current" — it is a
+            // deployment where nothing opens the app. Reporting it as current told the merchant
+            // their poster worked when nothing had ever been published.
+            'files_are_current' => $writer->isCurrent($settings),
+            'published_claims_an_app' => $published['claims_an_app'],
             'setup_url' => route('admin.system-setup.app-deep-link'),
         ];
     }

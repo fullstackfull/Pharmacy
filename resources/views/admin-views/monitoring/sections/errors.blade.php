@@ -27,6 +27,7 @@
         'severity' => $filters['severity'],
         'channel' => $filters['channel'],
         'release' => $filters['release'],
+        'route' => $filters['route'],
     ], static fn ($value) => $value !== null && $value !== '');
 
     $linkTo = static fn (array $extra = []) => route(
@@ -185,6 +186,16 @@
             <x-k.button type="submit" variant="primary" size="sm" icon="filter">{{ translate('apply') }}</x-k.button>
             <x-k.button :href="$clearUrl" variant="ghost" size="sm">{{ translate('clear') }}</x-k.button>
         </div>
+
+        {{-- Arrived from an endpoint's page. A list scoped to one route that does not say so reads
+             as "this shop has one error", so the scope is stated and removable. --}}
+        @if (!empty($filters['route']))
+            <input type="hidden" name="route" value="{{ $filters['route'] }}">
+            <p class="mon-note" style="margin-block-end:0">
+                {{ translate('showing_only') }} <code>{{ $filters['route'] }}</code>
+                — <a href="{{ route('admin.monitoring.section', array_merge(['section' => 'errors'], collect($carried)->except('route')->all())) }}">{{ translate('every_route') }}</a>
+            </p>
+        @endif
     </form>
 
     {{-- An unreadable filter list renders as "any severity, any channel, any release" with nothing
@@ -476,8 +487,24 @@
                             <tr>
                                 <td class="k-table__num k-num">{{ $occurrence['at']['at'] ?? translate('no_data') }}</td>
                                 <td class="k-num">{{ $occurrence['request_id'] ?? translate('no_data') }}</td>
-                                <td class="k-num">{{ $occurrence['trace_id'] ?? translate('no_data') }}</td>
-                                <td>{{ $occurrence['route'] ?? translate('no_route') }}</td>
+                                {{-- The two ways out of this row: the trace that recorded the request,
+                                     and what the route it hit actually is. The traces section takes a
+                                     trace filter and the Developer Portal resolves a path, so both are
+                                     one link rather than a copy and a search. --}}
+                                <td class="k-num">
+                                    @if (!empty($occurrence['trace_id']))
+                                        <a href="{{ route('admin.monitoring.section', ['section' => 'traces', 'trace' => $occurrence['trace_id'], 'range' => $range]) }}#mon-trace">{{ $occurrence['trace_id'] }}</a>
+                                    @else
+                                        {{ translate('no_data') }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if (!empty($occurrence['route']))
+                                        <a href="{{ route('admin.developer.lookup', ['path' => $occurrence['route'], 'method' => $occurrence['method'] ?? null]) }}">{{ $occurrence['route'] }}</a>
+                                    @else
+                                        {{ translate('no_route') }}
+                                    @endif
+                                </td>
                                 <td>{{ $occurrence['method'] ?? translate('no_data') }}</td>
                                 <td class="k-table__num k-num">{{ $occurrence['status'] ?? translate('no_data') }}</td>
                                 <td>{{ $occurrence['platform'] ?? translate('no_data') }}</td>

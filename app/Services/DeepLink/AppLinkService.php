@@ -69,6 +69,12 @@ class AppLinkService
         return $this->settings = $stored;
     }
 
+    /** The pattern campaign short links are served at, whatever prefix this deployment configured. */
+    public function campaignPathPattern(): string
+    {
+        return '/' . trim((string) config('analytics.campaigns.path', 'go'), '/') . '/*';
+    }
+
     public function isConfigured(string $platform): bool
     {
         $settings = $this->settings();
@@ -110,6 +116,14 @@ class AppLinkService
             static fn ($path) => trim((string) $path),
             (array) config($key, [])
         )));
+
+        // The campaign prefix is configurable, and the shipped list names the default. A deployment
+        // that changed ANALYTICS_CAMPAIGN_PATH would otherwise publish /go/* — a path it does not
+        // serve — while its real short links opened the browser.
+        $campaign = $this->campaignPathPattern();
+        if (!in_array($campaign, $paths, true)) {
+            $paths[] = $campaign;
+        }
 
         return array_values(array_unique($paths));
     }

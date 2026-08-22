@@ -333,7 +333,10 @@ class BusinessSettingsController extends BaseController
             'android' => $appLinks->paths(AppLinkService::PLATFORM_ANDROID),
         ];
         $published = $writer->published();
-        $publishedIsStale = $published['exists'] && $published['paths'] !== $linkPaths['ios'];
+        // Identifiers as well as paths: the file shipped with the project carried the full path
+        // list and an appID of ".", which named no app at all — comparing paths alone called that
+        // up to date.
+        $publishedIsStale = $published['exists'] && !$writer->isCurrent($deeplink ?? []);
 
         return view('admin-views.system-setup.app-deep-link', compact(
             'deeplink', 'fileStatus', 'linkPaths', 'published', 'publishedIsStale'

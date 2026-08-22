@@ -96,19 +96,77 @@ class AssociationFileWriter
      * What is on disk right now, so a screen can show the published list rather than the intended
      * one. The difference between the two is the whole failure mode this class exists to prevent.
      *
-     * @return array{exists: bool, paths: array<int, string>, app_id: ?string, package: ?string}
+     * `claims_an_app` is the part that matters and the part that is easy to miss: a file can exist,
+     * be valid JSON and carry the full path list while naming no app at all. The shipped
+     * association file did exactly that — an appID of "." — and iOS discards such an entry, so
+     * every universal link opened Safari while every screen reported the paths as published.
+     *
+     * @return array{exists: bool, claims_an_app: bool, paths: array<int, string>, app_id: ?string, package: ?string}
      */
     public function published(): array
     {
         $apple = $this->readJson(public_path('.well-known/apple-app-site-association'));
         $android = $this->readJson(public_path('.well-known/assetlinks.json'));
 
+        $appId = $apple['applinks']['details'][0]['appID'] ?? null;
+        $package = $android[0]['target']['package_name'] ?? null;
+
         return [
             'exists' => $apple !== null || $android !== null,
+            'claims_an_app' => $this->namesAnApp($appId) || $this->namesAnApp($package),
             'paths' => (array) ($apple['applinks']['details'][0]['paths'] ?? []),
-            'app_id' => $apple['applinks']['details'][0]['appID'] ?? null,
-            'package' => $android[0]['target']['package_name'] ?? null,
+            'app_id' => $appId,
+            'package' => $package,
         ];
+    }
+
+    /**
+     * Is this identifier a real one, or a placeholder shaped like one?
+     *
+     * "." is what the writer produces from an empty team id and an empty bundle id, and it is what
+     * shipped in the repository. It passes every test for "the file exists and parses" and claims
+     * nothing.
+     */
+    private function namesAnApp(mixed $identifier): bool
+    {
+        $identifier = is_string($identifier) ? trim($identifier) : '';
+
+        if ($identifier === '' || trim($identifier, '.') === '') {
+            return false;
+        }
+
+        // An Apple appID is TEAMID.bundle.id: a leading or trailing dot means one half is missing.
+        return !str_starts_with($identifier, '.') && !str_ends_with($identifier, '.');
+    }
+
+    /**
+     * Does what is on disk match what this deployment would publish now?
+     *
+     * Compares the identifiers as well as the paths. Comparing paths alone reported the shipped
+     * file — full path list, no app — as up to date.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public function isCurrent(array $settings): bool
+    {
+        $published = $this->published();
+
+        if (!$published['exists'] || !$published['claims_an_app']) {
+            return false;
+        }
+
+        $apple = $this->appleDocument($settings);
+        $android = $this->androidDocument($settings);
+
+        if ($apple !== null && $published['app_id'] !== $apple['applinks']['details'][0]['appID']) {
+            return false;
+        }
+
+        if ($android !== null && $published['package'] !== $android[0]['target']['package_name']) {
+            return false;
+        }
+
+        return $published['paths'] === $this->links->paths(AppLinkService::PLATFORM_IOS);
     }
 
     /**
