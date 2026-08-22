@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Support;
 
+use App\Services\Monitoring\Metric;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -77,9 +78,21 @@ class SeriesReader
     }
 
     /**
-     * A named gauge over time, ready to chart.
+     * A named series over time, ready to chart.
      *
-     * @return array{points: array<int, array{t: string, v: float|null}>, latest: float|null, unit: string|null}
+     * `v` IS NOT ALWAYS A COUNT, and that is the trap this signature exists to defuse. For a gauge
+     * it is the bucket's last reading. For a COUNTER it is value_sum — whatever the writer chose to
+     * total there, which for requests.by_platform is milliseconds and for requests.by_status is
+     * literally nothing (that writer only ever increments the sample count). A caller that wants
+     * "how many" must read `n` per point, or `samples` for the window; two panels reached for `v`
+     * and published a millisecond total under the word "requests".
+     *
+     * `state` is the other half of the same honesty. This method is total — it answers an
+     * unreachable store with an empty result rather than throwing — and an empty result that cannot
+     * say whether it looked is indistinguishable from a quiet window, so a caller drawing "0
+     * samples" over a failed read has no way to know. It is reported instead of inferred.
+     *
+     * @return array{points: array<int, array{t: string, v: float|null, n: int}>, latest: float|null, samples: int, state: string, note: string|null, unit: string|null}
      */
     public function series(string $metric, string $range, ?string $label = null): array
     {
@@ -96,24 +109,41 @@ class SeriesReader
                 ->get(['bucket_at', 'samples', 'value_sum', 'value_last', 'value_min', 'value_max', 'label']);
 
             $points = [];
+            $samples = 0;
+
             foreach ($rows as $row) {
                 // A gauge's honest value for a bucket is its last reading; a counter's is its sum.
                 // value_last is null for counters, which is how the two are told apart without a
                 // separate column saying which kind this is.
+                $rowSamples = (int) $row->samples;
+                $samples += $rowSamples;
+
                 $value = $row->value_last !== null
                     ? (float) $row->value_last
-                    : ((int) $row->samples > 0 ? (float) $row->value_sum : null);
+                    : ($rowSamples > 0 ? (float) $row->value_sum : null);
 
-                $points[] = ['t' => Clock::parse($row->bucket_at)->toIso8601String(), 'v' => $value];
+                $points[] = ['t' => Clock::parse($row->bucket_at)->toIso8601String(), 'v' => $value, 'n' => $rowSamples];
             }
 
             return [
                 'points' => $points,
                 'latest' => $points === [] ? null : end($points)['v'],
+                'samples' => $samples,
+                'state' => 'ok',
+                'note' => null,
                 'unit' => null,
             ];
-        } catch (\Throwable) {
-            return ['points' => [], 'latest' => null, 'unit' => null];
+        } catch (\Throwable $exception) {
+            // Empty AND said to have failed. A caller that publishes "0 samples in this window" from
+            // this branch would be reporting a measurement nobody took.
+            return [
+                'points' => [],
+                'latest' => null,
+                'samples' => 0,
+                'state' => 'failed',
+                'note' => Metric::describeFailure($exception),
+                'unit' => null,
+            ];
         }
     }
 

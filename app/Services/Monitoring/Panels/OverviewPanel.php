@@ -126,9 +126,27 @@ class OverviewPanel implements Panel
     private function platformCard(string $label, string $platform): array
     {
         $series = $this->reader->series('requests.by_platform', '1h', $platform);
-        $total = array_sum(array_map(static fn (array $point) => (float) ($point['v'] ?? 0), $series['points']));
 
-        if ($total <= 0) {
+        // `samples`, not the sum of `v`. requests.by_platform is a counter: the writer puts the
+        // request count in the sample column and the TOTAL RESPONSE TIME in value_sum, and
+        // SeriesReader hands back value_sum for a counter. Summing `v` printed 1,190 on an hour
+        // that had twelve requests — and because the error is the latency, a slow app looked like
+        // a busy one, which is the opposite of what this card is for.
+        $requests = (int) ($series['samples'] ?? 0);
+
+        if ($series['state'] === 'failed') {
+            return [
+                'key' => $label,
+                'label' => $label,
+                'state' => 'unavailable',
+                'detail' => 'The series store could not be read, so this app\'s traffic is unknown — which is not the same as none.',
+                'note' => $series['note'] ?? null,
+                'section' => $platform,
+                'source' => 'monitoring_series',
+            ];
+        }
+
+        if ($requests <= 0) {
             return [
                 'key' => $label,
                 'label' => $label,
@@ -143,10 +161,10 @@ class OverviewPanel implements Panel
             'key' => $label,
             'label' => $label,
             'state' => 'healthy',
-            'value' => (int) $total,
+            'value' => $requests,
             'unit' => 'requests',
             'metric_label' => 'last hour',
-            'detail' => number_format($total) . ' requests in the last hour',
+            'detail' => number_format($requests) . ' requests in the last hour',
             'section' => $platform,
             'source' => 'monitoring_series',
         ];
