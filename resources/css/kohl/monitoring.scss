@@ -570,3 +570,28 @@
        narrower than its own offset stops carrying any meaning at all. */
     .mon-waterfall__row { grid-template-columns: minmax(90px, 130px) minmax(0, 1fr) 64px; }
 }
+
+/* ── Scheduler status pills ────────────────────────────────────────────────────
+   A scheduled task has six states and the pill palette above distinguishes four,
+   so three are added rather than letting two states share a colour on the one page
+   where telling them apart is the diagnosis.
+
+   The fill carries the distinction that matters. `failed` stays filled red — the
+   task ran and broke. `missed` is an outline: it never ran at all, and the fix for
+   that is in the crontab rather than in the command. `unknown` is outlined for the
+   same reason — an absent reading is not a state, and it must not look like one. */
+.mon-pill--running { background: var(--k-info-soft, rgba(59, 91, 219, .12)); color: var(--k-info, #3b5bdb); }
+.mon-pill--missed {
+    background: transparent;
+    color: var(--mon-critical);
+    /* Outline rather than a border: it draws inside the pill, so an outlined pill and
+       a filled one keep identical metrics and the column does not jog between rows. */
+    outline: 1px dashed currentColor;
+    outline-offset: -1px;
+}
+.mon-pill--unknown {
+    background: transparent;
+    color: var(--k-text-muted);
+    outline: 1px dashed var(--k-border-strong);
+    outline-offset: -1px;
+}

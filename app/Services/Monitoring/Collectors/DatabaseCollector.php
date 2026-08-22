@@ -445,17 +445,24 @@ class DatabaseCollector implements Collector
 
         try {
             $previous = Cache::get(self::PREVIOUS_KEY);
-            Cache::put(self::PREVIOUS_KEY, $sample, self::SAMPLE_TTL_SECONDS);
+            $comparable = is_array($previous) && isset($previous['at']) && is_array($previous['counters'] ?? null);
+            $window = $comparable ? $sampledAt - (float) $previous['at'] : 0.0;
+
+            // The stored sample is only replaced once it is old enough to have been used for
+            // something. Overwriting it on every dashboard refresh would hold the window under a
+            // second for as long as anyone was watching, and the rates would never appear at all.
+            if (!$comparable || $window >= self::MIN_INTERVAL_SECONDS) {
+                Cache::put(self::PREVIOUS_KEY, $sample, self::SAMPLE_TTL_SECONDS);
+            }
         } catch (Throwable) {
             // A cache store that has fallen over costs the rates, not the page.
             return 'The cache store is unavailable, so there is no previous sample to compare against.';
         }
 
-        if (!is_array($previous) || !isset($previous['at']) || !is_array($previous['counters'] ?? null)) {
+        if (!$comparable) {
             return 'Collecting the first sample; rates appear one minute after monitoring starts.';
         }
 
-        $window = $sampledAt - (float) $previous['at'];
         if ($window < self::MIN_INTERVAL_SECONDS) {
             return 'The previous sample is too recent to derive a rate from.';
         }
@@ -1039,7 +1046,7 @@ class DatabaseCollector implements Collector
     {
         $code = $this->driverErrorCode($exception);
         $config = $connection->getConfig();
-        $database = is_string($config['database'] ?? null) && $config['database'] !== '' ? $config['database'] : 'the_database';
+        $database = is_string($config['database'] ?? null) && $config['database'] !== '' ? $config['database'] : '<database>';
 
         if (in_array($code, self::LOGIN_DENIED_CODES, true)) {
             $account = $this->refusedAccount($exception, $connection);
@@ -1056,7 +1063,7 @@ class DatabaseCollector implements Collector
         if (in_array($code, self::ABSENT_CODES, true)) {
             return Metric::notConfigured(
                 $source,
-                "Point DB_DATABASE in .env at a schema that exists, or create this one:"
+                'Point DB_DATABASE in .env at a schema that exists, or create this one:'
                 . " CREATE DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
                 'The server answered, but has no schema by that name: ' . $this->driverMessage($exception),
             );

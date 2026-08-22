@@ -7,6 +7,7 @@ use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\SeriesReader;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * The scheduler: whether cron is firing at all, and what each task did the last time it ran.
@@ -60,9 +61,6 @@ class SchedulerPanel implements Panel
      */
     private const STATUS_ORDER = ['missed' => 0, 'failed' => 1, 'late' => 2, 'unknown' => 3, 'running' => 4, 'healthy' => 5];
 
-    /** Run outcomes that settle a run: everything else is still open or was never attempted. */
-    private const SETTLED = ['success', 'failed'];
-
     public function __construct(
         private readonly CollectorRegistry $collectors,
         private readonly SeriesReader $reader,
@@ -115,15 +113,18 @@ class SchedulerPanel implements Panel
         $installed = $readings['cron_installed'] ?? null;
         $lastRun = $readings['last_run_at'] ?? null;
         $age = $readings['last_run_age_minutes'] ?? null;
+        $failure = $readings['__collector'] ?? null;
         $lateAfter = (int) config('monitoring.thresholds.scheduler_late_minutes', 10);
 
         if (!$installed instanceof Metric) {
             return [
-                'state' => 'not_supported',
+                'state' => $failure instanceof Metric ? $failure->state : 'not_supported',
                 'running' => null,
-                'note' => 'The scheduler collector is not installed in this build, so whether cron is firing cannot be read here.',
+                'note' => $failure instanceof Metric
+                    ? $failure->note
+                    : 'The scheduler collector is not installed in this build, so whether cron is firing cannot be read here.',
                 'remedy' => null,
-                'source' => null,
+                'source' => $failure instanceof Metric ? $failure->source : null,
                 'last_run_at' => null,
                 'last_run_age_minutes' => null,
                 'late_after_minutes' => $lateAfter,
@@ -580,12 +581,13 @@ class SchedulerPanel implements Panel
             return null;
         }
 
-        // "at 02:00" alone does not say how often; on an unrestricted day it is every day.
-        if ($days === '' && str_starts_with($time, 'at ')) {
-            return 'every day ' . $time;
+        // A clock time alone does not say how often. Unrestricted, it is every day; restricted, the
+        // restriction is what the sentence has to open with — "on Sunday at 04:00", not the reverse.
+        if (!str_starts_with($time, 'at ')) {
+            return trim($time . ' ' . $days);
         }
 
-        return trim($time . ' ' . $days);
+        return $days === '' ? 'every day ' . $time : $days . ' ' . $time;
     }
 
     private function humanTime(string $minute, string $hour): ?string
@@ -636,7 +638,7 @@ class SchedulerPanel implements Panel
             if (!$this->isNumber($month) || (int) $month < 1 || (int) $month > 12) {
                 return null;
             }
-            $parts[] = 'in ' . \Illuminate\Support\Carbon::create(null, (int) $month, 1)->format('F');
+            $parts[] = 'in ' . Carbon::create(null, (int) $month, 1)->format('F');
         }
 
         return implode(', ', $parts);
@@ -672,7 +674,7 @@ class SchedulerPanel implements Panel
         return preg_match('/^\d+$/', $field) === 1;
     }
 
-    /** The N of a `*​/N` field, or null when the field is not a plain step. */
+    /** The N of a step field (every Nth minute or hour), or null when the field is not a plain step. */
     private function step(string $field): ?int
     {
         return preg_match('#^\*/(\d+)$#', $field, $matches) === 1 ? (int) $matches[1] : null;

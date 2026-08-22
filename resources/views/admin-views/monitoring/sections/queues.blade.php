@@ -315,16 +315,19 @@
 
     @if ($workers['process_count_known'] && $workers['process_count'] === 0)
         <p class="mon-note mon-note--critical">
-            {{ translate('the_process_list_was_read_and_it_contains_no_worker_this_is_a_counted_zero_not_a_missing_reading') }}
+            {{ translate('the_process_list_was_read_and_it_contains_no_worker') }} —
+            {{ translate('this_is_a_counted_zero_not_a_missing_reading') }}.
         </p>
     @elseif (!$workers['process_count_known'])
         <p class="mon-note">
-            {{ translate('the_process_list_could_not_be_read_so_the_number_of_workers_is_unknown_it_is_not_zero') }}
+            {{ translate('the_process_list_could_not_be_read_so_the_number_of_workers_is_unknown') }} —
+            {{ translate('that_is_not_the_same_as_a_count_of_zero') }}.
         </p>
     @endif
 
     <p class="mon-note">
-        {{ translate('workers_are_counted_on_this_host_only_a_worker_on_another_machine_is_invisible_here') }}
+        {{ translate('workers_are_counted_on_this_host_only') }};
+        {{ translate('a_worker_on_another_machine_is_invisible_here') }}.
     </p>
 </x-k.card>
 

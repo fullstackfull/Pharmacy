@@ -86,6 +86,7 @@ class QueuesPanel implements Panel
         $window = $this->reader->window($range);
         $readings = $this->collectors->collect('queue');
         $throughput = $this->throughput($range, $window);
+        $backend = $this->backend($readings);
 
         return [
             'window' => [
@@ -96,9 +97,9 @@ class QueuesPanel implements Panel
                 'until' => Clock::display(Clock::now())->toDateTimeString(),
                 'timezone' => Clock::displayTimezone(),
             ],
-            'backend' => $this->backend($readings),
+            'backend' => $backend,
             'headline' => $this->headline($readings),
-            'queues' => $this->queues($readings, $throughput),
+            'queues' => $this->queues($readings, $throughput, $backend),
             'throughput' => $throughput,
             'timeline' => $this->timeline($range, $window),
             'workers' => $this->workers($readings),
@@ -192,7 +193,7 @@ class QueuesPanel implements Panel
      * @param  array<string, mixed>  $throughput
      * @return array<string, mixed>
      */
-    private function queues(array $readings, array $throughput): array
+    private function queues(array $readings, array $throughput, array $backend): array
     {
         $table = $readings['queues'] ?? null;
         $rows = [];
@@ -243,7 +244,7 @@ class QueuesPanel implements Panel
             'remedy' => $remedy,
             'source' => $source,
             'rows' => $rows,
-            'columns' => $this->columns($readings, $throughput, $rows),
+            'columns' => $this->columns($readings, $throughput, $rows, $backend),
         ];
     }
 
@@ -316,7 +317,7 @@ class QueuesPanel implements Panel
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<string, array<string, mixed>>
      */
-    private function columns(array $readings, array $throughput, array $rows): array
+    private function columns(array $readings, array $throughput, array $rows, array $backend): array
     {
         $columns = [];
 
@@ -326,6 +327,14 @@ class QueuesPanel implements Panel
             }
 
             $metric = $readings[$column] ?? null;
+
+            // On sync, on a null driver, on an unreachable backend, every one of these columns is
+            // missing for the same single reason — and that reason is already stated once at the
+            // top of the section. Repeating it seven times turns one fault into seven.
+            if ($backend['state'] !== 'ok' && $metric instanceof Metric && $metric->note === $backend['note']) {
+                continue;
+            }
+
             $columns[$column] = [
                 'state' => $metric instanceof Metric && !$metric->isOk() ? $metric->state : 'no_data',
                 'note' => $metric instanceof Metric
