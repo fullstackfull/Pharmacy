@@ -79,7 +79,7 @@ class SettingsPanel implements Panel
     private const RETENTION = [
         'minute_days' => [
             'env' => 'MONITORING_RETENTION_MINUTE_DAYS',
-            'what' => 'how_long_one_minute_buckets_are_kept_this_is_the_only_resolution_that_can_answer_what_happened_at_02_11',
+            'what' => 'how_long_one_minute_buckets_are_kept_which_is_the_only_resolution_that_can_answer_what_happened_at_02_11',
             'note' => 'Prunes minute rows from monitoring_request_buckets, monitoring_series and monitoring_dependency_buckets.',
         ],
         'hour_days' => [
@@ -226,7 +226,7 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'enabled',
                 label: 'collection_enabled',
-                what: 'the_master_switch_with_it_off_nothing_is_measured_and_every_section_says_so_rather_than_showing_the_last_numbers_it_saw',
+                what: 'the_master_switch_and_with_it_off_nothing_is_measured_while_every_section_says_so_rather_than_showing_the_last_numbers_it_saw',
                 env: 'MONITORING_ENABLED',
             ),
             $this->connectionRow($stored),
@@ -259,7 +259,7 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'max_series_per_minute',
                 label: 'max_series_per_minute',
-                what: 'the_high_cardinality_guard_series_past_this_many_in_one_minute_are_folded_into_other_rather_than_being_allowed_to_explode_the_table',
+                what: 'the_high_cardinality_guard_so_that_anything_past_this_many_distinct_series_in_one_minute_is_folded_into_other_instead_of_exploding_the_table',
                 unit: 'series',
             ),
             $this->row(
@@ -349,14 +349,14 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'tracing.enabled',
                 label: 'tracing_enabled',
-                what: 'whether_a_span_tree_is_recorded_at_all_with_it_off_the_traces_section_has_nothing_to_show_however_slow_a_request_was',
+                what: 'whether_a_span_tree_is_recorded_at_all_and_therefore_whether_the_traces_section_can_show_anything_however_slow_a_request_was',
                 env: 'MONITORING_TRACING',
             ),
             $this->row(
                 stored: $stored,
                 path: 'tracing.sample_rate',
                 label: 'sample_rate',
-                what: 'the_share_of_ordinary_requests_kept_as_a_full_trace_recording_every_request_of_a_live_store_would_cost_more_than_the_store',
+                what: 'the_share_of_ordinary_requests_kept_as_a_full_trace_because_recording_every_request_of_a_live_store_would_cost_more_than_the_store',
                 env: 'MONITORING_TRACE_SAMPLE_RATE',
                 note: 'Currently ' . rtrim(rtrim(number_format($sampleRate * 100, 3, '.', ''), '0'), '.') . '% of requests that are neither slow nor failed.',
             ),
@@ -393,14 +393,14 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'tracing.otlp_endpoint',
                 label: 'otlp_endpoint',
-                what: 'where_finished_traces_are_posted_as_otlp_over_http_left_empty_tracing_stays_entirely_inside_this_application',
+                what: 'where_finished_traces_are_posted_as_otlp_over_http_and_while_it_is_empty_tracing_stays_entirely_inside_this_application',
                 env: 'OTEL_EXPORTER_OTLP_ENDPOINT',
             ),
             $this->row(
                 stored: $stored,
                 path: 'tracing.otlp_headers',
                 label: 'otlp_headers',
-                what: 'the_headers_sent_with_each_export_which_is_where_the_collector_credential_lives_so_only_its_presence_is_shown',
+                what: 'the_headers_sent_with_each_export_and_since_that_is_where_the_collector_credential_lives_only_its_presence_is_shown',
                 env: 'OTEL_EXPORTER_OTLP_HEADERS',
                 secret: true,
             ),
@@ -439,7 +439,7 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'privacy.extra_redacted_keys',
                 label: 'extra_redacted_keys',
-                what: 'additional_field_names_stripped_from_captured_traffic_the_built_in_secret_names_are_always_redacted_and_cannot_be_switched_off',
+                what: 'additional_field_names_stripped_from_captured_traffic_on_top_of_the_built_in_secret_names_which_can_never_be_switched_off',
                 note: 'Additive only. Names are listed here, never the values they matched.',
             ),
         ];
@@ -456,14 +456,15 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'energy.estimated_mode',
                 label: 'estimated_mode',
-                what: 'whether_power_draw_may_be_modelled_from_cpu_load_where_the_hardware_exposes_no_real_counter_an_estimate_is_always_labelled_estimated_never_measured',
+                what: 'whether_power_draw_may_be_modelled_from_cpu_load_where_the_hardware_exposes_no_real_counter',
                 env: 'MONITORING_ENERGY_ESTIMATED',
+                note: 'An estimate is always labelled Estimated, never Measured, and is drawn between the idle and full-load figures below.',
             ),
             $this->row(
                 stored: $stored,
                 path: 'energy.price_per_kwh',
                 label: 'price_per_kwh',
-                what: 'what_a_kilowatt_hour_costs_without_it_the_energy_section_reports_power_but_never_money',
+                what: 'what_a_kilowatt_hour_costs_and_without_it_the_energy_section_reports_power_but_never_money',
                 env: 'MONITORING_ENERGY_PRICE',
             ),
             $this->row(
@@ -526,7 +527,7 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'prometheus.enabled',
                 label: 'prometheus_exposition',
-                what: 'whether_the_text_exposition_endpoint_is_served_for_a_prometheus_scrape_no_package_is_involved_the_format_is_generated_here',
+                what: 'whether_the_text_exposition_endpoint_is_served_for_a_prometheus_scrape_with_the_format_generated_here_rather_than_by_a_package',
                 env: 'MONITORING_PROMETHEUS',
                 note: $exposed && !$tokenSet
                     ? 'The endpoint is on with no token set, so anything that can reach this host can read the shop\'s metrics. Set MONITORING_PROMETHEUS_TOKEN in .env.'
@@ -536,7 +537,7 @@ class SettingsPanel implements Panel
                 stored: $stored,
                 path: 'prometheus.token',
                 label: 'prometheus_token',
-                what: 'the_bearer_token_a_scrape_must_present_only_whether_one_exists_is_ever_shown_here',
+                what: 'the_bearer_token_a_scrape_must_present_of_which_only_the_presence_is_ever_shown_here',
                 env: 'MONITORING_PROMETHEUS_TOKEN',
                 secret: true,
             ),
@@ -624,7 +625,7 @@ class SettingsPanel implements Panel
             stored: $stored,
             path: 'connection',
             label: 'database_connection',
-            what: 'which_connection_every_monitoring_table_is_written_to_moving_it_to_its_own_host_is_a_setting_rather_than_a_migration',
+            what: 'which_connection_every_monitoring_table_is_written_to_so_that_moving_the_store_to_its_own_host_is_a_setting_rather_than_a_migration',
             env: 'MONITORING_DB_CONNECTION',
             note: $note,
         );
@@ -645,9 +646,9 @@ class SettingsPanel implements Panel
             stored: $stored,
             path: 'buffer',
             label: 'buffer_driver',
-            what: 'where_the_in_flight_minute_of_counters_lives_before_it_is_folded_into_a_row_auto_picks_redis_when_it_is_genuinely_reachable',
+            what: 'where_the_in_flight_minute_of_counters_lives_before_it_is_folded_into_a_row',
             env: 'MONITORING_BUFFER',
-            note: 'In use right now: ' . $this->sink->driver() . ' — ' . $this->sink->describe() . '.',
+            note: 'The shipped value `auto` takes Redis when it is genuinely reachable, then APCu, then a direct bucket upsert. In use right now: ' . $this->sink->driver() . ' — ' . $this->sink->describe() . '.',
         );
     }
 
@@ -669,10 +670,10 @@ class SettingsPanel implements Panel
             stored: $stored,
             path: 'display_timezone',
             label: 'display_timezone',
-            what: 'the_timezone_stored_timestamps_are_converted_to_for_this_page_only_everything_is_written_and_compared_in_utc',
+            what: 'the_timezone_this_page_converts_stored_timestamps_to_for_reading_and_nothing_else',
             note: $configured === ''
-                ? 'Not set for monitoring, so the application timezone answers instead. Storage and comparison stay in UTC either way.'
-                : null,
+                ? 'Not set for monitoring, so the application timezone answers instead. Everything is stored and compared in UTC either way.'
+                : 'Everything is stored and compared in UTC; this only changes what is printed.',
         );
 
         if ($row['state'] === 'ok') {

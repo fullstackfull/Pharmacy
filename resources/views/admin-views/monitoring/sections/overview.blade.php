@@ -14,7 +14,9 @@
                 <x-k.icon :name="$item['severity'] === 'info' ? 'settings' : 'alert'" :size="16" />
                 <span class="mon-attention__body">
                     <strong>{{ translate($item['title']) }}</strong>
-                    <small>{{ translate($item['detail']) }}</small>
+                    {{-- Composed at runtime from counts and collector notes, so it is rendered as-is:
+                         putting it through translate() minted a new language key per value. --}}
+                    <small>{{ $item['detail'] }}</small>
                     @if (!empty($item['remedy']))
                         <code>{{ \Illuminate\Support\Str::limit($item['remedy'], 150) }}</code>
                     @endif
