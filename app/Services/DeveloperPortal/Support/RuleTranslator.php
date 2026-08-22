@@ -235,7 +235,12 @@ class RuleTranslator
                 ($field['format'] ?? null) === 'uuid' => '00000000-0000-4000-8000-000000000000',
                 ($field['format'] ?? null) === 'date-time' => '2026-01-31 09:00:00',
                 str_contains($name, 'phone') => '+96590000000',
-                str_contains($name, 'password') => '••••••••',
+                // A placeholder somebody can paste and then replace. Bullets look like a masked
+                // secret, which is the right thing in a UI and the wrong thing in a code sample —
+                // pasted into a shell they become a literal password made of dots.
+                str_contains($name, 'password') => 'your-password',
+                str_contains($name, 'token') => 'your-token',
+                str_contains($name, 'otp') || str_contains($name, 'code') => '123456',
                 str_contains($name, 'name') => 'Example',
                 default => 'string',
             },

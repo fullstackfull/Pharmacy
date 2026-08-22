@@ -1250,4 +1250,7 @@ return [
 	'The_scheduler_last_reported_a_run_31_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 31 minutes ago  the server cron appears to have stopped.',
 	'written_by_the_worker_process_itself_as_each_job_finishes' => 'Written by the worker process itself as each job finishes',
 	'throughput_and_runtime_are_read_from_the_stored_series_in' => 'Throughput and runtime are read from the stored series in',
+	'The_scheduler_last_reported_a_run_38_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 38 minutes ago  the server cron appears to have stopped.',
+	'depth_lag_and_failures_are_read_live_from' => 'Depth lag and failures are read live from',
+	'written_by_the_task_listeners_in' => 'Written by the task listeners in',
 ];

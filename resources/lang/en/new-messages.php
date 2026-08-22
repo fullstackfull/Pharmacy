@@ -4306,4 +4306,10 @@ return [
 	'recent_failed_jobs' => 'Recent failed jobs',
 	'no_failed_job_is_recorded' => 'No failed job is recorded',
 	'a_worker_on_another_machine_is_invisible_here' => 'A worker on another machine is invisible here',
+	'The_scheduler_last_reported_a_run_37_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 37 minutes ago  the server cron appears to have stopped.',
+	'workers_are_counted_on_this_host_only' => 'Workers are counted on this host only',
+	'the_process_list_was_read_and_it_contains_no_worker' => 'The process list was read and it contains no worker',
+	'this_is_a_counted_zero_not_a_missing_reading' => 'This is a counted zero not a missing reading',
+	'written_by_the_task_listeners_in' => 'Written by the task listeners in',
+	'runs_durations_and_outcomes_are_read_from' => 'Runs durations and outcomes are read from',
 ];

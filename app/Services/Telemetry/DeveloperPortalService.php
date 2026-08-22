@@ -2,286 +2,501 @@
 
 namespace App\Services\Telemetry;
 
+use App\Services\DeveloperPortal\ApiManifest;
+use App\Services\DeveloperPortal\ApiSnapshotService;
+use App\Services\DeveloperPortal\EndpointHealthService;
+use App\Services\DeveloperPortal\Generators\CodeExampleGenerator;
+use App\Services\DeveloperPortal\Generators\OpenApiGenerator;
+use App\Services\DeveloperPortal\Support\AuthResolver;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
 
 /**
- * The developer portal's data: the REST API surface read LIVE from the route
- * table, so the reference can never drift from the code the apps actually
- * call. Grouped by version and resource, flagged with what each route needs
- * (bearer token, guest allowed).
+ * The portal's screens, assembled from the manifest.
+ *
+ * This class used to BE the portal: it walked the route table itself, grouped by URI segment and
+ * carried fifteen hand-written guides in a PHP array. The live-route idea was the good part and it
+ * is kept — but it now sits on the manifest, which knows about authentication, permissions, rate
+ * limits, validation and versions, so every screen below is derived rather than described.
+ *
+ * Nothing here writes. The portal is a reader of the system it documents, and a reader that could
+ * change the thing it reads would eventually be blamed for an outage it caused.
  */
 class DeveloperPortalService
 {
-    /** @return array<string, array<string, array<int, array<string, mixed>>>> */
-    public function apiReference(): array
-    {
-        $versions = [];
-
-        foreach (Route::getRoutes() as $route) {
-            $uri = $route->uri();
-            if (!str_starts_with($uri, 'api/')) {
-                continue;
-            }
-
-            $segments = explode('/', $uri);
-            $version = $segments[1] ?? 'api';
-            $resource = $segments[2] ?? '/';
-            $middleware = $route->gatherMiddleware();
-
-            $needsAuth = false;
-            foreach ($middleware as $item) {
-                if (is_string($item) && (str_starts_with($item, 'auth') || str_contains($item, 'passport'))) {
-                    $needsAuth = true;
-                }
-            }
-
-            $versions[$version][$resource][] = [
-                'methods' => implode('|', array_values(array_diff($route->methods(), ['HEAD']))),
-                'uri' => '/' . $uri,
-                'name' => $route->getName(),
-                'auth' => $needsAuth,
-                'params' => array_map(fn ($name) => '{' . $name . '}', $route->parameterNames()),
-            ];
-        }
-
-        foreach ($versions as &$resources) {
-            ksort($resources);
-            foreach ($resources as &$routes) {
-                usort($routes, fn ($a, $b) => strcmp($a['uri'], $b['uri']));
-            }
-        }
-        ksort($versions);
-
-        return $versions;
+    public function __construct(
+        private readonly ApiManifest $manifest,
+        private readonly ApiSnapshotService $snapshots,
+        private readonly EndpointHealthService $health,
+        private readonly OpenApiGenerator $openApi,
+        private readonly CodeExampleGenerator $examples,
+        private readonly AuthResolver $auth,
+    ) {
     }
 
     /**
-     * The newest release notes, read straight from CHANGELOG.md.
+     * What this installation can actually offer, so the navigation does not advertise absences.
      *
-     * The portal's job is to be current; a hand-maintained "what's new" panel is exactly the
-     * thing that goes stale. This parses the top entries of the repo's own changelog, so shipping
-     * a release updates the portal by itself.
-     *
-     * @return array<int, array{version:string, title:string, points:array<int,string>}>
+     * @return array<string, bool>
      */
-    public function releaseNotes(int $limit = 3): array
+    public function capabilities(): array
+    {
+        return [
+            'webhooks' => $this->hasInboundWebhooks(),
+            'monitoring' => $this->hasMonitoring(),
+            'snapshots' => $this->snapshots->latest() !== null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function overview(): array
+    {
+        $manifest = $this->manifest->get();
+        $summary = $manifest['summary'];
+
+        return [
+            'summary' => $summary,
+            'base_url' => $manifest['base_url'],
+            'app_version' => $manifest['app_version'],
+            'generated_at' => $manifest['generated_at'],
+            'health' => $this->apiHealth(),
+            'recent_changes' => array_slice($this->snapshots->changelog(8), 0, 8),
+            'latest_snapshot' => $this->snapshots->latest(),
+            'quality' => $this->qualityScore(),
+        ];
+    }
+
+    /**
+     * Overall API health, from the monitoring buckets rather than a second collection path.
+     *
+     * @return array<string, mixed>
+     */
+    public function apiHealth(string $range = '24h'): array
+    {
+        if (!$this->hasMonitoring()) {
+            return [
+                'measured' => false,
+                'reason' => 'Monitoring is not collecting on this installation, so there are no request numbers to report. Nothing here falls back to zeros: a zero error rate and no data look identical and mean opposite things.',
+            ];
+        }
+
+        $reader = app(\App\Services\Monitoring\Support\SeriesReader::class);
+        $summary = $reader->requestSummary($range, channel: 'api');
+
+        if (($summary['has_data'] ?? false) !== true) {
+            return [
+                'measured' => false,
+                'reason' => 'No API request has been recorded in this window. Monitoring is collecting — nothing has called the API.',
+            ];
+        }
+
+        return [
+            'measured' => true,
+            'range' => $range,
+            'requests' => (int) $summary['hits'],
+            'errors' => (int) $summary['errors'],
+            'error_rate' => round((float) $summary['error_rate'], 2),
+            'p95' => $summary['p95'],
+            'p99' => $summary['p99'],
+            'avg' => $summary['avg'],
+            'requests_per_minute' => $summary['requests_per_minute'],
+        ];
+    }
+
+    /**
+     * The explorer: a filtered, health-decorated endpoint list.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function explorer(array $filters = [], int $perPage = 50, int $page = 1): array
+    {
+        $all = $this->manifest->endpoints($filters + ['surface' => 'api']);
+        $total = count($all);
+        $slice = array_slice($all, max(0, ($page - 1) * $perPage), $perPage);
+        $health = $this->hasMonitoring() ? $this->health->forMany($slice) : [];
+
+        foreach ($slice as $index => $endpoint) {
+            $slice[$index]['health'] = $health[$endpoint['id']] ?? ['measured' => false, 'status' => 'no_traffic'];
+        }
+
+        return [
+            'endpoints' => $slice,
+            'total' => $total,
+            'page' => $page,
+            'pages' => (int) ceil($total / max(1, $perPage)),
+            'filters' => $filters,
+            'facets' => $this->facets($all),
+        ];
+    }
+
+    /**
+     * One endpoint, with everything a developer needs on a single page.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function endpoint(string $id): ?array
+    {
+        $endpoint = $this->manifest->endpoint($id);
+
+        if ($endpoint === null) {
+            return null;
+        }
+
+        $baseUrl = $this->manifest->get()['base_url'] ?: url('/');
+
+        return $endpoint + [
+            'examples' => $this->examples->all($endpoint, $baseUrl),
+            'health' => $this->hasMonitoring() ? $this->health->forEndpoint($endpoint) : ['measured' => false, 'status' => 'no_monitoring'],
+            'removal' => $this->health->removalSafety($endpoint),
+            'callers' => $this->health->callers($endpoint),
+            'related' => $this->related($endpoint),
+            'changes' => $this->changesFor($endpoint['id']),
+            'full_url' => rtrim($baseUrl, '/') . $endpoint['path'],
+        ];
+    }
+
+    /**
+     * The conventions screens, all read from the code rather than described.
+     *
+     * @return array<string, mixed>
+     */
+    public function conventions(string $section): array
+    {
+        return match ($section) {
+            'authentication' => [
+                'schemes' => $this->auth->schemes(),
+                'usage' => $this->authenticationUsage(),
+                'guards' => array_map(
+                    static fn (array $guard) => ['driver' => $guard['driver'], 'provider' => $guard['provider']],
+                    (array) config('auth.guards'),
+                ),
+            ],
+            'errors' => [
+                'envelope' => ['errors' => [['code' => 'field_or_condition', 'message' => 'A translated, human-readable explanation.']]],
+                'statuses' => $this->errorCatalogue(),
+                'note' => 'Validation failures on this API return HTTP 403, not 422. That is long-standing behaviour the shipped apps depend on; changing it would break them, so it is documented rather than corrected.',
+            ],
+            'rate_limits' => ['limits' => $this->rateLimits()],
+            'pagination' => [
+                'style' => 'offset',
+                'envelope' => ['total_size' => 128, 'limit' => 10, 'offset' => 1, 'items' => '…'],
+                'note' => 'Offset-based, and offset counts PAGES rather than records in most of this API: limit=10&offset=2 returns records 11-20. Read total_size to know when to stop.',
+                'endpoints' => $this->paginatedEndpoints(),
+            ],
+            'uploads' => ['endpoints' => $this->uploadEndpoints()],
+            default => [],
+        };
+    }
+
+    /**
+     * The documentation-quality screen: what this portal cannot tell a developer, and why.
+     *
+     * @return array<string, mixed>
+     */
+    public function quality(): array
+    {
+        $warnings = $this->openApi->warnings();
+        $byReason = [];
+
+        foreach ($warnings as $warning) {
+            foreach ($warning['missing'] as $reason) {
+                $byReason[$reason] = ($byReason[$reason] ?? 0) + 1;
+            }
+        }
+
+        arsort($byReason);
+
+        return [
+            'score' => $this->qualityScore(),
+            'summary' => $this->manifest->get()['summary'],
+            'by_reason' => $byReason,
+            'endpoints' => array_slice($warnings, 0, 200),
+            'total_flagged' => count($warnings),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function changelog(?string $severity = null): array
+    {
+        return [
+            'changes' => $this->snapshots->changelog(300, $severity),
+            'snapshots' => $this->snapshots->snapshots(),
+            'latest' => $this->snapshots->latest(),
+        ];
+    }
+
+    /**
+     * Versions, with who still calls each one — the number that decides whether v1 can be retired.
+     *
+     * @return array<string, mixed>
+     */
+    public function versions(): array
+    {
+        $summary = $this->manifest->get()['summary'];
+        $versions = [];
+
+        foreach ($summary['by_version'] as $version => $count) {
+            $endpoints = $this->manifest->endpoints(['version' => $version === 'unversioned' ? null : $version]);
+            $endpoints = array_filter($endpoints, static fn (array $e) => $e['surface'] === 'api'
+                && ($version === 'unversioned' ? $e['version'] === null : $e['version'] === $version));
+
+            $versions[$version] = [
+                'endpoints' => $count,
+                'deprecated' => count(array_filter($endpoints, static fn (array $e) => $e['deprecated'])),
+                'audiences' => array_count_values(array_column($endpoints, 'audience')),
+                'traffic' => $this->versionTraffic($version),
+            ];
+        }
+
+        return ['versions' => $versions];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function deprecations(): array
+    {
+        $deprecated = array_filter(
+            $this->manifest->endpoints(),
+            static fn (array $endpoint) => $endpoint['deprecated'],
+        );
+
+        return array_map(function (array $endpoint) {
+            return $endpoint + ['removal' => $this->health->removalSafety($endpoint)];
+        }, array_values($deprecated));
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    /**
+     * How complete the documentation is, as a number somebody can watch move.
+     *
+     * @return array<string, mixed>
+     */
+    private function qualityScore(): array
+    {
+        $summary = $this->manifest->get()['summary'];
+        $total = max(1, $summary['api']);
+
+        // Weighted by what a developer is actually blocked without: a described endpoint they can
+        // find, a request schema they can build against, and a classification that tells them
+        // whether it is even theirs to call.
+        $documented = $summary['documented'] / $total;
+        $schemas = $summary['with_body_schema'] / $total;
+        $classified = 1 - ($summary['unclassified'] / $total);
+
+        return [
+            'score' => (int) round(100 * (0.4 * $documented + 0.4 * $schemas + 0.2 * $classified)),
+            'documented_pct' => round(100 * $documented, 1),
+            'schema_pct' => round(100 * $schemas, 1),
+            'classified_pct' => round(100 * $classified, 1),
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $endpoints
+     * @return array<string, array<string, int>>
+     */
+    private function facets(array $endpoints): array
+    {
+        $facets = ['audience' => [], 'version' => [], 'group' => [], 'method' => [], 'visibility' => []];
+
+        foreach ($endpoints as $endpoint) {
+            $facets['audience'][$endpoint['audience']] = ($facets['audience'][$endpoint['audience']] ?? 0) + 1;
+            $facets['version'][$endpoint['version'] ?? 'unversioned'] = ($facets['version'][$endpoint['version'] ?? 'unversioned'] ?? 0) + 1;
+            $facets['group'][$endpoint['group']] = ($facets['group'][$endpoint['group']] ?? 0) + 1;
+            $facets['visibility'][$endpoint['visibility']] = ($facets['visibility'][$endpoint['visibility']] ?? 0) + 1;
+
+            foreach ($endpoint['methods'] as $method) {
+                $facets['method'][$method] = ($facets['method'][$method] ?? 0) + 1;
+            }
+        }
+
+        foreach ($facets as $key => $counts) {
+            arsort($counts);
+            $facets[$key] = $counts;
+        }
+
+        return $facets;
+    }
+
+    /**
+     * Endpoints a developer is likely to need next: the rest of this resource.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function related(array $endpoint): array
+    {
+        $siblings = array_filter(
+            $this->manifest->endpoints(['audience' => $endpoint['audience'], 'group' => $endpoint['group']]),
+            static fn (array $candidate) => $candidate['id'] !== $endpoint['id'],
+        );
+
+        return array_slice(array_values($siblings), 0, 8);
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    private function changesFor(string $endpointId): array
     {
         try {
-            $path = base_path('CHANGELOG.md');
-            if (!is_file($path)) {
-                return [];
-            }
-
-            $contents = (string) file_get_contents($path);
-            // Entries look like: "## v4.4 — headline" followed by "- bullet" lines.
-            preg_match_all('/^## (v[\d.]+)\s*[—-]\s*(.+)$/m', $contents, $matches, PREG_OFFSET_CAPTURE);
-
-            $notes = [];
-            foreach ($matches[0] as $index => $heading) {
-                if (count($notes) >= max(1, $limit)) {
-                    break;
-                }
-
-                $start = $heading[1] + strlen($heading[0]);
-                $end = $matches[0][$index + 1][1] ?? strlen($contents);
-                $body = substr($contents, $start, $end - $start);
-
-                preg_match_all('/^- \*\*(.+?)\*\*/m', $body, $bullets);
-                $points = array_slice(array_map('trim', $bullets[1] ?? []), 0, 5);
-
-                $notes[] = [
-                    'version' => trim($matches[1][$index][0]),
-                    'title'   => trim($matches[2][$index][0]),
-                    'points'  => $points,
-                ];
-            }
-
-            return $notes;
+            return DB::table('api_changes')
+                ->where('endpoint_id', $endpointId)
+                ->orderByDesc('detected_at')
+                ->limit(10)
+                ->get()
+                ->all();
         } catch (\Throwable) {
             return [];
         }
     }
 
-    /** Copy-paste integration recipes for the app teams. */
-    public function guides(string $baseUrl): array
+    /**
+     * Which authentication scheme is used how many times, so the Authentication page leads with
+     * the one a reader is most likely to need.
+     *
+     * @return array<string, int>
+     */
+    private function authenticationUsage(): array
+    {
+        $usage = [];
+
+        foreach ($this->manifest->endpoints() as $endpoint) {
+            if ($endpoint['surface'] !== 'api') {
+                continue;
+            }
+
+            $mechanism = $endpoint['auth']['mechanism'] ?? 'public';
+            $usage[$mechanism] = ($usage[$mechanism] ?? 0) + 1;
+        }
+
+        arsort($usage);
+
+        return $usage;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function errorCatalogue(): array
     {
         return [
-            [
-                'title' => translate('authentication'),
-                'body' => translate('obtain_a_bearer_token_then_send_it_on_every_authenticated_call'),
-                'snippet' => "curl -X POST {$baseUrl}/api/v1/auth/login \\\n"
-                    . "  -H 'Content-Type: application/json' \\\n"
-                    . "  -d '{\"email\": \"customer@example.com\", \"password\": \"secret\"}'\n\n"
-                    . "# then:\ncurl {$baseUrl}/api/v1/customer/info \\\n  -H 'Authorization: Bearer <token>'",
-            ],
-            [
-                'title' => translate('banners_and_media'),
-                'body' => translate('banner_records_carry_photo_full_url_use_its_path_as_is_do_not_build_storage_urls_yourself'),
-                'snippet' => "curl {$baseUrl}/api/v1/banners\n\n"
-                    . "# response items include:\n"
-                    . "# photo_full_url: { key, path } — load path directly\n"
-                    . "# resource_type: product|category|shop|brand|custom + resource_id",
-            ],
-            [
-                'title' => translate('catalogue'),
-                'body' => translate('products_categories_and_search_the_endpoints_the_store_app_lists_products_with'),
-                'snippet' => "curl '{$baseUrl}/api/v1/products/latest?limit=10&offset=1'\n"
-                    . "curl '{$baseUrl}/api/v1/categories'\n"
-                    . "curl '{$baseUrl}/api/v1/products/search?name=serum&limit=10&offset=1'",
-            ],
-            [
-                'title' => translate('category_page_header'),
-                'body' => translate('one_call_returns_the_category_banner_and_its_sub_categories_for_the_category_screen'),
-                'snippet' => "curl {$baseUrl}/api/v1/categories/page-header/7\n\n"
-                    . "# {\n"
-                    . "#   category:      { id, name, slug, position, parent_id, icon_full_url },\n"
-                    . "#   banner:        null | { id, title, sub_title, button_text, background_color,\n"
-                    . "#                           url, resource_type, resource_id, photo_full_url,\n"
-                    . "#                           inherited },   # inherited = the banner belongs to a parent\n"
-                    . "#   sub_categories: [ { id, name, slug, position, products_count, icon_full_url } ]\n"
-                    . "# }\n"
-                    . "# Render the banner above the grid and the sub_categories as an entry strip;\n"
-                    . "# hide either half when it is null/empty. Banners come from admin > banners\n"
-                    . "# (type: Category Banner) and are NOT part of /api/v1/banners.",
-            ],
-            [
-                'title' => translate('brand_page_header'),
-                'body' => translate('one_call_returns_the_brand_banner_and_the_categories_its_products_live_in'),
-                'snippet' => "curl {$baseUrl}/api/v1/brands/page-header/3\n\n"
-                    . "# {\n"
-                    . "#   brand:      { id, name, slug, image_full_url },\n"
-                    . "#   banner:     null | { id, title, sub_title, url,\n"
-                    . "#                        photo_full_url, mobile_photo_full_url },\n"
-                    . "#   categories: [ { id, name, slug, products_count, icon_full_url } ]\n"
-                    . "# }\n"
-                    . "# The categories are only those holding active products of this brand, so a\n"
-                    . "# chip never leads to an empty list. Filter with the same category id:\n"
-                    . "# /api/v1/categories/products/{category_id}?brand_id=3",
-            ],
-            [
-                'title' => translate('home_promo_banners'),
-                'body' => translate('one_call_returns_the_home_promo_grid_with_each_banners_layout_and_both_images'),
-                'snippet' => "curl {$baseUrl}/api/v1/banners/home-promos\n\n"
-                    . "# [ { id, title, sub_title, button_text, background_color, url,\n"
-                    . "#     layout,   # full | half | slider — how the banner is meant to sit\n"
-                    . "#     priority, # display order, lowest first\n"
-                    . "#     resource_type, resource_id,   # what tapping it opens\n"
-                    . "#     photo_full_url, mobile_photo_full_url } ]\n"
-                    . "# Render in the given order: `full` on its own row, two `half` side by\n"
-                    . "# side, every `slider` pooled into one rotating slot. These banners\n"
-                    . "# belong to no category and are NOT part of /api/v1/banners.",
-            ],
-            [
-                'title' => translate('category_section_banners'),
-                'body' => translate('one_call_returns_every_category_section_banner_with_both_its_web_and_mobile_image'),
-                'snippet' => "curl {$baseUrl}/api/v1/banners/category-sections\n\n"
-                    . "# [ {\n"
-                    . "#   id, title, sub_title, button_text, background_color, url,\n"
-                    . "#   photo_full_url,         # wide image, what the web renders\n"
-                    . "#   mobile_photo_full_url,  # phone-shaped image (falls back to the wide one)\n"
-                    . "#   category_id, category: { id, name, slug }\n"
-                    . "# } ]\n"
-                    . "# Render each banner above that category's product row on the home\n"
-                    . "# screen, using mobile_photo_full_url. Like the category page banner,\n"
-                    . "# these are NOT part of /api/v1/banners.",
-            ],
-            [
-                'title' => translate('vendor_app'),
-                'body' => translate('the_seller_api_lives_under_api_v3_seller_with_its_own_token'),
-                'snippet' => "curl -X POST {$baseUrl}/api/v3/seller/auth/login \\\n"
-                    . "  -H 'Content-Type: application/json' \\\n"
-                    . "  -d '{\"email\": \"vendor@example.com\", \"password\": \"secret\"}'",
-            ],
-            [
-                'title' => translate('configuration'),
-                'body' => translate('base_config_currencies_languages_and_feature_flags_for_app_bootstrapping'),
-                'snippet' => "curl {$baseUrl}/api/v1/config",
-            ],
-            [
-                'title' => translate('theme_banners'),
-                'body' => translate('the_theme_builder_can_mint_its_own_banner_rows_treat_banner_type_as_an_open_set'),
-                'snippet' => "curl {$baseUrl}/api/v1/banners\n\n"
-                    . "# banner_type is an OPEN set. Types an app may now receive:\n"
-                    . "#   Main Banner | Popup Banner | Footer Banner | Main Section Banner\n"
-                    . "#   Category Banner | Category Section Banner | Home Promo Banner\n"
-                    . "#   Brand Banner | Theme Banner   <-- minted by the Theme Builder\n"
-                    . "# 'Theme Banner' has NO built-in slot: it renders only where the\n"
-                    . "# merchant placed it in the theme. Apps should ignore unknown types\n"
-                    . "# rather than failing on them.",
-            ],
-            [
-                'title' => translate('category_and_brand_page_banners'),
-                'body' => translate('page_banners_are_now_editable_from_the_category_and_brand_forms_and_stay_the_same_banner_rows'),
-                'snippet' => "# A category's / brand's page banner is a normal banner row:\n"
-                    . "#   banner_type    = 'Category Banner' | 'Brand Banner'\n"
-                    . "#   resource_type  = 'category' | 'brand'\n"
-                    . "#   resource_id    = that category's / brand's id\n\n"
-                    . "curl {$baseUrl}/api/v1/categories/page-header/{category_id}\n"
-                    . "curl {$baseUrl}/api/v1/brands/page-header/{brand_id}",
-            ],
-            [
-                'title' => translate('addresses_zip_is_optional'),
-                'body' => translate('zip_is_only_required_when_the_zip_allow_list_restriction_is_on_and_is_billing_is_optional'),
-                'snippet' => "curl -X POST {$baseUrl}/api/v1/customer/address/add \\\n"
-                    . "  -H 'Authorization: Bearer <token>' \\\n"
-                    . "  -H 'Content-Type: application/json' \\\n"
-                    . "  -d '{\"contact_person_name\": \"...\", \"address\": \"...\",\n"
-                    . "       \"city\": \"...\", \"country\": \"...\", \"phone\": \"...\"}'\n\n"
-                    . "# zip: omit it freely — required ONLY when config.delivery_zip_code_area_restriction = 1\n"
-                    . "# is_billing: optional, defaults to 0\n"
-                    . "# Orders now always carry a billing address: it falls back to the\n"
-                    . "# shipping address when the customer does not enter a separate one.",
-            ],
-            [
-                'title' => translate('a_theme_reaches_the_store_only_once_published'),
-                'body' => translate('sections_colors_and_typography_all_travel_with_the_published_version_a_draft_changes_nothing'),
-                'snippet' => "# The storefront reads the ACTIVE theme's PUBLISHED version only:\n"
-                    . "#   themes.is_active = 1  AND  theme_versions.status = 'published'\n"
-                    . "# Until both hold, the built-in home renders and Theme Settings colours\n"
-                    . "# are not injected — this is the usual cause of 'the look did not change'.\n"
-                    . "# The builder shows an activate + publish bar whenever that is the case.\n\n"
-                    . "# Section settings carry breakpoint overrides beside the desktop value:\n"
-                    . "#   padding_top | padding_top_tablet | padding_top_mobile\n"
-                    . "#   columns     | columns_tablet     | columns_mobile\n"
-                    . "#   height, visible — same pattern; an absent key means 'inherit'.",
-            ],
-            [
-                'title' => translate('theme_sections_choose_real_records'),
-                'body' => translate('a_section_stores_the_ids_it_shows_so_an_app_can_mirror_the_same_selection'),
-                'snippet' => "# Section settings carry the merchant's picks as ids:\n"
-                    . "#   product_slider:    source = category|brand|manual\n"
-                    . "#                      source_id   -> that category / brand id\n"
-                    . "#                      product_ids -> \"12,7,90\" (order = display order)\n"
-                    . "#   category_grid:     category_ids -> \"3,8,1\" (empty = top-level by priority)\n"
-                    . "#   flash_deal:        deal_id -> a specific deal (empty = whichever runs now)\n"
-                    . "#   category_showcase: category_id -> the category whose banner,\n"
-                    . "#                      sub-categories and products the block shows\n\n"
-                    . "#   vendor_slider:     shop_ids -> the shops to feature (empty = top rated)\n"
-                    . "#   vendor_showcase:   shop_id  -> the shop whose cover, rating and\n"
-                    . "#                      products the block shows. The in-house shop counts\n"
-                    . "#                      as a vendor: its products are added_by = admin,\n"
-                    . "#                      a vendor's are added_by = seller + user_id."                    . "# A category pick includes everything filed under it, matched on all three\n"
-                    . "# levels: category_id, sub_category_id, sub_sub_category_id.\n"
-                    . "curl '{$baseUrl}/api/v1/categories/products/{category_id}?brand_id=3'",
-            ],
-            [
-                'title' => translate('product_page_signals'),
-                'body' => translate('the_viewers_line_is_a_merchandising_widget_driven_by_config_not_analytics'),
-                'snippet' => "# config keys (business settings):\n"
-                    . "#   product_live_viewers_status   0|1   the viewers line on the product page\n"
-                    . "#   product_live_viewers_min/max        the range the number is drawn from\n"
-                    . "#   product_authenticity_badge_status   the '100% authentic' badge\n"
-                    . "#   product_authenticity_badge_text     its wording\n"
-                    . "#   company_registration_no | company_vat_no | company_platform_no\n"
-                    . "#                                       legal ids shown in the web footer\n\n"
-                    . "# The viewers number is derived from the product id and a 10-minute window,\n"
-                    . "# so it is stable across reloads and is NOT real traffic — never report it\n"
-                    . "# as analytics. It is not exposed on the product API; an app that wants the\n"
-                    . "# same treatment should generate it the same way from the product id.\n"
-                    . "# The short description under the title falls back to meta_description and\n"
-                    . "# then to the stripped details, both of which the API already returns.",
-            ],
+            ['status' => 200, 'meaning' => 'Success.', 'note' => 'This API returns 200 for most successful writes rather than 201.'],
+            ['status' => 401, 'meaning' => 'No credentials, or credentials that are not valid any more.', 'note' => 'Re-authenticate. A vendor token cannot be used on customer endpoints and the other way around.'],
+            ['status' => 403, 'meaning' => 'Validation failed, OR the caller lacks a permission.', 'note' => 'Both share this status here. Read the errors array: a validation failure names the field in code, a permission failure names the module.'],
+            ['status' => 404, 'meaning' => 'The record does not exist, or is not visible to this caller.', 'note' => 'Inactive products and other vendors\' records read as missing rather than forbidden, deliberately.'],
+            ['status' => 429, 'meaning' => 'Rate limited.', 'note' => 'Back off and retry. The limit on each endpoint is shown on its own page.'],
+            ['status' => 500, 'meaning' => 'The request failed inside the application.', 'note' => 'Keep the X-Request-Id from the response headers: it is what makes the failure findable in Monitoring.'],
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function rateLimits(): array
+    {
+        $limits = [];
+
+        foreach ($this->manifest->endpoints() as $endpoint) {
+            if ($endpoint['surface'] !== 'api' || ($endpoint['rate_limit']['requests'] ?? null) === null) {
+                continue;
+            }
+
+            $key = $endpoint['rate_limit']['requests'] . '/' . $endpoint['rate_limit']['minutes'];
+            $limits[$key]['requests'] = $endpoint['rate_limit']['requests'];
+            $limits[$key]['minutes'] = $endpoint['rate_limit']['minutes'];
+            $limits[$key]['endpoints'][] = implode('|', $endpoint['methods']) . ' ' . $endpoint['path'];
+        }
+
+        uasort($limits, static fn (array $a, array $b) => $a['requests'] <=> $b['requests']);
+
+        return array_values($limits);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function paginatedEndpoints(): array
+    {
+        return array_values(array_filter($this->manifest->endpoints(), static function (array $endpoint) {
+            if ($endpoint['surface'] !== 'api') {
+                return false;
+            }
+
+            foreach ($endpoint['body'] as $field) {
+                if (in_array($field['name'], ['limit', 'offset', 'page'], true)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function uploadEndpoints(): array
+    {
+        return array_values(array_filter($this->manifest->endpoints(), static function (array $endpoint) {
+            foreach ($endpoint['body'] as $field) {
+                if (($field['type'] ?? null) === 'file') {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function versionTraffic(string $version): array
+    {
+        if (!$this->hasMonitoring() || $version === 'unversioned') {
+            return ['measured' => false];
+        }
+
+        try {
+            $hits = (int) DB::connection(config('monitoring.connection'))
+                ->table('monitoring_request_buckets')
+                ->where('channel', 'api')
+                ->where('route', 'like', "/api/{$version}/%")
+                ->where('bucket_at', '>=', now()->subDays(30))
+                ->sum('hits');
+
+            return ['measured' => true, 'hits_30d' => $hits];
+        } catch (\Throwable) {
+            return ['measured' => false];
+        }
+    }
+
+    /** Does this installation receive webhooks from anybody? */
+    private function hasInboundWebhooks(): bool
+    {
+        foreach (Route::getRoutes() as $route) {
+            if (str_contains($route->uri(), 'webhook') || str_contains($route->uri(), 'callback')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasMonitoring(): bool
+    {
+        try {
+            return \Illuminate\Support\Facades\Schema::connection(config('monitoring.connection'))
+                ->hasTable('monitoring_request_buckets');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }
