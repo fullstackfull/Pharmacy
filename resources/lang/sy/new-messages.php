@@ -1279,4 +1279,9 @@ return [
 	'The_scheduler_last_reported_a_run_73_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 73 minutes ago  the server cron appears to have stopped.',
 	'The_scheduler_last_reported_a_run_77_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 77 minutes ago  the server cron appears to have stopped.',
 	'neither_php_lookup_accepts_a_timeout_so_a_resolver_that_stops_answering_is_skipped_on_the_next_collection_rather_than_holding_this_page_behind_it' => 'Neither php lookup accepts a timeout so a resolver that stops answering is skipped on the next collection rather than holding this page behind it',
+	'The_scheduler_last_reported_a_run_83_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 83 minutes ago  the server cron appears to have stopped.',
+	'a_lookup_that_is_answered_from_etc_hosts_or_a_local_cache_is_not_dns_and_timing_it_would_put_a_reassuring_number_where_no_resolver_was_ever_measured' => 'A lookup that is answered from etc hosts or a local cache is not dns and timing it would put a reassuring number where no resolver was ever measured',
+	'The_scheduler_last_reported_a_run_85_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 85 minutes ago  the server cron appears to have stopped.',
+	'the_php_fpm_status_page' => 'The php fpm status page',
+	'The_scheduler_last_reported_a_run_87_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 87 minutes ago  the server cron appears to have stopped.',
 ];

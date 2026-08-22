@@ -3,22 +3,241 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
-use App\Services\Telemetry\AnalyticsService;
+use App\Services\Analytics\Reporting\AnalyticsNavigation;
+use App\Services\Analytics\Reporting\AnalyticsReporting;
+use App\Services\Analytics\Reporting\Window;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * The Analytics area.
+ *
+ * Thin on purpose: it resolves the section and the date window, asks the reporting service for
+ * that section's data, and renders. Every judgement about what a number means lives in the
+ * reporting service, so the screens and any future export or API cannot disagree about what
+ * "sessions" counts.
+ */
 class AnalyticsController extends BaseController
 {
-    public function __construct(private readonly AnalyticsService $analytics)
+    public function __construct(private readonly AnalyticsReporting $reporting)
     {
     }
 
-    public function index(?Request $request, ?string $type = null): View
+    /**
+     * Signature is the project's ControllerInterface one — `?Request`, `?string $type` — because
+     * BaseController declares it and PHP checks compatibility at class load. A nicer parameter
+     * name here is a fatal error on every admin page.
+     */
+    public function index(?Request $request = null, ?string $type = null): View|JsonResponse|RedirectResponse
     {
-        $days = in_array((int) $request['range'], [7, 30, 90], true) ? (int) $request['range'] : 7;
-        return view('admin-views.telemetry.analytics', [
-            'data' => $this->analytics->overview($days),
-            'range' => $days,
+        $request ??= request();
+        $section = $type ?: (string) $request->query('section', 'overview');
+
+        if (!AnalyticsNavigation::has($section)) {
+            $section = 'overview';
+        }
+
+        $window = $this->window($request);
+
+        return view('admin-views.analytics.index', [
+            'section' => $section,
+            'meta' => AnalyticsNavigation::meta($section),
+            'navigation' => AnalyticsNavigation::grouped(),
+            'window' => $window,
+            'ranges' => Window::RANGES,
+            'health' => $this->reporting->collectionHealth(),
+            'data' => $this->dataFor($section, $window, $request),
         ]);
+    }
+
+    /**
+     * A CSV of whatever is on screen.
+     *
+     * Streamed rather than built in memory: a year of daily rows for a busy dimension is not
+     * something to assemble in a string before sending the first byte.
+     */
+    public function export(Request $request, string $dimension): StreamedResponse|RedirectResponse
+    {
+        if (!in_array($dimension, AnalyticsReporting::DIMENSIONS, true)) {
+            return back();
+        }
+
+        $window = $this->window($request);
+        $breakdown = $this->reporting->breakdown($window, $dimension, 5000);
+
+        $filename = "analytics-{$dimension}-{$window->fromDate()}-to-{$window->toDate()}.csv";
+
+        return response()->streamDownload(function () use ($breakdown, $dimension) {
+            $handle = fopen('php://output', 'wb');
+
+            // A BOM, because a merchant opens this in Excel and Arabic product names without one
+            // arrive as mojibake.
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, [
+                $dimension, 'sessions', 'visitors', 'new_visitors', 'pageviews', 'events',
+                'bounce_rate_pct', 'engagement_rate_pct', 'avg_duration_seconds',
+                'cart_adds', 'orders', 'revenue', 'conversion_rate_pct', 'share_pct',
+            ]);
+
+            foreach ($breakdown['rows'] as $row) {
+                fputcsv($handle, [
+                    $row['key'], $row['sessions'], $row['visitors'], $row['new_visitors'],
+                    $row['pageviews'], $row['events'], $row['bounce_rate'], $row['engagement_rate'],
+                    $row['avg_duration'], $row['cart_adds'], $row['orders'], $row['revenue'],
+                    $row['conversion_rate'], $row['share'],
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /** The Live screen polls this rather than reloading a page every few seconds. */
+    public function live(Request $request): JsonResponse
+    {
+        return response()->json($this->reporting->live((int) $request->query('minutes', 30)));
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    private function window(Request $request): Window
+    {
+        $from = $request->query('from');
+        $to = $request->query('to');
+
+        if (is_string($from) && is_string($to) && $from !== '' && $to !== '') {
+            return Window::between($from, $to);
+        }
+
+        return Window::make($request->query('range'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dataFor(string $section, Window $window, Request $request): array
+    {
+        return match ($section) {
+            'overview' => [
+                'totals' => $this->reporting->totals($window),
+                'trend' => $this->reporting->trend($window),
+                'sources' => $this->reporting->breakdown($window, 'source', 8),
+                'devices' => $this->reporting->breakdown($window, 'device', 6),
+                'pages' => $this->reporting->breakdown($window, 'path', 8),
+                'funnel' => $this->reporting->funnel($window),
+            ],
+            'live' => ['live' => $this->reporting->live()],
+            'acquisition' => [
+                'sources' => $this->reporting->breakdown($window, 'source', 30),
+                'mediums' => $this->reporting->breakdown($window, 'medium', 20),
+                'campaigns' => $this->reporting->breakdown($window, 'campaign', 20),
+                'basis' => $this->reporting->breakdown($window, 'attribution_basis', 10),
+                'landing' => $this->reporting->breakdown($window, 'landing_path', 20),
+            ],
+            'audience' => [
+                'devices' => $this->reporting->breakdown($window, 'device', 10),
+                'os' => $this->reporting->breakdown($window, 'os', 10),
+                'browsers' => $this->reporting->breakdown($window, 'browser', 10),
+                'countries' => $this->reporting->breakdown($window, 'country', 20),
+                'languages' => $this->reporting->breakdown($window, 'language', 10),
+                'app_versions' => $this->reporting->breakdown($window, 'app_version', 10),
+                'new_vs_returning' => $this->reporting->breakdown($window, 'new_vs_returning', 4),
+            ],
+            'retention' => ['cohorts' => $this->reporting->cohorts()],
+            'behaviour' => [
+                'pages' => $this->reporting->breakdown($window, 'path', 50),
+                'landing' => $this->reporting->breakdown($window, 'landing_path', 25),
+            ],
+            'catalogue' => [
+                'products' => $this->withNames($this->reporting->breakdown($window, 'product', 40), 'products'),
+                'categories' => $this->withNames($this->reporting->breakdown($window, 'category', 30), 'categories'),
+                'brands' => $this->withNames($this->reporting->breakdown($window, 'brand', 20), 'brands'),
+            ],
+            'search' => [
+                'terms' => $this->reporting->breakdown($window, 'search_term', 50),
+                'no_results' => $this->reporting->breakdown($window, 'search_no_results', 50),
+            ],
+            'vendors' => ['shops' => $this->withNames($this->reporting->breakdown($window, 'vendor', 40), 'sellers')],
+            'funnel' => [
+                'funnel' => $this->reporting->funnel($window),
+                'gateways' => $this->reporting->breakdown($window, 'gateway', 10),
+            ],
+            'revenue' => [
+                'totals' => $this->reporting->totals($window),
+                'trend' => $this->reporting->trend($window),
+                'sources' => $this->reporting->breakdown($window, 'source', 20),
+                'campaigns' => $this->reporting->breakdown($window, 'campaign', 20),
+            ],
+            'timing' => [
+                'hours' => $this->reporting->breakdown($window, 'hour', 24),
+                'weekdays' => $this->reporting->breakdown($window, 'weekday', 7),
+            ],
+            'events' => ['events' => $this->reporting->breakdown($window, 'event', 60)],
+            'journeys' => ['journey' => $this->journey($request)],
+            'quality' => [
+                'health' => $this->reporting->collectionHealth(),
+                'excluded' => $this->reporting->excludedTraffic($window),
+                'events' => $this->reporting->breakdown($window, 'event', 40),
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function journey(Request $request): ?array
+    {
+        $visitorId = $request->query('visitor');
+
+        return is_string($visitorId) && $visitorId !== ''
+            ? $this->reporting->journey($visitorId)
+            : null;
+    }
+
+    /**
+     * Resolve entity ids to names.
+     *
+     * The rollups store ids, deliberately: a product renamed last week must not fragment into two
+     * rows in a report about last month. Names are looked up once here, at read time, so the
+     * report always shows what the record is called NOW.
+     *
+     * @param  array<string, mixed>  $breakdown
+     * @return array<string, mixed>
+     */
+    private function withNames(array $breakdown, string $table): array
+    {
+        if (($breakdown['rows'] ?? []) === []) {
+            return $breakdown;
+        }
+
+        $ids = array_filter(array_map(static fn (array $row) => (int) $row['key'], $breakdown['rows']));
+
+        if ($ids === []) {
+            return $breakdown;
+        }
+
+        try {
+            $column = $table === 'sellers' ? 'f_name' : 'name';
+            $names = \Illuminate\Support\Facades\DB::table($table)
+                ->whereIn('id', $ids)
+                ->pluck($column, 'id');
+        } catch (\Throwable) {
+            return $breakdown;
+        }
+
+        foreach ($breakdown['rows'] as $index => $row) {
+            // An id with no row behind it is a record that has been deleted since. Saying so is
+            // more useful than showing a bare number, and hiding it would silently change the
+            // totals the rest of the screen is computed from.
+            $breakdown['rows'][$index]['name'] = $names[(int) $row['key']] ?? null;
+            $breakdown['rows'][$index]['deleted'] = !isset($names[(int) $row['key']]);
+        }
+
+        return $breakdown;
     }
 }

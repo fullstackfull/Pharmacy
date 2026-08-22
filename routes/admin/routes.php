@@ -192,10 +192,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('{section}', 'index')->name('section');
         });
 
-    // Analytics: visits, sources, products, vendors and API load, read from
-    // the telemetry rollups.
-    Route::get('analytics', [\App\Http\Controllers\Admin\Telemetry\AnalyticsController::class, 'index'])
-        ->name('analytics.index')->middleware('module:reports');
+    /*
+    | Analytics: behaviour, not traffic. Visits, sources, funnels, products, search and revenue,
+    | read from the analytics rollups with today spliced in live.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Telemetry\AnalyticsController::class)
+        ->prefix('analytics')->name('analytics.')->middleware('module:reports')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            // Named routes first: a {section} catch-all registered before these would swallow them.
+            Route::get('live-feed', 'live')->name('live-feed');
+            Route::get('export/{dimension}', 'export')->name('export');
+            Route::get('{section}', 'index')->name('section');
+        });
 
     // Monitoring: the live state of the server, the store and both apps. The
     // pulse feed is excluded from telemetry so the page cannot watch itself.

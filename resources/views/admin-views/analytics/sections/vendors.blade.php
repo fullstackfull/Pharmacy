@@ -1,0 +1,1 @@
+@include('admin-views.analytics.sections._breakdown', ['breakdown' => $data['shops'], 'title' => translate('vendors'), 'label' => translate('vendor'), 'dimension' => 'vendor', 'window' => $window, 'showEngagement' => false])

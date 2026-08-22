@@ -169,7 +169,9 @@
         {{-- The cards above are one instant. A backup saturating the uplink every night is only
              ever visible as a line. --}}
         @foreach ($interface['charts'] as $chart)
-            <p class="mon-note">{{ translate($chart['title']) }}</p>
+            {{-- A heading rather than another note: the paragraph above it is prose about the
+                 counters, and two muted lines running together read as one sentence. --}}
+            <h4 class="mon-heading">{{ translate($chart['title']) }}</h4>
             @if ($chart['state'] === 'ok')
                 @php($line = $asRateChart($chart))
                 <div class="mon-chart" data-mon-chart='@json($line['payload'])'></div>
