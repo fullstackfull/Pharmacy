@@ -49,9 +49,13 @@ class AppHealthController extends Controller
             return $silence;
         }
 
+        // Guarded, not cast. This endpoint is public and unauthenticated, and `{"platform":["x"]}`
+        // would make `(string) $array` raise the warning this application turns into a throw — a 500
+        // from the one endpoint whose whole contract is that it always answers 204 and can never
+        // fail the app reporting to it. A field that is not a string is a field that was not sent.
         $recorder->record(
-            platform: (string) $request->input('platform', $request->headers->get('X-Platform', '')),
-            version: $request->input('app_version') ?? $request->headers->get('X-App-Version'),
+            platform: $this->text($request->input('platform')) ?? (string) $request->headers->get('X-Platform', ''),
+            version: $this->text($request->input('app_version')) ?? $request->headers->get('X-App-Version'),
             counters: [
                 'sessions' => $request->input('sessions'),
                 'crashes' => $request->input('crashes'),
@@ -60,5 +64,11 @@ class AppHealthController extends Controller
         );
 
         return $silence;
+    }
+
+    /** A value the recorder can use, or null when the caller sent something that is not one. */
+    private function text(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

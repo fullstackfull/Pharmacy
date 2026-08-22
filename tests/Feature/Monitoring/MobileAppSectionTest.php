@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Monitoring;
 
+use App\Http\Controllers\RestAPI\v1\AppHealthController;
 use App\Services\Monitoring\Ingest\AppHealthRecorder;
 use App\Services\Monitoring\Ingest\BucketWriter;
 use App\Services\Monitoring\Panels\AndroidPanel;
@@ -187,5 +188,30 @@ class MobileAppSectionTest extends TestCase
 
         $this->assertSame('ios:unknown', $row->label);
         $this->assertSame(7, (int) $row->samples);
+    }
+    public function test_the_health_endpoint_answers_204_even_to_a_payload_it_cannot_read(): void
+    {
+        // It is public, unauthenticated, and its whole contract is that it never fails the app
+        // reporting to it — so `{"platform":["android"]}` must not become the 500 that
+        // `(string) $array` produces in this application.
+        $post = fn (array $payload) => (new AppHealthController)->__invoke(
+            Request::create('/api/v1/app-health', 'POST', $payload),
+            app(AppHealthRecorder::class),
+        )->getStatusCode();
+
+        $this->assertSame(204, $post(['platform' => ['android'], 'sessions' => 1]));
+        $this->assertSame(204, $post(['platform' => 'android', 'sessions' => [1]]));
+        $this->assertSame(204, $post([]));
+
+        $this->assertSame(0, $this->series()->count(), 'a payload with no readable platform or count stores nothing');
+
+        // A junk VERSION is different: the platform and the count are both real, so the session is
+        // filed under `unknown` rather than thrown away. Losing a session because one field was
+        // malformed would be the same mistake as reporting one that never happened.
+        $this->assertSame(204, $post(['platform' => 'android', 'app_version' => ['4.2.1'], 'sessions' => 1]));
+        $this->assertSame('android:unknown', $this->series()->value('label'));
+
+        $this->assertSame(204, $post(['platform' => 'android', 'app_version' => '4.2.1', 'sessions' => 3]));
+        $this->assertSame(3, (int) $this->series()->where('label', 'android:4.2.1')->value('samples'));
     }
 }
