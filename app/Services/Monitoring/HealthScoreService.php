@@ -120,27 +120,27 @@ class HealthScoreService
         $thresholds = (array) config('monitoring.thresholds', []);
 
         return [
-            $this->fromRequests('availability', 'Request success rate', weight: 3, window: 15),
-            $this->fromLatency('latency', 'Response time (p95)', weight: 2, window: 15,
+            $this->fromRequests('availability', 'request_success_rate', weight: 3, window: 15),
+            $this->fromLatency('latency', 'response_time_p95', weight: 2, window: 15,
                 warning: (float) ($thresholds['p95_warning_ms'] ?? 800),
                 critical: (float) ($thresholds['p95_critical_ms'] ?? 2000)),
-            $this->fromCollector('database', 'Database latency', 'db', 'latency_ms', weight: 3,
+            $this->fromCollector('database', 'database_latency', 'db', 'latency_ms', weight: 3,
                 warning: (float) ($thresholds['db_latency_warning_ms'] ?? 50),
                 critical: (float) ($thresholds['db_latency_critical_ms'] ?? 250)),
-            $this->fromCollector('cpu', 'CPU utilisation', 'cpu', 'usage_pct', weight: 1,
+            $this->fromCollector('cpu', 'cpu_utilisation', 'cpu', 'usage_pct', weight: 1,
                 warning: (float) ($thresholds['cpu_warning'] ?? 75),
                 critical: (float) ($thresholds['cpu_critical'] ?? 90)),
-            $this->fromCollector('memory', 'Memory utilisation', 'memory', 'used_pct', weight: 1,
+            $this->fromCollector('memory', 'memory_utilisation', 'memory', 'used_pct', weight: 1,
                 warning: (float) ($thresholds['memory_warning'] ?? 80),
                 critical: (float) ($thresholds['memory_critical'] ?? 92)),
-            $this->fromCollector('disk', 'Disk utilisation', 'disk', 'used_pct', weight: 2,
+            $this->fromCollector('disk', 'disk_utilisation', 'disk', 'used_pct', weight: 2,
                 warning: (float) ($thresholds['disk_warning'] ?? 80),
                 critical: (float) ($thresholds['disk_critical'] ?? 90)),
-            $this->fromCollector('queue', 'Queue lag', 'queue', 'oldest_wait_seconds', weight: 2,
+            $this->fromCollector('queue', 'queue_lag', 'queue', 'oldest_wait_seconds', weight: 2,
                 warning: (float) ($thresholds['queue_lag_warning_seconds'] ?? 300),
                 critical: (float) ($thresholds['queue_lag_critical_seconds'] ?? 900)),
             $this->schedulerSignal(),
-            $this->fromCollector('redis', 'Redis latency', 'redis', 'latency_ms', weight: 1,
+            $this->fromCollector('redis', 'redis_latency', 'redis', 'latency_ms', weight: 1,
                 warning: (float) ($thresholds['redis_latency_warning_ms'] ?? 10),
                 critical: (float) ($thresholds['redis_latency_critical_ms'] ?? 50)),
             $this->dependencySignal(),
@@ -276,13 +276,13 @@ class HealthScoreService
         $installed = $readings['cron_installed'] ?? null;
 
         if (!$installed instanceof Metric) {
-            return $this->unmeasured('scheduler', 'Scheduler', 2, 'The scheduler collector is not installed.');
+            return $this->unmeasured('scheduler', 'scheduler', 2, 'The scheduler collector is not installed.');
         }
 
         if (!$installed->isOk()) {
             return [
                 'key' => 'scheduler',
-                'label' => 'Scheduler',
+                'label' => 'scheduler',
                 'measured' => true,
                 'weight' => 2,
                 'value' => 0,
@@ -300,7 +300,7 @@ class HealthScoreService
 
         return [
             'key' => 'scheduler',
-            'label' => 'Scheduler',
+            'label' => 'scheduler',
             'measured' => true,
             'weight' => 2,
             'value' => $broken,
@@ -325,14 +325,14 @@ class HealthScoreService
 
             $calls = (int) ($row->calls ?? 0);
             if ($calls === 0) {
-                return $this->unmeasured('dependencies', 'External services', 2, 'No outbound service calls recorded in the last 30 minutes.');
+                return $this->unmeasured('dependencies', 'external_services', 2, 'No outbound service calls recorded in the last 30 minutes.');
             }
 
             $failureRate = 100 * (int) ($row->failures ?? 0) / $calls;
 
             return [
                 'key' => 'dependencies',
-                'label' => 'External services',
+                'label' => 'external_services',
                 'measured' => true,
                 'weight' => 2,
                 'value' => round($failureRate, 2),
@@ -342,7 +342,7 @@ class HealthScoreService
                 'source' => 'monitoring_dependency_buckets',
             ];
         } catch (\Throwable $exception) {
-            return $this->unmeasured('dependencies', 'External services', 2, class_basename($exception) . ' while reading dependency buckets.');
+            return $this->unmeasured('dependencies', 'external_services', 2, class_basename($exception) . ' while reading dependency buckets.');
         }
     }
 
@@ -356,7 +356,7 @@ class HealthScoreService
 
             return [
                 'key' => 'errors',
-                'label' => 'Unresolved errors',
+                'label' => 'unresolved_errors',
                 'measured' => true,
                 'weight' => 2,
                 'value' => $newGroups,
@@ -371,7 +371,7 @@ class HealthScoreService
                 'source' => 'monitoring_error_groups',
             ];
         } catch (\Throwable $exception) {
-            return $this->unmeasured('errors', 'Unresolved errors', 2, class_basename($exception) . ' while reading error groups.');
+            return $this->unmeasured('errors', 'unresolved_errors', 2, class_basename($exception) . ' while reading error groups.');
         }
     }
 
@@ -383,7 +383,7 @@ class HealthScoreService
         if (!$days instanceof Metric || !$days->isOk()) {
             return $this->unmeasured(
                 'ssl',
-                'TLS certificate',
+                'tls_certificate',
                 1,
                 $days instanceof Metric ? ($days->note ?? $days->state) : 'The TLS collector is not installed.',
                 $days instanceof Metric ? $days->remedy : null,
@@ -394,7 +394,7 @@ class HealthScoreService
 
         return [
             'key' => 'ssl',
-            'label' => 'TLS certificate',
+            'label' => 'tls_certificate',
             'measured' => true,
             'weight' => 1,
             'value' => $remaining,

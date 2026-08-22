@@ -13,8 +13,8 @@
                href="{{ route('admin.monitoring.section', ['section' => $item['section'], 'range' => $range]) }}">
                 <x-k.icon :name="$item['severity'] === 'info' ? 'settings' : 'alert'" :size="16" />
                 <span class="mon-attention__body">
-                    <strong>{{ $item['title'] }}</strong>
-                    <small>{{ $item['detail'] }}</small>
+                    <strong>{{ translate($item['title']) }}</strong>
+                    <small>{{ translate($item['detail']) }}</small>
                     @if (!empty($item['remedy']))
                         <code>{{ \Illuminate\Support\Str::limit($item['remedy'], 150) }}</code>
                     @endif
@@ -165,7 +165,7 @@
             <tbody>
             @foreach ($panel['health']['signals'] as $signal)
                 <tr class="{{ $signal['measured'] ? '' : 'mon-row--muted' }}">
-                    <td>{{ $signal['label'] }}</td>
+                    <td>{{ translate($signal['label']) }}</td>
                     <td>
                         {{ $signal['display'] }}
                         @if (!empty($signal['remedy']))

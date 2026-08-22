@@ -1,4 +1,4 @@
-import {BASE, SHOTS, loginAdmin, watch, hasServerError} from './_env.mjs';
+import {BASE, SHOTS, loginAdmin, watch, hasServerError, setDirection} from './_env.mjs';
 import {chromium} from 'playwright';
 
 const browser = await chromium.launch({executablePath: '/opt/pw-browsers/chromium'});
@@ -24,6 +24,17 @@ if (cards < 10) problems.push('too few service cards: ' + cards);
 if (railLinks < 25) problems.push('rail is missing sections: ' + railLinks);
 
 await page.screenshot({path: SHOTS + '/monitoring-overview.png', fullPage: true});
+
+// The merchant runs the panel in Arabic, so the layout has to hold in RTL as well as LTR.
+await setDirection(page, 'rtl');
+await page.goto(BASE + '/admin/monitoring', {waitUntil: 'domcontentloaded'});
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelectorAll('.phpdebugbar,.modal,.modal-backdrop,.alert--container').forEach((n) => n.remove()));
+const rtlOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 4);
+console.log('RTL horizontal overflow:', rtlOverflow);
+if (rtlOverflow) problems.push('the page scrolls horizontally in RTL');
+await page.screenshot({path: SHOTS + '/monitoring-overview-rtl.png', fullPage: true});
+await setDirection(page, 'ltr');
 
 console.log(problems.length ? '\nPROBLEMS:\n' + problems.join('\n') : '\nall good');
 await browser.close();

@@ -471,8 +471,8 @@ class OverviewPanel implements Panel
         if ($health['stale']) {
             $items[] = [
                 'severity' => 'critical',
-                'title' => 'Monitoring has stopped receiving data',
-                'detail' => 'The dashboard cannot see the shop right now, so nothing below can be trusted as current.',
+                'title' => 'monitoring_has_stopped_receiving_data',
+                'detail' => 'the_dashboard_cannot_see_the_shop_right_now_so_nothing_below_can_be_trusted_as_current',
                 'section' => 'settings',
             ];
         }
@@ -498,7 +498,7 @@ class OverviewPanel implements Panel
         foreach (array_slice($unmeasured, 0, 3) as $signal) {
             $items[] = [
                 'severity' => 'info',
-                'title' => $signal['label'] . ' is not being measured',
+                'title' => translate($signal['label']) . ' — ' . translate('is_not_being_measured'),
                 'detail' => $signal['display'],
                 'remedy' => $signal['remedy'],
                 'section' => $this->sectionForSignal($signal['key']),
