@@ -113,7 +113,11 @@ class SystemHealthService
             'requests_per_min' => (int) (clone $lastMinute)->count(),
             'active_visitors' => (int) DB::table('visit_sessions')->where('last_activity_at', '>=', now()->subMinutes(5))->count(),
             'visitors_today' => (int) DB::table('visit_sessions')->where('started_at', '>=', now()->startOfDay())->distinct()->count('visitor_id'),
-            'avg_ms_hour' => (int) round((clone $lastHour)->avg('duration_ms') ?? 0),
+            // Null, not zero. An hour with no requests has no average, and "0 ms" reads as a shop
+            // serving every page instantly rather than as a shop nobody visited.
+            'avg_ms_hour' => ($average = (clone $lastHour)->avg('duration_ms')) === null
+                ? null
+                : (int) round((float) $average),
             'errors_hour' => (int) (clone $lastHour)->where('status', '>=', 500)->count(),
             'hits_hour' => (int) (clone $lastHour)->count(),
         ];
