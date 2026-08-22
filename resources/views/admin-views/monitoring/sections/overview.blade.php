@@ -91,7 +91,7 @@
         <div class="mon-chart" data-mon-chart='@json($panel['timeline'])'></div>
     @else
         <x-k.empty icon="trend-up" :title="translate('no_requests_recorded_in_this_window')"
-                   :description="translate('traffic_appears_here_within_a_minute_of_the_first_request')" />
+                   :text="translate('traffic_appears_here_within_a_minute_of_the_first_request')" />
     @endif
 </x-k.card>
 
