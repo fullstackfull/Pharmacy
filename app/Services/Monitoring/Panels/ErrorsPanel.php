@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -110,12 +111,17 @@ class ErrorsPanel implements Panel
      */
     private function filters(Request $request): array
     {
-        $status = (string) $request->query('status', 'open');
+        // `?status[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — which takes the whole section down with an "Array to
+        // string conversion" card. A filter that cannot be spelled is simply not applied.
+        $status = $request->query('status', 'open');
+        $status = is_string($status) ? $status : 'open';
+
         if (!in_array($status, array_merge(self::STATUSES, ['all']), true)) {
             $status = 'open';
         }
 
-        $group = (int) $request->query('group', 0);
+        $group = (int) $this->scalar($request, 'group', 0);
 
         return [
             'q' => $this->trimmed($request, 'q', 120),
@@ -129,13 +135,27 @@ class ErrorsPanel implements Panel
             // link rather than a search. 191 is the column width in the migration.
             'route' => $this->trimmed($request, 'route', 191),
             'group' => $group > 0 ? $group : null,
-            'page' => max(1, min(self::MAX_PAGE, (int) $request->query('page', 1))),
+            'page' => max(1, min(self::MAX_PAGE, (int) $this->scalar($request, 'page', 1))),
         ];
+    }
+
+    /** A query value that can be cast to a number, or the fallback when it is an array. */
+    private function scalar(Request $request, string $key, int|string $fallback): int|string
+    {
+        $value = $request->query($key, $fallback);
+
+        return is_scalar($value) ? $value : $fallback;
     }
 
     private function trimmed(Request $request, string $key, int $maxLength): ?string
     {
-        $value = trim((string) $request->query($key, ''));
+        $value = $request->query($key, '');
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
 
         return $value === '' ? null : mb_substr($value, 0, $maxLength);
     }
@@ -194,7 +214,7 @@ class ErrorsPanel implements Panel
                 'releases' => [],
                 'groups_in_window' => null,
                 'truncated' => false,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -248,7 +268,7 @@ class ErrorsPanel implements Panel
             $summary['occurrences_all_time'] = (int) ($row->lifetime_occurrences ?? 0);
         } catch (\Throwable $exception) {
             $summary['state'] = 'unavailable';
-            $summary['message'] = class_basename($exception) . ': ' . $exception->getMessage();
+            $summary['message'] = Metric::describeFailure($exception);
         }
 
         $totals = $this->occurrenceTotals($since, $filters);
@@ -321,7 +341,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'value' => null,
                 'source' => 'monitoring_errors',
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
 
             return ['occurrences' => $failure, 'affected_users' => $failure];
@@ -381,7 +401,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'rows' => [],
                 'pagination' => null,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
                 'remedy' => 'monitoring_error_groups could not be read on the `' . (string) config('monitoring.connection', 'monitoring') . '` connection. Run `php artisan migrate` to create the monitoring tables, and check that connection\'s credentials.',
                 'source' => 'monitoring_error_groups',
             ];
@@ -501,7 +521,7 @@ class ErrorsPanel implements Panel
             return [
                 'state' => 'unavailable',
                 'id' => $groupId,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -574,7 +594,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'rows' => [],
                 'stack_trace' => null,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -630,7 +650,7 @@ class ErrorsPanel implements Panel
                 'ever_recorded' => null,
                 'collection_enabled' => $collecting,
                 'retention_days' => $retentionDays,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
                 'remedy' => 'The monitoring tables could not be read on the `' . (string) config('monitoring.connection', 'monitoring') . '` connection. Run `php artisan migrate` and check MONITORING_DB_* in .env.',
             ];
         }

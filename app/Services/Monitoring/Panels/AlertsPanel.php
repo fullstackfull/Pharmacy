@@ -571,6 +571,12 @@ class AlertsPanel implements Panel
             'window_days' => $days,
             'limit' => self::EVENT_LIMIT,
             'firings_recorded_in_state' => $recorded,
+            // Whether the two independent records of a firing — the lifetime counter on the rule
+            // and the event timeline — can be compared at all, and what the comparison said. The
+            // page used to decide this itself and got it wrong in the one case that matters: a
+            // timeline it could not READ was reported as a timeline that disagreed, which sends an
+            // operator looking for a lost firing instead of a broken query.
+            'discrepancy' => null,
             // How many there ARE, which is not how many are shown. The reading below used to be
             // count($rows) — a page size hard-capped at fifty, so a deployment with three thousand
             // alert events in the window reported fifty.
@@ -591,19 +597,24 @@ class AlertsPanel implements Panel
                 ->limit(self::EVENT_LIMIT)
                 ->get(['severity', 'key', 'title', 'description', 'related_id', 'occurred_at']);
         } catch (\Throwable $exception) {
-            return $base + [
+            return array_merge($base, [
                 'state' => 'failed',
                 'note' => 'The event timeline could not be read: ' . $this->failureNote($exception),
                 'remedy' => null,
-            ];
+                'discrepancy' => $recorded > 0 ? 'not_comparable' : null,
+            ]);
         }
 
         if ($rows->isEmpty()) {
-            return $base + [
+            return array_merge($base, [
                 'state' => 'no_data',
                 'note' => 'No alert has been written to the event timeline in the last ' . $days . ' days.',
                 'remedy' => null,
-            ];
+                // The counter is for the life of the rule and the timeline is bounded by retention,
+                // so firings older than the window are absent for a legitimate reason. Both
+                // readings are given; which one it is, is stated as the question it is.
+                'discrepancy' => $recorded > 0 ? 'missing_from_timeline' : null,
+            ]);
         }
 
         return array_merge($base, [
@@ -654,6 +665,8 @@ class AlertsPanel implements Panel
 
     private function failureNote(\Throwable $exception): string
     {
-        return class_basename($exception) . ': ' . $exception->getMessage();
+        // Not the raw message: a QueryException carries the statement with its bound values, so
+        // this used to be able to print a customer's email onto the alerts screen.
+        return Metric::describeFailure($exception);
     }
 }

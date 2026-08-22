@@ -5,6 +5,7 @@ namespace App\Services\Monitoring\Panels;
 use App\Services\Monitoring\Collectors\CollectorRegistry;
 use App\Services\Monitoring\HealthScoreService;
 use App\Services\Monitoring\Ingest\MetricSink;
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\SeriesReader;
 use Illuminate\Http\Request;
@@ -94,7 +95,7 @@ class PanelRegistry
 
             return [
                 'state' => 'failed',
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }

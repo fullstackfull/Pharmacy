@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring;
 
+use App\Services\Monitoring\Support\Redactor;
 use JsonSerializable;
 
 /**
@@ -38,6 +39,9 @@ final class Metric implements JsonSerializable
 
     /** The probe threw. */
     public const FAILED = 'failed';
+
+    /** How much of an exception message a card may carry. */
+    private const NOTE_LIMIT = 180;
 
     private function __construct(
         public readonly string $state,
@@ -90,7 +94,36 @@ final class Metric implements JsonSerializable
 
     public static function failed(string $source, \Throwable $exception): self
     {
-        return new self(self::FAILED, null, $source, null, class_basename($exception) . ': ' . $exception->getMessage(), null);
+        return new self(self::FAILED, null, $source, null, self::describeFailure($exception), null);
+    }
+
+    /**
+     * What a failure is allowed to say on the screen — shared by every panel that reports one.
+     *
+     * An exception message is untrusted text: a QueryException carries the whole statement with the
+     * BOUND VALUES substituted in, so a failed probe used to print a customer's email — or a token
+     * from a WHERE clause — onto a dashboard that is screenshotted and pasted into chat. Laravel
+     * appends that part after " (Connection: ", so the tail is cut off entirely, leaving the driver
+     * error, which is the half an operator can act on. Whatever survives still goes through the
+     * same redaction every other stored string does, then is bounded — a card is a card, not a page
+     * of stack text.
+     */
+    public static function describeFailure(\Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+
+        $connectionMarker = strpos($message, ' (Connection: ');
+        if ($connectionMarker !== false) {
+            $message = substr($message, 0, $connectionMarker);
+        }
+
+        $message = Redactor::make()->text(trim($message));
+
+        if (mb_strlen($message) > self::NOTE_LIMIT) {
+            $message = mb_substr($message, 0, self::NOTE_LIMIT - 1) . '…';
+        }
+
+        return class_basename($exception) . ($message === '' ? '' : ': ' . $message);
     }
 
     /**

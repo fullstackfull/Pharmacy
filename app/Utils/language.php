@@ -41,6 +41,23 @@ if (!function_exists('translate')) {
 
                 $targetPath = base_path('resources/lang/' . $local . '/new-messages.php');
                 file_put_contents($targetPath, $languageFileContents);
+
+                // Two caches still hold the PRE-write copy of the file we just rewrote, and both
+                // answer the next translate() call in this same request with stale data:
+                //   - OPcache keeps the compiled include. The next include() of this path can hand
+                //     back the array as it was before this write, so the key added here is lost on
+                //     the following write.
+                //   - Laravel's translator loads a language group once per request. The next call
+                //     for this key takes the array_key_exists() branch below and resolves through
+                //     __('new-messages.<key>') against the copy read before the write, printing the
+                //     raw key — "New-messages.free_delivery" instead of "Free delivery".
+                if (function_exists('opcache_invalidate')) {
+                    opcache_invalidate($targetPath, true);
+                }
+                $translator = app('translator');
+                $translator->load('*', 'new-messages', $local);
+                $translator->addLines(['new-messages.' . $key => $processedKey], $local);
+
                 $message = $processedKey;
             } elseif (array_key_exists($key, $translatedMessagesArray)) {
                 $message = __('messages.' . $key);

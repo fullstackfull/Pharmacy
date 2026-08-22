@@ -363,12 +363,22 @@
         <x-k.empty icon="clock"
                    :title="($events['state'] ?? '') === 'failed' ? translate('the_alert_history_could_not_be_read') : translate('no_alert_has_been_recorded')"
                    :text="$events['note'] ?? ''" />
-        @if (($events['firings_recorded_in_state'] ?? 0) > 0)
-            {{-- Two independent records of the same thing. When they disagree, say so rather than
-                 letting an empty timeline read as "nothing has ever fired". --}}
+        {{-- Two independent records of the same firing: the lifetime counter on the rule, and the
+             timeline. Which sentence is shown depends on whether they could be compared at all —
+             a timeline that could not be READ is not a timeline that disagrees, and reporting it
+             as one sends an operator hunting a lost firing instead of a broken query. --}}
+        @if (($events['discrepancy'] ?? null) === 'missing_from_timeline')
             <p class="mon-note mon-note--critical">
                 {{ translate('the_rule_state_table_records') }} {{ number_format($events['firings_recorded_in_state']) }}
-                {{ translate('firings_that_do_not_appear_on_this_timeline') }}
+                {{ translate('firings_in_total_and_none_of_them_appear_on_this_timeline') }}
+                <small class="mon-metric__note" style="display:block">
+                    {{ translate('either_they_are_older_than_the_window_above_or_the_timeline_is_not_being_written') }}
+                </small>
+            </p>
+        @elseif (($events['discrepancy'] ?? null) === 'not_comparable')
+            <p class="mon-note">
+                {{ translate('the_rule_state_table_records') }} {{ number_format($events['firings_recorded_in_state']) }}
+                {{ translate('firings_the_timeline_could_not_be_read_so_the_two_cannot_be_compared') }}
             </p>
         @endif
     @endif

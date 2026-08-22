@@ -146,9 +146,11 @@ class CodeExampleGenerator
             $headers[] = "'Content-Type': 'application/json'";
         }
 
-        // The app-version header is what makes safe deprecation possible; every generated client
-        // sends it, so nobody has to remember to add it later.
+        // The app-version header is what makes safe deprecation possible, and the client id is what
+        // makes an app visitor countable as one visitor rather than one carrier NAT. Every
+        // generated client sends both, so nobody has to remember to add them later.
         $headers[] = "'X-App-Version': appVersion";
+        $headers[] = "'X-Client-Id': clientId";
 
         $method = strtolower($context['method']);
         $body = $context['json'] !== null ? ",\n  body: jsonEncode(" . $this->dartMap($context['body']) . ')' : '';
@@ -175,6 +177,7 @@ class CodeExampleGenerator
         }
 
         $builder[] = '    .header("X-App-Version", BuildConfig.VERSION_NAME)';
+        $builder[] = '    .header("X-Client-Id", clientId)';
 
         if ($context['json'] !== null) {
             $builder[] = '    .' . strtolower($context['method']) . '(body)';
@@ -207,6 +210,7 @@ class CodeExampleGenerator
         }
 
         $lines[] = 'request.setValue(appVersion, forHTTPHeaderField: "X-App-Version")';
+        $lines[] = 'request.setValue(clientId, forHTTPHeaderField: "X-Client-Id")';
 
         if ($context['json'] !== null) {
             $lines[] = 'request.setValue("application/json", forHTTPHeaderField: "Content-Type")';

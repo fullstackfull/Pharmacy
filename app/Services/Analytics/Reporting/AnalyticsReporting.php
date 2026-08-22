@@ -3,6 +3,7 @@
 namespace App\Services\Analytics\Reporting;
 
 use App\Services\Analytics\AnalyticsEvent;
+use App\Services\Telemetry\ClientIdentity;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -148,6 +149,15 @@ class AnalyticsReporting
                 // is arithmetically true and useless; from zero it is not even that.
                 'change_pct' => $was > 0 ? round(100 * ($value - $was) / $was, 1) : null,
             ];
+        }
+
+        // Some visits could only be told apart by their network address — app traffic from a client
+        // that sends no installation id. Every device behind one carrier NAT is a single "visitor"
+        // there, so the figure is a floor and the card says so rather than printing it as people.
+        $approximated = $this->networkIdentifiedSessions($window);
+
+        if ($approximated !== null) {
+            $metrics['visitors']['approximate'] = $approximated;
         }
 
         $metrics['bounce_rate'] = $this->derivedRate($current, $previous, 'bounces', 'sessions');
@@ -847,6 +857,57 @@ class AnalyticsReporting
     {
         return $this->connection()->table('analytics_daily')
             ->whereBetween('date', [$from, $to]);
+    }
+
+    /**
+     * How much of this window is app traffic that could only be identified by network address.
+     *
+     * Read from the session table rather than the rollups, because it is a caveat about the visitor
+     * count and not a figure in its own right: if the sessions have been pruned the caveat simply
+     * gets smaller, which understates the approximation and never overstates it.
+     *
+     * @return array<string, int|float>|null  null when nothing in the window was approximated, or
+     *                                        when the installation has not migrated the column yet
+     */
+    private function networkIdentifiedSessions(Window $window): ?array
+    {
+        if (!$this->sessionsCarryBasis()) {
+            return null;
+        }
+
+        try {
+            $row = $this->realSessions(
+                Carbon::parse($window->fromDate())->startOfDay(),
+                Carbon::parse($window->toDate())->endOfDay(),
+            )
+                ->selectRaw('COUNT(*) sessions')
+                ->selectRaw("SUM(CASE WHEN identity_basis = ? THEN 1 ELSE 0 END) network_sessions", [ClientIdentity::BASIS_NETWORK])
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $sessions = (int) ($row->sessions ?? 0);
+        $network = (int) ($row->network_sessions ?? 0);
+
+        if ($network < 1) {
+            return null;
+        }
+
+        return [
+            'sessions' => $network,
+            'of_sessions' => $sessions,
+            'share_pct' => $sessions > 0 ? round(100 * $network / $sessions, 1) : 0.0,
+        ];
+    }
+
+    private function sessionsCarryBasis(): bool
+    {
+        try {
+            return Schema::connection(config('analytics.connection'))->hasColumn('analytics_sessions', 'identity_basis');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function realSessions(Carbon $from, Carbon $to): \Illuminate\Database\Query\Builder

@@ -107,14 +107,18 @@ final class AnalyticsEvent
      * twice, and the deduplication would not catch it: the two paths disagree about the path
      * (a normalised route pattern against the browser's actual URL), so they hash differently.
      *
-     * What is left is what genuinely has no server-side equivalent: the product filter's
-     * pushState navigations, which return JSON and are correctly not counted as pageviews; the
-     * cart page; and the compare tray, which nothing instruments server-side.
+     * What is left is one thing: the product filter's pushState navigations, which return JSON and
+     * are correctly not counted as pageviews.
+     *
+     * This list used to also carry cart_viewed and compare_added, on the belief that neither had a
+     * server-side equivalent. Neither could ever fire — no element in the theme carries the
+     * data-analytics attribute that would have sent them — so both were an allow-list entry for an
+     * event that did not exist, and the cart step of every funnel was empty for a reason no screen
+     * could show. Both are recorded on the server now, where they always belonged: the cart page is
+     * a page load the server serves, and a compare add is a row the server writes.
      */
     private const CLIENT_ALLOWED = [
         self::PRODUCT_LIST_VIEWED,
-        self::CART_VIEWED,
-        self::COMPARE_ADDED,
     ];
 
     public function __construct(

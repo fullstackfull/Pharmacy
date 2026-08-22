@@ -165,7 +165,9 @@ class TelemetryTest extends TestCase
         $row = DB::table('telemetry_requests')->first();
         $this->assertSame('api', $row->channel);
         $this->assertSame(401, (int) $row->status);
-        $this->assertStringStartsWith('api:guest:', $row->visitor_id);
+        // Not "api:guest:<address hash>" any more: a signed-out API caller that sends no
+        // installation id is identified by its network, which is a network and says so.
+        $this->assertStringStartsWith('net:', $row->visitor_id);
         $this->assertSame(0, DB::table('visit_sessions')->count());
     }
 

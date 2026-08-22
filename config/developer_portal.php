@@ -20,4 +20,32 @@ return [
     */
 
     'record_response_shapes' => env('DEVELOPER_PORTAL_RECORD_RESPONSES', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The API console ("try it")
+    |--------------------------------------------------------------------------
+    |
+    | A console on an admin panel sends real requests at the shop that takes the
+    | orders. So the defaults are the safe ones and the dangerous setting has to
+    | be turned on by hand, by somebody who knows which installation they are on:
+    |
+    |  - Reads work out of the box. A GET changes nothing.
+    |  - WRITES ARE OFF. Turning them on takes an environment variable and, per
+    |    request, a typed confirmation. Off by default everywhere — including on
+    |    a developer's own copy, because a default that is only safe when someone
+    |    remembers to set it is not a default.
+    |  - Some endpoints are never sent at any setting: money, identity, removal.
+    |    That list is in ConsoleGuard and is deliberately not configurable.
+    |
+    | The console can only aim at this application's own API routes; there is no
+    | URL field anywhere in it.
+    |
+    */
+    'console' => [
+        'enabled' => env('DEVELOPER_CONSOLE_ENABLED', true),
+        'allow_writes' => env('DEVELOPER_CONSOLE_ALLOW_WRITES', false),
+        // Per administrator. A console is for trying an endpoint, not for driving it.
+        'rate_limit_per_minute' => env('DEVELOPER_CONSOLE_RATE_LIMIT', 20),
+    ],
 ];

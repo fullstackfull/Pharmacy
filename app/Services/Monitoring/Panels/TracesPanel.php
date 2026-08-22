@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -883,7 +884,7 @@ class TracesPanel implements Panel
 
     private function failureNote(\Throwable $exception): string
     {
-        return class_basename($exception) . ': ' . $exception->getMessage();
+        return Metric::describeFailure($exception);
     }
 
     private function redactor(): Redactor

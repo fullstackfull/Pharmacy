@@ -17,6 +17,7 @@ use App\Services\RestockProductService;
 use App\Utils\CustomerManager;
 use App\Utils\Helpers;
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Analytics;
 use App\Models\Cart;
 use App\Models\Color;
 use App\Models\OrderDetail;
@@ -242,7 +243,19 @@ class CartController extends Controller
     {
         $user = Helpers::getCustomerInformation();
 
-        Cart::where(['id' => $request->key, 'customer_id' => ($user == 'offline' ? session('guest_id') : auth('customer')->id())])->delete();
+        $owner = ($user == 'offline' ? session('guest_id') : auth('customer')->id());
+        // Read before the delete, because after it there is nothing left to say what was removed.
+        $removed = Cart::where(['id' => $request->key, 'customer_id' => $owner])->first(['product_id', 'quantity', 'price']);
+
+        Cart::where(['id' => $request->key, 'customer_id' => $owner])->delete();
+
+        if ($removed !== null) {
+            app(Analytics::class)->cartRemoved(
+                productId: (int) $removed->product_id,
+                quantity: (int) $removed->quantity,
+                value: (float) $removed->price * (int) $removed->quantity,
+            );
+        }
 
         session()->forget('coupon_code');
         session()->forget('coupon_type');

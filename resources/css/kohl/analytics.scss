@@ -142,6 +142,15 @@
     .k-num { font-size: var(--k-text-xl, 24px); font-weight: 700; line-height: 1.1; }
     i { font-style: normal; font-size: var(--k-text-sm, 13px); color: var(--k-text-muted); }
 }
+/* A figure that is a floor rather than a count, and the sentence that says why. The label styling
+   above uppercases every <small> in the card; this one is a sentence, so it opts out. */
+.ana-metric__floor { font-style: normal; color: var(--k-text-muted); font-weight: 600; }
+.ana-metric__caveat {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    line-height: 1.4;
+    margin-top: 2px;
+}
 .ana-change {
     font-size: 11px;
     font-weight: 600;

@@ -8,7 +8,10 @@
  |     sorting and changing a price range are real page changes that return JSON, so the server
  |     counts them as an XHR and — correctly — not as a pageview. Without this they are simply
  |     lost, and on a catalogue site that is a large share of all navigation.
- |  2. Interactions that never navigate at all: a wishlist toggle, a quick view.
+ |  2. Interactions that never navigate and write nothing on the server, should the theme ever add
+ |     one. The delegated [data-analytics] handler below is that extension point; today nothing in
+ |     the theme carries the attribute, and an event the server already records is refused here
+ |     rather than counted twice.
  |
  | Deliberately small, dependency-free and defensive. It runs on every storefront page of a live
  | shop, so it must never throw into a customer's console, never block a click, and never delay a
@@ -33,10 +36,12 @@
     // The server allow-list, mirrored here so a typo never becomes a silent no-op that only shows
     // up as a missing report weeks later.
     //
-    // Short on purpose. Anything the server already records — a product view, a wishlist add, a
-    // checkout start — is deliberately absent: sending it from here as well would count it twice,
-    // and it would not be caught by deduplication because the two sides disagree about the path.
-    var ALLOWED = ['product_list_viewed', 'cart_viewed', 'compare_added'];
+    // One entry, on purpose. Anything the server already records — a product view, a wishlist add,
+    // a checkout start, the cart page, a compare add — is deliberately absent: sending it from here
+    // as well would count it twice, and deduplication would not catch it because the two sides
+    // disagree about the path. What is left is the filter's pushState navigation, which returns
+    // JSON and is correctly not a pageview to the server.
+    var ALLOWED = ['product_list_viewed'];
 
     function push(name, payload) {
         try {
@@ -71,10 +76,22 @@
     function flush() {
         try {
             if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-            if (!queue.length) return;
+            // Vitals alone are worth a request: a visitor who reads one page and leaves queues no
+            // event at all, and that visit is exactly the one whose speed decided they left.
+            if (!queue.length && Object.keys(vitals).length === 0) return;
 
-            var body = JSON.stringify({events: queue});
+            var readings = Object.keys(vitals).map(function (name) {
+                return {name: name, value: vitals[name]};
+            });
+            var body = JSON.stringify({
+                events: queue,
+                vitals: readings,
+                path: location.pathname,
+            });
             queue = [];
+            // Sent once. A second flush on the same page would report the same numbers again and
+            // double their weight in the window they land in.
+            vitals = {};
 
             // sendBeacon survives the page being closed, which is exactly when the last events of
             // a visit are queued. It cannot set headers, which is why the endpoint is same-origin
@@ -123,6 +140,77 @@
             // A click is never blocked by its own measurement.
         }
     }, true);
+
+    // ---- Core Web Vitals -------------------------------------------------------------------
+    //
+    // Measured here because they cannot be measured anywhere else: the server's own timing can be
+    // excellent while the page is unusable — an image that shifts the layout after two seconds, a
+    // font that blocks the first paint, a tap the page ignores for half a second. PerformanceObserver
+    // is in every browser this shop supports; a library for it would be 3KB to compute five numbers.
+    //
+    // They ride out on the same request as the events (one trip, not two) but are a separate key,
+    // because they are measurements of the shop rather than things a visitor did.
+    var vitals = {};
+
+    function vital(name, value) {
+        try {
+            if (typeof value !== 'number' || !isFinite(value) || value < 0) return;
+            // Last value wins: LCP and CLS are refined as the page settles, and the final reading
+            // is the one that describes what the visitor got.
+            vitals[name] = Math.round(value);
+        } catch (error) {
+            // A page is never broken by its own measurement.
+        }
+    }
+
+    function observe(type, handler, options) {
+        try {
+            var observer = new PerformanceObserver(function (list) {
+                list.getEntries().forEach(handler);
+            });
+            observer.observe(Object.assign({type: type, buffered: true}, options || {}));
+            return observer;
+        } catch (error) {
+            // An unsupported entry type simply goes unmeasured, which the panel reports as such
+            // rather than as a good score.
+            return null;
+        }
+    }
+
+    try {
+        // TTFB and FCP come from the navigation timeline the browser already recorded.
+        var navigation = performance.getEntriesByType('navigation')[0];
+        if (navigation) vital('ttfb', navigation.responseStart);
+
+        observe('paint', function (entry) {
+            if (entry.name === 'first-contentful-paint') vital('fcp', entry.startTime);
+        });
+
+        // Largest Contentful Paint: the last one before the visitor interacts is the real one.
+        observe('largest-contentful-paint', function (entry) { vital('lcp', entry.startTime); });
+
+        // Cumulative Layout Shift, ×1000 so it travels as an integer like the timings. Shifts the
+        // visitor caused by interacting are excluded — that is the metric's own definition.
+        var shifted = 0;
+        observe('layout-shift', function (entry) {
+            if (entry.hadRecentInput) return;
+            shifted += entry.value;
+            vital('cls', shifted * 1000);
+        });
+
+        // Interaction to Next Paint: the worst interaction of the visit is what the visitor
+        // remembers, so the maximum is kept rather than the last.
+        var worstInteraction = 0;
+        observe('event', function (entry) {
+            if (typeof entry.duration !== 'number') return;
+            if (entry.duration > worstInteraction) {
+                worstInteraction = entry.duration;
+                vital('inp', worstInteraction);
+            }
+        }, {durationThreshold: 40});
+    } catch (error) {
+        // As above: a browser that offers none of this reports no vitals, and the panel says so.
+    }
 
     // Anything still queued when the page goes away. visibilitychange fires on mobile where
     // unload does not, which is where most of this shop's traffic is.

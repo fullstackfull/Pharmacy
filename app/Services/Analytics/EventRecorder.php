@@ -20,10 +20,16 @@ use Illuminate\Support\Str;
  *
  * Two other properties are load-bearing:
  *
- *  - IDEMPOTENCE. Events carry a dedupe key and the table has a unique index on it, so a
- *    double-submitted form, a retried mobile upload or a page restored from the back/forward cache
- *    produces one row. Revenue counted twice is worse than revenue not counted at all, because
- *    nobody goes looking for a number that is too high.
+ *  - IDEMPOTENCE, where it is asked for. Events carry a dedupe key and the table has a unique
+ *    index on it. What that key covers decides what is actually collapsed, and the two cases are
+ *    not the same strength: an act that names its own key — an order, a payment — is one row
+ *    however many times its page is reloaded, for as long as the rows are kept. An act that does
+ *    not is collapsed only when the duplicate lands in the SAME few-second bucket, so a
+ *    double-submitted form usually produces one row and a retry that straddles a bucket boundary
+ *    produces two. That is the deliberate trade — see dedupeKey() — and it is worth stating
+ *    plainly, because "duplicates are collapsed" would read as a guarantee it does not make.
+ *    Revenue counted twice is worse than revenue not counted at all, because nobody goes looking
+ *    for a number that is too high, and that is exactly why the money events carry explicit keys.
  *
  *  - REDACTION. Properties pass through the same redactor the monitoring system uses, so a
  *    password, an OTP, a token or a card number cannot reach this table by way of a well-meaning
@@ -183,10 +189,19 @@ class EventRecorder
     /**
      * The identity of an act, so the same act recorded twice is stored once.
      *
-     * An explicit key from the caller wins — an order is the same order however many times its
-     * confirmation page is reloaded. Without one, the key covers the visitor, the event and what
-     * it was about within the dedupe window, which collapses a double-clicked button but leaves
-     * two genuine views ten minutes apart as two views.
+     * An explicit key from the caller wins, and it is scoped to the event name and that key ALONE —
+     * deliberately, because an order is the same order whoever reloads its confirmation page, and
+     * because a guest and their later signed-in self are two visitor ids for one person. The cost
+     * is that an explicit key must be globally unique for its event: order:{id} is, "checkout"
+     * would not be, and would collapse two customers into one row.
+     *
+     * Without an explicit key the identity is the visitor, the event, what it was about, the page,
+     * and a bucket number — time divided by the dedupe window, NOT a sliding window over the last
+     * few seconds. So two identical events collapse when they fall in the same bucket and survive
+     * when they straddle its edge, which for a 5-second window catches most accidental repeats and
+     * is not claimed to catch all of them. A sliding window would need a read before every insert
+     * on the request path; a longer bucket would collapse four genuine pageviews in one visit into
+     * one, which is a measurement error rather than deduplication.
      */
     private function dedupeKey(AnalyticsEvent $event, string $visitorId, ?string $path): ?string
     {
@@ -201,7 +216,9 @@ class EventRecorder
         // deduplication. Anything that must be unique for longer than that says so explicitly:
         // an order carries order:{id} and is one sale however often its page is reloaded.
         $window = max(1, (int) config('analytics.dedupe_window_seconds', 5));
-        $bucket = intdiv(time(), $window);
+        // Carbon rather than time(), so the clock is the same one every other timestamp in this
+        // class reads — and so the boundary behaviour described above is testable at all.
+        $bucket = intdiv(Carbon::now()->getTimestamp(), $window);
 
         return substr(hash('sha256', implode('|', [
             $visitorId,

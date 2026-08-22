@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Collectors\CollectorRegistry;
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\HealthScoreService;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
@@ -125,9 +126,27 @@ class OverviewPanel implements Panel
     private function platformCard(string $label, string $platform): array
     {
         $series = $this->reader->series('requests.by_platform', '1h', $platform);
-        $total = array_sum(array_map(static fn (array $point) => (float) ($point['v'] ?? 0), $series['points']));
 
-        if ($total <= 0) {
+        // `samples`, not the sum of `v`. requests.by_platform is a counter: the writer puts the
+        // request count in the sample column and the TOTAL RESPONSE TIME in value_sum, and
+        // SeriesReader hands back value_sum for a counter. Summing `v` printed 1,190 on an hour
+        // that had twelve requests — and because the error is the latency, a slow app looked like
+        // a busy one, which is the opposite of what this card is for.
+        $requests = (int) ($series['samples'] ?? 0);
+
+        if ($series['state'] === 'failed') {
+            return [
+                'key' => $label,
+                'label' => $label,
+                'state' => 'unavailable',
+                'detail' => 'The series store could not be read, so this app\'s traffic is unknown — which is not the same as none.',
+                'note' => $series['note'] ?? null,
+                'section' => $platform,
+                'source' => 'monitoring_series',
+            ];
+        }
+
+        if ($requests <= 0) {
             return [
                 'key' => $label,
                 'label' => $label,
@@ -142,10 +161,10 @@ class OverviewPanel implements Panel
             'key' => $label,
             'label' => $label,
             'state' => 'healthy',
-            'value' => (int) $total,
+            'value' => $requests,
             'unit' => 'requests',
             'metric_label' => 'last hour',
-            'detail' => number_format($total) . ' requests in the last hour',
+            'detail' => number_format($requests) . ' requests in the last hour',
             'section' => $platform,
             'source' => 'monitoring_series',
         ];
@@ -396,7 +415,7 @@ class OverviewPanel implements Panel
                     'label' => 'backups',
                     'state' => 'not_configured',
                     'detail' => 'No backup has ever been recorded.',
-                    'remedy' => 'Report each backup to monitoring with `php artisan monitoring:backup-recorded`, or run the bundled backup command from cron.',
+                    'remedy' => 'Report each backup to monitoring with `php artisan monitoring:backup-recorded` as the last line of whatever script takes it; monitoring records backups, it does not take them.',
                     'section' => 'backups',
                     'source' => 'monitoring_backups',
                 ];
@@ -558,6 +577,11 @@ class OverviewPanel implements Panel
                 ->get(['type', 'severity', 'title', 'occurred_at'])
                 ->map(static fn ($row) => [
                     'type' => $row->type,
+                    // `type` is a plain column: a foreign producer can put anything in it, and
+                    // translate() MINTS a language key for whatever it is handed. Without this the
+                    // events strip would write a new key into new-messages.php for every unknown
+                    // value that ever lands in the table.
+                    'type_known' => in_array($row->type, EventLog::TYPES, true),
                     'severity' => $row->severity,
                     'title' => $row->title,
                     'at' => Clock::display($row->occurred_at)->toDateTimeString(),

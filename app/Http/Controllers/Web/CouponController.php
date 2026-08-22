@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Utils\Helpers;
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Analytics;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Utils\CartManager;
@@ -20,6 +21,16 @@ class CouponController extends Controller
         self::removeCurrentCouponActivity();
 
         $result = OrderManager::getTotalCouponAmount(request: $request, couponCode: $request['code']);
+
+        // A rejected coupon is the more useful half of this measurement: an expired code still
+        // printed on a flyer shows up as a spike of rejections against one code, and nothing else
+        // in the system would ever surface it.
+        app(Analytics::class)->couponApplied(
+            code: (string) $request['code'],
+            accepted: (bool) $result['status'],
+            discount: $result['status'] ? (float) ($result['discount'] ?? 0) : null,
+            reason: $result['status'] ? null : 'rejected',
+        );
 
         if ($result['status']) {
             if ($request->ajax()) {

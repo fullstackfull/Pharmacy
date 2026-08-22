@@ -1148,7 +1148,7 @@ class DatabaseCollector implements Collector
             }
         }
 
-        return class_basename($exception) . ': ' . $exception->getMessage();
+        return Metric::describeFailure($exception);
     }
 
     /**

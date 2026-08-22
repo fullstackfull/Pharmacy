@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Alerting;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -80,7 +81,7 @@ class AlertNotifier
             // Report the failure to send rather than the alert disappearing silently.
             Log::warning('A monitoring alert could not be emailed.', [
                 'subject' => $subject,
-                'error' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'error' => Metric::describeFailure($exception),
             ]);
         }
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Http\Request;
@@ -175,7 +176,7 @@ class LogsPanel implements Panel
                 'source' => 'config/logging.php',
             ];
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => class_basename($exception) . ': ' . $exception->getMessage(), 'source' => 'config/logging.php'];
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception), 'source' => 'config/logging.php'];
         }
     }
 
@@ -276,7 +277,7 @@ class LogsPanel implements Panel
                 'directory' => $this->relative($directory),
                 'items' => [],
                 'total' => 0,
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -291,12 +292,23 @@ class LogsPanel implements Panel
      * @param  array<string, mixed>  $files
      * @return array<string, mixed>
      */
+    /** One query value, trimmed — or an empty string when it is not a single string. */
+    private function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key, '');
+
+        return is_string($value) ? trim($value) : '';
+    }
+
     private function filters(Request $request, array $files): array
     {
-        $level = strtolower(trim((string) $request->query('level', '')));
-        $query = trim((string) $request->query('q', ''));
-        $date = trim((string) $request->query('date', ''));
-        $requestedFile = basename(trim((string) $request->query('file', '')));
+        // `?level[]=x` hands the request an ARRAY, and casting one to string is a PHP warning the
+        // error handler turns into a throw — which takes the whole section down with an "Array to
+        // string conversion" card. A filter that cannot be spelled is simply not applied.
+        $level = strtolower($this->queryString($request, 'level'));
+        $query = $this->queryString($request, 'q');
+        $date = $this->queryString($request, 'date');
+        $requestedFile = basename($this->queryString($request, 'file'));
 
         $names = array_column((array) ($files['items'] ?? []), 'name');
 
@@ -385,7 +397,7 @@ class LogsPanel implements Panel
                 'requested_missing' => $filters['file_rejected'],
             ];
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => class_basename($exception) . ': ' . $exception->getMessage()];
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception)];
         }
     }
 
@@ -465,7 +477,7 @@ class LogsPanel implements Panel
                 ],
             ];
         } catch (\Throwable $exception) {
-            return $empty('failed', ['bytes_total' => $total, 'note' => class_basename($exception) . ': ' . $exception->getMessage()]);
+            return $empty('failed', ['bytes_total' => $total, 'note' => Metric::describeFailure($exception)]);
         } finally {
             fclose($handle);
         }
@@ -537,7 +549,7 @@ class LogsPanel implements Panel
                 'counts' => $counts,
             ];
         } catch (\Throwable $exception) {
-            return $noEntries('failed', class_basename($exception) . ': ' . $exception->getMessage());
+            return $noEntries('failed', Metric::describeFailure($exception));
         }
     }
 

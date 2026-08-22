@@ -898,6 +898,17 @@ class CartManager
             Cart::where(['id' => $request->key, 'customer_id' => ($user == 'offline' ? $guest_id : $user['id'])])->update(['is_checked' => 1]);
         }
 
+        // Analytics: recorded here rather than in the two controllers that call this, because web
+        // and API both come through it and an event added to one of them would be missing from the
+        // other. Only an update that actually took — a rejected quantity changed nothing.
+        if ($status) {
+            app(Analytics::class)->cartUpdated(
+                productId: (int) $cart['product_id'],
+                quantity: $qty,
+                value: (float) $cart['price'] * $qty,
+            );
+        }
+
         return [
             'status' => $status,
             'qty' => $qty,

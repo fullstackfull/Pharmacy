@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Ingest\MetricSink;
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -115,7 +116,7 @@ class SettingsPanel implements Panel
         'incident_days' => [
             'env' => 'MONITORING_RETENTION_INCIDENT_DAYS',
             'what' => 'how_long_the_event_stream_behind_incidents_and_the_timeline_is_kept',
-            'note' => 'Prunes monitoring_events. Incident records themselves are never deleted by the pruner.',
+            'note' => 'Prunes monitoring_events, monitoring_backups, monitoring_deployments and RESOLVED incidents. An incident nobody closed is never pruned, however old it is.',
         ],
     ];
 
@@ -175,7 +176,7 @@ class SettingsPanel implements Panel
                 // operator far less than six correct tables and one named failure.
                 $failures[] = [
                     'part' => $key,
-                    'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                    'message' => Metric::describeFailure($exception),
                 ];
             }
         }
@@ -845,7 +846,7 @@ class SettingsPanel implements Panel
             return [
                 'state' => 'unavailable',
                 'rows' => [],
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -913,7 +914,7 @@ class SettingsPanel implements Panel
         } catch (\Throwable $exception) {
             $failures[] = [
                 'part' => 'self_health',
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
 
             return null;

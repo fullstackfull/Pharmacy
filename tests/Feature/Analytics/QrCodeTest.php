@@ -29,6 +29,18 @@ class QrCodeTest extends TestCase
         $this->assertNull($qr->matrix(str_repeat('x', 400)));
     }
 
+    public function test_the_documented_capacity_is_the_capacity(): void
+    {
+        // Version 10 at level M holds 216 data codewords; the mode indicator and the 16-bit length
+        // field take 20 of those 1,728 bits, which leaves 213 whole bytes — not the 271 the class
+        // used to claim. A number in a docblock that nobody can check is a number that drifts, so
+        // it is checked here: 213 encodes and 214 is refused.
+        $qr = new QrCode();
+
+        $this->assertNotNull($qr->matrix(str_repeat('x', 213)), 'the documented maximum must encode');
+        $this->assertNull($qr->matrix(str_repeat('x', 214)), 'one byte past it must be refused');
+    }
+
     public function test_the_finder_patterns_are_where_a_scanner_looks_for_them(): void
     {
         $matrix = (new QrCode())->matrix('https://example.com/go/abc1234');

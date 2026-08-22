@@ -740,6 +740,6 @@ class LiveTrafficPanel implements Panel
 
     private function failureNote(\Throwable $exception): string
     {
-        return class_basename($exception) . ': ' . $exception->getMessage();
+        return Metric::describeFailure($exception);
     }
 }

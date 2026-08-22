@@ -2,6 +2,7 @@
 
 namespace App\Services\Analytics\Support;
 
+use App\Services\DeveloperPortal\ApiConsole;
 use Illuminate\Http\Request;
 
 /**
@@ -123,6 +124,12 @@ class BotDetector
     public function isInternal(Request $request): bool
     {
         if (auth('admin')->check() || auth('seller')->check()) {
+            return true;
+        }
+
+        // The API console's own probes. Flagged rather than dropped, like every other internal
+        // visit: a filter nobody can audit is indistinguishable from one that stopped working.
+        if ($request->headers->has(ApiConsole::MARKER_HEADER)) {
             return true;
         }
 

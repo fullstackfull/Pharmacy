@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Ingest\BucketWriter;
 use App\Services\Monitoring\Ingest\MetricSink;
 use App\Services\Monitoring\Ingest\RequestContext;
+use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
@@ -13,7 +15,6 @@ use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -92,9 +93,15 @@ class MonitoringServiceProvider extends ServiceProvider
                 $this->finishRun($event->task, 'failed', null, [
                     'error' => app(Redactor::class)->text(Str::limit($event->exception->getMessage(), 900, '')),
                 ]);
-                $this->recordEvent('scheduler', 'critical', 'Scheduled task failed: ' . $this->taskName($event->task), [
-                    'exception' => class_basename($event->exception),
-                ]);
+                $name = $this->taskName($event->task);
+                app(EventLog::class)->record(
+                    type: EventLog::SCHEDULER,
+                    severity: EventLog::CRITICAL,
+                    title: 'Scheduled task failed: ' . $name,
+                    key: $name,
+                    description: app(Redactor::class)->text(Str::limit($event->exception->getMessage(), 500, '')),
+                    context: ['exception' => class_basename($event->exception)],
+                );
             });
         });
 
@@ -237,18 +244,6 @@ class MonitoringServiceProvider extends ServiceProvider
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    private function recordEvent(string $type, string $severity, string $title, array $context = []): void
-    {
-        $this->monitoring()->table('monitoring_events')->insert([
-            'type' => $type,
-            'severity' => $severity,
-            'title' => Str::limit($title, 185, ''),
-            'context' => json_encode(app(Redactor::class)->array($context)),
-            'occurred_at' => Clock::stamp(),
-            'created_at' => Clock::stamp(),
-        ]);
     }
 
     private function monitoring(): \Illuminate\Database\Connection

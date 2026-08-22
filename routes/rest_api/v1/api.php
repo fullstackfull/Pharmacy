@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\RestAPI\v1\AppHealthController;
 use App\Http\Controllers\RestAPI\v1\AttributeController;
 use App\Http\Controllers\RestAPI\v1\auth\CustomerAPIAuthController;
 use App\Http\Controllers\RestAPI\v1\auth\EmailVerificationController;
@@ -65,6 +66,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
             Route::get('resolve', 'resolve')->name('api.v1.deep-link.resolve');
         });
     });
+
+    /*
+     * App health. Unauthenticated because an app that has just crashed cannot refresh a token, and
+     * requiring one would mean the only sessions ever reported are the healthy ones — the exact
+     * bias that makes a crash-free figure worthless. It accepts three counters and nothing else,
+     * stores no free-form text, and always answers 204.
+     *
+     * Throttled per IP: this is a public write into a monitoring table, and the limit is what keeps
+     * "how many sessions" from being decided by whoever calls it most.
+     */
+    Route::post('app-health', AppHealthController::class)
+        ->middleware('throttle:30,1')
+        ->name('api.v1.app-health');
 
     /*
      * Rate limited: login, OTP verification/resend and password reset are credential-stuffing and

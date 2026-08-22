@@ -36,7 +36,7 @@ class ThemeEndToEndWorkflowTest extends TestCase
 
         $registry = new SectionRegistry();
         $this->manager = new ThemeManager();
-        $this->builder = new ThemeBuilderService($registry);
+        $this->builder = new ThemeBuilderService($registry, app(\App\Services\Theme\SectionReadiness::class));
         $this->storefront = new StorefrontThemeRenderer($registry);
 
         foreach (['theme_blocks', 'theme_sections', 'theme_versions', 'themes'] as $t) {

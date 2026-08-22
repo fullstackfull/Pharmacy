@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\DB;
 
@@ -38,7 +39,7 @@ class DatabaseCheck implements Check
         } catch (\Throwable $exception) {
             return CheckResult::failing(
                 $this->key(),
-                class_basename($exception) . ': ' . $exception->getMessage(),
+                Metric::describeFailure($exception),
                 context: ['connection' => config('database.default')],
             );
         }

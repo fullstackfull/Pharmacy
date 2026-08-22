@@ -186,19 +186,35 @@ class Redactor
             return $ip;
         }
 
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-            $octets = explode('.', $ip);
+        return self::networkOf($ip);
+    }
 
-            return $octets[0] . '.' . $octets[1] . '.' . $octets[2] . '.0';
+    /**
+     * The network an address belongs to: its last octet for IPv4, its last 64 bits for IPv6.
+     *
+     * Written against the address's BYTES rather than its text, because IPv6 text is not one
+     * address per string. The previous version split on ':' and kept the first four groups, which
+     * works only for a fully expanded address — and almost no IPv6 address is written that way.
+     * Given 2001:db8::1 it produced "2001:db8::1::", an invalid address that still carried the
+     * interface identifier the mask exists to remove; given ::1 it produced "::1::". Worse for
+     * anything that groups by the result: 2001:db8::1 and 2001:0db8:0000:0000:0000:0000:0000:0001
+     * are the same address and used to mask to two different strings, so one visitor counted twice.
+     *
+     * inet_pton normalises both to the same sixteen bytes, and inet_ntop writes the masked result
+     * back in the one canonical form.
+     */
+    public static function networkOf(string $ip): ?string
+    {
+        $packed = @inet_pton($ip);
+
+        if ($packed === false) {
+            return null;
         }
 
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            $groups = explode(':', $ip);
+        $keep = strlen($packed) === 4 ? 3 : 8;
+        $masked = @inet_ntop(substr($packed, 0, $keep) . str_repeat("\0", strlen($packed) - $keep));
 
-            return implode(':', array_slice($groups, 0, 4)) . '::';
-        }
-
-        return null;
+        return $masked === false ? null : $masked;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -13,7 +14,7 @@ use Illuminate\Support\Str;
  * throws after the response has started, a CDN serving a stale error, a maintenance file nobody
  * removed. Only an actual request finds that.
  *
- * Journeys are defined in Monitoring → Settings rather than hard-coded, and NOTHING is probed
+ * Journeys are defined with `php artisan monitoring:synthetic` rather than hard-coded, and NOTHING is probed
  * until at least one is defined: inventing a target would mean this server quietly making
  * outbound requests the operator never asked for. With none defined the check reports
  * not_configured and says how to add one.
@@ -49,8 +50,10 @@ class SyntheticCheck implements Check
 
         if ($targets === []) {
             return [CheckResult::notConfigured(
-                $this->key(),
-                'No synthetic journey is defined. Add one in Monitoring → Settings → Synthetic tests: a name, a URL on this site, the status code it must return and optionally a phrase the page must contain.',
+                key: $this->key(),
+                remedy: 'No synthetic journey is defined, so nothing is fetched and a white screen would go unnoticed. Define one with '
+                    . '`php artisan monitoring:synthetic add "Home page" ' . rtrim((string) config('app.url'), '/') . '/ --contains="…"`'
+                    . ' — a name, a URL on this site, the status it must return and a phrase the page must contain.',
                 kind: $this->kind(),
             )];
         }
@@ -76,7 +79,7 @@ class SyntheticCheck implements Check
         $targets = [];
 
         foreach ($configured as $target) {
-            if (!is_array($target) || !isset($target['url']) || !$this->isProbeable((string) $target['url'])) {
+            if (!is_array($target) || !isset($target['url']) || !self::isProbeable((string) $target['url'])) {
                 continue;
             }
 
@@ -94,7 +97,7 @@ class SyntheticCheck implements Check
      * A URL is probeable only if it is an http(s) address. Anything else — file://, a shell
      * fragment, an internal metadata address — is not a customer journey and is not fetched.
      */
-    private function isProbeable(string $url): bool
+    public static function isProbeable(string $url): bool
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
         $host = parse_url($url, PHP_URL_HOST);
@@ -125,7 +128,7 @@ class SyntheticCheck implements Check
         } catch (\Throwable $exception) {
             return CheckResult::failing(
                 $key,
-                class_basename($exception) . ': ' . $exception->getMessage(),
+                Metric::describeFailure($exception),
                 context: ['name' => $name, 'url' => $target['url']],
                 kind: $this->kind(),
             );

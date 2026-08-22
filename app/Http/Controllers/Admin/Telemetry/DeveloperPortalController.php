@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Services\DeveloperPortal\ApiConsole;
 use App\Services\DeveloperPortal\ApiManifest;
 use App\Services\DeveloperPortal\ApiSnapshotService;
 use App\Services\DeveloperPortal\Generators\OpenApiGenerator;
+use App\Services\DeveloperPortal\ConsoleGuard;
 use App\Services\DeveloperPortal\Generators\PostmanGenerator;
 use App\Services\DeveloperPortal\PortalNavigation;
 use App\Services\Telemetry\DeveloperPortalService;
@@ -13,6 +15,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -147,6 +150,69 @@ class DeveloperPortalController extends BaseController
                 . ($result['breaking'] > 0 ? ' — ' . $result['breaking'] . ' ' . translate('breaking') : '');
 
         return redirect()->route('admin.developer.section', ['section' => 'changelog'])->with('success', $message);
+    }
+
+    /**
+     * Send one request from the console and return what came back.
+     *
+     * Whether it may be sent at all is ConsoleGuard's decision, made from the endpoint's own facts;
+     * this method's job is the three things the guard cannot know — that the endpoint exists, that
+     * the operator confirmed a write in this browser, and that nobody is driving the console like
+     * an API client.
+     */
+    public function try(Request $request, string $id, ApiConsole $console, ConsoleGuard $guard): JsonResponse
+    {
+        $endpoint = $this->manifest->endpoint($id);
+
+        if ($endpoint === null) {
+            return response()->json(['ok' => false, 'message' => translate('that_endpoint_is_not_in_the_manifest')], 404);
+        }
+
+        $method = strtoupper((string) $request->input('method', $endpoint['methods'][0] ?? 'GET'));
+        $verdict = $guard->verdict($endpoint, $method);
+
+        if (!$verdict['allowed']) {
+            return response()->json([
+                'ok' => false,
+                'tier' => $verdict['tier'],
+                'message' => translate($verdict['reason_key']),
+                'remedy' => $verdict['remedy'],
+            ], 403);
+        }
+
+        // The confirmation is checked here rather than in the guard because it is a fact about this
+        // submission, not about the endpoint: the guard answers "may this ever be sent", and a
+        // typed word answers "did a person mean to send it now".
+        if ($verdict['needs_confirmation']
+            && strtoupper(trim((string) $request->input('confirm'))) !== $guard->confirmationFor($method)) {
+            return response()->json([
+                'ok' => false,
+                'tier' => $verdict['tier'],
+                'message' => translate('type_the_method_name_to_confirm_a_write'),
+                'remedy' => $guard->confirmationFor($method),
+            ], 422);
+        }
+
+        $perMinute = max(1, (int) config('developer_portal.console.rate_limit_per_minute', 20));
+        $key = 'developer-console:' . (auth('admin')->id() ?: 'unknown');
+
+        if (RateLimiter::tooManyAttempts($key, $perMinute)) {
+            return response()->json([
+                'ok' => false,
+                'message' => translate('the_console_is_rate_limited_wait_a_moment'),
+                'remedy' => RateLimiter::availableIn($key) . 's',
+            ], 429);
+        }
+
+        RateLimiter::hit($key, 60);
+
+        return response()->json($console->send(
+            endpoint: $endpoint,
+            method: $method,
+            pathParameters: (array) $request->input('path', []),
+            payload: (array) $request->input('payload', []),
+            token: $request->filled('token') ? (string) $request->input('token') : null,
+        ));
     }
 
     /** Rebuild the manifest by hand, for the moment after a deployment. */

@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Alerting;
 
+use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class AlertEvaluator
         private readonly IncidentManager $incidents,
         private readonly AlertNotifier $notifier,
         private readonly MonitoringSettings $settings,
+        private readonly EventLog $events,
     ) {
     }
 
@@ -236,6 +238,23 @@ class AlertEvaluator
             $this->notifier->fired($rule, $level, $value, $incidentId);
         }
 
+        // The timeline is told the first time an episode starts, not on every cooldown repeat: a
+        // rule that has been firing for an hour is one event on the axis, not twelve. Until this
+        // existed the alerts page had a permanent discrepancy against its own history, because the
+        // rule's fire counter was the only record that a firing had ever happened.
+        if (!$alreadyFiring) {
+            $this->events->record(
+                type: EventLog::ALERT,
+                severity: $level === 'critical' ? EventLog::CRITICAL : EventLog::WARNING,
+                title: $rule->name . ' — ' . $level,
+                key: (string) $rule->key,
+                description: $rule->metric . ' ' . $rule->operator . ' '
+                    . ($level === 'critical' ? $rule->critical_threshold : $rule->warning_threshold),
+                context: ['value' => $value, 'metric' => $rule->metric, 'label' => $rule->label ?: null],
+                relatedId: $incidentId,
+            );
+        }
+
         $this->writeState($rule, [
             'state' => $level,
             'last_value' => $value,
@@ -276,6 +295,14 @@ class AlertEvaluator
 
         if ($wasFiring) {
             $this->notifier->recovered($rule, $value);
+            $this->events->record(
+                type: EventLog::ALERT,
+                severity: EventLog::SUCCESS,
+                title: $rule->name . ' — recovered',
+                key: (string) $rule->key,
+                context: ['value' => $value, 'metric' => $rule->metric],
+                relatedId: $state->incident_id !== null ? (int) $state->incident_id : null,
+            );
         }
 
         $this->writeState($rule, [

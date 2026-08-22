@@ -202,7 +202,7 @@
             @foreach ($panel['events'] as $event)
                 <li class="mon-events__item mon-events__item--{{ $event['severity'] }}">
                     <span class="mon-events__time k-num">{{ $event['at'] }}</span>
-                    <span class="mon-events__type">{{ translate($event['type']) }}</span>
+                    <span class="mon-events__type">{{ $event['type_known'] ? translate($event['type']) : $event['type'] }}</span>
                     <span>{{ $event['title'] }}</span>
                 </li>
             @endforeach

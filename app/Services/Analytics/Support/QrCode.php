@@ -5,10 +5,12 @@ namespace App\Services\Analytics\Support;
 /**
  * A QR code, rendered as an SVG, with no dependency.
  *
- * Scope is deliberately narrow: byte mode, error-correction level M, versions 1 to 10, which
- * covers a URL of up to 271 characters — comfortably more than a short link needs. A general QR
- * library handles kanji, structured append and version 40; none of that is wanted here, and the
- * cost of a composer dependency and its transitive tree is not worth a poster.
+ * Scope is deliberately narrow: byte mode, error-correction level M, versions 1 to 10 — 213 bytes
+ * at the largest version, which is comfortably more than a short link needs and is where encode()
+ * refuses rather than truncates. (Version 10 holds 216 data codewords; the mode indicator and the
+ * 16-bit length field take 20 of the 1,728 bits, leaving 213 whole bytes.) A general QR library
+ * handles kanji, structured append and version 40; none of that is wanted here, and the cost of a
+ * composer dependency and its transitive tree is not worth a poster.
  *
  * Level M is chosen over L on purpose. These get printed, photographed off a shop window and
  * scanned in bad light; M recovers from 15% damage against L's 7%, for one version step.

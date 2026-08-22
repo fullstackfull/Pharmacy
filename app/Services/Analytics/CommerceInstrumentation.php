@@ -3,9 +3,12 @@
 namespace App\Services\Analytics;
 
 use App\Models\Order;
+use App\Models\ProductCompare;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\Wishlist;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 
 /**
  * Where commerce events actually come from.
@@ -40,8 +43,16 @@ class CommerceInstrumentation
         // instead (OrderManager::generateOrder, CartManager::add_to_cart).
         Order::updated(fn (Order $order) => $this->safely(fn () => $this->orderUpdated($order)));
         Wishlist::created(fn (Wishlist $wishlist) => $this->safely(fn () => $this->analytics->wishlistAdded((int) $wishlist->product_id)));
+        // The compare tray is written through the model from the web controller and would be
+        // written the same way by anything added later, so the model is where it is counted.
+        ProductCompare::created(fn (ProductCompare $compare) => $this->safely(fn () => $this->analytics->compareAdded((int) $compare->product_id)));
         Review::created(fn (Review $review) => $this->safely(fn () => $this->reviewSubmitted($review)));
         User::created(fn (User $user) => $this->safely(fn () => $this->analytics->signedUp((int) $user->id)));
+
+        // Sign-in happens in eight places — the login form, four social providers, OTP, a password
+        // reset, and the API — and instrumenting eight controllers would have meant missing at
+        // least one. The framework already fires one event for all of them.
+        Event::listen(Login::class, fn (Login $login) => $this->safely(fn () => $this->signedIn($login)));
     }
 
 
@@ -68,6 +79,17 @@ class CommerceInstrumentation
     }
 
 
+
+    private function signedIn(Login $login): void
+    {
+        // Only shoppers. An administrator or a vendor signing in is staff traffic, and counting it
+        // as a customer sign-in would put the shop's own team in its conversion funnel.
+        if ($login->guard !== 'customer' || !isset($login->user->id)) {
+            return;
+        }
+
+        $this->analytics->signedIn(customerId: (int) $login->user->id, method: 'session');
+    }
 
     private function reviewSubmitted(Review $review): void
     {

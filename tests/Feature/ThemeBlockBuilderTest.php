@@ -56,7 +56,7 @@ class ThemeBlockBuilderTest extends TestCase
         });
 
         $this->registry = new SectionRegistry();
-        $this->builder = new ThemeBuilderService($this->registry);
+        $this->builder = new ThemeBuilderService($this->registry, app(\App\Services\Theme\SectionReadiness::class));
 
         $theme = Theme::create(['name' => 'T', 'slug' => 't', 'is_active' => true]);
         $this->draft = ThemeVersion::create(['theme_id' => $theme->id, 'status' => ThemeVersion::STATUS_DRAFT]);

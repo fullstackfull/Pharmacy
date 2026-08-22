@@ -311,7 +311,7 @@ class SslCollector implements Collector
 
             return $this->peer = $reading;
         } catch (\Throwable $exception) {
-            return $this->peer = ['stage' => 'probe', 'error' => class_basename($exception) . ': ' . $exception->getMessage()];
+            return $this->peer = ['stage' => 'probe', 'error' => Metric::describeFailure($exception)];
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Services\Telemetry;
 
 use App\Services\DeveloperPortal\ApiManifest;
 use App\Services\DeveloperPortal\ApiSnapshotService;
+use App\Services\DeveloperPortal\ConsoleGuard;
 use App\Services\DeveloperPortal\EndpointHealthService;
 use App\Services\DeveloperPortal\Generators\CodeExampleGenerator;
 use App\Services\DeveloperPortal\Generators\OpenApiGenerator;
@@ -24,6 +25,9 @@ use Illuminate\Support\Facades\Route;
  */
 class DeveloperPortalService
 {
+    /** The quality table lists this many endpoints; the count above it says how many there are. */
+    private const QUALITY_TABLE_LIMIT = 200;
+
     public function __construct(
         private readonly ApiManifest $manifest,
         private readonly ApiSnapshotService $snapshots,
@@ -158,8 +162,35 @@ class DeveloperPortalService
             // responses because the controllers return JSON directly and there is no type to
             // reflect — keys and types only, never a value.
             'observed' => $this->observedResponses($endpoint),
+            // Whether the console may send each of this endpoint's methods, and what it needs
+            // first. Decided here so the page draws the answer rather than deciding it: a button
+            // that appears when it should not is how a guard gets discovered by being bypassed.
+            'console' => $this->consoleVerdicts($endpoint),
             'full_url' => rtrim($baseUrl, '/') . $endpoint['path'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $endpoint
+     * @return array<string, array<string, mixed>>
+     */
+    private function consoleVerdicts(array $endpoint): array
+    {
+        $guard = app(ConsoleGuard::class);
+        $verdicts = [];
+
+        foreach ($endpoint['methods'] as $method) {
+            $verdict = $guard->verdict($endpoint, $method);
+
+            $verdicts[$method] = $verdict + [
+                'confirmation' => $guard->confirmationFor($method),
+                // Translated here rather than in the page: the page receives these as JSON and a
+                // sentence built in JavaScript would mint a language key per endpoint.
+                'message' => $verdict['reason_key'] !== null ? translate($verdict['reason_key']) : null,
+            ];
+        }
+
+        return $verdicts;
     }
 
     /**
@@ -181,6 +212,40 @@ class DeveloperPortalService
         ksort($found);
 
         return array_values($found);
+    }
+
+    /**
+     * How many endpoints have been seen answering successfully at least once.
+     *
+     * The response-shape gap is the only one that closes without anybody writing anything: the
+     * portal learns the shape from a real 2xx. So the screen shows the progress rather than a
+     * static count that looks permanent.
+     *
+     * @return array<string, int>
+     */
+    private function observedEndpointCount(): array
+    {
+        try {
+            $shapes = app(\App\Services\DeveloperPortal\ResponseShapeRecorder::class)->all();
+        } catch (\Throwable) {
+            return ['endpoints' => 0, 'with_success' => 0];
+        }
+
+        $withSuccess = 0;
+
+        foreach ($shapes as $byMethod) {
+            foreach ($byMethod as $byStatus) {
+                foreach (array_keys($byStatus) as $status) {
+                    if ((int) $status >= 200 && (int) $status < 300) {
+                        $withSuccess++;
+
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return ['endpoints' => count($shapes), 'with_success' => $withSuccess];
     }
 
     /**
@@ -234,12 +299,24 @@ class DeveloperPortalService
 
         arsort($byReason);
 
+        $summary = $this->manifest->get()['summary'];
+        $observed = $this->observedEndpointCount();
+
         return [
             'score' => $this->qualityScore(),
-            'summary' => $this->manifest->get()['summary'],
+            'summary' => $summary,
             'by_reason' => $byReason,
-            'endpoints' => array_slice($warnings, 0, 200),
+            'endpoints' => array_slice($warnings, 0, self::QUALITY_TABLE_LIMIT),
             'total_flagged' => count($warnings),
+            // The screen used to headline the number of ENDPOINTS with a gap, which reads as that
+            // many distinct problems. It is three gaps, each shared by hundreds of endpoints — and
+            // knowing that is the difference between a hopeless list and three afternoons of work.
+            'api_endpoints' => (int) ($summary['api'] ?? 0),
+            'distinct_gaps' => count($byReason),
+            'table_limit' => self::QUALITY_TABLE_LIMIT,
+            // Response shapes are learned from live traffic, so this gap closes itself. How far
+            // along that is, is a fact the screen should show rather than leave to be discovered.
+            'observed' => $observed,
         ];
     }
 
