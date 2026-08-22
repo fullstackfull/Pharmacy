@@ -450,13 +450,16 @@ class ApiManifest
             // pointing a route at a different controller, adding auth middleware, changing a
             // FormRequest — so the portal kept describing an endpoint the application no longer
             // served, and the documentation drifted exactly where it is most dangerous.
-            $action = $route->getActionName();
-            $middleware = $route->gatherMiddleware();
+            // getAction('middleware'), NOT gatherMiddleware(): the latter instantiates the
+            // controller to ask for its middleware, so fingerprinting the route table would
+            // construct four hundred controllers — and a controller whose constructor reads a
+            // setting would then need a database just to decide whether a cache is stale.
+            $middleware = (array) $route->getAction('middleware');
 
             $signature[] = implode(',', $route->methods())
                 . ' ' . $route->uri()
                 . ' ' . (string) $route->getName()
-                . ' ' . $action
+                . ' ' . $route->getActionName()
                 . ' ' . implode(',', array_map(static fn ($one) => is_string($one) ? $one : gettype($one), $middleware));
         }
 

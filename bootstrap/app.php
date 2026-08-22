@@ -83,6 +83,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\RecordHttpTelemetry::class,
             \App\Http\Middleware\MonitorRequest::class,
             \App\Http\Middleware\RecordAnalytics::class,
+            // What each endpoint answers with, learned from what it answers with. The API returns
+            // JSON directly rather than through Resource classes, so there is no type to reflect —
+            // this is the only way the portal can describe a response without somebody typing it.
+            \App\Http\Middleware\RecordApiResponseShape::class,
         ]);
         /*
         |--------------------------------------------------------------------------
