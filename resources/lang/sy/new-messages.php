@@ -1284,4 +1284,9 @@ return [
 	'The_scheduler_last_reported_a_run_85_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 85 minutes ago  the server cron appears to have stopped.',
 	'the_php_fpm_status_page' => 'The php fpm status page',
 	'The_scheduler_last_reported_a_run_87_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 87 minutes ago  the server cron appears to have stopped.',
+	'how_long_this_server_takes_to_resolve_the_hostname_in_app_url' => 'How long this server takes to resolve the hostname in app url',
+	'The_scheduler_last_reported_a_run_89_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 89 minutes ago  the server cron appears to have stopped.',
+	'a_reading_is_only_stored_while_it_is_available_so_a_gauge_with_no_line_on_this_host_is_a_missing_reading_rather_than_a_missing_sampler' => 'A reading is only stored while it is available so a gauge with no line on this host is a missing reading rather than a missing sampler',
+	'dns_ms' => 'Dns ms',
+	'The_scheduler_last_reported_a_run_92_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 92 minutes ago  the server cron appears to have stopped.',
 ];

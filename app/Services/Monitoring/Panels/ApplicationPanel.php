@@ -544,16 +544,25 @@ class ApplicationPanel implements Panel
                     note: 'Stamped onto every error, trace and deployment record, which is what lets a spike be tied to a release.',
                 ),
             ),
-            'commit_sha' => Metric::probe('.git/HEAD', static function () {
+            'commit' => Metric::probe('.git/HEAD', static function () {
                 $sha = app_commit_sha();
 
-                return $sha === null
-                    ? Metric::notConfigured(
+                if ($sha === null) {
+                    return Metric::notConfigured(
                         source: '.git/HEAD',
                         remedy: 'Deploy with the .git directory present, or write the deployed sha into version.json as part of the build.',
                         note: 'This deployment has no readable .git, so the exact commit behind the running code cannot be read here.',
-                    )
-                    : Metric::of(value: $sha, source: '.git/HEAD');
+                    );
+                }
+
+                // Abbreviated because a 40-character sha has no break opportunity in it and pushes
+                // straight through the next column of the card; 12 is git's own abbreviation, and
+                // the full value is one `cat .git/HEAD` away rather than lost.
+                return Metric::of(
+                    value: substr($sha, 0, 12),
+                    source: '.git/HEAD',
+                    note: 'The first 12 characters, as git abbreviates a commit. The full 40 are in .git/HEAD on this deployment.',
+                );
             }),
             'release_channel' => Metric::probe(
                 'version.json',
@@ -855,12 +864,16 @@ class ApplicationPanel implements Panel
             ];
         }
 
+        // Every gauge on this page is sampled by the scheduled CLI process, and the CLI reads its
+        // own php.ini. A counter this page can read says nothing about what the sampler can read,
+        // so the gap is not blamed on the scheduler alone.
         return [
             'state' => 'no_data',
-            'note' => $points === 1
+            'note' => ($points === 1
                 ? 'Only one sample has been stored in this window, and one point is not a line.'
-                : 'No sample of this gauge has been stored in this window.',
-            'remedy' => 'Gauges are sampled by `php artisan monitoring:flush`, scheduled every minute. Check the Laravel scheduler is running: `php artisan schedule:list`.',
+                : 'No sample of this gauge has been stored in this window.')
+                . ' The sample is taken by a command-line process, which loads a different php.ini from the one serving this page — a counter readable here is not necessarily readable there.',
+            'remedy' => 'Gauges are sampled by `php artisan monitoring:flush`, scheduled every minute: check the scheduler is running with `php artisan schedule:list`. For the OPcache counters that sample also needs opcache.enable_cli=1 in the CLI php.ini.',
         ];
     }
 

@@ -116,7 +116,7 @@
                     <x-k.card>
                         <x-k.empty icon="settings"
                                    :title="translate('this_section_is_not_installed_in_this_build')"
-                                   :description="$panel['message'] ?? ''" />
+                                   :text="$panel['message'] ?? ''" />
                     </x-k.card>
                 @elseif (($panel['state'] ?? null) === 'failed')
                     {{-- A panel that threw says so plainly. Rendering an empty page instead would

@@ -8,7 +8,7 @@
 <x-k.card>
     <x-k.empty icon="settings"
                :title="translate('this_section_is_not_installed_in_this_build')"
-               :description="translate('its_data_is_being_collected_the_view_for_it_is_not_part_of_this_release')" />
+               :text="translate('its_data_is_being_collected_the_view_for_it_is_not_part_of_this_release')" />
     @if (!empty($panel) && is_array($panel))
         <details class="mon-metric__remedy">
             <summary>{{ translate('raw_data_for_this_section') }}</summary>

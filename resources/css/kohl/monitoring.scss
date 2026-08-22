@@ -30,12 +30,12 @@
     flex-wrap: wrap;
     gap: 2px;
     padding: 3px;
-    border-radius: var(--k-radius-2, 8px);
-    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    border-radius: var(--k-radius-md, 8px);
+    background: var(--k-surface-sunk, rgba(128, 138, 157, .1));
 }
 .mon-range__option {
     padding: 5px 10px;
-    border-radius: var(--k-radius-1, 6px);
+    border-radius: var(--k-radius-sm, 6px);
     font-size: var(--k-text-xs, 12px);
     color: var(--k-text-muted);
     text-decoration: none;
@@ -57,7 +57,7 @@
     gap: clamp(12px, 3vw, 32px);
     padding: 16px 20px;
     margin-block-end: var(--k-size-4, 16px);
-    border-radius: var(--k-radius-3, 12px);
+    border-radius: var(--k-radius-lg, 12px);
     border: 1px solid var(--k-border, rgba(128, 138, 157, .25));
     background: var(--k-surface, #fff);
     border-inline-start: 4px solid var(--mon-unknown);
@@ -114,7 +114,7 @@
     padding: 4px 10px;
     border-radius: 99px;
     font-size: var(--k-text-xs, 12px);
-    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    background: var(--k-surface-sunk, rgba(128, 138, 157, .1));
     color: var(--k-text-muted);
     white-space: nowrap;
 }
@@ -138,7 +138,7 @@
 .mon-rail {
     position: sticky;
     top: 12px;
-    border-radius: var(--k-radius-3, 12px);
+    border-radius: var(--k-radius-lg, 12px);
     border: 1px solid var(--k-border);
     background: var(--k-surface);
     overflow: hidden;
@@ -160,17 +160,17 @@
     align-items: center;
     gap: 9px;
     padding: 7px 10px;
-    border-radius: var(--k-radius-1, 6px);
+    border-radius: var(--k-radius-sm, 6px);
     font-size: var(--k-text-sm, 13px);
     color: var(--k-text);
     text-decoration: none;
 }
-.mon-rail__link:hover { background: var(--k-surface-2); text-decoration: none; color: var(--k-text); }
-.mon-rail__link.is-active { background: var(--k-primary-soft, rgba(59, 91, 219, .12)); color: var(--k-primary, #3b5bdb); font-weight: var(--k-weight-medium); }
+.mon-rail__link:hover { background: var(--k-surface-sunk); text-decoration: none; color: var(--k-text); }
+.mon-rail__link.is-active { background: var(--k-accent-soft, rgba(59, 91, 219, .12)); color: var(--k-accent, #3b5bdb); font-weight: var(--k-weight-medium); }
 .mon-rail__link svg { flex: 0 0 auto; opacity: .75; }
 
 .mon-main { min-inline-size: 0; display: flex; flex-direction: column; gap: var(--k-size-4, 16px); }
-.mon-heading { font-size: var(--k-text-base, 15px); font-weight: var(--k-weight-bold, 700); margin: 4px 0 0; }
+.mon-heading { font-size: var(--k-text-md, 15px); font-weight: var(--k-weight-bold, 700); margin: 4px 0 0; }
 
 /* ── Attention list ────────────────────────────────────────────────────────── */
 .mon-attention { display: flex; flex-direction: column; gap: 8px; }
@@ -178,7 +178,7 @@
     display: flex;
     gap: 12px;
     padding: 12px 14px;
-    border-radius: var(--k-radius-2, 8px);
+    border-radius: var(--k-radius-md, 8px);
     border: 1px solid var(--k-border);
     border-inline-start: 3px solid var(--mon-unknown);
     background: var(--k-surface);
@@ -196,7 +196,7 @@
     margin-block-start: 4px;
     font-size: 11px;
     color: var(--k-text-muted);
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     padding: 4px 7px;
     border-radius: 5px;
     overflow-wrap: anywhere;
@@ -209,7 +209,7 @@
     flex-direction: column;
     gap: 3px;
     padding: 13px 14px;
-    border-radius: var(--k-radius-2, 8px);
+    border-radius: var(--k-radius-md, 8px);
     border: 1px solid var(--k-border);
     border-block-start: 3px solid var(--mon-unknown);
     background: var(--k-surface);
@@ -249,7 +249,7 @@
     inline-size: 14px;
     block-size: 14px;
     border-radius: 50%;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     font-size: 9px;
     cursor: help;
 }
@@ -272,13 +272,13 @@
 .mon-metric__note { font-size: 11px; color: var(--k-text-muted); }
 .mon-metric__source { font-size: 10px; color: var(--k-text-muted); opacity: .7; }
 .mon-metric__remedy { margin-block-start: 4px; }
-.mon-metric__remedy summary { font-size: 11px; color: var(--k-primary); cursor: pointer; }
+.mon-metric__remedy summary { font-size: 11px; color: var(--k-accent); cursor: pointer; }
 .mon-metric__remedy code {
     display: block;
     margin-block-start: 5px;
     padding: 7px 9px;
     border-radius: 5px;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     font-size: 11px;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
@@ -315,7 +315,7 @@
     padding: 2px 8px;
     border-radius: 99px;
     font-size: 11px;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     color: var(--k-text-muted);
 }
 .mon-pill--critical { background: rgba(214, 69, 69, .14); color: var(--mon-critical); }
@@ -330,7 +330,7 @@
     max-block-size: 420px;
     overflow: auto;
     font-size: 11px;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     padding: 10px;
     border-radius: 6px;
     margin-block-start: 6px;
@@ -354,7 +354,7 @@
     letter-spacing: .06em;
     padding: 2px 6px;
     border-radius: 4px;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     color: var(--k-text-muted);
 }
 .mon-events__item--critical .mon-events__type { background: rgba(214, 69, 69, .14); color: var(--mon-critical); }
@@ -364,8 +364,8 @@
 /* ── Chart ─────────────────────────────────────────────────────────────────── */
 .mon-chart { inline-size: 100%; block-size: 180px; }
 .mon-chart svg { inline-size: 100%; block-size: 100%; overflow: visible; }
-.mon-chart__area { fill: var(--k-primary, #3b5bdb); opacity: .12; }
-.mon-chart__line { fill: none; stroke: var(--k-primary, #3b5bdb); stroke-width: 1.6; stroke-linejoin: round; }
+.mon-chart__area { fill: var(--k-accent, #3b5bdb); opacity: .12; }
+.mon-chart__line { fill: none; stroke: var(--k-accent, #3b5bdb); stroke-width: 1.6; stroke-linejoin: round; }
 .mon-chart__errors { fill: none; stroke: var(--mon-critical); stroke-width: 1.4; }
 .mon-chart__axis { stroke: var(--k-border); stroke-width: 1; }
 .mon-chart__label { fill: var(--k-text-muted); font-size: 9px; }
@@ -449,7 +449,7 @@
     font-size: var(--k-text-xs, 12px);
 }
 .mon-waterfall__row:last-child { border-block-end: 0; }
-.mon-waterfall__row:hover { background: var(--k-surface-2); }
+.mon-waterfall__row:hover { background: var(--k-surface-sunk); }
 
 .mon-waterfall__label { display: flex; align-items: center; gap: 6px; min-inline-size: 0; }
 .mon-waterfall__label .k-truncate { min-inline-size: 0; }
@@ -479,7 +479,7 @@
     display: block;
     block-size: 12px;
     border-radius: var(--k-radius-sm, 4px);
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     overflow: hidden;
 }
 
@@ -517,7 +517,7 @@
 .mon-waterfall__attrs code {
     font-size: 10px;
     color: var(--k-text-muted);
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
     padding: 1px 5px;
     border-radius: var(--k-radius-sm, 4px);
     max-inline-size: 100%;
@@ -540,7 +540,7 @@
     margin-block-start: 8px;
     border-radius: var(--k-radius-sm, 4px);
     overflow: hidden;
-    background: var(--k-surface-2);
+    background: var(--k-surface-sunk);
 }
 .mon-waterfall-split__part { display: block; block-size: 100%; }
 
@@ -619,10 +619,10 @@
 .mon-cores__track {
     block-size: 8px;
     border-radius: 4px;
-    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    background: var(--k-surface-sunk, rgba(128, 138, 157, .1));
     overflow: hidden;
 }
-.mon-cores__fill { display: block; block-size: 100%; border-radius: 4px; background: var(--k-primary, #3b5bdb); }
+.mon-cores__fill { display: block; block-size: 100%; border-radius: 4px; background: var(--k-accent, #3b5bdb); }
 /* The two thresholds are the configured cpu_warning / cpu_critical, so a core reads
    the same colour here as the same figure does anywhere else on the dashboard. */
 .mon-cores__fill--busy { background: var(--mon-degraded); }
@@ -659,10 +659,10 @@
     display: block;
     block-size: 12px;
     border-radius: 6px;
-    background: var(--k-surface-2, rgba(128, 138, 157, .1));
+    background: var(--k-surface-sunk, rgba(128, 138, 157, .1));
     overflow: hidden;
 }
-.mon-usage__fill { display: block; block-size: 100%; border-radius: 6px; background: var(--k-primary, #3b5bdb); }
+.mon-usage__fill { display: block; block-size: 100%; border-radius: 6px; background: var(--k-accent, #3b5bdb); }
 /* The two thresholds are the configured disk_warning / disk_critical, so a filesystem
    reads the same colour here as the same figure does on the overview card. */
 .mon-usage__fill--healthy { background: var(--mon-healthy); }
@@ -671,7 +671,7 @@
 
 /* A reading with no configured threshold behind it — device utilisation — keeps the
    neutral fill: colouring it would teach the eye a state no alert rule shares. */
-.mon-usage__fill--unscored { background: var(--k-primary, #3b5bdb); }
+.mon-usage__fill--unscored { background: var(--k-accent, #3b5bdb); }
 
 .mon-usage--degraded .mon-usage__value { color: var(--mon-degraded); }
 .mon-usage--critical .mon-usage__value { color: var(--mon-critical); }
