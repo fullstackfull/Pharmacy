@@ -262,15 +262,20 @@ class BucketWriter
 
         foreach ($sums as $column) {
             $wrapped = $grammar->wrap($column);
-            $update[$column] = DB::raw("{$wrapped} + VALUES({$wrapped})");
+            $update[$column] = DB::raw("{$wrapped} + {$this->incoming($column)}");
         }
 
         foreach ($extremes as $column => $mode) {
             $wrapped = $grammar->wrap($column);
-            $function = $mode === 'min' ? 'LEAST' : 'GREATEST';
+            $incoming = $this->incoming($column);
+            // SQLite spells the multi-argument extremes MIN/MAX; MySQL, MariaDB and Postgres
+            // spell them LEAST/GREATEST and reserve MIN/MAX for aggregates.
+            $function = $this->connection()->getDriverName() === 'sqlite'
+                ? ($mode === 'min' ? 'MIN' : 'MAX')
+                : ($mode === 'min' ? 'LEAST' : 'GREATEST');
             // COALESCE: the stored extreme is NULL until the first value lands in the bucket, and
             // LEAST(NULL, x) is NULL in MySQL — which would erase it on every later write.
-            $update[$column] = DB::raw("{$function}(COALESCE({$wrapped}, VALUES({$wrapped})), COALESCE(VALUES({$wrapped}), {$wrapped}))");
+            $update[$column] = DB::raw("{$function}(COALESCE({$wrapped}, {$incoming}), COALESCE({$incoming}, {$wrapped}))");
         }
 
         foreach ($replace as $column) {
@@ -279,15 +284,35 @@ class BucketWriter
 
         if ($histogram !== null) {
             $wrapped = $grammar->wrap($histogram);
+            $incoming = $this->incoming($histogram);
             $buckets = count((array) config('monitoring.latency_buckets_ms', [])) + 1;
             $terms = [];
             for ($index = 0; $index < $buckets; $index++) {
-                $terms[] = "COALESCE(JSON_EXTRACT({$wrapped}, '$[{$index}]'), 0) + COALESCE(JSON_EXTRACT(VALUES({$wrapped}), '$[{$index}]'), 0)";
+                $terms[] = "COALESCE(JSON_EXTRACT({$wrapped}, '$[{$index}]'), 0) + COALESCE(JSON_EXTRACT({$incoming}, '$[{$index}]'), 0)";
             }
             $update[$histogram] = DB::raw('JSON_ARRAY(' . implode(', ', $terms) . ')');
         }
 
         return $update;
+    }
+
+    /**
+     * How this database spells "the value this statement is trying to insert".
+     *
+     * MariaDB and MySQL say VALUES(col); SQLite and Postgres say excluded.col. The distinction
+     * matters beyond portability: without it every counter update is a syntax error on any engine
+     * but MySQL, which means the ingest path cannot be tested anywhere except against a live
+     * MariaDB — and an ingest path nobody can test is one that breaks silently.
+     */
+    private function incoming(string $column): string
+    {
+        $grammar = $this->connection()->getQueryGrammar();
+        $wrapped = $grammar->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite', 'pgsql' => $grammar->wrap('excluded') . '.' . $wrapped,
+            default => "VALUES({$wrapped})",
+        };
     }
 
     /**
