@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Collectors;
 
 use App\Services\Monitoring\Metric;
+use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Environment;
 use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Database\Connection;
@@ -298,18 +299,13 @@ class QueueCollector implements Collector
                 'paused' => $this->allPaused(),
                 'resume' => $this->resumeRemedy($connectionName),
                 'stalled_reason' => $this->lagVerdict($oldest),
+                'waited' => $oldest->isOk() ? (int) $oldest->value : null,
                 'restart' => 'php artisan queue:restart, then confirm the supervisor is actually respawning workers (supervisorctl status).',
                 'start' => "Start a worker for this connection and keep it alive: php artisan queue:work {$connectionName} --queue=" . implode(',', array_keys($this->perQueue)),
             ]),
             'pending_batches' => $this->pendingBatches(),
-            'throughput_per_minute' => Metric::notSupported(
-                $source,
-                'A finished job is deleted from this table, so the database driver keeps no record of what it has processed — only of what is still waiting.',
-            ),
-            'average_runtime_ms' => Metric::notSupported(
-                $source,
-                'The database driver stores no start or finish time for a job, so how long jobs take cannot be recovered from this table.',
-            ),
+            'throughput_per_minute' => $this->recordedThroughput(),
+            'average_runtime_ms' => $this->recordedRuntime(),
         ];
     }
 
@@ -404,12 +400,15 @@ class QueueCollector implements Collector
                 'stalled_reason' => $overdue > 0
                     ? "{$overdue} delayed job(s) came due and are still sitting in the delayed set; only a running worker moves them onto the queue."
                     : null,
+                // Redis cannot say how long the head of the list has waited, and guessing would be
+                // the one thing this collector must not do.
+                'waited' => null,
                 'restart' => 'php artisan queue:restart, then confirm the supervisor is actually respawning workers (supervisorctl status).',
                 'start' => "Start a worker for this connection and keep it alive: php artisan queue:work {$connectionName} --queue=" . implode(',', array_keys($this->perQueue)),
             ]),
             'pending_batches' => $this->pendingBatches(),
-            'throughput_per_minute' => $this->horizonOnly($source, 'Redis keeps no counter of jobs completed per minute.'),
-            'average_runtime_ms' => $this->horizonOnly($source, 'Redis keeps no per-job runtime.'),
+            'throughput_per_minute' => $this->recordedThroughput(),
+            'average_runtime_ms' => $this->recordedRuntime(),
         ];
     }
 
@@ -951,10 +950,16 @@ class QueueCollector implements Collector
             return Metric::of(true, 'ps -eo args', null, "{$running} worker process(es) are running on this host.");
         }
 
-        if ((int) $facts['pending'] > 0 && $running === 0) {
+        $waited = $facts['waited'] === null ? null : (int) $facts['waited'];
+        $warning = (int) config('monitoring.thresholds.queue_lag_warning_seconds', 300);
+
+        // ps alone is not enough to declare a queue unattended: on a deployment where workers run
+        // on their own machine, this host correctly sees none. It takes a backlog that is also
+        // ageing before the absence of a local worker means anything.
+        if ((int) $facts['pending'] > 0 && $running === 0 && $waited !== null && $waited > $warning) {
             return Metric::collectorOffline(
                 'ps -eo args',
-                $facts['pending'] . ' job(s) are waiting and no worker process is running on this host. If workers run on another machine this is normal; if they do not, nothing is draining this queue.',
+                $facts['pending'] . " job(s) are waiting, the oldest for {$waited}s, and no worker process is running on this host. If the workers run on another machine, check there; if they do not, nothing is draining this queue.",
                 (string) $facts['start'],
             );
         }
@@ -968,7 +973,9 @@ class QueueCollector implements Collector
 
         return Metric::noData(
             $source,
-            'Jobs are waiting but none has aged past the lag threshold yet, so a busy worker and a stopped one cannot yet be told apart from the queue alone.',
+            $waited === null
+                ? 'Jobs are waiting, and on this driver their age cannot be read, so a busy worker and a stopped one cannot be told apart from the queue alone.'
+                : "Jobs are waiting but the oldest has only waited {$waited}s, short of the {$warning}s threshold, so a busy worker and a stopped one cannot yet be told apart.",
         );
     }
 
@@ -1041,5 +1048,64 @@ class QueueCollector implements Collector
         return $label !== '' && strlen($label) <= 64 && preg_match('/^[A-Za-z0-9._:-]+$/', $label) === 1
             ? $label
             : null;
+    }
+
+    /**
+     * Jobs completed per minute, from what the workers themselves reported.
+     *
+     * Neither the jobs table nor a Redis list can answer this — a finished job is deleted, so the
+     * queue itself only knows what is still waiting. But the worker knows: MonitoringServiceProvider
+     * listens to JobProcessed and records the count and duration into monitoring_series, which makes
+     * throughput and runtime real on both drivers without Horizon.
+     */
+    private function recordedThroughput(): Metric
+    {
+        return Metric::probe('monitoring_series (queue.processed)', function () {
+            $row = $this->monitoring()->table('monitoring_series')
+                ->where('metric', 'queue.processed')
+                ->where('resolution', 'minute')
+                ->where('bucket_at', '>=', Clock::minutesAgo(15))
+                ->selectRaw('SUM(samples) AS jobs, COUNT(DISTINCT bucket_at) AS minutes')
+                ->first();
+
+            $jobs = (int) ($row->jobs ?? 0);
+            $minutes = (int) ($row->minutes ?? 0);
+
+            if ($minutes === 0) {
+                return Metric::noData(
+                    'monitoring_series (queue.processed)',
+                    'No job has been processed in the last fifteen minutes, so there is no throughput to report yet.',
+                );
+            }
+
+            return round($jobs / $minutes, 2);
+        }, 'jobs/min');
+    }
+
+    private function recordedRuntime(): Metric
+    {
+        return Metric::probe('monitoring_series (queue.processed)', function () {
+            $row = $this->monitoring()->table('monitoring_series')
+                ->where('metric', 'queue.processed')
+                ->where('resolution', 'minute')
+                ->where('bucket_at', '>=', Clock::minutesAgo(60))
+                ->selectRaw('SUM(samples) AS jobs, SUM(value_sum) AS total_ms')
+                ->first();
+
+            $jobs = (int) ($row->jobs ?? 0);
+            if ($jobs === 0) {
+                return Metric::noData(
+                    'monitoring_series (queue.processed)',
+                    'No job has been processed in the last hour, so there is no runtime to average.',
+                );
+            }
+
+            return round((float) $row->total_ms / $jobs, 1);
+        }, 'ms');
+    }
+
+    private function monitoring(): \Illuminate\Database\Connection
+    {
+        return \Illuminate\Support\Facades\DB::connection(config('monitoring.connection', 'monitoring'));
     }
 }
