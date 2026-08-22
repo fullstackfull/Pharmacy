@@ -38,7 +38,7 @@ class WithdrawalMethodController extends BaseController
     {
         $withdrawalMethods = $this->withdrawalMethodRepo->getListWhere(
             orderBy: ['id'=>'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             dataLimit:getWebConfig(name: WebConfigKey::PAGINATION_LIMIT)
         );
 

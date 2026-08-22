@@ -37,7 +37,7 @@
                                 <form action="{{ route('admin.third-party.offline-payment-method.index') }}" method="GET">
                                     <div class="form-group">
                                         <div class="input-group">
-                                            <input type="search" value="{{ request('searchValue') }}" name="searchValue" class="form-control min-w-300" placeholder="{{ translate('Search_by_payment_method_name') }}">
+                                            <input type="search" value="{{ requestString('searchValue') }}" name="searchValue" class="form-control min-w-300" placeholder="{{ translate('Search_by_payment_method_name') }}">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">
                                                     <i class="fi fi-rr-search"></i>

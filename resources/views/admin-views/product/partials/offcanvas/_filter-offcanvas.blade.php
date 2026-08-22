@@ -34,7 +34,7 @@
             @endphp
 
             @if(request()->has('request_status'))
-                <input type="hidden" name="request_status" value="{{ request('request_status') }}">
+                <input type="hidden" name="request_status" value="{{ requestString('request_status') }}">
             @endif
 
             @include("admin-views.partials._product-filters-sections", [

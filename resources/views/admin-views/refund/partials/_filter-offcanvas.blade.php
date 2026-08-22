@@ -26,13 +26,13 @@
                     <div class="col-sm-6">
                         <div>
                             <label for="" class="form-label fs-12 mb-2">{{ translate('From') }}</label>
-                            <input type="date" name="from_date" id="start-date-time" value="{{ request('from_date') }}" class="form-control" title="{{translate('from_date')}}">
+                            <input type="date" name="from_date" id="start-date-time" value="{{ requestString('from_date') }}" class="form-control" title="{{translate('from_date')}}">
                         </div>
                     </div>
                     <div class="col-sm-6">
                         <div>
                             <label for="" class="form-label fs-12 mb-2">{{ translate('To') }}</label>
-                            <input type="date" name="to_date" id="end-date-time" value="{{ request('to_date') }}" class="form-control" title="{{translate('to_date')}}">
+                            <input type="date" name="to_date" id="end-date-time" value="{{ requestString('to_date') }}" class="form-control" title="{{translate('to_date')}}">
                         </div>
                     </div>
                 </div>

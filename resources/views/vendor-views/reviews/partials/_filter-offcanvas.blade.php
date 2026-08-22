@@ -56,7 +56,7 @@
                         <h4 class="mb-2 fz-14 fw-normal">{{ translate('Products') }}</h4>
                         <div class="dropdown select-product-search w-100">
                             <input type="text" class="product_id" name="product_id"
-                                   value="{{ request('product_id') }}" hidden>
+                                   value="{{ requestString('product_id') }}" hidden>
 
                             <button class="form-control text-start selected-product-name text-truncate select-product-button dropdown--toggle"
                                     data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" type="button">

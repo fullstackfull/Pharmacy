@@ -36,7 +36,7 @@ class SupportTicketController extends BaseController
     {
         $tickets = $this->supportTicketRepo->getListWhere(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['priority' => $request['priority'], 'status' => $request['status']],
             relations: ['customer'],
             dataLimit: getWebConfig('pagination_limit')

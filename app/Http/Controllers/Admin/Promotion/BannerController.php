@@ -47,7 +47,7 @@ class BannerController extends BaseController
         $bannerTypes = $this->bannerService->getBannerTypes();
         $banners = $this->bannerRepo->getListWhereIn(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['theme' => theme_root_path()],
             whereInFilters: ['banner_type' => array_keys($bannerTypes)],
             dataLimit: getWebConfig(name: 'pagination_limit'),

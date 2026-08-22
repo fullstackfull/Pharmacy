@@ -14,7 +14,7 @@
         @include('admin-views.third-party._third-party-payment-method-menu')
 
         <x-k.data-view class="mt-3" :title="translate('Withdraw_Method_List')" :count="$withdrawalMethods->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('Search_by_withdraw_method_name')">
 
             <x-slot:actions>

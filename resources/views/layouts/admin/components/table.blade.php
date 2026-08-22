@@ -15,7 +15,7 @@
                                 @csrf
                                 <div class="input-group">
                                     <input type="search" name="order_search" class="form-control"
-                                        placeholder="{{ translate('Search_by_topic') }}" value="{{ request('order_search') }}">
+                                        placeholder="{{ translate('Search_by_topic') }}" value="{{ requestString('order_search') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">
                                             <i class="fi fi-rr-search"></i>
@@ -152,7 +152,7 @@
                     @csrf
                     <div class="input-group">
                         <input type="search" name="order_search" class="form-control"
-                            placeholder="{{ translate('Search_by_topic') }}" value="{{ request('order_search') }}">
+                            placeholder="{{ translate('Search_by_topic') }}" value="{{ requestString('order_search') }}">
                         <div class="input-group-append search-submit">
                             <button type="submit">
                                 <i class="fi fi-rr-search"></i>
@@ -290,7 +290,7 @@
                                         <div class="input-group flex-grow-1 max-w-280">
                                             <input id="" type="search" name="searchValue" class="form-control"
                                                 placeholder="{{ translate('search_by_category_name') }}"
-                                                value="{{ request('searchValue') }}">
+                                                value="{{ requestString('searchValue') }}">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">
                                                     <i class="fi fi-rr-search"></i>
@@ -445,7 +445,7 @@
                         <div class="input-group flex-grow-1 max-w-280">
                             <input id="" type="search" name="searchValue" class="form-control"
                                 placeholder="{{ translate('search_by_category_name') }}"
-                                value="{{ request('searchValue') }}">
+                                value="{{ requestString('searchValue') }}">
                             <div class="input-group-append search-submit">
                                 <button type="submit">
                                     <i class="fi fi-rr-search"></i>

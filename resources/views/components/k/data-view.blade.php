@@ -38,7 +38,10 @@
             <div class="k-search">
                 <x-k.icon name="search" :size="15" />
                 <input type="search" class="k-input" name="{{ $searchName }}"
-                       value="{{ $searchValue ?? request($searchName) }}"
+                       {{-- requestString, not request(): htmlspecialchars() rejects an array, so
+                            `?searchValue[]=x` took down every list screen built on this component.
+                            The hidden fields above already guard with is_scalar; this one did not. --}}
+                       value="{{ $searchValue ?? requestString($searchName) }}"
                        placeholder="{{ $searchPlaceholder ?? translate('search') }}"
                        aria-label="{{ $searchPlaceholder ?? translate('search') }}">
             </div>

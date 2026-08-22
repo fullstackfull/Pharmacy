@@ -32,7 +32,7 @@
                                             </div>
                                             <input type="search" name="searchValue" class="form-control"
                                                    placeholder="{{translate('search_by_name')}}"
-                                                   value="{{ request('searchValue') }}">
+                                                   value="{{ requestString('searchValue') }}">
                                             <button type="submit" class="btn btn--primary">{{translate('search')}}</button>
                                         </div>
                                     </form>

@@ -55,7 +55,7 @@ class DeliveryManWithdrawController extends BaseController
         $vendorId = auth('seller')->id();
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'vendorId' => $vendorId,
                 'whereNotNull' => 'delivery_man_id',
@@ -77,7 +77,7 @@ class DeliveryManWithdrawController extends BaseController
         $vendorId = auth('seller')->id();
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'vendorId' => $vendorId,
                 'whereNotNull' => 'delivery_man_id',
@@ -150,7 +150,7 @@ class DeliveryManWithdrawController extends BaseController
         $vendorId = auth('seller')->id();
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'vendorId' => $vendorId,
                 'whereNotNull' => 'delivery_man_id',

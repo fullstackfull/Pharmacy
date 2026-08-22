@@ -55,7 +55,7 @@ class ShippingMethodController extends BaseController
     {
         $shippingMethods = $this->shippingMethodRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->order_search,
+            searchValue: requestString('order_search') ?: null,
             filters: ['creator_type' => 'admin'],
             dataLimit: getWebConfig(name: 'pagination_limit')
         );
@@ -80,7 +80,7 @@ class ShippingMethodController extends BaseController
         );
         $allCategoryShippingCost = $this->categoryShippingCostRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->category_search,
+            searchValue: requestString('category_search') ?: null,
             filters: ['seller_id' => 0],
             relations: ['category']
         )->filter(function ($item) use ($request) {

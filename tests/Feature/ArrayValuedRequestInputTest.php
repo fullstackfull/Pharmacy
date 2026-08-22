@@ -161,4 +161,21 @@ class ArrayValuedRequestInputTest extends TestCase
             $this->assertFalse(in_array($guarded, ['block', 'unblock', 'approved', 'delivered'], true));
         }
     }
+    public function test_a_form_echoes_back_only_what_could_have_been_typed_into_it(): void
+    {
+        // Filter forms repopulate with `{{ request('x') }}`. Blade compiles that to e(), e() calls
+        // htmlspecialchars(), and htmlspecialchars() rejects an array — so a guarded controller
+        // still died at the VIEW. 85 echoes and 25 component calls read through this instead.
+        $this->app['request'] = Request::create('/', 'GET', [
+            'searchValue' => ['x'],
+            'typed' => 'paracetamol',
+            'blank' => '',
+        ]);
+
+        $this->assertSame('', requestString('searchValue'), 'an array was never typed into a text box');
+        $this->assertSame('all', requestString('missing', 'all'), 'the default survives');
+        $this->assertSame('all', requestString('searchValue') ?: 'all');
+        $this->assertSame('paracetamol', requestString('typed'));
+        $this->assertSame('', requestString('blank'));
+    }
 }

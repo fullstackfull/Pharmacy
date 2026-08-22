@@ -22,12 +22,12 @@
                                         <i class="tio-search"></i>
                                     </div>
                                 </div>
-                                <input type="hidden" name="brand_id" value="{{ request('brand_id') }}">
-                                <input type="hidden" name="category_id" value="{{ request('category_id') }}">
-                                <input type="hidden" name="vendor_id" value="{{ request('vendor_id') }}">
+                                <input type="hidden" name="brand_id" value="{{ requestString('brand_id') }}">
+                                <input type="hidden" name="category_id" value="{{ requestString('category_id') }}">
+                                <input type="hidden" name="vendor_id" value="{{ requestString('vendor_id') }}">
                                 <input type="search" name="searchValue" class="form-control"
                                         placeholder="{{translate('search_by_product_name')}}"
-                                        aria-label="Search orders" value="{{ request('searchValue') }}">
+                                        aria-label="Search orders" value="{{ requestString('searchValue') }}">
                                 <button type="submit" class="btn btn--primary">{{translate('search')}}</button>
                             </div>
                         </form>
@@ -173,7 +173,7 @@
 
         </div>
     </div>
-    <span id="get-product-gallery-route" data-action="{{route('vendor.products.product-gallery')}}" data-brand-id="{{request('brand_id')}}" data-category-id="{{request('category_id')}}" data-vendor-id="{{request('vendor_id')}}">
+    <span id="get-product-gallery-route" data-action="{{route('vendor.products.product-gallery')}}" data-brand-id="{{ requestString('brand_id') }}" data-category-id="{{ requestString('category_id') }}" data-vendor-id="{{ requestString('vendor_id') }}">
 
     @include('vendor-views.product.partials.offcanvas._product-gallery-filter-offcanvas')
     @foreach ($products as $product)

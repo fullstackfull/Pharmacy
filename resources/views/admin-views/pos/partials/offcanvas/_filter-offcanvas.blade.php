@@ -8,7 +8,7 @@
             </button>
         </div>
         <div class="offcanvas-body">
-            <input type="hidden" name="product_type" value="{{ request('product_type') }}">
+            <input type="hidden" name="product_type" value="{{ requestString('product_type') }}">
             @include("admin-views.partials._product-filters-sections", [
                 'filterSection' => ['sorting', 'brand', 'category'],
                 'productBrands' => $productBrands,

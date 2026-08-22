@@ -149,7 +149,7 @@
                                 <div class="input-group">
                                     <input type="text" name="search" class="form-control"
                                         placeholder="{{ translate('Search_By_Amount') }}"
-                                           value="{{ request('search') }}">
+                                           value="{{ requestString('search') }}">
                                     <div class="input-group-append">
                                         <button type="submit" class="input-group-text bg-light">
                                             <i class="fi fi-rr-search"></i>

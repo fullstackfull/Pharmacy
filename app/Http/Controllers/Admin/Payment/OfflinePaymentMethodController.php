@@ -36,7 +36,7 @@ class OfflinePaymentMethodController extends BaseController
     {
         $methods = $this->offlinePaymentMethodRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['status' => $request['status']],
             dataLimit: 10,
         );

@@ -34,7 +34,7 @@ class ContactController extends BaseController
     {
         $contacts = $this->contactRepo->getListWhere(
             orderBy: ['id'=>'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             dataLimit: getWebConfig('pagination_limit')
         );
         return view('admin-views.contacts.list', compact('contacts'));
@@ -44,7 +44,7 @@ class ContactController extends BaseController
     {
         $contacts = $this->contactRepo->getListWhere(
             orderBy: ['id'=>'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['reply' => $request['status']],
             dataLimit: getWebConfig('pagination_limit')
         );

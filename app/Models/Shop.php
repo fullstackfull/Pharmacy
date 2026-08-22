@@ -145,9 +145,12 @@ class Shop extends Model
 
     public function scopeApplyNameFilter($query, $shopName)
     {
-        if (!$shopName) return $query;
+        // searchTerms(), not explode(): `?shop_name[]=x` is truthy and explode() rejects an array,
+        // which made the public store list a 500 for anyone who sent one.
+        $keywords = searchTerms($shopName);
 
-        $keywords = explode(' ', $shopName);
+        if ($keywords === []) return $query;
+
         return $query->where(function ($q) use ($keywords) {
             foreach ($keywords as $word) {
                 $q->orWhere('name', 'like', "%{$word}%");

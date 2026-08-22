@@ -22,7 +22,7 @@
                                 <form action="{{ url()->current() }}" method="GET">
                                     <div class="form-group mb-0">
                                         <div class="input-group">
-                                            <input type="search" value="{{ request('searchValue') }}" name="searchValue" class="form-control" placeholder="{{translate('search_ticket_by_subject_or_status').'...'}}">
+                                            <input type="search" value="{{ requestString('searchValue') }}" name="searchValue" class="form-control" placeholder="{{translate('search_ticket_by_subject_or_status').'...'}}">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">
                                                     <i class="fi fi-rr-search"></i>

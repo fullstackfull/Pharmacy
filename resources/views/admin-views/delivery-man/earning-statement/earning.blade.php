@@ -110,7 +110,7 @@
                                         <div class="input-group input-group-merge input-group-custom">
                                             <input id="datatableSearch_" type="search" name="searchValue"
                                                 class="form-control" placeholder="{{ translate('search_by_order_no') }}"
-                                                aria-label="Search orders" value="{{ request('searchValue') }}">
+                                                aria-label="Search orders" value="{{ requestString('searchValue') }}">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">
                                                     <i class="fi fi-rr-search"></i>

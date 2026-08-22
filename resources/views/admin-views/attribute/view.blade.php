@@ -79,7 +79,7 @@
 
             <div class="col-md-12">
                 <x-k.data-view :title="translate('Attribute_List')" :count="$attributes->total()"
-                               searchName="searchValue" :searchValue="request('searchValue')"
+                               searchName="searchValue" :searchValue="requestString('searchValue')"
                                :searchPlaceholder="translate('search_by_Attribute_Name')">
 
                     <table class="k-table">

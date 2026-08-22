@@ -118,7 +118,7 @@
                             <form action="" method="get" class="flex-grow-1 max-w-300 min-w-100-mobile">
                                 @csrf
                                 <div class="input-group">
-                                    <input type="search" name="searchValue" class="form-control" placeholder="{{ translate('Search_here') }}" value="{{ request('searchValue') }}">
+                                    <input type="search" name="searchValue" class="form-control" placeholder="{{ translate('Search_here') }}" value="{{ requestString('searchValue') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">
                                             <i class="fi fi-rr-search"></i>

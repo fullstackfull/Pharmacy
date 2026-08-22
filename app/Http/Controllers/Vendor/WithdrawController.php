@@ -62,7 +62,7 @@ class WithdrawController extends BaseController
 
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['search'] ?? null,
+            searchValue: requestString('search') ?: null ?? null,
             filters: array_merge(['vendorId' => $vendorId], $filters ?? []),
             relations: ['seller'],
             dataLimit: getWebConfig('pagination_limit')
@@ -206,7 +206,7 @@ class WithdrawController extends BaseController
         $vendor = $this->vendorRepo->getFirstWhere(params: ['id' => $vendorId]);
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'vendorId' => $vendorId,
                 'status' => $request['status']

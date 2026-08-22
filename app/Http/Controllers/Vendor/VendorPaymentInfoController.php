@@ -29,7 +29,7 @@ class VendorPaymentInfoController extends Controller
         $withdrawalMethods = $this->withdrawalMethodRepo->getListWhere(filters: ['is_active' => 1], dataLimit: 10);
         $vendorWithdrawMethods = $this->vendorWithdrawMethodInfoRepo->getListWhere(
             orderBy: ['created_at' => 'desc'],
-            searchValue: $request['search'],
+            searchValue: requestString('search') ?: null,
             filters: ['user_id' => auth('seller')->id()],
             relations: ['withdraw_method'],
             dataLimit: 10

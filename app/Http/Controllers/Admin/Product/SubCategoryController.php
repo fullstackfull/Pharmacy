@@ -58,7 +58,7 @@ class SubCategoryController extends BaseController
 
         $categories = $this->categoryRepo->getListWhereIn(
             orderBy: $orderBy,
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 1],
             whereIn: ['parent_id' => $parentCategoryIDs],
             relations: ['parent'],
@@ -66,7 +66,7 @@ class SubCategoryController extends BaseController
 
         $categoriesWithTrans = $this->categoryRepo->getListWhereIn(
             orderBy: $orderBy,
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 1],
             whereIn: ['parent_id' => $parentCategoryIDs],
             relations: ['translations', 'seo'],
@@ -140,7 +140,7 @@ class SubCategoryController extends BaseController
 
         $subCategories = $this->categoryRepo->getListWhereIn(
             orderBy: $orderBy,
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 1],
             whereIn: ['parent_id' => $parentCategoryIDs],
             dataLimit: 'all');

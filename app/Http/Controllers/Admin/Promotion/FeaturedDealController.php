@@ -29,7 +29,7 @@ class FeaturedDealController extends BaseController
     {
         $flashDeals = $this->flashDealRepo->getListWithRelations(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['deal_type' => 'feature_deal'],
             withCount: ['products' => 'products'],
             dataLimit: getWebConfig('pagination_limit')

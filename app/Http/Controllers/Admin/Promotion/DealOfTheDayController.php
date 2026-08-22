@@ -39,7 +39,7 @@ class DealOfTheDayController extends BaseController
 
         $deals = $this->dealOfTheDayRepo->getListWhere(
             orderBy: ['id'=>'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             dataLimit: getWebConfig('pagination_limit')
         );
         return view('admin-views.deal.day-index', compact('deals', 'products'));

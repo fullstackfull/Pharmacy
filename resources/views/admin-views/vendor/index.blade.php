@@ -29,7 +29,7 @@
         </x-k.page-header>
 
         <x-k.data-view :title="translate('vendor_List')" :count="$vendors->total()" :selectable="true"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_shop_name_or_vendor_name_or_phone_or_email')">
 
             {{-- Sorting was a dropdown whose current choice was only visible as a red dot.

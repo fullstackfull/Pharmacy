@@ -139,7 +139,7 @@
         <div class="row mt-20">
             <div class="col-md-12">
                 <x-k.data-view :title="translate('coupon_list')" :count="$coupons->total()"
-                               searchName="searchValue" :searchValue="request('searchValue')"
+                               searchName="searchValue" :searchValue="requestString('searchValue')"
                                :searchPlaceholder="translate('search_by_Title_or_Code_or_Discount_Type')">
 
                     <x-slot:actions>

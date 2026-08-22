@@ -49,7 +49,7 @@ class FlashDealController extends BaseController
     {
         $flashDeals = $this->flashDealRepo->getListWithRelations(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['deal_type' => 'flash_deal'],
             withCount: ['products' => 'products'],
             dataLimit: getWebConfig('pagination_limit')
@@ -171,7 +171,7 @@ class FlashDealController extends BaseController
     {
         $products = $this->productRepo->getListWithScope(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             scope: "active",
             relations: ['brand', 'category', 'seller.shop'],
             dataLimit: 'all');

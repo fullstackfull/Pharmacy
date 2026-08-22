@@ -40,7 +40,7 @@ class CustomRoleController extends BaseController
         $employeeRolePermission = GlobalConstant::EMPLOYEE_ROLE_MODULE_PERMISSION;
         $roles = $this->adminRoleRepo->getEmployeeRoleList(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_role_id' => $request['role']],
             dataLimit: 'all'
         );
@@ -93,7 +93,7 @@ class CustomRoleController extends BaseController
     {
         $roles = $this->adminRoleRepo->getEmployeeRoleList(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_role_id' => $request['role']],
             dataLimit: 'all');
 

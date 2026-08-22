@@ -22,7 +22,7 @@
                                    name="from_date"
                                    id="start-date-time"
                                    class="form-control"
-                                   value="{{ request('from_date') }}"
+                                   value="{{ requestString('from_date') }}"
                                    title="{{ translate('from_date') }}">
                         </div>
 
@@ -32,7 +32,7 @@
                                    name="to_date"
                                    id="end-date-time"
                                    class="form-control"
-                                   value="{{ request('to_date') }}"
+                                   value="{{ requestString('to_date') }}"
                                    title="{{ translate('to_date') }}">
                         </div>
                     </div>

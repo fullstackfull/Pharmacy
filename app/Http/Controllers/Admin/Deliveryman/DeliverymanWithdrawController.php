@@ -41,7 +41,7 @@ class DeliverymanWithdrawController extends Controller
     {
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_id' => 0, 'whereNotNull' => 'delivery_man_id', 'status' => $request['status']],
             relations: ['deliveryMan'],
             dataLimit: getWebConfig('pagination_limit')
@@ -53,7 +53,7 @@ class DeliverymanWithdrawController extends Controller
     {
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_id' => 0, 'whereNotNull' => 'delivery_man_id', 'status' => $request['status']],
             relations: ['deliveryMan'],
             dataLimit: getWebConfig('pagination_limit')
@@ -106,7 +106,7 @@ class DeliverymanWithdrawController extends Controller
     {
         $withdrawRequests = $this->withdrawRequestRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_id' => 0, 'whereNotNull' => 'delivery_man_id', 'status' => $request['status']],
             relations: ['deliveryMan'],
             dataLimit: 'all'

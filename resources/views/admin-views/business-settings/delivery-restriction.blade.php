@@ -90,7 +90,7 @@
                                             <form action="{{ route('admin.business-settings.delivery-zone.index') }}" method="get" class="flex-grow-1 max-w-300 min-w-100-mobile">
                                                 @csrf
                                                 <div class="input-group">
-                                                    <input type="search" class="form-control" placeholder="{{ translate('Search_Country') }}" name="search_country" value="{{ request('search_country') }}">
+                                                    <input type="search" class="form-control" placeholder="{{ translate('Search_Country') }}" name="search_country" value="{{ requestString('search_country') }}">
                                                     <div class="input-group-append search-submit">
                                                         <button type="submit">
                                                             <i class="fi fi-rr-search"></i>
@@ -259,7 +259,7 @@
                                             <form action="{{ route('admin.business-settings.delivery-zone.index') }}" method="get" class="flex-grow-1 max-w-300 min-w-100-mobile">
                                                 @csrf
                                                 <div class="input-group">
-                                                    <input type="search" class="form-control" placeholder="{{ translate('Search_ZIP_Code') }}" name="search_zip_code" value="{{ request('search_zip_code') }}">
+                                                    <input type="search" class="form-control" placeholder="{{ translate('Search_ZIP_Code') }}" name="search_zip_code" value="{{ requestString('search_zip_code') }}">
                                                     <div class="input-group-append search-submit">
                                                         <button type="submit">
                                                             <i class="fi fi-rr-search"></i>

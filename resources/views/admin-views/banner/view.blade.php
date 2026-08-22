@@ -242,7 +242,7 @@
         <div class="row" id="banner-table">
             <div class="col-md-12">
                 <x-k.data-view :title="translate('banner_table')" :count="$banners->total()"
-                               searchName="searchValue" :searchValue="request('searchValue')"
+                               searchName="searchValue" :searchValue="requestString('searchValue')"
                                :searchPlaceholder="translate('search_by_banner_type')">
 
                     <x-slot:actions>

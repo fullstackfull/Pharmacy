@@ -188,7 +188,10 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
         Route::post('checkout-complete-wallet', 'checkout_complete_wallet')->name('checkout-complete-wallet');
 
         Route::post('subscription', 'subscription')->name('subscription');
-        Route::get('search-shop', 'search_shop')->name('search-shop');
+        // The all-vendors action, which already filters on shop_name. It used to point at a
+        // search_shop() that handed the store list a `$sellers` variable the view stopped reading —
+        // so this URL was a 500 for every visitor and every input, not only a malformed one.
+        Route::get('search-shop', 'getAllVendorsView')->name('search-shop');
 
         Route::get('categories', 'getAllCategoriesView')->name('categories');
         Route::get('category-ajax/{id}', 'categories_by_category')->name('category-ajax');

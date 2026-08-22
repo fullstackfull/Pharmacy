@@ -47,7 +47,7 @@ class ThemeManagementController extends BaseController
 
         $themes = $this->themeRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request?->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             relations: $relations,
             dataLimit: 20,
         );

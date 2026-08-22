@@ -21,7 +21,7 @@
                             <label class="form-label">{{ translate('Subscription_Date') }}</label>
                             <div class="position-relative">
                             <span class="fi fi-sr-calendar icon-absolute-on-right"></span>
-                                <input type="text" name="subscription_date" value="{{ request('subscription_date', '') }}" class="js-daterangepicker-with-range form-control cursor-pointer" value="{{request('subscription_date')}}" placeholder="{{ translate('Select_Date') }}" autocomplete="off" readonly>
+                                <input type="text" name="subscription_date" value="{{ requestString('subscription_date', '') }}" class="js-daterangepicker-with-range form-control cursor-pointer" value="{{ requestString('subscription_date') }}" placeholder="{{ translate('Select_Date') }}" autocomplete="off" readonly>
                             </div>
                         </div>
                     </div>
@@ -38,7 +38,7 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="form-label">{{translate('Choose_First')}}</label>
-                            <input type="number" name="choose_first" min="1" value="{{ request('choose_first') }}" class="form-control" placeholder="{{translate('Ex')}} : {{translate('100')}}">
+                            <input type="number" name="choose_first" min="1" value="{{ requestString('choose_first') }}" class="form-control" placeholder="{{translate('Ex')}} : {{translate('100')}}">
                         </div>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
     <div class="row">
         <div class="col-md-12">
             <x-k.data-view :title="translate('subscriber_list')" :count="$subscriberList->total()"
-                           searchName="searchValue" :searchValue="request('searchValue')"
+                           searchName="searchValue" :searchValue="requestString('searchValue')"
                            :searchPlaceholder="translate('search_by_email')">
 
                 <x-slot:actions>

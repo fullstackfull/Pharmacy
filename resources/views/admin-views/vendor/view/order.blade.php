@@ -223,13 +223,13 @@ use Illuminate\Support\Facades\Session;
                         <form action="{{ url()->current() }}" method="GET" class="min-w-100-mobile min-w-280">
                             <div class="form-group">
                                 <div class="input-group">
-                                    <input type="hidden" name="order_date" value="{{request('order_date')}}">
-                                    <input type="hidden" name="customer_joining_date" value="{{request('customer_joining_date')}}">
-                                    <input type="hidden" name="is_active" value="{{request('is_active')}}">
-                                    <input type="hidden" name="sort_by" value="{{request('sort_by')}}">
-                                    <input type="hidden" name="choose_first" value="{{request('choose_first')}}">
+                                    <input type="hidden" name="order_date" value="{{ requestString('order_date') }}">
+                                    <input type="hidden" name="customer_joining_date" value="{{ requestString('customer_joining_date') }}">
+                                    <input type="hidden" name="is_active" value="{{ requestString('is_active') }}">
+                                    <input type="hidden" name="sort_by" value="{{ requestString('sort_by') }}">
+                                    <input type="hidden" name="choose_first" value="{{ requestString('choose_first') }}">
                                     <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                           placeholder="{{ translate('search_by_Customer_name')}}"  aria-label="Search orders" value="{{ request('searchValue') }}">
+                                           placeholder="{{ translate('search_by_Customer_name')}}"  aria-label="Search orders" value="{{ requestString('searchValue') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">
                                             <i class="fi fi-rr-search"></i>

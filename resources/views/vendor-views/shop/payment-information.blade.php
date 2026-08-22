@@ -42,7 +42,7 @@
                             <form action="{{ url('vendor/shop/payment-information') }}" method="GET">
                                 @csrf
                                 <div class="input-group">
-                                    <input type="search" name="search" value="{{ request('search') }}"
+                                    <input type="search" name="search" value="{{ requestString('search') }}"
                                         class="form-control" placeholder="Search By Method Name">
                                     <div class="input-group-append">
                                         <button type="submit" class="input-group-text bg-light">

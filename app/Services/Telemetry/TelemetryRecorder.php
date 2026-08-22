@@ -171,9 +171,13 @@ class TelemetryRecorder
             'user_id' => $userId,
             'entry_path' => Str::limit(trim($request->path(), '/') ?: '/', 191, ''),
             'referrer_domain' => $this->referrerDomain($request),
-            'utm_source' => Str::limit((string) $request->query('utm_source'), 96, '') ?: null,
-            'utm_medium' => Str::limit((string) $request->query('utm_medium'), 96, '') ?: null,
-            'utm_campaign' => Str::limit((string) $request->query('utm_campaign'), 96, '') ?: null,
+            // Guarded, though nothing here 500s: the whole recorder sits inside a catch, so
+            // `?utm_source[]=x` on any storefront URL threw and was swallowed — and the visit
+            // SESSION was silently never written. A campaign parameter nobody can spell should cost
+            // the attribution, not the visit.
+            'utm_source' => $this->campaignTag($request, 'utm_source'),
+            'utm_medium' => $this->campaignTag($request, 'utm_medium'),
+            'utm_campaign' => $this->campaignTag($request, 'utm_campaign'),
             'device' => $this->device($request),
             'ip_hash' => $this->identity->networkHash($request),
             'pageviews' => 1,
@@ -215,5 +219,12 @@ class TelemetryRecorder
             return 'mobile';
         }
         return 'desktop';
+    }
+    /** One UTM parameter, or null when the visitor's URL did not carry a readable one. */
+    private function campaignTag(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? (Str::limit($value, 96, '') ?: null) : null;
     }
 }

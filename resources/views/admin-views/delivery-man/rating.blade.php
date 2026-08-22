@@ -106,7 +106,7 @@
                             <div class="input-group">
                                 <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
                                     placeholder="{{ translate('search_by_Order_ID') }}" aria-label="Search orders"
-                                    value="{{ request('searchValue') }}" required>
+                                    value="{{ requestString('searchValue') }}" required>
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>
@@ -123,7 +123,7 @@
                         <div class="col-xl-3 col-sm-6">
                             <div>
                                 <label for="from" class="form-label">{{ translate('from') }}</label>
-                                <input type="date" name="from_date" id="from_date" value="{{ request('from_date') }}"
+                                <input type="date" name="from_date" id="from_date" value="{{ requestString('from_date') }}"
                                     class="form-control" title="{{ translate('from_date') }}">
                             </div>
                         </div>
@@ -131,7 +131,7 @@
                         <div class="col-xl-3 col-sm-6">
                             <div>
                                 <label for="to_date" class="form-label">{{ translate('to') }}</label>
-                                <input type="date" name="to_date" id="to_date" value="{{ request('to_date') }}"
+                                <input type="date" name="to_date" id="to_date" value="{{ requestString('to_date') }}"
                                     class="form-control" title="{{ ucfirst(translate('to_date')) }}">
                             </div>
                         </div>

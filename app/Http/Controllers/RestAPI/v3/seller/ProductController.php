@@ -2070,7 +2070,7 @@ class ProductController extends Controller
 
         $restockProducts = $this->restockProductRepo->getListWhereBetween(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request['search'],
+            searchValue: requestString('search') ?: null,
             filters: $filters,
             relations: ['product'],
             whereBetween: 'created_at',

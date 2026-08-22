@@ -81,7 +81,7 @@ class CustomerController extends BaseController
             'sort_by' => $request['sort_by'] ?? null,
             'avoid_walking_customer' => 1,
         ];
-        $takeItem = $request->get('choose_first');
+        $takeItem = $this->scalarOrNull($request->get('choose_first'));
 
         if (!empty($request['order_date']) && !$this->getDateRangeInMDY(request: $request, key: 'order_date')) {
             ToastMagic::error(translate('Invalid_date_range_format'));
@@ -101,7 +101,7 @@ class CustomerController extends BaseController
         }
 
         $customers = $this->customerRepo->getListWhereBetween(
-            searchValue: $request['searchValue'],
+            searchValue: $this->searchValue($request),
             filters: $filters,
             relations: ['orders'],
             whereBetween: 'created_at',
@@ -214,7 +214,7 @@ class CustomerController extends BaseController
     {
         $customer = $this->customerRepo->getFirstWhere(params: ['id' => $id], relations: ['addresses']);
         if (isset($customer)) {
-            $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request['searchValue'], filters: ['customer_id' => $id, 'is_guest' => '0'], dataLimit: 'all');
+            $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $this->searchValue($request), filters: ['customer_id' => $id, 'is_guest' => '0'], dataLimit: 'all');
             $orderStatusArray = [
                 'total_order' => 0,
                 'ongoing' => 0,
@@ -244,7 +244,7 @@ class CustomerController extends BaseController
 
             $orders = $this->orderRepo->getListWhereIn(
                 orderBy: ['id' => 'desc'],
-                searchValue: $request['searchValue'],
+                searchValue: $this->searchValue($request),
                 filters: ['customer_id' => $id, 'is_guest' => '0',  'from' => $request['from'], 'to' => $request['to'],'date_type' => $dateType],
                 whereIn: $filterWhereIn,
                 relations: ['details', 'customer', 'seller.shop'],
@@ -258,7 +258,7 @@ class CustomerController extends BaseController
     public function exportOrderList(Request $request, $id): BinaryFileResponse
     {
         $customer = $this->customerRepo->getFirstWhere(params: ['id' => $id]);
-        $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request['searchValue'], filters: ['customer_id' => $id, 'is_guest' => '0'], dataLimit: 'all');
+        $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $this->searchValue($request), filters: ['customer_id' => $id, 'is_guest' => '0'], dataLimit: 'all');
         $data = [
             'customer' => $customer,
             'searchValue' => $request->get('searchValue'),
@@ -334,7 +334,7 @@ class CustomerController extends BaseController
     public function getSubscriberListView(Request $request): View|RedirectResponse
     {
         $orderBy = $request['sort_by'] ?? 'desc';
-        $takeItem = $request->get('choose_first');
+        $takeItem = $this->scalarOrNull($request->get('choose_first'));
         $startDate = '';
         $endDate = '';
         if (!empty($request['subscription_date'])) {
@@ -348,7 +348,7 @@ class CustomerController extends BaseController
         }
         $subscriberList = $this->subscriptionRepo->getListWhereBetween(
             orderBy: ['created_at' => $orderBy],
-            searchValue: $request['searchValue'],
+            searchValue: $this->searchValue($request),
             whereBetween: 'created_at',
             whereBetweenFilters: $startDate && $endDate ? [$startDate, $endDate] : [],
             takeItem: $takeItem,
@@ -371,7 +371,7 @@ class CustomerController extends BaseController
             'sort_by' => $request['sort_by'] ?? null,
             'avoid_walking_customer' => 1,
         ];
-        $takeItem = $request->get('choose_first');
+        $takeItem = $this->scalarOrNull($request->get('choose_first'));
 
         $orderStartDate = '';
         $orderEndDate = '';
@@ -388,7 +388,7 @@ class CustomerController extends BaseController
         }
 
         $customers = $this->customerRepo->getListWhereBetween(
-            searchValue: $request['searchValue'],
+            searchValue: $this->searchValue($request),
             filters: $filters,
             relations: ['orders'],
             whereBetween: 'created_at',
@@ -417,7 +417,7 @@ class CustomerController extends BaseController
     public function exportSubscribersList(Request $request): BinaryFileResponse
     {
         $orderBy = $request->get('sort_by', 'desc');
-        $takeItem = $request->get('choose_first');
+        $takeItem = $this->scalarOrNull($request->get('choose_first'));
         $startDate = '';
         $endDate = '';
         $dates = $this->getDateRangeInMDY(request: $request, key: 'subscription_date');
@@ -427,7 +427,7 @@ class CustomerController extends BaseController
         }
         $subscriptionList = $this->subscriptionRepo->getListWhereBetween(
             orderBy: ['created_at' => $orderBy],
-            searchValue: $request['searchValue'],
+            searchValue: $this->searchValue($request),
             whereBetween: 'created_at',
             whereBetweenFilters: $startDate && $endDate ? [$startDate, $endDate] : [],
             takeItem: $takeItem,
@@ -551,5 +551,23 @@ class CustomerController extends BaseController
         $this->customerRepo->updateWhere(['id' => $request['id']], data: $customerService->getCustomerProfileUpdateData(request: $request, customer: $customer));
         ToastMagic::success(translate('Update_successfully'));
         return redirect()->back();
+    }
+    /**
+     * A search box's value, or null when the caller sent something that is not one.
+     *
+     * These reach TYPED repository parameters (`?string $searchValue`, `string|int|null $takeItem`),
+     * so `?searchValue[]=x` is an uncatchable TypeError rather than the warning the casts elsewhere
+     * in this file produce — the same 500, arriving through a different door. A search nobody can
+     * spell is simply not applied.
+     */
+    private function searchValue(Request $request): ?string
+    {
+        return is_string($request['searchValue']) ? $request['searchValue'] : null;
+    }
+
+    /** The "first N" limiter, which the repositories accept as a string or an int and nothing else. */
+    private function scalarOrNull(mixed $value): string|int|null
+    {
+        return is_string($value) || is_int($value) ? $value : null;
     }
 }

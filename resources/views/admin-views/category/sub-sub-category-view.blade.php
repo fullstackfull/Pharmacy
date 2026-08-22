@@ -25,7 +25,7 @@
                                     <div class="input-group min-w-300">
                                         <input id="" type="search" name="searchValue" class="form-control pe-2"
                                                placeholder="{{ translate('search_by_sub_sub_category_name') }}"
-                                               value="{{ request('searchValue') }}">
+                                               value="{{ requestString('searchValue') }}">
                                         <div class="input-group-append search-submit">
                                             <button type="submit">
                                                 <i class="fi fi-rr-search"></i>

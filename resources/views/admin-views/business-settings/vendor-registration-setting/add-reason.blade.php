@@ -81,7 +81,7 @@
                                 <div class="input-group">
                                     <input type="search" name="searchValue" class="form-control"
                                            placeholder="{{ translate('Search_by_title') }}"
-                                           value="{{ request('searchValue') }}">
+                                           value="{{ requestString('searchValue') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">
                                             <i class="fi fi-rr-search"></i>

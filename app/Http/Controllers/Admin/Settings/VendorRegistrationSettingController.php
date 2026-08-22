@@ -38,7 +38,7 @@ class VendorRegistrationSettingController extends BaseController
 
     public function getSellWithUsView(Request $request): View
     {
-        $vendorRegistrationReasons = $this->vendorRegistrationReasonRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request->searchValue, dataLimit: 10);
+        $vendorRegistrationReasons = $this->vendorRegistrationReasonRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: requestString('searchValue') ?: null, dataLimit: 10);
         $sellWithUs = json_decode($this->businessSettingRepo->getFirstWhere(params: ['type' => 'vendor_registration_sell_with_us'])['value']);
         return view('admin-views.business-settings.vendor-registration-setting.with-us', compact('sellWithUs', 'vendorRegistrationReasons'));
     }
@@ -60,7 +60,7 @@ class VendorRegistrationSettingController extends BaseController
     {
         $helps = $this->helpTopicRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['type' => 'vendor_registration'],
             dataLimit: 10);
         return view('admin-views.business-settings.vendor-registration-setting.faq', compact('helps'));

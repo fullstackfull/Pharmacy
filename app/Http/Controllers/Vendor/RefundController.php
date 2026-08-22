@@ -198,7 +198,7 @@ class RefundController extends BaseController
         ];
         $refundList = $this->refundRequestRepo->getListWhereHas(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['search'],
+            searchValue: requestString('search') ?: null,
             filters: $filter,
             whereHas: 'order',
             whereHasFilters: ['seller_is' => 'seller', 'seller_id' => $vendorId],

@@ -148,7 +148,7 @@
             </div>
         </div>
         <x-k.data-view :title="translate('transaction_table')" :count="$transactions->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_orders_id_or_transaction_id')">
 
             <table class="k-table">
