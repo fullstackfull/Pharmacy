@@ -167,7 +167,9 @@ class VendorController extends BaseController
     public function bulkUpdateStatus(Request $request): JsonResponse
     {
         $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
-        $status = (string) $request->input('status', '');
+        // Not cast: `status[]=x` would raise the warning this application turns into a throw,
+        // so the allow-list below — which is the real check — would never run.
+        $status = is_string($request->input('status')) ? $request->input('status') : '';
 
         if (empty($ids)) {
             return response()->json(['status' => 0, 'message' => translate('select_at_least_one_vendor')], 422);

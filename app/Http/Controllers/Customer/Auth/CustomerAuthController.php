@@ -343,7 +343,7 @@ class CustomerAuthController extends Controller
 
     public function loginVerifyPhone(Request $request): View|JsonResponse
     {
-        $token = $this->phoneOrEmailVerificationRepo->getFirstWhere(params: ['phone_or_email' => base64_decode($request['identity'])]);
+        $token = $this->phoneOrEmailVerificationRepo->getFirstWhere(params: ['phone_or_email' => $this->identityFrom($request)]);
         $otpResendTime = getWebConfig(name: 'otp_resend_time') > 0 ? getWebConfig(name: 'otp_resend_time') : 0;
         if ($token) {
             $token_time = Carbon::parse($token['created_at']);
@@ -394,7 +394,7 @@ class CustomerAuthController extends Controller
         $authAttemptRedirectUrl = $this->customerAuthService->getCustomerAuthReturnURL();
 
         $firebaseOTPVerification = getWebConfig(name: 'firebase_otp_verification') ?? [];
-        $identity = base64_decode($request['identity']);
+        $identity = $this->identityFrom($request);
         $maxOTPHit = getWebConfig(name: 'maximum_otp_hit') ?? 5;
         $maxOTPHitTime = getWebConfig(name: 'otp_resend_time') ?? 60; // seconds
         $tempBlockTime = getWebConfig(name: 'temporary_block_time') ?? 600; // seconds
@@ -513,7 +513,7 @@ class CustomerAuthController extends Controller
 
     public function updateInfo(Request $request): View|RedirectResponse
     {
-        $user = $this->customerRepo->getFirstWhere(params: ['phone' => base64_decode($request['identity'])]);
+        $user = $this->customerRepo->getFirstWhere(params: ['phone' => $this->identityFrom($request)]);
         return view(VIEW_FILE_NAMES['customer_auth_verify_otp_update_info'], [
             'user' => $user,
             'tempUser' => session('tempCustomerInfo'),
@@ -543,9 +543,12 @@ class CustomerAuthController extends Controller
         }
         $authAttemptRedirectUrl = $this->customerAuthService->getCustomerAuthReturnURL();
 
-        $user = $this->customerRepo->getFirstWhere(params: ['phone' => base64_decode($request['identity'])]);
+        $user = $this->customerRepo->getFirstWhere(params: ['phone' => $this->identityFrom($request)]);
         if ($user || session()->has('tempCustomerInfo')) {
-            $nameParts = explode(' ', trim($request['name']), 2);
+            // trim() and explode() both reject an array, and this is a public registration flow —
+            // a name that is not a string is a name that was not given.
+            $name = is_string($request['name']) ? trim($request['name']) : '';
+            $nameParts = explode(' ', $name, 2);
 
             $data = [
                 'name' => $request['name'],
@@ -558,7 +561,7 @@ class CustomerAuthController extends Controller
             if (session()->has('tempCustomerInfo')) {
                 $data = array_merge($data, session('tempCustomerInfo'));
             }
-            $this->customerRepo->updateOrCreate(params: ['phone' => base64_decode($request['identity'])], data: $data);
+            $this->customerRepo->updateOrCreate(params: ['phone' => $this->identityFrom($request)], data: $data);
             if (!empty($request['email'])) {
                 $user = $this->customerRepo->getFirstWhere(params: ['email' => $request['email']]);
             } else {
@@ -577,7 +580,7 @@ class CustomerAuthController extends Controller
 
     public function resendOTPCode(Request $request): JsonResponse|RedirectResponse
     {
-        $user = $this->customerRepo->getFirstWhere(params: ['phone' => base64_decode($request['identity'])]);
+        $user = $this->customerRepo->getFirstWhere(params: ['phone' => $this->identityFrom($request)]);
         if (!$user) {
             Toastr::error(translate('User_not_found'));
             return back();
@@ -711,5 +714,19 @@ class CustomerAuthController extends Controller
             ]);
             return redirect()->route('customer.auth.login.update-info', ['identity' => base64_encode($responseData['phoneNumber'])]);
         }
+    }
+    /**
+     * The phone or email this request is about, decoded.
+     *
+     * Six methods on this controller carry the identity through the OTP flow as base64 in the
+     * request, and every one of them decoded it inline. base64_decode's parameter is typed, so
+     * `?identity[]=x` was a 500 on a PUBLIC registration and password-reset path — six times over,
+     * which is exactly why it is read in one place now.
+     *
+     * An identity that is not a string decodes to nothing, and nothing matches no account.
+     */
+    private function identityFrom(Request $request): string
+    {
+        return is_string($request['identity']) ? base64_decode($request['identity']) : '';
     }
 }

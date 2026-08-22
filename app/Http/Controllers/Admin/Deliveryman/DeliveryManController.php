@@ -185,8 +185,9 @@ class DeliveryManController extends Controller
             searchValue: $request['searchValue'],
             filters: ['delivery_man_id' => $id,
                 'whereHas_deliveryMan' => 0,
-                'whereIn_order_status' => $request['order_status'] ? explode(',', $request['order_status']) : 'all',
-                'whereIn_payment_status' => $request['payment_status'] ? explode(',', $request['payment_status']) : 'all'
+                // is_string, not truthiness: `?order_status[]=x` is truthy and explode() rejects it.
+                'whereIn_order_status' => is_string($request['order_status']) && $request['order_status'] !== '' ? explode(',', $request['order_status']) : 'all',
+                'whereIn_payment_status' => is_string($request['payment_status']) && $request['payment_status'] !== '' ? explode(',', $request['payment_status']) : 'all'
             ],
             dataLimit: 'all',
         );

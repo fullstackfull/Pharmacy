@@ -90,7 +90,7 @@ class SellerController extends Controller
         $product_ids = Product::where(['user_id' => $seller['id'], 'added_by' => 'seller'])->pluck('id')->toArray();
 
         if ($request->has('search')) {
-            $key = explode(' ', $request['search']);
+            $key = searchTerms($request['search']);
             $product_id = Product::where('added_by', 'seller')->where('user_id', $seller->id)->where(function ($q) use ($key) {
                 foreach ($key as $value) {
                     $q->where('name', 'like', "%{$value}%");

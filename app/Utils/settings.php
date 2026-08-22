@@ -269,6 +269,32 @@ if (!function_exists('getFCMTopicListToSubscribe')) {
     }
 }
 
+if (!function_exists('searchTerms')) {
+    /**
+     * The words a search box was filled with, or none at all.
+     *
+     * Every seller-API listing splits its search on spaces and ANDs the parts together, and each one
+     * did it straight off the request: `explode(' ', $request['search'])`. A caller sending
+     * `?search[]=x` — which any client can — handed explode() an array, and explode's $string
+     * parameter is typed, so the vendor app's product, refund, coupon and seller listings answered a
+     * malformed search with a 500 instead of a result set.
+     *
+     * A search nobody can spell is simply not applied: the caller gets the unfiltered list, which is
+     * what an empty search box already returns. Blank words are dropped too, so "  paracetamol  "
+     * does not become three conditions, one of which matches everything.
+     *
+     * @return array<int, string>
+     */
+    function searchTerms(mixed $value): array
+    {
+        if (!is_string($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(explode(' ', trim($value)), 'strlen'));
+    }
+}
+
 if (!function_exists('checkDateFormatInMDY')) {
     function checkDateFormatInMDY($date): bool
     {

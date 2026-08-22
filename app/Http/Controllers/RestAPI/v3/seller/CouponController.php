@@ -20,7 +20,7 @@ class CouponController extends Controller
         $seller = $request->seller;
         $coupons = Coupon::whereIn('seller_id', [$seller->id, '0'])
             ->when(isset($request['search']) && !empty($request['search']), function ($query) use ($request) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 foreach ($key as $value) {
                     $query->where('title', 'like', "%{$value}%")
                         ->orWhere('code', 'like', "%{$value}%")

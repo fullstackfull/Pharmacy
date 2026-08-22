@@ -220,7 +220,7 @@ class ProductController extends Controller
             ->withCount('reviews')
             ->where(['user_id' => $seller_id, 'added_by' => 'seller'])
             ->when($request['search'], function ($query) use ($request) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 foreach ($key as $value) {
                     $query->where('name', 'like', "%{$value}%");
                 }
@@ -473,7 +473,7 @@ class ProductController extends Controller
             ->withCount('reviews')
             ->where(['user_id' => $seller_id, 'added_by' => 'seller'])
             ->when($request['search'], function ($query) use ($request) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 foreach ($key as $value) {
                     $query->where('name', 'like', "%{$value}%");
                 }
@@ -1906,7 +1906,7 @@ class ProductController extends Controller
             })
             ->where(['seller_id' => $seller['id']])
             ->when(!empty($request['search']), function ($query) use ($request) {
-                $key = explode(' ', $request['search']);
+                $key = searchTerms($request['search']);
                 foreach ($key as $value) {
                     $query->where('f_name', 'like', "%{$value}%")
                         ->orWhere('l_name', 'like', "%{$value}%");
