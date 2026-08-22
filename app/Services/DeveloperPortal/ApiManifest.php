@@ -168,7 +168,9 @@ class ApiManifest
         return [
             'fingerprint' => $fingerprint,
             'generated_at' => now()->toIso8601String(),
-            'app_version' => function_exists('getAppVersion') ? getAppVersion() : null,
+            // getAppVersion() returns the whole version.json record; the portal wants the number.
+            'app_version' => $this->appVersion(),
+            'release' => function_exists('getAppVersion') ? getAppVersion() : null,
             'base_url' => rtrim((string) config('app.url'), '/'),
             'endpoints' => $endpoints,
             'summary' => $this->summarise($endpoints),
@@ -383,6 +385,17 @@ class ApiManifest
     private function id(array $methods, string $uri): string
     {
         return substr(sha1(implode(',', $methods) . ' ' . $uri), 0, 16);
+    }
+
+    private function appVersion(): ?string
+    {
+        if (!function_exists('getAppVersion')) {
+            return null;
+        }
+
+        $release = getAppVersion();
+
+        return is_array($release) ? (string) ($release['version'] ?? '') : (string) $release;
     }
 
     /**

@@ -1247,4 +1247,6 @@ return [
 	'the_driver_table_is_read_from_the_live_configuration' => 'The driver table is read from the live configuration',
 	'The_scheduler_last_reported_a_run_25_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 25 minutes ago  the server cron appears to have stopped.',
 	'the_charts_are_read_from_the_stored_series_in' => 'The charts are read from the stored series in',
+	'The_scheduler_last_reported_a_run_31_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 31 minutes ago  the server cron appears to have stopped.',
+	'written_by_the_worker_process_itself_as_each_job_finishes' => 'Written by the worker process itself as each job finishes',
 ];

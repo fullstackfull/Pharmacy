@@ -37,14 +37,19 @@
         if ($seconds < 60) {
             return $seconds . ' s';
         }
+        // The smaller unit is only shown when it carries something: "5 m" reads as a duration,
+        // "5 m 0 s" reads as a machine that has not been told to stop talking.
+        $parts = static fn (int $whole, int $rest, string $big, string $small) => $whole . ' ' . $big
+            . ($rest > 0 ? ' ' . $rest . ' ' . $small : '');
+
         if ($seconds < 3600) {
-            return intdiv($seconds, 60) . ' m ' . ($seconds % 60) . ' s';
+            return $parts(intdiv($seconds, 60), $seconds % 60, 'm', 's');
         }
         if ($seconds < 86400) {
-            return intdiv($seconds, 3600) . ' h ' . intdiv($seconds % 3600, 60) . ' m';
+            return $parts(intdiv($seconds, 3600), intdiv($seconds % 3600, 60), 'h', 'm');
         }
 
-        return intdiv($seconds, 86400) . ' d ' . intdiv($seconds % 86400, 3600) . ' h';
+        return $parts(intdiv($seconds, 86400), intdiv($seconds % 86400, 3600), 'd', 'h');
     };
 
     $stateTitle = static fn (string $state) => match ($state) {
@@ -115,7 +120,8 @@
     <p class="mon-note">
         {{ translate('connection') }}: <code>{{ $panel['backend']['connection'] ?? '—' }}</code>,
         {{ translate('driver') }}: <code>{{ $panel['backend']['driver'] ?? '—' }}</code>.
-        {{ translate('depth_and_lag_are_read_from_the_backend_throughput_and_runtime_from_what_the_workers_recorded') }}
+        {{ translate('depth_and_lag_are_read_from_the_backend') }};
+        {{ translate('throughput_and_runtime_from_what_the_workers_recorded') }}.
     </p>
 </x-k.card>
 
@@ -256,7 +262,7 @@
         @endforeach
 
         <p class="mon-note">
-            {{ translate('rows_are_ordered_by_how_long_the_oldest_job_has_waited_because_a_small_stalled_queue_matters_more_than_a_large_moving_one') }}
+            {{ translate('rows_are_ordered_by_how_long_the_oldest_job_has_waited_because_a_small_stalled_queue_matters_more_than_a_large_moving_one') }}.
             {{ translate('warning_above') }} {{ $age($panel['thresholds']['lag_warning_seconds']) }},
             {{ translate('critical_above') }} {{ $age($panel['thresholds']['lag_critical_seconds']) }}.
             {{ translate('throughput_covers') }} {{ $panel['window']['since'] }} → {{ $panel['window']['until'] }}
@@ -415,7 +421,7 @@
 
 <p class="mon-note">
     {{ translate('depth_lag_and_failures_are_read_live_from') }}
-    <code>{{ $queues['source'] ?? '—' }}</code>{{ $failures['source'] ? ', ' : '' }}<code>{{ $failures['source'] }}</code>.
+    <code>{{ $queues['source'] ?? '—' }}</code>@if (!empty($failures['source'])), <code>{{ $failures['source'] }}</code>@endif.
     {{ translate('throughput_and_runtime_are_read_from_the_stored_series_in') }}
     <code>monitoring_series</code> (<code>queue.processed</code>, <code>queue.failed</code>),
     {{ translate('written_by_the_worker_process_itself_as_each_job_finishes') }}

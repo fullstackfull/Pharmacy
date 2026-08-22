@@ -4268,4 +4268,7 @@ return [
 	'these_lines_would_change_that_in' => 'These lines would change that in',
 	'The_scheduler_last_reported_a_run_25_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 25 minutes ago  the server cron appears to have stopped.',
 	'the_keys_and_lookups_on_this_page_belong_to_the_monitoring_buffer_rather_than_to_shop_traffic' => 'The keys and lookups on this page belong to the monitoring buffer rather than to shop traffic',
+	'The_scheduler_last_reported_a_run_30_minutes_ago;_the_server_cron_appears_to_have_stopped.' => 'The scheduler last reported a run 30 minutes ago  the server cron appears to have stopped.',
+	'written_by_the_worker_process_itself_as_each_job_finishes' => 'Written by the worker process itself as each job finishes',
+	'throughput_and_runtime_are_read_from_the_stored_series_in' => 'Throughput and runtime are read from the stored series in',
 ];
