@@ -21,6 +21,9 @@ use App\Services\DeveloperPortal\Support\RuleTranslator;
  */
 class OpenApiGenerator
 {
+    /** @var array<string, true> operationIds already handed out for the document being built. */
+    private array $operationIds = [];
+
     public function __construct(
         private readonly ApiManifest $manifest,
         private readonly RuleTranslator $translator,
@@ -144,7 +147,10 @@ class OpenApiGenerator
     private function operation(array $endpoint, string $method): array
     {
         $operation = [
-            'operationId' => $endpoint['name'] ?: strtolower($method) . '_' . $endpoint['id'],
+            // Route names are not unique in Laravel — a Route::any registers one name for several
+            // verbs, and this project reuses a few — but operationId must be, or codegen collides
+            // and drops operations. The verb disambiguates, and the id is the fallback.
+            'operationId' => $this->operationId($endpoint, $method),
             'summary' => $endpoint['summary'],
             'tags' => [$endpoint['audience'] . ':' . $endpoint['group']],
             'parameters' => $this->parameters($endpoint, $method),
@@ -327,13 +333,39 @@ class OpenApiGenerator
     }
 
     /**
+     * A unique operationId, remembered across the document being built.
+     *
+     * @param  array<string, mixed>  $endpoint
+     */
+    private function operationId(array $endpoint, string $method): string
+    {
+        $base = $endpoint['name']
+            ? preg_replace('/[^A-Za-z0-9_.\-]/', '_', (string) $endpoint['name']) . '_' . strtolower($method)
+            : strtolower($method) . '_' . $endpoint['id'];
+
+        $id = $base;
+        $suffix = 2;
+
+        while (isset($this->operationIds[$id])) {
+            $id = $base . '_' . $suffix++;
+        }
+
+        $this->operationIds[$id] = true;
+
+        return $id;
+    }
+
+    /**
      * @param  array<string, mixed>  $endpoint
      * @return array<int, array<string, array<int, string>>>|null
      */
     private function security(array $endpoint): ?array
     {
         if (!($endpoint['auth']['required'] ?? false)) {
-            return ($endpoint['auth']['optional_auth'] ?? false) ? [[], ['customerToken' => []]] : null;
+            // (object) [], not []: OpenAPI's "anonymous is allowed" alternative is an EMPTY SECURITY
+            // REQUIREMENT OBJECT, and an empty PHP array is encoded as a JSON array, which no
+            // validator accepts there.
+            return ($endpoint['auth']['optional_auth'] ?? false) ? [(object) [], ['customerToken' => []]] : null;
         }
 
         $scheme = match ($endpoint['auth']['mechanism'] ?? '') {

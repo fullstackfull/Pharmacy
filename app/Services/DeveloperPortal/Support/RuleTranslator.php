@@ -78,7 +78,15 @@ class RuleTranslator
             };
 
             if (in_array($head, ['in', 'not_in'], true) && $argument !== null) {
-                $values = array_map('trim', explode(',', $argument));
+                // An empty list is what Laravel's own Enum rule casts to when the backing enum has
+                // no cases; publishing it produced a documented field whose only allowed value was
+                // the empty string.
+                $values = array_values(array_filter(array_map('trim', explode(',', $argument)), static fn ($v) => $v !== ''));
+
+                if ($values === []) {
+                    continue;
+                }
+
                 if ($head === 'in') {
                     $enum = $values;
                 }

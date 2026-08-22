@@ -135,6 +135,12 @@ class DeveloperPortalController extends BaseController
         $label = trim((string) $request->input('label')) ?: 'manual-' . now()->format('Y-m-d H:i');
         $result = $this->snapshots->captureAndRecord($label, auth('admin')->id());
 
+        if ($result['unavailable'] ?? false) {
+            return redirect()->route('admin.developer.section', ['section' => 'changelog'])
+                ->with('error', translate('the_snapshot_tables_are_not_installed_so_nothing_was_captured')
+                    . ' — php artisan migrate');
+        }
+
         $message = $result['first']
             ? translate('first_snapshot_captured_there_is_nothing_to_compare_it_against_yet')
             : translate('snapshot_captured') . ': ' . $result['changes'] . ' ' . translate('change_s_recorded')

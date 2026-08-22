@@ -1,0 +1,10 @@
+import {BASE, loginAdmin} from './_env.mjs';
+import {chromium} from 'playwright';
+const browser = await chromium.launch({executablePath: '/opt/pw-browsers/chromium'});
+const page = await browser.newPage({viewport: {width: 1600, height: 1100}});
+await loginAdmin(page);
+await page.goto(BASE + '/admin/monitoring/server', {waitUntil: 'domcontentloaded'});
+await page.waitForTimeout(1000);
+await page.evaluate(() => document.querySelectorAll('.phpdebugbar').forEach(n => n.remove()));
+console.log(await page.locator('.mon-main').innerText());
+await browser.close();

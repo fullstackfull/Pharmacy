@@ -127,10 +127,13 @@ class ApiSnapshotService
             $this->modified($from, $to),
         );
 
-        usort($changes, static fn (array $a, array $b) => [
-            ['breaking' => 0, 'warning' => 1, 'none' => 2][$b['severity']] <=> ['breaking' => 0, 'warning' => 1, 'none' => 2][$a['severity']],
-            $a['endpoint'] <=> $b['endpoint'],
-        ]);
+        // usort wants an int. An array is truthy, so every comparison returned 1 and the list came
+        // back in reverse insertion order — the breaking changes this whole service exists to
+        // surface were wherever they happened to fall.
+        $rank = ['breaking' => 0, 'warning' => 1, 'none' => 2];
+
+        usort($changes, static fn (array $a, array $b) => [$rank[$a['severity']] ?? 3, $a['endpoint']]
+            <=> [$rank[$b['severity']] ?? 3, $b['endpoint']]);
 
         return [
             'from' => $fromId,
@@ -158,7 +161,14 @@ class ApiSnapshotService
         $previous = $this->latest();
         $captured = $this->capture($label, $userId);
 
-        if (($captured['unavailable'] ?? false) || $previous === null) {
+        // 'first' means "there was nothing to compare against", which is a success. A capture that
+        // could not happen at all is not: reporting both the same way told an operator "first
+        // snapshot captured" over a table that does not exist.
+        if ($captured['unavailable'] ?? false) {
+            return $captured + ['changes' => 0, 'breaking' => 0, 'first' => false];
+        }
+
+        if ($previous === null) {
             return $captured + ['changes' => 0, 'breaking' => 0, 'first' => true];
         }
 
@@ -275,8 +285,12 @@ class ApiSnapshotService
     {
         $changes = [];
 
+        $byPath = $this->indexByPath($to);
+
         foreach ($from as $id => $endpoint) {
-            if (isset($to[$id])) {
+            // Still served at the same path under a different method set: that is a narrowing,
+            // reported as method_removed, not a removal that 404s.
+            if (isset($to[$id]) || isset($byPath[$endpoint['path']])) {
                 continue;
             }
 
@@ -301,14 +315,31 @@ class ApiSnapshotService
     private function added(array $from, array $to): array
     {
         $changes = [];
+        $byPath = $this->indexByPath($from);
 
         foreach ($to as $id => $endpoint) {
-            if (!isset($from[$id])) {
+            // A path that already existed under a different method set is not a new endpoint.
+            if (!isset($from[$id]) && !isset($byPath[$endpoint['path']])) {
                 $changes[] = $this->change($id, $endpoint, 'added', 'endpoint_added', 'New endpoint.', 'none');
             }
         }
 
         return $changes;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $endpoints
+     * @return array<string, array<string, mixed>>
+     */
+    private function indexByPath(array $endpoints): array
+    {
+        $byPath = [];
+
+        foreach ($endpoints as $endpoint) {
+            $byPath[$endpoint['path']] ??= $endpoint;
+        }
+
+        return $byPath;
     }
 
     /**
@@ -320,8 +351,14 @@ class ApiSnapshotService
     {
         $changes = [];
 
+        // Matched by PATH, not by id. The id is a hash of the methods AND the uri, so narrowing a
+        // route from any-verb to GET produced a different id — the endpoint read as removed and a
+        // new one added, method_removed below could never fire, and the removal's detail said
+        // callers "now get a 404", which was simply untrue.
+        $byPath = $this->indexByPath($from);
+
         foreach ($to as $id => $now) {
-            $before = $from[$id] ?? null;
+            $before = $from[$id] ?? ($byPath[$now['path']] ?? null);
 
             if ($before === null) {
                 continue;
@@ -389,7 +426,10 @@ class ApiSnapshotService
 
         foreach ($before as $name => $field) {
             if (!isset($now[$name])) {
-                $found[] = ['param_removed', "The `{$name}` parameter is gone. A client still sending it is now ignored; one reading it back will not find it.", 'breaking'];
+                // Warning, not breaking, by this service's own definition: a request that used to
+                // succeed still succeeds — the parameter is ignored. Grading it breaking buried the
+                // changes that genuinely reject a previously-valid call.
+                $found[] = ['param_removed', "The `{$name}` parameter is gone. A client still sending it is now ignored; one reading it back will not find it.", 'warning'];
             }
         }
 
@@ -414,9 +454,20 @@ class ApiSnapshotService
                 $found[] = ['param_type_changed', "`{$name}` changed type from {$was['type']} to {$field['type']}.", 'breaking'];
             }
 
-            $lostValues = array_diff($was['enum'] ?? [], $field['enum'] ?? []);
-            if (($was['enum'] ?? null) !== null && $lostValues !== []) {
+            $wasEnum = $was['enum'] ?? [];
+            $nowEnum = $field['enum'] ?? [];
+
+            $lostValues = array_diff($wasEnum, $nowEnum);
+            if ($wasEnum !== [] && $lostValues !== []) {
                 $found[] = ['enum_value_removed', "`{$name}` no longer accepts: " . implode(', ', $lostValues) . '.', 'breaking'];
+            }
+
+            // Unconstrained to a fixed list is the same breakage with none of the evidence: every
+            // value outside the new list used to be accepted and is now rejected, and nothing here
+            // used to say so at all.
+            if ($wasEnum === [] && $nowEnum !== []) {
+                $found[] = ['enum_added', "`{$name}` now accepts only: " . implode(', ', $nowEnum)
+                    . '. Any other value a caller was sending is now rejected.', 'breaking'];
             }
         }
 
@@ -446,6 +497,13 @@ class ApiSnapshotService
      */
     private function payload(int $id): ?array
     {
+        // Guarded like every other read of these tables. Code reaches a server before its migration
+        // does — that is exactly how /admin/developer returned a 500 in production — and this one
+        // is reachable from `php artisan api:snapshot --diff=N` as well as from the page.
+        if (!$this->ready()) {
+            return null;
+        }
+
         $row = DB::table('api_snapshots')->where('id', $id)->first(['payload']);
 
         if ($row === null) {

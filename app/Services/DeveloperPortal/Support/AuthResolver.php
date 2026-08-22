@@ -102,6 +102,17 @@ class AuthResolver
                 continue;
             }
 
+            // A guard this table does not name is still authentication. Keying only on the two
+            // guards that happened to be listed documented fourteen protected endpoints —
+            // auth:web and auth:customer — as needing no authentication at all, which is the one
+            // direction this resolver must never be wrong in.
+            $generic = $this->genericGuard($item);
+            if ($generic !== null) {
+                $matched ??= $generic;
+
+                continue;
+            }
+
             if (in_array($item, self::OPTIONAL, true)) {
                 $optional = true;
             }
@@ -125,6 +136,42 @@ class AuthResolver
         }
 
         return $matched + ['required' => true, 'optional_auth' => $optional];
+    }
+
+    /**
+     * An authentication middleware whose guard this table does not describe.
+     *
+     * @return array<string, string|null>|null
+     */
+    private function genericGuard(mixed $item): ?array
+    {
+        if (!is_string($item)) {
+            return null;
+        }
+
+        foreach (['App\\Http\\Middleware\\Authenticate', 'Illuminate\\Auth\\Middleware\\Authenticate'] as $class) {
+            if ($item !== $class && !str_starts_with($item, $class . ':')) {
+                continue;
+            }
+
+            $guard = str_contains($item, ':') ? substr($item, strpos($item, ':') + 1) : 'default';
+            $session = in_array($guard, ['web', 'customer', 'seller', 'admin', 'default'], true);
+
+            return [
+                'scheme' => $session ? 'session' : 'bearer',
+                'mechanism' => $guard . '_guard',
+                'actor' => match ($guard) {
+                    'customer', 'web' => 'customer',
+                    'seller' => 'vendor',
+                    'admin' => 'admin',
+                    default => 'authenticated caller',
+                },
+                'header' => $session ? 'Session cookie' : 'Authorization: Bearer <token>',
+                'note' => 'Authenticated through Laravel\'s "' . $guard . '" guard.',
+            ];
+        }
+
+        return null;
     }
 
     /**

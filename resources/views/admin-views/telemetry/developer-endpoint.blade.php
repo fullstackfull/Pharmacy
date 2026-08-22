@@ -216,7 +216,12 @@
                 </p>
 
                 @if ($endpoint['callers']['measured'] ?? false)
-                    <h4 class="dev-subhead">{{ translate('calling_app_versions') }}</h4>
+                    <h4 class="dev-subhead">{{ translate('app_versions_calling_this_shop') }}</h4>
+                    {{-- Named for what it measures. A session records the app version it came from,
+                         not the endpoints it called, so this is the shop's version mix and not this
+                         endpoint's — and a removal decision has to be made on the traffic figures
+                         above, which are per-route. --}}
+                    <p class="dev-muted">{{ $endpoint['callers']['note'] ?? '' }}</p>
                     <ul class="dev-list">
                         @foreach ($endpoint['callers']['versions'] as $caller)
                             <li><span>{{ $caller['version'] }}</span><strong>{{ $caller['share'] }}%</strong></li>

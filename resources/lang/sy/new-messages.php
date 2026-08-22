@@ -1327,4 +1327,9 @@ return [
 	'error_text_is_redacted_and_shortened_where_it_is_written_a_scheduled_task_message_is_a_reliable_place_to_find_a_token_or_a_customer_address' => 'Error text is redacted and shortened where it is written a scheduled task message is a reliable place to find a token or a customer address',
 	'recent_failed_jobs' => 'Recent failed jobs',
 	'state' => 'State',
+	'jobs_completed_over_time' => 'Jobs completed over time',
+	'log_size_over_time' => 'Log size over time',
+	'cloud_reachable' => 'Cloud reachable',
+	'stored_points_in_window' => 'Stored points in window',
+	'series' => 'Series',
 ];

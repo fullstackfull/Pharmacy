@@ -140,11 +140,17 @@ class EndpointHealthService
      */
     public function callers(array $endpoint, string $range = '30d'): array
     {
+        // Shop-wide, and it says so. Sessions carry an app version; they do not carry the endpoints
+        // that session called, and nothing else in this system records a version against a route —
+        // so a genuine per-endpoint breakdown cannot be produced today. Presenting this one under
+        // an endpoint's own heading, as it used to be, claimed a measurement nobody took.
+        $days = max(1, (int) filter_var($range, FILTER_SANITIZE_NUMBER_INT) ?: 30);
+
         try {
             $rows = DB::connection(config('analytics.connection'))
                 ->table('analytics_sessions')
                 ->whereNotNull('app_version')
-                ->where('started_at', '>=', Clock::daysAgo(30))
+                ->where('started_at', '>=', Clock::daysAgo($days))
                 ->selectRaw('app_version, COUNT(*) sessions')
                 ->groupBy('app_version')
                 ->orderByDesc('sessions')
@@ -170,6 +176,9 @@ class EndpointHealthService
         return [
             'measured' => true,
             'range' => $range,
+            'days' => $days,
+            'scope' => 'shop',
+            'note' => 'Across the whole shop, not this endpoint: sessions record an app version, not the endpoints they called.',
             'versions' => $rows->map(fn ($row) => [
                 'version' => $row->app_version,
                 'sessions' => (int) $row->sessions,

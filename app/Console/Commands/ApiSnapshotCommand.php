@@ -32,8 +32,15 @@ class ApiSnapshotCommand extends Command
             return $this->showDiff($snapshots, (int) $this->option('diff'), $this->option('against') ? (int) $this->option('against') : null);
         }
 
-        $label = $this->argument('label') ?: 'v' . (function_exists('getAppVersion') ? getAppVersion() : date('Y-m-d-His'));
+        $version = app(\App\Services\DeveloperPortal\ApiManifest::class)->appVersion();
+        $label = $this->argument('label') ?: 'v' . ($version !== null && $version !== '' ? $version : date('Y-m-d-His'));
         $result = $snapshots->captureAndRecord($label);
+
+        if ($result['unavailable'] ?? false) {
+            $this->error('The snapshot tables are not installed, so nothing was captured. Run php artisan migrate.');
+
+            return self::FAILURE;
+        }
 
         $this->info("Snapshot '{$result['label']}' captured: {$result['endpoints']} endpoint(s).");
 

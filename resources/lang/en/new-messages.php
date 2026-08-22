@@ -5234,4 +5234,5 @@ return [
 	'stored_history_also_exists_for_labels_this_host_no_longer_reports' => 'Stored history also exists for labels this host no longer reports',
 	'the_line_is_completed_jobs_per_bucket_the_red_line_is_the_failures_among_them' => 'The line is completed jobs per bucket the red line is the failures among them',
 	'processed' => 'Processed',
+	'added' => 'Added',
 ];

@@ -419,7 +419,14 @@ class ApiManifest
         return substr(sha1(implode(',', $methods) . ' ' . $uri), 0, 16);
     }
 
-    private function appVersion(): ?string
+    /**
+     * The application's version number.
+     *
+     * Public because the snapshot command needs the same answer, and it was building its own —
+     * concatenating getAppVersion() straight into a string, which is an ARRAY, so
+     * `php artisan api:snapshot` with no label died on "Array to string conversion".
+     */
+    public function appVersion(): ?string
     {
         if (!function_exists('getAppVersion')) {
             return null;
