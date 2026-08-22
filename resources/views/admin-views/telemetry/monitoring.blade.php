@@ -104,7 +104,10 @@
                     set('requests_per_min', num(s.traffic.requests_per_min));
                     set('active_visitors', num(s.traffic.active_visitors));
                     set('visitors_today', num(s.traffic.visitors_today));
-                    set('avg_ms_hour', num(s.traffic.avg_ms_hour) + ' ms');
+                    // Null is "no request to average", which is not the same as an instant one.
+                    set('avg_ms_hour', s.traffic.avg_ms_hour === null
+                        ? '{{ translate('no_data') }}'
+                        : num(s.traffic.avg_ms_hour) + ' ms');
                     set('errors_hour', num(s.traffic.errors_hour));
                 }
                 if (s.commerce && !s.commerce.error) {

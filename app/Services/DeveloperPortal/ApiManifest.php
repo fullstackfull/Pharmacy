@@ -134,6 +134,38 @@ class ApiManifest
         return $endpoints;
     }
 
+    /**
+     * One endpoint by the path it is registered at.
+     *
+     * The id is a hash of the methods and the URI, so nothing outside this class can compute it —
+     * which is why Monitoring, whose request buckets are keyed by route pattern rather than by a
+     * portal id, could not link to an endpoint's documentation. This is how it asks.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByPath(string $path, ?string $method = null): ?array
+    {
+        $path = '/' . ltrim(trim($path), '/');
+        $method = $method === null ? null : strtoupper($method);
+        $fallback = null;
+
+        foreach ($this->get()['endpoints'] ?? [] as $endpoint) {
+            if ($endpoint['path'] !== $path) {
+                continue;
+            }
+
+            if ($method === null || in_array($method, $endpoint['methods'], true)) {
+                return $endpoint;
+            }
+
+            // The same path registered for a different verb still documents the resource, so it is
+            // a better answer than nothing — but only if no exact match turns up.
+            $fallback ??= $endpoint;
+        }
+
+        return $fallback;
+    }
+
     /** One endpoint by its stable id. */
     public function endpoint(string $id): ?array
     {
@@ -387,7 +419,14 @@ class ApiManifest
         return substr(sha1(implode(',', $methods) . ' ' . $uri), 0, 16);
     }
 
-    private function appVersion(): ?string
+    /**
+     * The application's version number.
+     *
+     * Public because the snapshot command needs the same answer, and it was building its own —
+     * concatenating getAppVersion() straight into a string, which is an ARRAY, so
+     * `php artisan api:snapshot` with no label died on "Array to string conversion".
+     */
+    public function appVersion(): ?string
     {
         if (!function_exists('getAppVersion')) {
             return null;
@@ -406,10 +445,26 @@ class ApiManifest
         $signature = [];
 
         foreach (RouteFacade::getRoutes() as $route) {
-            $signature[] = implode(',', $route->methods()) . ' ' . $route->uri() . ' ' . (string) $route->getName();
+            // The controller and the middleware belong in here too. Hashing only the method, the
+            // uri and the name meant the cache survived every change that does not move a route —
+            // pointing a route at a different controller, adding auth middleware, changing a
+            // FormRequest — so the portal kept describing an endpoint the application no longer
+            // served, and the documentation drifted exactly where it is most dangerous.
+            $action = $route->getActionName();
+            $middleware = $route->gatherMiddleware();
+
+            $signature[] = implode(',', $route->methods())
+                . ' ' . $route->uri()
+                . ' ' . (string) $route->getName()
+                . ' ' . $action
+                . ' ' . implode(',', array_map(static fn ($one) => is_string($one) ? $one : gettype($one), $middleware));
         }
 
         sort($signature);
+
+        // The application's own version too, so a deploy that changes a FormRequest's rules without
+        // touching the route table still rebuilds.
+        $signature[] = 'app:' . (string) $this->appVersion();
 
         return count($signature) . ':' . substr(sha1(implode("\n", $signature)), 0, 32);
     }

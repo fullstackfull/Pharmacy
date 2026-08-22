@@ -191,6 +191,23 @@
                         :title="translate('no_traffic_recorded')"
                         :text="$endpoint['health']['reason']['note'] ?? null ?? translate('nothing_has_called_this_endpoint_in_the_measured_window')" />
                 @endif
+
+                {{-- These numbers are a summary of what Monitoring recorded; the evidence behind
+                     them — the individual slow requests, the failures — lives there, and having to
+                     go and find the route by hand is the difference between a link and a search. --}}
+                <p class="dev-note dev-note--links">
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'traces', 'route' => $endpoint['path'], 'range' => '24h']) }}">
+                        {{ translate('traced_requests_for_this_route') }}
+                    </a>
+                    ·
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'requests', 'range' => '24h']) }}">
+                        {{ translate('all_route_timings') }}
+                    </a>
+                    ·
+                    <a href="{{ route('admin.monitoring.section', ['section' => 'errors', 'route' => $endpoint['path'], 'status' => 'all', 'range' => '24h']) }}">
+                        {{ translate('errors_on_this_route') }}
+                    </a>
+                </p>
             </x-k.card>
 
             <x-k.card :title="translate('can_this_be_removed')">
@@ -199,7 +216,12 @@
                 </p>
 
                 @if ($endpoint['callers']['measured'] ?? false)
-                    <h4 class="dev-subhead">{{ translate('calling_app_versions') }}</h4>
+                    <h4 class="dev-subhead">{{ translate('app_versions_calling_this_shop') }}</h4>
+                    {{-- Named for what it measures. A session records the app version it came from,
+                         not the endpoints it called, so this is the shop's version mix and not this
+                         endpoint's — and a removal decision has to be made on the traffic figures
+                         above, which are per-route. --}}
+                    <p class="dev-muted">{{ $endpoint['callers']['note'] ?? '' }}</p>
                     <ul class="dev-list">
                         @foreach ($endpoint['callers']['versions'] as $caller)
                             <li><span>{{ $caller['version'] }}</span><strong>{{ $caller['share'] }}%</strong></li>

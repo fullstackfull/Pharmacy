@@ -2,6 +2,8 @@
 
 namespace App\Services\DeveloperPortal\Support;
 
+use Illuminate\Support\Str;
+
 /**
  * Turns Laravel validation rules into something a developer who has never used Laravel can act on.
  *
@@ -78,7 +80,15 @@ class RuleTranslator
             };
 
             if (in_array($head, ['in', 'not_in'], true) && $argument !== null) {
-                $values = array_map('trim', explode(',', $argument));
+                // An empty list is what Laravel's own Enum rule casts to when the backing enum has
+                // no cases; publishing it produced a documented field whose only allowed value was
+                // the empty string.
+                $values = array_values(array_filter(array_map('trim', explode(',', $argument)), static fn ($v) => $v !== ''));
+
+                if ($values === []) {
+                    continue;
+                }
+
                 if ($head === 'in') {
                     $enum = $values;
                 }
@@ -184,7 +194,13 @@ class RuleTranslator
             $schema['enum'] = $field['enum'];
         }
 
-        if (isset($field['min'])) {
+        // A file's min and max are kilobytes, which OpenAPI has no keyword for: emitting them as
+        // minimum/maximum put numeric bounds on a {"type":"string","format":"binary"} schema — the
+        // same length-and-value conflation the comment below is about, one type further on. The
+        // limit is stated in the description instead, where a reader can act on it.
+        $isFile = ($field['type'] ?? null) === 'file';
+
+        if (isset($field['min']) && !$isFile) {
             // For a string, min is a length; for a number it is a value. Conflating the two is the
             // usual way a generated spec ends up rejecting valid input.
             $key = $type === 'string' ? 'minLength' : 'minimum';
@@ -289,13 +305,20 @@ class RuleTranslator
     private function subject(?string $argument, string $field): string
     {
         $table = $argument !== null ? explode(',', $argument)[0] : '';
-        $table = trim(str_replace(['\\', 'App\Models'], '', $table));
+        // The model class first, while its backslashes are still there — replacing them in the same
+        // pass removed the separator the second needle depends on, so that needle never matched.
+        $table = trim(str_replace(['App\\Models\\', 'App\\Models'], '', $table));
+        $table = trim(str_replace('\\', '', $table));
 
         if ($table === '' || $table === 'NULL') {
             return str_replace('_id', '', $field);
         }
 
-        return rtrim(str_replace('_', ' ', $table), 's');
+        // Str::singular, not rtrim($table, 's'): that stripped EVERY trailing s, so "address"
+        // became "addre" and "business" became "busine" — misspelled nouns printed in the public
+        // API reference. The framework already ships an inflector that knows "addresses" is one
+        // address and "status" is already singular.
+        return Str::singular(str_replace('_', ' ', $table));
     }
 
     private function relational(string $head, ?string $argument): string

@@ -125,6 +125,9 @@ class ErrorsPanel implements Panel
             'severity' => $this->trimmed($request, 'severity', 12),
             'channel' => $this->trimmed($request, 'channel', 12),
             'release' => $this->trimmed($request, 'release', 40),
+            // The route an endpoint's page links in with, so "the errors on this endpoint" is a
+            // link rather than a search. 191 is the column width in the migration.
+            'route' => $this->trimmed($request, 'route', 191),
             'group' => $group > 0 ? $group : null,
             'page' => max(1, min(self::MAX_PAGE, (int) $request->query('page', 1))),
         ];
@@ -281,7 +284,14 @@ class ErrorsPanel implements Panel
                 $since,
                 $filters,
             )
-                ->selectRaw('COUNT(*) AS occurrence_rows, COUNT(DISTINCT monitoring_errors.user_id) AS distinct_users')
+                // The identity is the guard plus the id, not the id alone. admin #5, vendor #5 and
+                // customer #5 are three different people whose ids come from three different
+                // tables, so counting user_id on its own quietly merges them into one. CONCAT is
+                // null when user_id is null, which is what keeps guests out of the count.
+                ->selectRaw(
+                    'COUNT(*) AS occurrence_rows,'
+                    . " COUNT(DISTINCT CONCAT(COALESCE(monitoring_errors.user_type, ''), ':', monitoring_errors.user_id)) AS distinct_users",
+                )
                 ->first();
 
             $occurrences = [
@@ -302,7 +312,7 @@ class ErrorsPanel implements Panel
                     'state' => 'not_configured',
                     'value' => null,
                     'source' => 'monitoring_errors',
-                    'remedy' => 'Occurrences are stored without a user id because monitoring.privacy.store_user_id is off. Set MONITORING_STORE_USER_ID=true to count how many signed-in shoppers each error reached.',
+                    'remedy' => 'Occurrences are stored without a user id because monitoring.privacy.store_user_id is off. Set MONITORING_STORE_USER_ID=true to count how many signed-in accounts each error reached.',
                 ];
 
             return ['occurrences' => $occurrences, 'affected_users' => $users];
@@ -423,7 +433,7 @@ class ErrorsPanel implements Panel
      */
     private function presentGroup(object $row, Carbon $since, ?array $inWindow, ?int $selectedId): array
     {
-        $firstSeen = $this->moment($row->first_seen_at ?? null);
+        $firstSeenAt = $this->parsed($row->first_seen_at ?? null);
         $id = (int) $row->id;
 
         return [
@@ -448,12 +458,12 @@ class ErrorsPanel implements Panel
             'occurrences_all_time' => (int) ($row->occurrences ?? 0),
             'occurrences_in_window' => $inWindow === null ? null : ($inWindow[$id] ?? 0),
             'affected_users_all_time' => (int) ($row->affected_users ?? 0),
-            'first_seen' => $firstSeen,
+            'first_seen' => $this->moment($firstSeenAt),
             'last_seen' => $this->moment($row->last_seen_at ?? null),
             'resolved_at' => $this->moment($row->resolved_at ?? null),
             // New means first seen inside this window. After a deploy that is the difference
             // between "the release broke something" and "this was already broken".
-            'is_new' => $firstSeen !== null && Clock::parse($row->first_seen_at)->greaterThanOrEqualTo($since),
+            'is_new' => $firstSeenAt !== null && $firstSeenAt->greaterThanOrEqualTo($since),
             'is_selected' => $selectedId !== null && $selectedId === $id,
         ];
     }
@@ -475,7 +485,9 @@ class ErrorsPanel implements Panel
                 return [
                     'state' => 'no_data',
                     'id' => $groupId,
-                    'remedy' => 'This group is no longer in monitoring_error_groups. Groups are pruned after monitoring.retention.error_days (currently ' . (int) config('monitoring.retention.error_days', 60) . ' days).',
+                    // "No longer stored" would be a guess: a mistyped or stale link asks for an id
+                    // this store never issued, and that is not the same fact as a pruned group.
+                    'remedy' => 'No group with id ' . $groupId . ' is in monitoring_error_groups. Either it was pruned — groups go after monitoring.retention.error_days, currently ' . (int) config('monitoring.retention.error_days', 60) . ' days — or the link carries an id this store never issued.',
                 ];
             }
 
@@ -521,7 +533,11 @@ class ErrorsPanel implements Panel
                     'state' => 'no_data',
                     'rows' => [],
                     'stack_trace' => null,
-                    'remedy' => 'The group was last seen inside this window but no occurrence row for it is. Occurrence rows are pruned after monitoring.retention.error_days (currently ' . (int) config('monitoring.retention.error_days', 60) . ' days) — widen the window, or check retention.',
+                    'limited' => false,
+                    // A group reached by a shared link is looked up by id, not through the window,
+                    // so it can perfectly well have last been seen before this window opened. The
+                    // remedy must not assert that it was seen inside it.
+                    'remedy' => 'No occurrence row for this group falls inside the selected window. The group may last have fired before the window opened — widen it — or its rows may have been pruned, which happens after monitoring.retention.error_days (currently ' . (int) config('monitoring.retention.error_days', 60) . ' days).',
                 ];
             }
 
@@ -542,6 +558,10 @@ class ErrorsPanel implements Panel
                     'release' => $row->release === null ? null : (string) $row->release,
                     'at' => $this->moment($row->created_at),
                 ])->all(),
+                // A full page of rows is the newest slice, not the whole story. Without this the
+                // ten rows below a tile reading "40 in this window" look like a contradiction.
+                'limited' => $rows->count() >= self::OCCURRENCE_LIMIT,
+                'limit' => self::OCCURRENCE_LIMIT,
                 'stack_trace' => $this->stackTrace($newest->stack_trace ?? null),
                 'stack_trace_from' => [
                     'request_id' => $newest->request_id === null ? null : (string) $newest->request_id,
@@ -640,6 +660,7 @@ class ErrorsPanel implements Panel
             || $filters['severity'] !== null
             || $filters['channel'] !== null
             || $filters['release'] !== null
+            || $filters['route'] !== null
             || $filters['status'] !== 'all';
 
         if ((int) $options['groups_in_window'] > 0 && $narrowed) {
@@ -677,7 +698,7 @@ class ErrorsPanel implements Panel
             $query->where($table . '.status', $filters['status']);
         }
 
-        foreach (['severity', 'channel', 'release'] as $column) {
+        foreach (['severity', 'channel', 'release', 'route'] as $column) {
             if ($filters[$column] !== null) {
                 $query->where($table . '.' . $column, $filters[$column]);
             }
@@ -714,7 +735,32 @@ class ErrorsPanel implements Panel
      */
     private function moment(mixed $stamp): ?array
     {
-        if (!is_string($stamp) && !$stamp instanceof \DateTimeInterface) {
+        $moment = $this->parsed($stamp);
+
+        if ($moment === null) {
+            return null;
+        }
+
+        return [
+            'at' => Clock::display($moment)->toDateTimeString(),
+            'age_seconds' => max(0, (int) $moment->diffInSeconds(Clock::now())),
+        ];
+    }
+
+    /**
+     * A stored timestamp as a UTC instant, or null when it is not one.
+     *
+     * Kept apart from moment() so a caller that also has to COMPARE the instant — is this group new
+     * in the window? — reuses this parse instead of running its own against Clock::parse(), whose
+     * signature rejects the plain DateTime a driver may hand back and would throw on it.
+     */
+    private function parsed(mixed $stamp): ?Carbon
+    {
+        if ($stamp instanceof \DateTimeInterface && !$stamp instanceof Carbon) {
+            $stamp = Carbon::instance($stamp);
+        }
+
+        if (!$stamp instanceof Carbon && !is_string($stamp)) {
             return null;
         }
 
@@ -725,15 +771,10 @@ class ErrorsPanel implements Panel
         }
 
         try {
-            $moment = Clock::parse($stamp instanceof \DateTimeInterface ? Carbon::instance($stamp) : $stamp);
+            return Clock::parse($stamp);
         } catch (\Throwable) {
             return null;
         }
-
-        return [
-            'at' => Clock::display($moment)->toDateTimeString(),
-            'age_seconds' => max(0, (int) $moment->diffInSeconds(Clock::now())),
-        ];
     }
 
     private function shortClass(string $class): string

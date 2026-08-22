@@ -99,9 +99,9 @@
                         <div class="mon-rail__group">
                             <span class="mon-rail__group-title">{{ translate($groupLabels[$groupKey] ?? $groupKey) }}</span>
                             @foreach ($items as $item)
-                                <a class="mon-rail__link {{ $item['active'] ? 'is-active' : '' }}"
+                                <a class="mon-rail__link {{ $item['active'] ? 'is-active' : '' }} {{ ($item['built'] ?? true) ? '' : 'is-unbuilt' }}"
                                    href="{{ route('admin.monitoring.section', ['section' => $item['key'], 'range' => $range]) }}"
-                                   title="{{ translate($item['hint']) }}">
+                                   title="{{ translate($item['hint']) }}@if (!($item['built'] ?? true)) — {{ translate('not_installed_in_this_build') }}@endif">
                                     <x-k.icon :name="$item['icon']" :size="15" />
                                     <span>{{ translate($item['label']) }}</span>
                                 </a>

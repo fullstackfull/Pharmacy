@@ -74,7 +74,14 @@ return [
         | notices they are separate and stops joining across them.
         */
         'monitoring' => [
-            'driver' => 'mysql',
+            /*
+             * Follows the application's own driver unless it is told otherwise.
+             *
+             * Hardcoding mysql meant the two monitoring migrations — which pin themselves to this
+             * connection — tried to speak MySQL to whatever the app was actually using, so they
+             * could not run on a sqlite installation and could not be exercised by a test at all.
+             */
+            'driver' => env('MONITORING_DB_DRIVER', env('DB_CONNECTION', 'mysql')),
             'url' => env('MONITORING_DATABASE_URL'),
             'host' => env('MONITORING_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('MONITORING_DB_PORT', env('DB_PORT', '3306')),

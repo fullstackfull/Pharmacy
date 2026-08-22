@@ -149,7 +149,7 @@
                                            accept="{{ getFileUploadFormats(skip: '.svg') }}">
                                 </div>
                                 <div class="d-flex justify-content-end">
-                                    <button type="button" data-form-id="update-profile-form" data-message="{{ translate('want_to_update_vendor_info').'?'}}" class="btn btn--primary {{env('APP_MODE')!='demo'?'form-submit':'call-demo-alert'}}">{{ translate('save_Changes') }}</button>
+                                    <button type="button" data-form-id="update-profile-form" data-message="{{ translate('want_to_update_vendor_info').'?'}}" class="btn btn--primary {{config('app.mode')!='demo'?'form-submit':'call-demo-alert'}}">{{ translate('save_Changes') }}</button>
                                 </div>
                             </div>
                         </div>
@@ -235,7 +235,7 @@
                                 </div>
 
                                 <div class="d-flex justify-content-end">
-                                    <button type="button" data-form-id="update-password-form" data-message="{{ translate('want_to_update_vendor_password').'?'}}" class="btn btn--primary {{env('APP_MODE')!='demo'?'form-submit':'call-demo-alert'}}" >{{ translate('save_Changes') }}</button>
+                                    <button type="button" data-form-id="update-password-form" data-message="{{ translate('want_to_update_vendor_password').'?'}}" class="btn btn--primary {{config('app.mode')!='demo'?'form-submit':'call-demo-alert'}}" >{{ translate('save_Changes') }}</button>
                                 </div>
                             </form>
                         </div>

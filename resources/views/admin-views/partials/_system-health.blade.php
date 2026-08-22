@@ -7,8 +7,15 @@
     $lastRun = BusinessSetting::where('type', 'scheduler_last_run_at')->value('value');
     $schedulerStale = !$lastRun || \Carbon\Carbon::parse($lastRun)->lt(now()->subMinutes(15));
 
-    // Static-OTP guard: outside APP_MODE=live the app accepts fixed OTP codes (123456 / 1234).
-    $appMode = env('APP_MODE');
+    /*
+     * Static-OTP guard: outside APP_MODE=live the app accepts fixed OTP codes (123456 / 1234).
+     *
+     * Read through config(), not env(). Laravel stops loading the .env file once config:cache has
+     * run — which is the documented production step — so env() answers null there and a correctly
+     * configured live shop showed this warning permanently, which is how a real warning gets
+     * ignored.
+     */
+    $appMode = config('app.mode', config('app.mode'));
     $otpUnsafe = $appMode !== 'live';
 @endphp
 
@@ -23,7 +30,7 @@
                     <span class="d-block mt-1 fs-12 opacity-75">
                         {{ translate('add_this_cron') }}: <code>* * * * * cd {{ base_path() }} &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
                         @if ($lastRun) · {{ translate('last_run') }}: {{ $lastRun }} @endif
-                    </div>
+                    </span>
                 </div>
             </div>
         @endif

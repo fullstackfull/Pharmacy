@@ -163,6 +163,59 @@ class AlertEvaluationTest extends TestCase
         $this->assertSame(94.0, $outcome['value']);
     }
 
+    public function test_a_gap_in_the_data_does_not_count_towards_the_hold_time(): void
+    {
+        // Rule 2 asks that a breach held CONTINUOUSLY. The clock used to keep running through an
+        // outage, so after a collector came back a single breaching sample was treated as five
+        // minutes of sustained breach and paged immediately.
+        $this->rule(['key' => 'cpu', 'metric' => 'server.cpu.usage_pct', 'warning_threshold' => 80, 'for_seconds' => 300]);
+
+        $this->sample('server.cpu.usage_pct', 95, 0);
+        $this->assertSame('pending', $this->evaluateOnce('cpu')['state']);
+
+        // The collector stops. Five minutes pass with nothing recorded.
+        $this->clearSamples();
+        $this->backdateBreach('cpu', minutes: 5);
+        $outcome = $this->evaluateOnce('cpu');
+
+        $this->assertSame('ok', $outcome['state'], 'silence is not a breach');
+        $this->assertNull(
+            DB::connection(self::CONNECTION)->table('monitoring_alert_states')->where('rule_key', 'cpu')->value('breached_since'),
+            'the breach clock must not survive a gap in the data',
+        );
+
+        // It comes back, still breaching. That is a NEW breach and has to hold again.
+        $this->sample('server.cpu.usage_pct', 95, 0);
+        $this->assertSame('pending', $this->evaluateOnce('cpu')['state']);
+    }
+
+    public function test_a_rule_that_recovers_and_breaks_again_is_not_silenced_by_the_old_cooldown(): void
+    {
+        // The cooldown gates repeat messages about ONE episode. Carrying it past a recovery gated
+        // the FIRST message of the next one — an incident opened, the state flipped to firing, and
+        // nobody was told.
+        $this->rule([
+            'key' => 'disk', 'metric' => 'server.disk.used_pct',
+            'warning_threshold' => 80, 'for_seconds' => 0, 'cooldown_seconds' => 3600,
+        ]);
+
+        $this->sample('server.disk.used_pct', 94, 0);
+        $this->assertSame('warning', $this->evaluateOnce('disk')['state']);
+
+        $this->clearSamples();
+        $this->sample('server.disk.used_pct', 10, 0);
+        $this->assertSame('ok', $this->evaluateOnce('disk')['state']);
+
+        $this->assertNull(
+            DB::connection(self::CONNECTION)->table('monitoring_alert_states')->where('rule_key', 'disk')->value('last_notified_at'),
+            'recovery has to end the episode the cooldown belongs to',
+        );
+
+        $this->clearSamples();
+        $this->sample('server.disk.used_pct', 94, 0);
+        $this->assertSame('fired and notified', $this->evaluateOnce('disk')['note']);
+    }
+
     public function test_the_shipped_rules_are_installed_once_and_not_reinstated_after_deletion(): void
     {
         $evaluator = app(AlertEvaluator::class);

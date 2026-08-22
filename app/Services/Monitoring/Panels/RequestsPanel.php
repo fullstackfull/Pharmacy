@@ -15,12 +15,13 @@ use Illuminate\Http\Request;
  * The busiest route is usually the homepage, which is already fast. The route with the most errors
  * may be a health check returning 404 to a scanner. The route that actually costs the shop time is
  * hits multiplied by average, and it is almost never at the top of the other three lists. So all
- * four rankings are read separately and shown side by side rather than one being picked as "the"
- * answer.
+ * four rankings are shown side by side rather than one being picked as "the" answer.
  *
- * Every ranking is a separate read on purpose. The fifteen slowest routes are not a subset of the
- * fifteen busiest, so re-sorting one truncated list into four tables would silently hide exactly
- * the rows these tables exist to surface.
+ * The four tables are four orderings of ONE read. Each is sorted over the complete set of routes
+ * before it is truncated — the fifteen slowest are not a subset of the fifteen busiest, so sorting
+ * an already-truncated list would silently hide exactly the rows these tables exist to surface —
+ * but re-reading the window once per ranking would fold every bucket and merge every latency
+ * histogram four times to answer four questions about the same rows.
  */
 class RequestsPanel implements Panel
 {
@@ -28,12 +29,22 @@ class RequestsPanel implements Panel
      * The channels a request can be filed under, in the order an operator reads them.
      *
      * Fixed rather than discovered: a channel missing from the data is a fact worth showing —
-     * "the API served nothing this hour" is a finding, not an empty row to be omitted.
+     * "the API served nothing this hour" is a finding, not an empty row to be omitted. The set
+     * matches RequestRecorder::channelOf(), which is what makes the share column a share of
+     * everything rather than of the part we happened to list.
      */
     private const CHANNELS = ['web', 'api', 'admin', 'vendor'];
 
     /** Rows per ranking. Four tables of fifteen is already more than anyone reads in one sitting. */
     private const BREAKDOWN_ROWS = 15;
+
+    /**
+     * Ranking is applied to every route in the window, not to a pre-truncated head.
+     *
+     * The reader builds the complete set either way — the limit only decides how much of it comes
+     * back — so asking for all of it costs nothing and keeps each of the four orders honest.
+     */
+    private const ALL_ROUTES = PHP_INT_MAX;
 
     private const SOURCE = 'monitoring_request_buckets';
 
@@ -47,6 +58,7 @@ class RequestsPanel implements Panel
         $collection = $this->collectionState();
         $comparison = $this->comparison($range);
         $current = $comparison['current'] ?? [];
+        $rankings = $this->rankings($range, $collection, $window, $current);
 
         return [
             'window' => [
@@ -58,11 +70,12 @@ class RequestsPanel implements Panel
                 'timezone' => Clock::displayTimezone(),
             ],
             'collection' => $collection,
-            'summary' => $this->summary($comparison, $collection, $window['resolution']),
+            'summary' => $this->summary($comparison, $collection, $window),
             'readings' => $this->readings($current),
-            'timeline' => $this->timeline($range, $collection, $window['resolution']),
-            'channels' => $this->channels($range, $collection, $window['resolution']),
-            'breakdowns' => $this->breakdowns($range, $collection, $window['resolution']),
+            'timeline' => $this->timeline($range, $collection, $window),
+            'coverage' => $rankings['coverage'],
+            'channels' => $this->channels($range, $collection, $window),
+            'breakdowns' => $rankings['tables'],
         ];
     }
 
@@ -134,7 +147,7 @@ class RequestsPanel implements Panel
      *
      * @return array<string, mixed>
      */
-    private function summary(array $comparison, array $collection, string $resolution): array
+    private function summary(array $comparison, array $collection, array $window): array
     {
         if (isset($comparison['failure'])) {
             return ['state' => 'failed', 'note' => $comparison['failure'], 'current' => [], 'previous' => [], 'delta' => []];
@@ -150,7 +163,7 @@ class RequestsPanel implements Panel
         ];
 
         if (!($comparison['current']['has_data'] ?? false)) {
-            return array_merge($base, $this->emptyReason($collection, $resolution));
+            return array_merge($base, $this->emptyReason($collection, $window));
         }
 
         return array_merge($base, ['state' => 'ok', 'note' => null, 'remedy' => null]);
@@ -184,16 +197,16 @@ class RequestsPanel implements Panel
     /**
      * @return array<string, mixed>
      */
-    private function timeline(string $range, array $collection, string $resolution): array
+    private function timeline(string $range, array $collection, array $window): array
     {
         try {
             $timeline = $this->reader->requestTimeline($range);
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => $this->failureNote($exception), 'points' => [], 'resolution' => $resolution];
+            return ['state' => 'failed', 'note' => $this->failureNote($exception), 'points' => [], 'resolution' => $window['resolution']];
         }
 
         if (($timeline['points'] ?? []) === []) {
-            return array_merge($timeline, $this->emptyReason($collection, $resolution));
+            return array_merge($timeline, $this->emptyReason($collection, $window));
         }
 
         return array_merge($timeline, ['state' => 'ok', 'note' => null, 'remedy' => null]);
@@ -207,7 +220,7 @@ class RequestsPanel implements Panel
      *
      * @return array<string, mixed>
      */
-    private function channels(string $range, array $collection, string $resolution): array
+    private function channels(string $range, array $collection, array $window): array
     {
         $rows = [];
         $total = 0;
@@ -230,7 +243,7 @@ class RequestsPanel implements Panel
                 ],
                 $summary['has_data']
                     ? ['state' => 'ok', 'note' => null, 'remedy' => null]
-                    : $this->emptyReason($collection, $resolution, 'No request reached this channel in this window.'),
+                    : $this->emptyReason($collection, $window, 'No request reached this channel in this window.'),
             );
         }
 
@@ -247,13 +260,45 @@ class RequestsPanel implements Panel
     }
 
     /**
-     * The four rankings, each a full read of the window in its own order.
+     * The four rankings, and how much of the window they can actually see.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array{coverage: array<string, mixed>, tables: array<int, array<string, mixed>>}
      */
-    private function breakdowns(string $range, array $collection, string $resolution): array
+    private function rankings(string $range, array $collection, array $window, array $current): array
     {
-        $definitions = [
+        try {
+            $routes = $this->reader->routeBreakdown($range, sort: 'hits', limit: self::ALL_ROUTES);
+        } catch (\Throwable $exception) {
+            $note = $this->failureNote($exception);
+
+            return [
+                // The failure belongs to the tables, which say it in their own empty state. A
+                // coverage line has nothing to add here: there is no read to describe the reach of.
+                'coverage' => ['state' => 'failed', 'note' => null, 'measured_hits' => null, 'window_hits' => null],
+                'tables' => array_map(
+                    static fn (array $definition): array => array_merge($definition, ['state' => 'failed', 'note' => $note, 'rows' => []]),
+                    $this->definitions(),
+                ),
+            ];
+        }
+
+        return [
+            'coverage' => $this->coverage($routes, $current, $window),
+            'tables' => array_map(
+                fn (array $definition): array => $this->table($definition, $routes, $collection, $window),
+                $this->definitions(),
+            ),
+        ];
+    }
+
+    /**
+     * What each table is ordered by, and the sentence saying why that order is worth reading.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function definitions(): array
+    {
+        return [
             [
                 'key' => 'total_time',
                 'sort' => 'total_time',
@@ -279,34 +324,98 @@ class RequestsPanel implements Panel
                 'why' => 'what_the_shop_spends_its_day_answering_the_context_the_other_three_tables_are_read_against',
             ],
         ];
-
-        return array_map(
-            fn (array $definition): array => $this->breakdown($range, $definition, $collection, $resolution),
-            $definitions,
-        );
     }
 
     /**
+     * One ranking: the whole set put in this table's order, then cut to what fits.
+     *
      * @return array<string, mixed>
      */
-    private function breakdown(string $range, array $definition, array $collection, string $resolution): array
+    private function table(array $definition, array $routes, array $collection, array $window): array
     {
-        try {
-            $routes = $this->reader->routeBreakdown($range, sort: $definition['sort'], limit: self::BREAKDOWN_ROWS);
-        } catch (\Throwable $exception) {
-            return array_merge($definition, ['state' => 'failed', 'note' => $this->failureNote($exception), 'rows' => []]);
+        if ($routes === []) {
+            return array_merge($definition, $this->emptyReason($collection, $window), ['rows' => []]);
         }
 
-        if ($routes === []) {
-            return array_merge($definition, $this->emptyReason($collection, $resolution), ['rows' => []]);
+        // A ranking needs something to rank. Fifteen rows of zeroes under "failing most often" is
+        // an order the data does not contain, and it buries the one fact worth reading — that
+        // nothing failed. This is a measured zero, not a gap, so it is said as good news.
+        if ($definition['sort'] === 'errors' && array_sum(array_column($routes, 'errors')) === 0) {
+            return array_merge($definition, [
+                'state' => 'no_failures',
+                'note' => 'No route returned a 5xx across the ' . number_format((int) array_sum(array_column($routes, 'hits')))
+                    . ' requests measured on ' . count($routes) . ' routes in this window.',
+                'remedy' => null,
+                'rows' => [],
+            ]);
         }
 
         return array_merge($definition, [
             'state' => 'ok',
             'note' => null,
             'remedy' => null,
-            'rows' => array_map($this->routeRow(...), $routes),
+            'rows' => array_map($this->routeRow(...), array_slice($this->rank($routes, $definition['sort']), 0, self::BREAKDOWN_ROWS)),
         ]);
+    }
+
+    /**
+     * The orderings live here rather than in the reader because all four are views of one read:
+     * the order a table wants is a way of looking at the set, not a reason to fetch it again.
+     *
+     * @param  array<int, array<string, mixed>>  $routes
+     * @return array<int, array<string, mixed>>
+     */
+    private function rank(array $routes, string $sort): array
+    {
+        usort($routes, match ($sort) {
+            'p95' => static fn (array $a, array $b) => ($b['p95'] ?? 0) <=> ($a['p95'] ?? 0),
+            // Count first, rate as the tie-break: a route that failed nine times out of ten is
+            // worse news than one that failed once out of one.
+            'errors' => static fn (array $a, array $b) => [$b['errors'], $b['error_rate']] <=> [$a['errors'], $a['error_rate']],
+            'total_time' => static fn (array $a, array $b) => $b['total_time_ms'] <=> $a['total_time_ms'],
+            default => static fn (array $a, array $b) => $b['hits'] <=> $a['hits'],
+        });
+
+        return $routes;
+    }
+
+    /**
+     * How much of the window the per-route tables and the chart can see.
+     *
+     * Both read one resolution. On a range longer than six hours that is the hour or day buckets
+     * the rollup has folded, while the headline figures also read the minutes it has not reached
+     * yet — so an hour after a busy morning the tables can be short of the headline by half the
+     * window's traffic. Two totals on one screen that disagree by half, with nothing said, is how
+     * a dashboard loses the only thing it has.
+     *
+     * @return array<string, mixed>
+     */
+    private function coverage(array $routes, array $current, array $window): array
+    {
+        $measuredHits = (int) array_sum(array_column($routes, 'hits'));
+        $windowHits = ($current['has_data'] ?? false) ? (int) $current['hits'] : null;
+
+        if ($routes === []) {
+            return ['state' => 'no_data', 'measured_hits' => 0, 'window_hits' => $windowHits, 'note' => null];
+        }
+
+        if ($windowHits === null) {
+            return ['state' => 'unknown', 'measured_hits' => $measuredHits, 'window_hits' => null, 'note' => null];
+        }
+
+        if ($measuredHits >= $windowHits) {
+            return ['state' => 'complete', 'measured_hits' => $measuredHits, 'window_hits' => $windowHits, 'note' => null];
+        }
+
+        return [
+            'state' => 'partial',
+            'measured_hits' => $measuredHits,
+            'window_hits' => $windowHits,
+            'note' => 'The chart and the per-route tables read ' . $window['resolution'] . ' buckets, so they account for '
+                . number_format($measuredHits) . ' of the ' . number_format($windowHits)
+                . ' requests in this window. The remaining ' . number_format($windowHits - $measuredHits)
+                . ' are still in minute buckets that the rollup has not folded into ' . $window['resolution'] . 's yet.',
+        ];
     }
 
     /**
@@ -351,32 +460,55 @@ class RequestsPanel implements Panel
     /**
      * Why a part of this page has nothing to show.
      *
-     * Three different silences, and they are not interchangeable: collection is off, nothing has
-     * ever been recorded, or this particular window really was quiet. Only the first two have a
-     * remedy — the third is a legitimate reading of zero traffic and must not be dressed up as a
-     * fault.
+     * Four different silences, and they are not interchangeable: collection is off, nothing has
+     * ever been recorded, the collector has fallen behind, or this particular window really was
+     * quiet. Only the last is a legitimate reading of zero traffic — the other three are gaps in
+     * what we know, and dressing one of them up as "no requests" is the exact lie this system
+     * exists to avoid.
      *
      * @return array{state: string, note: string, remedy: string|null}
      */
-    private function emptyReason(array $collection, string $resolution, string $quietNote = 'No request was recorded in this window.'): array
+    private function emptyReason(array $collection, array $window, string $quietNote = 'No request was recorded in this window.'): array
     {
-        if (in_array($collection['state'], ['not_configured', 'no_data'], true)) {
+        $state = $collection['state'] ?? 'ok';
+
+        if (in_array($state, ['not_configured', 'no_data'], true)) {
             return [
-                'state' => $collection['state'],
+                'state' => $state,
                 'note' => (string) $collection['note'],
                 'remedy' => $collection['remedy'],
             ];
         }
 
-        if ($resolution !== 'minute') {
+        $age = (int) ($collection['age_seconds'] ?? 0);
+
+        // Nothing has been written since before this window opened: every minute of it is on the
+        // wrong side of the gap, so its emptiness says nothing at all about the traffic.
+        if ($state === 'stale' && $age >= $window['minutes'] * 60) {
+            return [
+                'state' => 'stale',
+                'note' => 'Nothing has been recorded since ' . $collection['newest_bucket_at'] . ', which is before this window begins — so this window has not been measured, and its emptiness is not a reading of the traffic.',
+                'remedy' => $collection['remedy'],
+            ];
+        }
+
+        if ($window['resolution'] !== 'minute') {
             // Long ranges read rolled-up buckets, which are produced by the rollup rather than by
             // traffic. So this window can be empty while the minute buckets covering the same
             // hours are full — a distinction that looks like "the shop had no visitors" unless it
             // is said out loud.
             return [
                 'state' => 'no_data',
-                'note' => 'This range is read from ' . $resolution . ' buckets, which are built by the monitoring rollup rather than written by traffic.',
+                'note' => 'This range is read from ' . $window['resolution'] . ' buckets, which are built by the monitoring rollup rather than written by traffic.',
                 'remedy' => 'Choose a shorter range to read the minute buckets directly, or check that the hourly monitoring rollup is running.',
+            ];
+        }
+
+        if ($state === 'stale') {
+            return [
+                'state' => 'stale',
+                'note' => $quietNote . ' Collection is also ' . $age . ' seconds behind, so the end of the window was not measured either.',
+                'remedy' => $collection['remedy'],
             ];
         }
 

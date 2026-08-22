@@ -183,7 +183,7 @@ class SocialAuthController extends Controller
             }
         } else if ($phoneVerification && !$user['is_phone_verified']) {
             $response = $this->customerAuthService->sendCustomerPhoneVerificationToken($user['phone'], $token);
-            if (env('APP_MODE') == 'dev') {
+            if (config('app.mode') == 'dev') {
                 $response['status'] = 'success';
             }
         } else if ($emailVerification && !$user['is_email_verified']) {
@@ -315,7 +315,7 @@ class SocialAuthController extends Controller
             }
         } else {
             $response = $this->customerAuthService->sendCustomerPhoneVerificationToken($request['phone'], $token);
-            if (env('APP_MODE') == 'dev') {
+            if (config('app.mode') == 'dev') {
                 $response['status'] = 'success';
             }
         }

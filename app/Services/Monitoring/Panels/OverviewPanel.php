@@ -280,9 +280,27 @@ class OverviewPanel implements Panel
             ];
         }
 
-        $late = (int) (($readings['late_tasks'] ?? null)?->valueOr(0) ?? 0);
-        $missed = (int) (($readings['missed_tasks'] ?? null)?->valueOr(0) ?? 0);
-        $failed = (int) (($readings['failed_tasks'] ?? null)?->valueOr(0) ?? 0);
+        // valueOr(0) turns "the run ledger could not be read" into "nothing has gone wrong", which
+        // on this card printed "All scheduled tasks on time" over a ledger nobody managed to open.
+        // A count that was not taken stays null and the card says the outcome is unknown.
+        $late = $this->counted($readings['late_tasks'] ?? null);
+        $missed = $this->counted($readings['missed_tasks'] ?? null);
+        $failed = $this->counted($readings['failed_tasks'] ?? null);
+        $lastRun = $readings['last_run_age_minutes'] ?? null;
+
+        if ($late === null || $missed === null || $failed === null) {
+            return [
+                'key' => 'scheduler',
+                'label' => 'scheduler',
+                'state' => 'unavailable',
+                'value' => $lastRun instanceof Metric && $lastRun->isOk() ? (int) $lastRun->value : null,
+                'unit' => 'minutes ago',
+                'metric_label' => 'last run',
+                'detail' => 'The scheduler is running, but its run ledger could not be read, so whether every task actually ran is unknown.',
+                'section' => 'scheduler',
+                'source' => 'Laravel Schedule + monitoring_scheduled_runs',
+            ];
+        }
 
         return [
             'key' => 'scheduler',
@@ -292,7 +310,7 @@ class OverviewPanel implements Panel
                 $late > 0 => 'degraded',
                 default => 'healthy',
             },
-            'value' => (int) (($readings['last_run_age_minutes'] ?? null)?->valueOr(0) ?? 0),
+            'value' => $lastRun instanceof Metric && $lastRun->isOk() ? (int) $lastRun->value : null,
             'unit' => 'minutes ago',
             'metric_label' => 'last run',
             'detail' => $missed + $failed + $late === 0
@@ -301,6 +319,12 @@ class OverviewPanel implements Panel
             'section' => 'scheduler',
             'source' => 'Laravel Schedule + monitoring_scheduled_runs',
         ];
+    }
+
+    /** A count that was actually taken, or null where the reading did not arrive. */
+    private function counted(mixed $metric): ?int
+    {
+        return $metric instanceof Metric && $metric->isOk() ? (int) $metric->value : null;
     }
 
     /**

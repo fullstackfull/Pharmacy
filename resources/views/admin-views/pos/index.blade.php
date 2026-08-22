@@ -150,7 +150,7 @@
                                                 @foreach ($customers as $customer)
                                                     <div class="custom_dropdown_item action-customer-change fs-12 fw-medium" data-id="{{ $customer->id }}">
                                                         {{ $customer->f_name }} {{ $customer->l_name }}
-                                                        ({{ env('APP_MODE') != 'demo' ? $customer->phone : '+88017'.rand(111, 999).'XXXXX' }})
+                                                        ({{ config('app.mode') != 'demo' ? $customer->phone : '+88017'.rand(111, 999).'XXXXX' }})
                                                     </div>
                                                 @endforeach
                                             </div>

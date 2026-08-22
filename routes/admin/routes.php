@@ -184,6 +184,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('download/openapi', 'openapi')->name('openapi');
             Route::get('download/postman', 'postman')->name('postman');
             Route::get('endpoint/{id}', 'endpoint')->name('endpoint');
+            // How other sections link in. They know an endpoint by its path, not by the portal's
+            // internal id, so they hand over the path and the portal resolves it.
+            Route::get('lookup', 'lookup')->name('lookup');
             // Writes, so they are POSTs: capturing a snapshot records history, and rebuilding the
             // manifest discards a cache. Neither belongs behind a link a browser can prefetch.
             Route::post('snapshot', 'snapshot')->name('snapshot');
@@ -216,10 +219,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     Route::group(['prefix' => 'monitoring', 'as' => 'monitoring.', 'middleware' => ['module:system_settings']], function () {
         Route::controller(\App\Http\Controllers\Admin\Telemetry\MonitoringController::class)->group(function () {
             Route::get('', 'index')->name('index');
-            // The header strip's own feed, and the previous dashboard's, kept apart: one is polled
-            // every few seconds and must stay cheap, the other is a section's full payload.
+            // The header strip's own feed: polled every few seconds, so it stays cheap and
+            // separate from a section's full payload.
             Route::get('pulse', 'pulse')->name('pulse');
-            Route::get('legacy-pulse', 'legacyPulse')->name('legacy-pulse');
             // Every section on one route. A new section needs an entry in MonitoringNavigation and
             // a panel class — nothing here changes, so the two can never drift apart.
             Route::get('{section}', 'index')->name('section')->where('section', '[a-z0-9\-]+');
@@ -1617,7 +1619,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     // Auction Time Adjustment — demo mode only, requires the Auction addon
-    if (env('APP_MODE') == 'demo' && function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction')) {
+    if (config('app.mode') == 'demo' && function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction')) {
         Route::get('auction-time/{auction_id}', function ($auction_id) {
             $auction = \Modules\Auction\app\Models\AuctionProduct::findOrFail($auction_id);
             return response()->make(view('auction-time-form', compact('auction'))->render());

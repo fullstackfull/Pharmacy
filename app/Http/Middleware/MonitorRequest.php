@@ -32,7 +32,11 @@ class MonitorRequest
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            if (config('monitoring.enabled', true)) {
+            // Registered globally so requests that match no route are measured too — a 404 storm is
+            // exactly the thing an operations page must be able to see. The groups still list it,
+            // so this runs twice per matched request; the context binding is the marker that says
+            // the first pass already started.
+            if (config('monitoring.enabled', true) && !app()->bound(RequestContext::class)) {
                 $context = new RequestContext(
                     correlationId: $this->inboundCorrelationId($request),
                     startedAt: defined('LARAVEL_START') ? LARAVEL_START : microtime(true),

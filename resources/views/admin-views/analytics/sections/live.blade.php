@@ -1,5 +1,13 @@
 {{-- Live reads the event table directly. "Live" and "rolled up" are contradictory, so nothing on
      this screen comes from a rollup. --}}
+{{-- With the tables absent there is nothing to be live about, and a zero here would be the
+     boldest fabricated number on the whole system: "nobody is on the shop right now". --}}
+@if (($data['live']['state'] ?? null) === 'not_installed')
+    <x-k.card>
+        <x-k.empty :title="translate('analytics_is_not_installed')"
+                   :text="translate('run_php_artisan_migrate_to_create_the_analytics_tables')" />
+    </x-k.card>
+@else
 <div class="ana-grid ana-grid--2">
     <x-k.card :title="translate('right_now')">
         <div class="ana-metrics">
@@ -10,8 +18,15 @@
             </div>
             <div class="ana-metric">
                 <small>{{ translate('events') }}</small>
-                <span class="k-num" data-live="events">{{ number_format(count($data['live']['events'] ?? [])) }}</span>
-                <span class="ana-change ana-change--none">{{ translate('most_recent_first') }}</span>
+                {{-- The window's total, not the size of the feed below it, which stops at sixty. --}}
+                <span class="k-num" data-live="events">{{ number_format($data['live']['total_events'] ?? 0) }}</span>
+                <span class="ana-change ana-change--none">
+                    @if (($data['live']['total_events'] ?? 0) > ($data['live']['feed_limit'] ?? 60))
+                        {{ translate('newest') }} {{ $data['live']['feed_limit'] ?? 60 }} {{ translate('shown_below') }}
+                    @else
+                        {{ translate('most_recent_first') }}
+                    @endif
+                </span>
             </div>
         </div>
     </x-k.card>
@@ -59,3 +74,4 @@
         </table>
     @endif
 </x-k.card>
+@endif

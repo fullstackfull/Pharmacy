@@ -449,7 +449,7 @@ if (!function_exists('getDisallowedExtensionsListArray')) {
             ],
         ];
 
-        if (env('APP_MODE') === 'demo') {
+        if (config('app.mode') === 'demo') {
             $groups['archives'][] = 'zip';
         }
 

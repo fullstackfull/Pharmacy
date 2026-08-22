@@ -296,7 +296,25 @@ class HealthScoreService
 
         $missed = $readings['missed_tasks'] ?? null;
         $failed = $readings['failed_tasks'] ?? null;
-        $broken = (int) ($missed?->valueOr(0) ?? 0) + (int) ($failed?->valueOr(0) ?? 0);
+
+        // A count that did not arrive is not a count of zero. Awarding a full 100 for a ledger
+        // nobody could read is the score equivalent of inventing a measurement, and it moved the
+        // whole health figure — this signal carries a weight of two.
+        if (!$missed instanceof Metric || !$missed->isOk() || !$failed instanceof Metric || !$failed->isOk()) {
+            return [
+                'key' => 'scheduler',
+                'label' => 'scheduler',
+                'measured' => false,
+                'weight' => 2,
+                'value' => null,
+                'unit' => 'tasks',
+                'display' => 'The run ledger could not be read, so whether every task ran is unknown.',
+                'score' => null,
+                'source' => 'Laravel Schedule + monitoring_scheduled_runs',
+            ];
+        }
+
+        $broken = (int) $missed->value + (int) $failed->value;
 
         return [
             'key' => 'scheduler',

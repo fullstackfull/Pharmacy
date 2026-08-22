@@ -82,7 +82,7 @@ class FileManagerController extends BaseController
 
     public function upload(FileManagerUploadRequest $request, FileManagerService $fileManagerService): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('This_option_is_disabled_for_demo'));
             return back();
         }

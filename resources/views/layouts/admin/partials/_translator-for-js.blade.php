@@ -75,7 +75,7 @@
 
 <span class="please_fill_out_this_field" data-text="{{ translate('please_fill_out_this_field') }}"></span>
 <span class="get-application-environment-mode"
-      data-value="{{ env('APP_MODE') == 'demo' ? 'demo' : 'live' }}"></span>
+      data-value="{{ config('app.mode') == 'demo' ? 'demo' : 'live' }}"></span>
 <span id="get-currency-symbol" data-currency-symbol="{{ getCurrencySymbol(currencyCode: getCurrencyCode(type: 'default')) }}"></span>
 
 <span id="get-product-stock-limit-title" data-title="{{ translate('warning') }}"></span>

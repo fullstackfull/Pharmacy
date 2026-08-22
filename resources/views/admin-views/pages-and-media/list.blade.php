@@ -165,7 +165,7 @@
                     </button>
                 </div>
                 <div class="modal-body px-20 py-0 mb-30">
-                    <form action="{{ env('APP_MODE') != 'demo' ? route('admin.pages-and-media.delete') : 'javascript:'}}"
+                    <form action="{{ config('app.mode') != 'demo' ? route('admin.pages-and-media.delete') : 'javascript:'}}"
                           method="post">
                         @csrf
                         <input type="hidden" name="slug" value="{{ $businessPage['slug'] }}">

@@ -179,7 +179,10 @@
                 <p class="mon-note">
                     {{ translate('latest') }}: {{ $count($chart['latest'] / $latestDivisor) }} {{ $latestUnit }} —
                     {{ translate('the_line_above_is_drawn_in') }} {{ $line['unit'] }} —
-                    <code>{{ $chart['metric'] }}</code>
+                    {{-- The interface belongs in the series name here. Three cards quoting the
+                         same bare `server.network.rx_bytes_per_s` name three different numbers
+                         under it, and none of them says which row it was read from. --}}
+                    <code>{{ $chart['metric'] . ($chart['label'] === '' ? '' : '@' . $chart['label']) }}</code>
                 </p>
             @else
                 <x-k.empty icon="trend-up" :title="$stateTitle($chart['state'])" :text="$chart['note'] ?? ''" />

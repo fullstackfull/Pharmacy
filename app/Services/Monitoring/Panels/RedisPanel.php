@@ -262,11 +262,10 @@ class RedisPanel implements Panel
         $serves = $readings['serves_app'] ?? null;
         $buffer = $this->bufferRow();
 
-        $rows = [];
-        $state = 'ok';
-        $note = $serves instanceof Metric ? $serves->note : null;
+        $readable = $subsystems instanceof Metric && $subsystems->isOk() && is_array($subsystems->value);
 
-        if ($subsystems instanceof Metric && $subsystems->isOk() && is_array($subsystems->value)) {
+        $rows = [];
+        if ($readable) {
             foreach ($subsystems->value as $entry) {
                 $entry = (array) $entry;
                 $rows[] = [
@@ -278,19 +277,26 @@ class RedisPanel implements Panel
                     'note' => null,
                 ];
             }
-        } else {
-            $state = $subsystems instanceof Metric && !$subsystems->isOk() ? $subsystems->state : 'no_data';
-            $note = $subsystems instanceof Metric
-                ? $subsystems->note
-                : 'The collector returned no reading for the application drivers.';
         }
 
+        // Monitoring's own row goes on whether or not the shop's three could be read, so `rows` is
+        // never empty and the table's own emptiness cannot carry the failure. The state and the
+        // reason are therefore separate keys the view renders beside the table: a table holding
+        // only the buffer row, with nothing saying why, reads as a shop that has no cache, no queue
+        // and no session store rather than as three readings that did not arrive.
         $rows[] = $buffer;
 
         return [
-            'state' => $state,
-            'note' => $note,
-            'source' => $subsystems instanceof Metric ? $subsystems->source : null,
+            'state' => $readable ? 'ok' : ($subsystems instanceof Metric && !$subsystems->isOk() ? $subsystems->state : 'no_data'),
+            'reason' => $readable ? null : ($subsystems instanceof Metric
+                ? ($subsystems->note ?? 'The collector returned no usable reading for the application drivers.')
+                : 'The collector returned no reading for the application drivers.'),
+            'note' => $readable && $serves instanceof Metric ? $serves->note : null,
+            // Only claimed where there is a reading to claim it for. On the collector's blanket
+            // failure path every metric carries "Redis INFO" as its source, and printing that under
+            // a table built from cache.default, queue.default and session.driver would credit the
+            // server with three numbers it never answered.
+            'source' => $readable ? $subsystems->source : null,
             'rows' => $rows,
             // Null, not false: "no subsystem uses Redis" and "we could not read the drivers" are
             // different claims, and only the first one earns the note that follows from it.
@@ -405,7 +411,10 @@ class RedisPanel implements Panel
                 static fn (array $row) => [
                     'command' => (string) ($row['command'] ?? ''),
                     'calls' => (int) ($row['calls'] ?? 0),
-                    'total_ms' => round((int) ($row['total_usec'] ?? 0) / 1000, 1),
+                    // Two decimals, not one: a command that has cost the server forty microseconds
+                    // in total rounds to 0.0 at one and prints as a flat "0 ms", which on this page
+                    // is the one thing a real measurement must never look like.
+                    'total_ms' => round((int) ($row['total_usec'] ?? 0) / 1000, 2),
                     'usec_per_call' => (float) ($row['usec_per_call'] ?? 0),
                     'failed_calls' => (int) ($row['failed_calls'] ?? 0),
                 ],
@@ -505,7 +514,8 @@ class RedisPanel implements Panel
                 'note' => class_basename($exception) . ': ' . $exception->getMessage(),
                 'remedy' => null,
                 'latest' => null,
-                'samples' => 0,
+                // Null, not zero: a read that failed did not find nothing, it did not look.
+                'stored_points' => null,
                 'points' => [],
             ]);
         }
@@ -518,7 +528,10 @@ class RedisPanel implements Panel
         $base = array_merge($definition, [
             'key' => $key,
             'latest' => $series['latest'],
-            'samples' => count($points),
+            // Points, not samples. One stored row is a bucket, and at hour or day resolution a
+            // bucket is a rollup of sixty or of fourteen hundred samples — so calling this a
+            // sample count would understate a week's collection by two orders of magnitude.
+            'stored_points' => count($points),
             'points' => $points,
         ]);
 

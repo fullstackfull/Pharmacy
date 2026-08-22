@@ -11,7 +11,7 @@
     </div>
 </x-k.card>
 
-@include('admin-views.analytics.sections._trend', ['trend' => $data['trend']])
+@include('admin-views.analytics.sections._trend', ['trend' => $data['trend'], 'trendState' => $data['totals']['state'] ?? null])
 
 <div class="ana-grid ana-grid--2">
     @include('admin-views.analytics.sections._breakdown', [
@@ -31,3 +31,14 @@
     ])
     @include('admin-views.analytics.sections._funnel', ['funnel' => $data['funnel'], 'compact' => true])
 </div>
+
+{{-- The other half of the picture. This section answers what people did; how fast the server
+     answered them, and whether it failed, is measured separately — and the two were built without
+     a way to get from one to the other. --}}
+<p class="ana-note">
+    {{ translate('this_counts_people_and_what_they_did') }}
+    <a href="{{ route('admin.monitoring.section', ['section' => 'requests', 'range' => '24h']) }}">{{ translate('how_fast_the_server_answered_them') }}</a>
+    {{ translate('and') }}
+    <a href="{{ route('admin.monitoring.section', ['section' => 'errors', 'range' => '24h']) }}">{{ translate('what_failed') }}</a>
+    {{ translate('are_measured_in_monitoring') }}.
+</p>

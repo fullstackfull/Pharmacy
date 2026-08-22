@@ -28,7 +28,10 @@ class PathNormalizer
 
     /** Paths that never belong in a visitor report: the panel, the tooling, the collector itself. */
     private const IGNORED_PREFIXES = [
-        'admin', 'vendor', 'deliveryman', 'api', 'analytics/collect',
+        // 'login' is the ADMIN and vendor panel's sign-in page: it is registered outside the /admin
+        // prefix (routes/admin/routes.php), so without naming it here every staff login was
+        // recorded as a customer pageview and appeared in the shop's top-pages table.
+        'admin', 'vendor', 'deliveryman', 'api', 'analytics/collect', 'login',
         '_debugbar', 'telemetry', 'livewire', 'broadcasting', 'sanctum', 'storage',
     ];
 

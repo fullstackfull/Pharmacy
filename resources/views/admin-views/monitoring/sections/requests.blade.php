@@ -24,9 +24,20 @@
         ? '—'
         : ((float) $value >= 1000 ? number_format((float) $value / 1000, 1) . ' s' : number_format((float) $value) . ' ms');
 
+    // A rate that rounds to zero is not a rate of zero. The reader stores three decimals, so a
+    // ninety-day window turns a thousand real requests into "0" beside a card saying 1,008 — two
+    // numbers contradicting each other on one screen.
+    $rate = static fn ($value, $hits) => $value === null
+        ? translate('no_data')
+        : (((float) $value) === 0.0 && (int) $hits > 0 ? '< 0.001' : (string) $value);
+
     $stateTitle = static fn (string $state) => match ($state) {
         'failed' => translate('this_could_not_be_read'),
         'not_configured' => translate('monitoring_collection_is_switched_off'),
+        // Behind is not empty: the flat line belongs to the collector, not to the shop.
+        'stale' => translate('this_window_has_not_been_measured'),
+        // The one empty table that is good news, and the only one that is a reading.
+        'no_failures' => translate('no_route_failed_in_this_window'),
         default => translate('no_requests_recorded_in_this_window'),
     };
 @endphp
@@ -54,7 +65,7 @@
               :value="$measured ? number_format($current['hits']) : translate('no_data')"
               icon="trend-up" :delta="$delta['hits'] ?? null" :caption="$caption('hits')" />
     <x-k.stat :label="translate('requests_per_second')"
-              :value="$measured ? $current['requests_per_second'] : translate('no_data')"
+              :value="$measured ? $rate($current['requests_per_second'], $current['hits']) : translate('no_data')"
               icon="trend-up" :delta="$delta['requests_per_second'] ?? null" :caption="$caption('requests_per_second')" />
     <x-k.stat :label="translate('error_rate')"
               :value="$measured ? $current['error_rate'] . '%' : translate('no_data')"
@@ -107,6 +118,12 @@
             {{ translate('window') }}: {{ $panel['window']['since'] }} → {{ $panel['window']['until'] }} ({{ $panel['window']['timezone'] }}),
             {{ translate('resolution') }}: {{ translate($panel['window']['resolution']) }}
         </p>
+        {{-- The chart reads one resolution while the cards above also read the minutes the rollup
+             has not folded yet, so on a long range this line is the difference between "traffic
+             fell" and "the rollup has not caught up". Drawn only when the two really do differ. --}}
+        @if (!empty($panel['coverage']['note']))
+            <p class="mon-note">{{ $panel['coverage']['note'] }}</p>
+        @endif
     @else
         <x-k.empty icon="trend-up" :title="$stateTitle($panel['timeline']['state'] ?? 'no_data')"
                    :text="$panel['timeline']['note'] ?? ''" />
@@ -185,7 +202,12 @@
 </x-k.card>
 
 {{-- The four rankings. The first one is the answer to "what should I fix"; the other three are
-     the questions people ask instead. --}}
+     the questions people ask instead. Said again here because a table's totals not adding up to
+     the headline is read as a broken page unless the gap is named where the table is. --}}
+@if (!empty($panel['coverage']['note']))
+    <p class="mon-note">{{ $panel['coverage']['note'] }}</p>
+@endif
+
 @foreach ($panel['breakdowns'] as $breakdown)
     <x-k.card :title="translate($breakdown['title'])">
         <p class="mon-note" style="margin-block-start:0">{{ translate($breakdown['why']) }}</p>
@@ -212,8 +234,18 @@
                     @foreach ($breakdown['rows'] as $row)
                         <tr>
                             <td>
-                                <span class="k-truncate" style="display:block;max-inline-size:260px"
-                                      title="{{ $row['channel'] }} {{ $row['method'] }} {{ $row['route'] }}">{{ $row['route'] }}</span>
+                                {{-- Straight through to what this route is: the Developer Portal
+                                     resolves the path, so this does not have to know how its
+                                     endpoint ids are made. Folded rows are not a route, so they do
+                                     not link anywhere. --}}
+                                @if ($row['route'] === '__other__')
+                                    <span class="k-truncate" style="display:block;max-inline-size:260px"
+                                          title="{{ translate('routes_folded_together_by_the_cardinality_guard') }}">{{ $row['route'] }}</span>
+                                @else
+                                    <a class="k-truncate" style="display:block;max-inline-size:260px"
+                                       href="{{ route('admin.developer.lookup', ['path' => $row['route'], 'method' => $row['method']]) }}"
+                                       title="{{ $row['channel'] }} {{ $row['method'] }} {{ $row['route'] }} — {{ translate('open_this_endpoint_in_the_developer_portal') }}">{{ $row['route'] }}</a>
+                                @endif
                             </td>
                             <td>{{ $row['method'] }}</td>
                             <td class="k-table__num k-num">{{ number_format($row['hits']) }}</td>
@@ -237,7 +269,10 @@
                 </table>
             </div>
         @else
-            <x-k.empty icon="reports" :title="$stateTitle($breakdown['state'] ?? 'no_data')"
+            {{-- An empty table that reports a clean window should not wear the same face as one
+                 that could not be read. --}}
+            <x-k.empty :icon="($breakdown['state'] ?? '') === 'no_failures' ? 'check' : 'reports'"
+                       :title="$stateTitle($breakdown['state'] ?? 'no_data')"
                        :text="$breakdown['note'] ?? ''" />
             @if (!empty($breakdown['remedy']))
                 <details class="mon-metric__remedy">
@@ -252,4 +287,7 @@
 <p class="mon-note">
     {{ translate('every_figure_on_this_page_is_read_from') }} <code>monitoring_request_buckets</code>,
     {{ translate('folded_per_minute_per_route_percentiles_are_interpolated_from_the_stored_latency_histogram_not_from_sampled_requests') }}
+    {{-- The complement: this page counts requests, Analytics counts people. Neither is a substitute
+         for the other and until now there was no way across. --}}
+    <a href="{{ route('admin.analytics.section', ['section' => 'acquisition']) }}">{{ translate('who_those_requests_were_and_where_they_came_from') }}</a>.
 </p>

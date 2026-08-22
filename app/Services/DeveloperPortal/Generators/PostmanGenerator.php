@@ -39,19 +39,54 @@ class PostmanGenerator
 
         return [
             'info' => [
-                'name' => config('app.name') . ' API' . (!empty($filters['audience']) ? ' — ' . str_replace('_', ' ', $filters['audience']) : ''),
+                // ?audience[]=seller reaches here as an array, and concatenating one is a PHP
+                // notice and a broken name; only a plain string narrows the collection's title.
+                'name' => config('app.name') . ' API'
+                    . (is_string($filters['audience'] ?? null) && $filters['audience'] !== ''
+                        ? ' — ' . str_replace('_', ' ', $filters['audience'])
+                        : ''),
                 'description' => 'Generated from the live route table on ' . ($manifest['generated_at'] ?? 'unknown')
                     . '. Set base_url and the token variable for the API you are calling, then send.',
                 'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
             ],
-            'variable' => [
-                ['key' => 'base_url', 'value' => $manifest['base_url'] ?: url('/'), 'type' => 'string'],
-                ['key' => 'customer_token', 'value' => '', 'type' => 'string'],
-                ['key' => 'vendor_token', 'value' => '', 'type' => 'string'],
-                ['key' => 'delivery_token', 'value' => '', 'type' => 'string'],
-            ],
+            'variable' => array_merge(
+                [
+                    ['key' => 'base_url', 'value' => $manifest['base_url'] ?: url('/'), 'type' => 'string'],
+                    ['key' => 'customer_token', 'value' => '', 'type' => 'string'],
+                    ['key' => 'vendor_token', 'value' => '', 'type' => 'string'],
+                    ['key' => 'delivery_token', 'value' => '', 'type' => 'string'],
+                ],
+                // Every {{id}} the requests below reference. Emitting the references without
+                // declaring them left most of the collection importing with unresolved variables,
+                // so the first send went to a literal "{{id}}" path.
+                $this->pathVariables($endpoints),
+            ),
             'item' => $this->folders($endpoints),
         ];
+    }
+
+    /**
+     * The path parameters used anywhere in this collection, declared once each.
+     *
+     * @param  array<int, array<string, mixed>>  $endpoints
+     * @return array<int, array<string, string>>
+     */
+    private function pathVariables(array $endpoints): array
+    {
+        $names = [];
+
+        foreach ($endpoints as $endpoint) {
+            foreach ($endpoint['path_parameters'] ?? [] as $parameter) {
+                $names[(string) $parameter['name']] = true;
+            }
+        }
+
+        ksort($names);
+
+        return array_map(
+            static fn (string $name) => ['key' => $name, 'value' => '', 'type' => 'string'],
+            array_keys($names),
+        );
     }
 
     public function toJson(array $filters = []): string

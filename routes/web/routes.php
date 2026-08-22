@@ -103,6 +103,22 @@ Route::get('/image-proxy', function (\App\Services\Security\OutboundUrlGuard $gu
 })->middleware('throttle:30,1');
 
 /*
+| The analytics beacon.
+|
+| Public and unauthenticated, because the storefront is. It is safe to be so: only allow-listed
+| event names are accepted, none of them carry money, and nothing the client sends is trusted for
+| anything but a page identity. It always answers 204, so a prober learns nothing from it.
+|
+| The rate limit is PER IP, which is what an unnamed throttle does — not per visitor. On a network
+| behind one address, an office or a campus, the limit is shared. That is the right trade for a
+| beacon: keying on the visitor cookie would let anyone lift the ceiling by clearing it.
+*/
+Route::post(trim((string) config('analytics.beacon.path', 'analytics/collect'), '/'),
+    \App\Http\Controllers\Web\AnalyticsCollectController::class)
+    ->middleware('throttle:' . (int) config('analytics.beacon.rate_limit_per_minute', 60) . ',1')
+    ->name('analytics.collect');
+
+/*
 | Campaign short links.
 |
 | Public and unauthenticated by design — these get printed on posters and pasted into WhatsApp.
@@ -112,7 +128,10 @@ Route::get('/image-proxy', function (\App\Services\Security\OutboundUrlGuard $gu
 */
 Route::get(trim((string) config('analytics.campaigns.path', 'go'), '/') . '/{code}',
     \App\Http\Controllers\Web\CampaignRedirectController::class)
-    ->where('code', '[a-z0-9]{4,24}')
+    // Case-insensitive on purpose: codes are minted lowercase, and CampaignService folds case
+    // on lookup, so a code read off a poster in capitals has to reach the controller rather
+    // than being refused by the router before the folding can happen.
+    ->where('code', '[A-Za-z0-9]{4,24}')
     ->middleware('throttle:' . (int) config('analytics.campaigns.click_rate_limit', 120) . ',1')
     ->name('campaign.go');
 

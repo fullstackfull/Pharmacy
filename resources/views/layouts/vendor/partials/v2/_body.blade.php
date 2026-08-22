@@ -1,6 +1,6 @@
 {{-- v1 body — wraps the rail + header + ctxpanel + @yield('content') in the grid shell.
      All shell markup uses v2- prefixed classes so no styling leaks into @yield('content'). --}}
-@if (env('APP_MODE') == 'demo')
+@if (config('app.mode') == 'demo')
     <div class="__announcement-bar" style="background-image: url({{ dynamicAsset(path: 'public/assets/website-top-header.png') }})">
         <div class="container">
             <div class="wrapper">

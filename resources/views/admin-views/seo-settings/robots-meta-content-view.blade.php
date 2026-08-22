@@ -252,7 +252,7 @@
                         <button type="reset" class="btn btn-secondary px-5">
                             {{ translate('reset') }}
                         </button>
-                        <button type="{{ env('APP_MODE') == 'demo' ? 'button' : 'submit' }}" class="btn btn-primary px-5 {{env('APP_MODE')!='demo'? '' : 'call-demo-alert'}}">
+                        <button type="{{ config('app.mode') == 'demo' ? 'button' : 'submit' }}" class="btn btn-primary px-5 {{config('app.mode')!='demo'? '' : 'call-demo-alert'}}">
                             {{ translate('submit') }}
                         </button>
                     </div>

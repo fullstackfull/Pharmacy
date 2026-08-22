@@ -456,7 +456,8 @@ class ServerPanel implements Panel
                 'note' => class_basename($exception) . ': ' . $exception->getMessage(),
                 'remedy' => null,
                 'latest' => null,
-                'samples' => 0,
+                // Null, not zero: a read that failed did not find nothing, it did not look.
+                'stored_points' => null,
                 'points' => [],
             ]);
         }
@@ -469,7 +470,10 @@ class ServerPanel implements Panel
         $chart = array_merge($definition, [
             'key' => $key,
             'latest' => $series['latest'],
-            'samples' => count($points),
+            // Points, not samples. One stored row is a bucket, and at hour or day resolution a
+            // bucket is a rollup of sixty or of fourteen hundred samples — so calling this a
+            // sample count would understate a week's collection by two orders of magnitude.
+            'stored_points' => count($points),
             'points' => $points,
         ]);
 
@@ -500,9 +504,17 @@ class ServerPanel implements Panel
             ];
         }
 
-        if ($live instanceof Metric && !$live->isOk()) {
-            // The sampler only stores a reading that is OK, so an unreadable metric has never been
-            // written. The gap is this host, not the scheduler, and the reading says which.
+        // The sampler only stores a reading that is OK, so a metric this host cannot produce has
+        // never been written. The gap is the host, not the scheduler, and the reading says which.
+        //
+        // Only a reading that is structurally unavailable earns that answer. NO_DATA means the
+        // opposite — the probe works here and has simply not recorded yet — and the CPU and memory
+        // collectors return it for the first sample of every process, because utilisation is a
+        // delta against a cached previous reading. Blaming "not on this host" for that printed
+        // "this host cannot measure processor usage" over a gauge with a fortnight of samples in
+        // the table underneath it.
+        $unavailable = [Metric::NOT_SUPPORTED, Metric::NOT_CONFIGURED, Metric::PERMISSION_DENIED, Metric::COLLECTOR_OFFLINE, Metric::FAILED];
+        if ($live instanceof Metric && in_array($live->state, $unavailable, true)) {
             return [
                 'state' => $live->state,
                 'note' => 'This gauge is only stored while the reading behind it is available, and it is not on this host. '

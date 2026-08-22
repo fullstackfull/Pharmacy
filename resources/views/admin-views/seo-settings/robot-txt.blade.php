@@ -5,7 +5,7 @@
 @section('content')
     <div class="content container-fluid">
         <div class="row g-3 align-items-center mb-3">
-            <div class="{{ env('APP_MODE') == 'demo' ? 'col-md-8' : 'col-md-12' }}">
+            <div class="{{ config('app.mode') == 'demo' ? 'col-md-8' : 'col-md-12' }}">
                 <h1 class="mb-3 sm-sm-20">
                     {{ translate('SEO_Settings') }}
                 </h1>
@@ -13,7 +13,7 @@
                 @include('admin-views.seo-settings._inline-menu')
             </div>
 
-            @if(env('APP_MODE') == 'demo')
+            @if(config('app.mode') == 'demo')
                 <div class="col-md-4">
                     <div
                         class="bg-warning bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center">
@@ -55,7 +55,7 @@
                     <div
                         class="bg-info bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center mb-3 mb-sm-20">
                         <i class="fi fi-sr-lightbulb-on text-info"></i>
-                        @if(env('APP_MODE') == 'demo')
+                        @if(config('app.mode') == 'demo')
                             <span>
                                 {{ translate('the_robots.txt_editor_lets_you_tell_search_engines_which_parts_of_your_website_they_should_or_should_not_crawl.') }} {{ translate('please_note') }}:{{ translate('this_feature_is_disabled_for_demo.') }}
                             </span>
@@ -77,7 +77,7 @@
                     class="d-flex justify-content-sm-end justify-content-center gap-3 flex-grow-1 flex-grow-sm-0 bg-white action-btn-wrapper trans3">
                     <button type="reset" class="btn btn-secondary px-3 px-sm-4 w-120">{{ translate('reset') }}</button>
                     <button type="submit"
-                            class="btn btn-primary px-3 px-sm-4 {{env('APP_MODE')!='demo'? '' : 'call-demo-alert'}}">
+                            class="btn btn-primary px-3 px-sm-4 {{config('app.mode')!='demo'? '' : 'call-demo-alert'}}">
                         <i class="fi fi-sr-disk"></i>
                         {{ translate('save_information') }}
                     </button>

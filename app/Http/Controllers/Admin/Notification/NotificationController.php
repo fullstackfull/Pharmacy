@@ -58,7 +58,7 @@ class NotificationController extends BaseController
      */
     public function add(NotificationRequest $request): RedirectResponse
     {
-        if (env('APP_MODE') === 'demo') {
+        if (config('app.mode') === 'demo') {
             ToastMagic::info(translate('push_notification_is_disable_for_demo'));
             return back();
         }
@@ -133,7 +133,7 @@ class NotificationController extends BaseController
      */
     public function resendNotification(Request $request): JsonResponse
     {
-        if (env('APP_MODE') === 'demo') {
+        if (config('app.mode') === 'demo') {
             $data['success'] = false;
             $data['message'] = translate("push_notification_is_disabled_for_demo");
             return response()->json($data);

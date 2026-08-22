@@ -306,7 +306,10 @@
                 <th>{{ translate('gauge') }}</th>
                 <th>{{ translate('series') }}</th>
                 <th class="k-table__num">{{ translate('latest') }}</th>
-                <th class="k-table__num">{{ translate('samples_in_window') }}</th>
+                {{-- Stored points, not samples: at hour or day resolution one stored row is a
+                     rollup of sixty or of fourteen hundred samples, so a sample count here would
+                     understate a week's collection by two orders of magnitude. --}}
+                <th class="k-table__num">{{ translate('stored_points_in_window') }}</th>
                 <th>{{ translate('state') }}</th>
             </tr>
             </thead>
@@ -319,7 +322,9 @@
                     <td class="k-table__num k-num">
                         {{ $chart['latest'] === null ? '—' : $count($chart['latest']) . ' ' . $chart['unit'] }}
                     </td>
-                    <td class="k-table__num k-num">{{ number_format($chart['samples']) }}</td>
+                    <td class="k-table__num k-num">
+                        {{ $chart['stored_points'] === null ? '—' : number_format($chart['stored_points']) }}
+                    </td>
                     <td>
                         @if ($chart['state'] === 'ok')
                             <span class="mon-pill mon-pill--ok">{{ translate('recorded') }}</span>

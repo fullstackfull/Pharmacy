@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
+use App\Services\Analytics\AnalyticsPermissionService;
 use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Reporting\AnalyticsReporting;
 use App\Services\Analytics\Reporting\Window;
@@ -26,6 +27,7 @@ class AnalyticsController extends BaseController
     public function __construct(
         private readonly AnalyticsReporting $reporting,
         private readonly CampaignService $campaigns,
+        private readonly AnalyticsPermissionService $permissions,
     ) {
     }
 
@@ -43,12 +45,20 @@ class AnalyticsController extends BaseController
             $section = 'overview';
         }
 
+        // Checked before any data is fetched, so a section this admin may not open never runs its
+        // queries — the difference between a page they cannot see and data they cannot reach.
+        if (!$this->permissions->can($this->permissions->capabilityForSection($section))) {
+            return redirect()
+                ->route('admin.analytics.section', ['section' => 'overview'])
+                ->with('error', translate('access_Denied') . '!');
+        }
+
         $window = $this->window($request);
 
         return view('admin-views.analytics.index', [
             'section' => $section,
             'meta' => AnalyticsNavigation::meta($section),
-            'navigation' => AnalyticsNavigation::grouped(),
+            'navigation' => AnalyticsNavigation::grouped($this->permissions),
             'window' => $window,
             'ranges' => Window::RANGES,
             'health' => $this->reporting->collectionHealth(),
@@ -64,7 +74,8 @@ class AnalyticsController extends BaseController
      */
     public function export(Request $request, string $dimension): StreamedResponse|RedirectResponse
     {
-        if (!in_array($dimension, AnalyticsReporting::DIMENSIONS, true)) {
+        if (!in_array($dimension, AnalyticsReporting::DIMENSIONS, true)
+            || !$this->permissions->can(AnalyticsPermissionService::EXPORT)) {
             return back();
         }
 
@@ -107,6 +118,10 @@ class AnalyticsController extends BaseController
      */
     public function storeCampaign(Request $request): RedirectResponse
     {
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return back()->with('error', translate('access_Denied') . '!');
+        }
+
         $result = $this->campaigns->create($request->all(), auth('admin')->id());
 
         return redirect()
@@ -119,6 +134,10 @@ class AnalyticsController extends BaseController
 
     public function toggleCampaign(Request $request, int $id): RedirectResponse
     {
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return back()->with('error', translate('access_Denied') . '!');
+        }
+
         $this->campaigns->setActive($id, $request->boolean('active'));
 
         return redirect()->route('admin.analytics.section', ['section' => 'campaigns']);
@@ -127,6 +146,14 @@ class AnalyticsController extends BaseController
     /** The QR for one short link, as an SVG the browser can render or a merchant can save. */
     public function campaignQr(int $id): \Illuminate\Http\Response|RedirectResponse
     {
+        // The same capability the campaigns section is gated on. Without it, an employee whose role
+        // grants only the reports module — which implies analytics_view and nothing more — could
+        // walk the ids and read every campaign's short code out of its QR.
+        if (!$this->permissions->can(AnalyticsPermissionService::CAMPAIGNS)) {
+            return redirect()->route('admin.analytics.section', ['section' => 'overview'])
+                ->with('error', translate('access_Denied') . '!');
+        }
+
         $campaign = $this->campaigns->find($id);
 
         if ($campaign === null) {
@@ -148,6 +175,12 @@ class AnalyticsController extends BaseController
     /** The Live screen polls this rather than reloading a page every few seconds. */
     public function live(Request $request): JsonResponse
     {
+        // Gated like the section it feeds. A polled JSON feed is still the same data, and the
+        // section's own check does not run for it.
+        if (!$this->permissions->can($this->permissions->capabilityForSection('live'))) {
+            return response()->json(['error' => 'forbidden'], 403);
+        }
+
         return response()->json($this->reporting->live((int) $request->query('minutes', 30)));
     }
 
@@ -184,6 +217,9 @@ class AnalyticsController extends BaseController
                 'campaigns' => $this->campaigns->all(),
                 'allowed_hosts' => app(\App\Services\Analytics\Support\CampaignDestination::class)->allowedHosts(),
                 'ready' => $this->campaigns->ready(),
+                // Whether a short link opens the app on a phone that has it. Without this the
+                // section could not tell a merchant why their QR code opens a browser.
+                'app_links' => $this->appLinkState(),
             ],
             'acquisition' => [
                 'sources' => $this->reporting->breakdown($window, 'source', 30),
@@ -294,4 +330,36 @@ class AnalyticsController extends BaseController
 
         return $breakdown;
     }
+
+    /**
+     * Whether campaign short links currently open the mobile app.
+     *
+     * Three things have to line up: the app has to be set up at all, /go/* has to be on the
+     * published path list, and the file on disk has to actually carry that list. Any one of them
+     * missing means a QR code on a poster opens a browser, and the campaigns section is where a
+     * merchant would look to find out why.
+     *
+     * @return array<string, mixed>
+     */
+    private function appLinkState(): array
+    {
+        $links = app(\App\Services\DeepLink\AppLinkService::class);
+        $writer = app(\App\Services\DeepLink\AssociationFileWriter::class);
+
+        $path = '/' . trim((string) config('analytics.campaigns.path', 'go'), '/') . '/x';
+        $published = $writer->published();
+        $settings = $links->settings();
+
+        return [
+            'configured' => $links->isConfiguredForAnyPlatform(),
+            'campaign_path_is_published' => $links->opensTheApp($path),
+            // A file that does not exist, or exists and names no app, is not "current" — it is a
+            // deployment where nothing opens the app. Reporting it as current told the merchant
+            // their poster worked when nothing had ever been published.
+            'files_are_current' => $writer->isCurrent($settings),
+            'published_claims_an_app' => $published['claims_an_app'],
+            'setup_url' => route('admin.system-setup.app-deep-link'),
+        ];
+    }
+
 }

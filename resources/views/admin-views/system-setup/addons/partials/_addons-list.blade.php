@@ -31,7 +31,7 @@
                                     </div>
                                 </div>
 
-                                @if(env('APP_MODE') != 'demo')
+                                @if(config('app.mode') != 'demo')
                                 <div class="d-flex gap-2 gap-sm-3 align-items-center">
                                     @if ($addonData['is_published'] == 0)
                                         <button class="btn btn-outline-danger bg-danger bg-opacity-10 icon-btn"

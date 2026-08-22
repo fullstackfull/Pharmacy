@@ -62,12 +62,23 @@ class AnalyticsNavigation
         return self::SECTIONS[$section] ?? self::SECTIONS['overview'];
     }
 
-    /** @return array<string, array<string, mixed>> */
-    public static function grouped(): array
+    /**
+     * The rail, filtered to what this administrator may actually open.
+     *
+     * Hiding rather than showing-and-refusing: a menu item that always ends in "access denied" is
+     * a worse experience than one that was never offered, and it leaks which features exist.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function grouped(?\App\Services\Analytics\AnalyticsPermissionService $permissions = null): array
     {
         $grouped = [];
 
         foreach (self::SECTIONS as $key => $meta) {
+            if ($permissions !== null && !$permissions->can($permissions->capabilityForSection($key))) {
+                continue;
+            }
+
             $grouped[$meta['group']]['label'] = self::GROUPS[$meta['group']] ?? $meta['group'];
             $grouped[$meta['group']]['sections'][$key] = $meta;
         }

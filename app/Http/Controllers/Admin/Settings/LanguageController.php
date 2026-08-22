@@ -235,7 +235,7 @@ class LanguageController extends BaseController
 
     public function getAutoTranslateAllMessages(Request $request, $lang, LanguageService $languageService): JsonResponse|RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('This_option_is_disabled_for_demo'));
             return back();
         }

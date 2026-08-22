@@ -287,6 +287,9 @@ class MonitoringRollup extends Command
             ['monitoring_series', 'bucket_at', 'day', (int) ($retention['day_days'] ?? 400)],
             ['monitoring_dependency_buckets', 'bucket_at', 'minute', (int) ($retention['minute_days'] ?? 7)],
             ['monitoring_dependency_buckets', 'bucket_at', 'hour', (int) ($retention['hour_days'] ?? 90)],
+            // The rollup writes day rows for this table too, and they were the one resolution with
+            // no line in this plan — so they grew for the life of the installation.
+            ['monitoring_dependency_buckets', 'bucket_at', 'day', (int) ($retention['day_days'] ?? 400)],
             ['monitoring_slow_queries', 'bucket_at', 'hour', (int) ($retention['hour_days'] ?? 90)],
         ];
 
@@ -316,7 +319,9 @@ class MonitoringRollup extends Command
             ->whereNotIn('trace_id', $this->connection()->table('monitoring_traces')->select('trace_id')));
 
         // An error group whose every occurrence has aged out, and which nobody is looking at.
-        $this->connection()->table('monitoring_error_groups')
+        // Counted, like every other delete here: the command reports how many rows it removed, and
+        // discarding this one made that figure quietly short.
+        $deleted += (int) $this->connection()->table('monitoring_error_groups')
             ->where('status', '!=', 'open')
             ->where('last_seen_at', '<', Clock::daysAgo(max(1, (int) ($retention['error_days'] ?? 60))))
             ->delete();

@@ -47,7 +47,7 @@ class RobotsMetaContentController extends BaseController
 
     public function addPage(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
             return redirect()->route('admin.seo-settings.robots-meta-content.index');
         }
@@ -78,7 +78,7 @@ class RobotsMetaContentController extends BaseController
 
     public function getPageDelete(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
             return redirect()->back();
         }
@@ -99,7 +99,7 @@ class RobotsMetaContentController extends BaseController
 
     public function getPageContentUpdate(RobotsMetaContentAddRequest $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
             return redirect()->route('admin.seo-settings.robots-meta-content.index');
         }

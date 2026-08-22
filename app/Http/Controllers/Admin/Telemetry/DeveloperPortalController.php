@@ -70,6 +70,31 @@ class DeveloperPortalController extends BaseController
         ]);
     }
 
+    /**
+     * Find an endpoint by the path another section knows it by.
+     *
+     * Monitoring keys everything by route pattern; the portal keys everything by a hash of the
+     * methods and the URI, which nothing outside the manifest can compute. Rather than teach
+     * Monitoring how portal ids are made — a coupling that would break the first time the scheme
+     * changed — it links here and the portal does the lookup. A path it cannot place lands on the
+     * explorer with the search already filled in, which is the useful answer rather than a 404.
+     */
+    public function lookup(Request $request): RedirectResponse
+    {
+        $path = (string) $request->query('path', '');
+        $method = $request->query('method');
+        $endpoint = $path === '' ? null : $this->manifest->findByPath($path, is_string($method) ? $method : null);
+
+        if ($endpoint === null) {
+            return redirect()->route('admin.developer.section', [
+                'section' => 'explorer',
+                'search' => mb_substr($path, 0, 191),
+            ]);
+        }
+
+        return redirect()->route('admin.developer.endpoint', ['id' => $endpoint['id']]);
+    }
+
     /** The generated OpenAPI document. */
     public function openapi(Request $request, OpenApiGenerator $generator): StreamedResponse
     {
@@ -109,6 +134,12 @@ class DeveloperPortalController extends BaseController
     {
         $label = trim((string) $request->input('label')) ?: 'manual-' . now()->format('Y-m-d H:i');
         $result = $this->snapshots->captureAndRecord($label, auth('admin')->id());
+
+        if ($result['unavailable'] ?? false) {
+            return redirect()->route('admin.developer.section', ['section' => 'changelog'])
+                ->with('error', translate('the_snapshot_tables_are_not_installed_so_nothing_was_captured')
+                    . ' — php artisan migrate');
+        }
 
         $message = $result['first']
             ? translate('first_snapshot_captured_there_is_nothing_to_compare_it_against_yet')

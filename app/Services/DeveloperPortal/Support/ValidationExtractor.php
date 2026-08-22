@@ -190,6 +190,11 @@ class ValidationExtractor
     {
         $rules = [];
 
+        // Commented-out rules are not rules. Without this a field somebody disabled months ago is
+        // published as a live request parameter, which is worse than not documenting it: a client
+        // sends it and the API ignores it.
+        $source = $this->withoutComments($source);
+
         // 'field' => 'required|integer|min:1'
         if (preg_match_all("/'([a-zA-Z0-9_.*\\[\\]]+)'\s*=>\s*'([^']*?)'/", $source, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
@@ -200,7 +205,14 @@ class ValidationExtractor
         }
 
         // 'field' => ['required', 'integer', Rule::in([...])]
-        if (preg_match_all("/'([a-zA-Z0-9_.*\\[\\]]+)'\s*=>\s*\[([^\]]*?)\]/s", $source, $matches, PREG_SET_ORDER)) {
+        //
+        // Scanned rather than matched with [^\]]*: a rule list holding a character class —
+        // 'regex:/^[a-zA-Z0-9]+$/' is ordinary — ended at the first ] inside it, so the field was
+        // published with whatever preceded the truncation and still labelled as read from the
+        // FormRequest.
+        foreach ($this->arrayAssignments($source) as $field => $body) {
+            $matches = [[null, $field, $body]];
+
             foreach ($matches as $match) {
                 $items = [];
 
@@ -222,6 +234,89 @@ class ValidationExtractor
         }
 
         return $rules;
+    }
+
+    /**
+     * The same source with every comment removed, using PHP's own tokeniser rather than a regex.
+     */
+    private function withoutComments(string $source): string
+    {
+        $tokens = @token_get_all('<?php ' . $source);
+
+        if ($tokens === false || $tokens === []) {
+            return $source;
+        }
+
+        $clean = '';
+
+        foreach ($tokens as $token) {
+            if (is_array($token)) {
+                if ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT) {
+                    continue;
+                }
+                if ($token[0] === T_OPEN_TAG) {
+                    continue;
+                }
+                $clean .= $token[1];
+
+                continue;
+            }
+
+            $clean .= $token;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Every `'field' => [ ... ]` in the source, with the brackets balanced properly.
+     *
+     * @return array<string, string>  field => the text between its outermost brackets
+     */
+    private function arrayAssignments(string $source): array
+    {
+        $found = [];
+        $offset = 0;
+
+        while (preg_match("/'([a-zA-Z0-9_.*\\[\\]]+)'\s*=>\s*\[/", $source, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
+            $field = $match[1][0];
+            $start = $match[0][1] + strlen($match[0][0]);
+            $depth = 1;
+            $index = $start;
+            $quote = null;
+            $length = strlen($source);
+
+            while ($index < $length && $depth > 0) {
+                $character = $source[$index];
+
+                if ($quote !== null) {
+                    if ($character === '\\') {
+                        $index += 2;
+
+                        continue;
+                    }
+                    if ($character === $quote) {
+                        $quote = null;
+                    }
+                } elseif ($character === "'" || $character === '"') {
+                    $quote = $character;
+                } elseif ($character === '[') {
+                    $depth++;
+                } elseif ($character === ']') {
+                    $depth--;
+                }
+
+                $index++;
+            }
+
+            if ($depth === 0) {
+                $found[$field] = substr($source, $start, $index - $start - 1);
+            }
+
+            $offset = $index;
+        }
+
+        return $found;
     }
 
     /**
@@ -264,10 +359,34 @@ class ValidationExtractor
         $fields = [];
 
         foreach ($rules as $name => $rule) {
-            $fields[] = $this->translator->field((string) $name, is_array($rule) ? $rule : (string) $rule);
+            $fields[] = $this->translator->field((string) $name, $this->readable($rule));
         }
 
         return $fields;
+    }
+
+    /**
+     * A rule in a form the translator can read.
+     *
+     * `'password' => Password::defaults()` and `'status' => new Enum(Status::class)` are ordinary
+     * Laravel, and casting either with (string) throws an Error — not an Exception, so it escaped
+     * every catch on the way out and took the whole Developer Portal down with it. A rule object
+     * that can describe itself is asked to; one that cannot is named by its class, which is more
+     * than the page could say before.
+     */
+    private function readable(mixed $rule): array|string
+    {
+        if (is_array($rule)) {
+            return array_map(fn ($one) => is_array($one) ? $one : $this->readable($one), $rule);
+        }
+
+        if (is_object($rule)) {
+            return $rule instanceof \Stringable || method_exists($rule, '__toString')
+                ? (string) $rule
+                : strtolower(class_basename($rule));
+        }
+
+        return is_scalar($rule) ? (string) $rule : '';
     }
 
     private function sourceOf(ReflectionMethod $method): string

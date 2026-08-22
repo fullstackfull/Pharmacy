@@ -74,7 +74,7 @@
     const iconPath = "{{ dynamicAsset(path: 'public/assets/new/back-end/img/icons/file.svg') }}";
 </script>
 
-@if(App\Utils\Helpers::module_permission_check('orders') && (in_array(request()->ip(), ['127.0.0.1', '::1']) ? true : env('APP_MODE') != 'dev'))
+@if(App\Utils\Helpers::module_permission_check('orders') && (in_array(request()->ip(), ['127.0.0.1', '::1']) ? true : config('app.mode') != 'dev'))
     <script>
         'use strict'
         let getInitialDataForPanelTime = parseInt(
@@ -87,7 +87,7 @@
     </script>
 @endif
 
-@if(env('APP_MODE') == 'demo')
+@if(config('app.mode') == 'demo')
     <script>
         'use strict'
         function checkDemoResetTime() {

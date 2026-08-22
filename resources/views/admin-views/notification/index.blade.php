@@ -79,8 +79,8 @@
                             </div>
                             <div class="d-flex justify-content-end flex-wrap gap-3">
                                 <button type="reset" class="btn btn-secondary">{{translate('reset')}} </button>
-                                <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"
-                                        class="btn btn-primary {{env('APP_MODE')!='demo'?'':'call-demo-alert'}}">{{translate('send_Notification')}}  </button>
+                                <button type="{{config('app.mode')!='demo'?'submit':'button'}}"
+                                        class="btn btn-primary {{config('app.mode')!='demo'?'':'call-demo-alert'}}">{{translate('send_Notification')}}  </button>
                             </div>
                         </form>
                     </div>

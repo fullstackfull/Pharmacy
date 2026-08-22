@@ -61,6 +61,39 @@
     </form>
 </x-k.card>
 
+{{-- Whether a short link opens the app. A merchant printing a QR code has no way to find this
+     out from the link itself, and the answer lives in a different section of the admin. --}}
+@php($appLinks = $data['app_links'])
+<x-k.card :title="translate('on_a_phone_with_the_app')">
+    @if (!$appLinks['configured'])
+        <p class="ana-note">
+            {{ translate('the_mobile_app_is_not_set_up_so_every_short_link_opens_the_browser') }}
+            <a href="{{ $appLinks['setup_url'] }}">{{ translate('set_up_deep_links') }}</a>.
+        </p>
+    @elseif (!$appLinks['campaign_path_is_published'])
+        <p class="ana-note ana-note--warning">
+            {{ translate('the_app_is_set_up_but_short_links_are_not_on_its_published_path_list_so_they_open_the_browser') }}
+            <a href="{{ $appLinks['setup_url'] }}">{{ translate('review_the_published_paths') }}</a>.
+        </p>
+    @elseif (!$appLinks['published_claims_an_app'])
+        <p class="ana-note ana-note--warning">
+            {{ translate('the_app_is_set_up_but_nothing_has_been_published_for_the_phone_to_read_so_no_link_opens_the_app_yet') }}
+            <code>php artisan deeplinks:publish</code>
+        </p>
+    @elseif (!$appLinks['files_are_current'])
+        <p class="ana-note ana-note--warning">
+            {{ translate('short_links_are_on_the_published_path_list_but_the_file_the_phone_reads_is_older_than_that_list') }}
+            <code>php artisan deeplinks:publish</code>
+        </p>
+    @else
+        <p class="ana-note">
+            {{ translate('a_short_link_opens_the_app_when_it_is_installed_and_the_visit_is_still_counted_against_its_campaign') }}
+            {{ translate('an_install_that_follows_one_carries_the_campaign_into_the_store_so_it_is_attributed_too') }}
+            <a href="{{ $appLinks['setup_url'] }}">{{ translate('deep_link_setup') }}</a>.
+        </p>
+    @endif
+</x-k.card>
+
 <x-k.card :title="translate('campaign_links')">
     @if ($data['campaigns'] === [])
         <x-k.empty
@@ -124,6 +157,12 @@
                     <div>
                         <span class="k-num">{{ $item['conversion_rate'] !== null ? $item['conversion_rate'] . '%' : '—' }}</span>
                         <small>{{ translate('conversion') }}</small>
+                    </div>
+                    {{-- Not shown as 0 when the surface was never recorded: rows written before
+                         short links became app links genuinely do not know where they opened. --}}
+                    <div>
+                        <span class="k-num">{{ $item['app_clicks'] === null ? '—' : number_format($item['app_clicks']) }}</span>
+                        <small>{{ translate('opened_in_the_app') }}</small>
                     </div>
                 </div>
 

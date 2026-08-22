@@ -70,6 +70,25 @@
         }
         return $values;
     };
+
+    // translate() writes every key it has not already seen into resources/lang/*/new-messages.php,
+    // so a value that came out of a column must never reach it — a span kind wrote 'db' => 'Db'
+    // into the Arabic file, and a free-text column would mint one key per distinct value. Only the
+    // words this system writes are translated; anything else is shown exactly as it was stored.
+    // Typed loosely on purpose: these values arrive as array keys as well as as values, and PHP
+    // turns a numeric string key into an int on the way into the array.
+    $vocabulary = $panel['vocabulary'];
+    $term = static function (int|string|null $value, string $set, string $whenMissing = 'no_data') use ($vocabulary): string {
+        $value = $value === null ? '' : trim((string) $value);
+        if ($value === '') {
+            return translate($whenMissing);
+        }
+        return in_array($value, $vocabulary[$set], true) ? translate($value) : $value;
+    };
+
+    // A truncated grouped read gives a floor rather than a total, and that is true of every tile it
+    // feeds — not only the first one.
+    $partialCounts = ($summary['state'] ?? '') === 'partial';
 @endphp
 
 {{-- Said before anything else: at a 2% sample rate an empty list is the normal state of a healthy
@@ -97,28 +116,41 @@
     <x-k.stat :label="translate('traces_in_this_window')"
               :value="$summary['state'] === 'unavailable' ? translate('no_data') : $count($summary['traces'])"
               icon="reports"
-              :caption="$summary['state'] === 'partial' ? translate('at_least_this_many_the_window_holds_more_than_was_counted') : translate('kept_by_the_sampler_not_all_requests')" />
+              :caption="$partialCounts ? translate('at_least_this_many_the_window_holds_more_than_was_counted') : translate('kept_by_the_sampler_not_all_requests')" />
 
     <x-k.stat :label="translate('kept_because_it_failed')"
               :value="$summary['state'] === 'unavailable' ? translate('no_data') : $count($summary['errors'])"
               icon="alert"
-              :caption="($capture['always_trace_errors'] ?? false) ? translate('every_5xx_is_traced') : translate('errors_are_not_always_traced')" />
+              :caption="$partialCounts
+                    ? translate('at_least_this_many_the_window_holds_more_than_was_counted')
+                    : (($capture['always_trace_errors'] ?? false) ? translate('every_5xx_is_traced') : translate('errors_are_not_always_traced'))" />
 
     <x-k.stat :label="translate('kept_because_it_was_slow')"
               :value="$summary['state'] === 'unavailable' ? translate('no_data') : $count($summary['slow'])"
               icon="clock"
-              :caption="($capture['always_trace_slower_than_ms'] ?? null) === null
-                    ? translate('no_slow_request_threshold_is_set')
-                    : translate('slower_than') . ' ' . number_format($capture['always_trace_slower_than_ms']) . ' ms'" />
+              :caption="$partialCounts
+                    ? translate('at_least_this_many_the_window_holds_more_than_was_counted')
+                    : (($capture['always_trace_slower_than_ms'] ?? null) === null
+                        ? translate('no_slow_request_threshold_is_set')
+                        : translate('slower_than') . ' ' . number_format($capture['always_trace_slower_than_ms']) . ' ms')" />
 
     <x-k.stat :label="translate('kept_as_a_sample')"
               :value="$summary['state'] === 'unavailable' ? translate('no_data') : $count($summary['sampled'])"
               icon="sparkles"
-              :caption="translate('sample_rate') . ': ' . ($capture['sample_pct'] ?? 0) . '%'" />
+              :caption="$partialCounts
+                    ? translate('at_least_this_many_the_window_holds_more_than_was_counted')
+                    : (isset($capture['sample_pct'])
+                        ? translate('sample_rate') . ': ' . $capture['sample_pct'] . '%'
+                        : translate('the_sample_rate_could_not_be_read'))" />
 
+    {{-- Under a truncated read this is the slowest of what was counted, not of the window, and the
+         two are a different claim. --}}
     <x-k.stat :label="translate('slowest_trace_in_this_window')"
               :value="$summary['state'] === 'unavailable' ? translate('no_data') : $ms($summary['slowest_ms'] ?? null)"
-              icon="trend-up" :caption="translate('wall_clock_of_the_whole_request')" />
+              icon="trend-up"
+              :caption="$partialCounts
+                    ? translate('at_least_this_the_window_holds_more_than_was_measured')
+                    : translate('wall_clock_of_the_whole_request')" />
 </div>
 
 @if (($summary['state'] ?? '') === 'unavailable' && !empty($summary['message']))
@@ -226,7 +258,7 @@
                     <p class="mon-note">
                         {{ translate('in_this_window') }}:
                         @foreach ($options['captured'] as $reasonKey => $total)
-                            {{ number_format($total) }} {{ translate($reasonKey) }}@if (!$loop->last), @endif
+                            {{ number_format($total) }} {{ $term($reasonKey, 'captured') }}@if (!$loop->last), @endif
                         @endforeach
                     </p>
                 @endif
@@ -266,8 +298,13 @@
                                class="k-num" title="{{ $trace['trace_id'] }}">{{ $trace['short_id'] }}</a>
                         </td>
                         <td>
-                            <span class="k-truncate" style="display:block;max-inline-size:240px"
-                                  title="{{ $trace['route'] ?? translate('no_route') }}">{{ $trace['route'] ?? translate('no_route') }}</span>
+                            @if (!empty($trace['route']))
+                                <a class="k-truncate" style="display:block;max-inline-size:240px"
+                                   href="{{ route('admin.developer.lookup', ['path' => $trace['route'], 'method' => $trace['method'] ?? null]) }}"
+                                   title="{{ $trace['route'] }} — {{ translate('open_this_endpoint_in_the_developer_portal') }}">{{ $trace['route'] }}</a>
+                            @else
+                                <span class="k-truncate" style="display:block;max-inline-size:240px">{{ translate('no_route') }}</span>
+                            @endif
                         </td>
                         <td>{{ $trace['method'] ?? '—' }}</td>
                         <td class="k-table__num">
@@ -289,7 +326,7 @@
                                 <span class="mon-metric__note">{{ $trace['app_version'] }}</span>
                             @endif
                         </td>
-                        <td><span class="mon-pill mon-pill--{{ $trace['severity'] }}">{{ translate($trace['captured_because']) }}</span></td>
+                        <td><span class="mon-pill mon-pill--{{ $trace['severity'] }}">{{ $term($trace['captured_because'], 'captured') }}</span></td>
                         <td class="k-num" title="{{ $trace['started_at']['at'] ?? '' }}">{{ $ago($trace['started_at']) }}</td>
                     </tr>
                 @endforeach
@@ -361,7 +398,7 @@
                         @else
                             <span class="mon-pill mon-pill--{{ $statusTone($trace['status']) }}">{{ $trace['status'] }}</span>
                         @endif
-                        <span class="mon-pill mon-pill--{{ $trace['severity'] }}">{{ translate($trace['captured_because']) }}</span>
+                        <span class="mon-pill mon-pill--{{ $trace['severity'] }}">{{ $term($trace['captured_because'], 'captured') }}</span>
                     </span>
                     <span class="mon-metric__note">{{ $trace['channel'] ?? translate('no_channel') }}</span>
                 </div>
@@ -397,7 +434,7 @@
                 <div class="mon-metric">
                     <span class="mon-metric__label">{{ translate('client') }}</span>
                     <span class="mon-metric__note">{{ $trace['platform'] ?? translate('not_declared') }} {{ $trace['app_version'] ?? '' }}</span>
-                    <span class="mon-metric__note">{{ translate($trace['user_type'] ?? 'no_data') }}</span>
+                    <span class="mon-metric__note">{{ $term($trace['user_type'], 'user_types') }}</span>
                 </div>
 
                 <div class="mon-metric">
@@ -415,7 +452,7 @@
             @if (!empty($selected['meta']))
                 <p class="mon-note">
                     @foreach ($selected['meta'] as $entry)
-                        {{ translate($entry['key']) }}: <span class="k-num">{{ $entry['value'] }}</span>@if (!$loop->last) · @endif
+                        {{ $term($entry['key'], 'meta') }}: <span class="k-num">{{ $entry['value'] }}</span>@if (!$loop->last) · @endif
                     @endforeach
                 </p>
             @endif
@@ -430,7 +467,7 @@
                         @if ($segment['share_pct'] !== null && $segment['share_pct'] > 0)
                             <span class="mon-waterfall-split__part mon-waterfall__bar--{{ $segment['kind'] }}"
                                   style="inline-size: {{ $segment['share_pct'] }}%"
-                                  title="{{ translate($segment['kind']) }}: {{ $ms($segment['ms']) }} ({{ $segment['share_pct'] }}%)"></span>
+                                  title="{{ $term($segment['kind'], 'kinds') }}: {{ $ms($segment['ms']) }} ({{ $segment['share_pct'] }}%)"></span>
                         @endif
                     @endforeach
                 </div>
@@ -440,7 +477,7 @@
                         <li class="mon-waterfall-split__key">
                             <span class="mon-waterfall__swatch mon-waterfall__bar--{{ $segment['kind'] }}" aria-hidden="true"></span>
                             <span>
-                                {{ translate($segment['kind']) }}
+                                {{ $term($segment['kind'], 'kinds') }}
                                 @if ($segment['basis'] === 'remainder')
                                     <small>{{ translate('the_total_minus_everything_measured_above') }}</small>
                                 @endif
@@ -466,7 +503,7 @@
                     @foreach ($split['segments'] as $segment)
                         <li class="mon-waterfall-split__key">
                             <span class="mon-waterfall__swatch mon-waterfall__bar--{{ $segment['kind'] }}" aria-hidden="true"></span>
-                            <span>{{ translate($segment['kind']) }}</span>
+                            <span>{{ $term($segment['kind'], 'kinds') }}</span>
                             <span class="k-num">
                                 @if ($segment['state'] !== 'ok')
                                     <span class="mon-metric__state">{{ translate('not_recorded') }}</span>
@@ -510,7 +547,7 @@
                         <div class="mon-waterfall__row">
                             <span class="mon-waterfall__label" style="padding-inline-start: {{ min($span['depth'], 8) * 10 }}px"
                                   title="{{ $span['name'] }}">
-                                <span class="mon-waterfall__kind mon-waterfall__bar--{{ $span['kind'] }}">{{ translate($span['kind']) }}</span>
+                                <span class="mon-waterfall__kind mon-waterfall__bar--{{ $span['kind'] }}">{{ $term($span['kind'], 'kinds') }}</span>
                                 <span class="k-truncate">{{ $span['name'] }}</span>
                             </span>
 
@@ -568,7 +605,7 @@
                             <tr>
                                 <td>
                                     <span class="mon-waterfall__swatch mon-waterfall__bar--{{ $kind['kind'] }}" aria-hidden="true"></span>
-                                    {{ translate($kind['kind']) }}
+                                    {{ $term($kind['kind'], 'kinds') }}
                                 </td>
                                 <td class="k-table__num k-num">{{ number_format($kind['spans']) }}</td>
                                 <td class="k-table__num k-num">{{ $ms($kind['total_ms']) }}</td>

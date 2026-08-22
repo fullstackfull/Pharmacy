@@ -18,6 +18,16 @@ use Illuminate\Support\Facades\DB;
  */
 class TelemetryRollup extends Command
 {
+    /*
+    | telemetry_daily is written here and read by no screen today.
+    |
+    | It is not an orphan by accident: the raw telemetry_requests rows are pruned on a retention
+    | window, and this daily summary is what survives it. The old Analytics page that used to read
+    | it has been replaced by the analytics_daily rollups, so until something is built on the
+    | history, this command's product is retention rather than a report. Said here so the next
+    | person does not have to work that out from an empty grep.
+    */
+
     protected $signature = 'telemetry:rollup {--date= : YYYY-MM-DD, defaults to today} {--prune : also prune raw rows past retention}';
 
     protected $description = 'Aggregate raw request telemetry into daily rollups';

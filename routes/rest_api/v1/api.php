@@ -14,6 +14,7 @@ use App\Http\Controllers\RestAPI\v1\CategoryController;
 use App\Http\Controllers\RestAPI\v1\ChatController;
 use App\Http\Controllers\RestAPI\v1\CompareController;
 use App\Http\Controllers\RestAPI\v1\ConfigController;
+use App\Http\Controllers\RestAPI\v1\DeepLinkController;
 use App\Http\Controllers\RestAPI\v1\CouponController;
 use App\Http\Controllers\RestAPI\v1\CustomerController;
 use App\Http\Controllers\RestAPI\v1\CustomerRestockRequestController;
@@ -50,6 +51,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
     Route::controller(ConfigController::class)->group(function () {
         Route::get('config', 'configuration');
         Route::get('business-pages', 'getBusinessPagesList');
+    });
+
+    /*
+     * Deep links. Unauthenticated because a campaign link arrives before the customer has logged
+     * in — that is the whole point of one — and because the association files that publish the same
+     * path list are already fetched unauthenticated by every phone. Throttled because resolve()
+     * reads a campaign row per call and is reachable by anybody.
+     */
+    Route::group(['prefix' => 'deep-link', 'middleware' => ['throttle:60,1']], function () {
+        Route::controller(DeepLinkController::class)->group(function () {
+            Route::get('config', 'config')->name('api.v1.deep-link.config');
+            Route::get('resolve', 'resolve')->name('api.v1.deep-link.resolve');
+        });
     });
 
     /*

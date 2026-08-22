@@ -2,43 +2,51 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\DeepLink\AppLinkService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class DetectMobile
 {
+    public function __construct(private readonly AppLinkService $appLinks)
+    {
+    }
+
     public function handle(Request $request, Closure $next)
     {
         if ($request->expectsJson() || $request->is('api/*') || $request->is('vendor/*') || $request->is('admin/*')) {
             return $next($request);
         }
 
-        $isMobile = false;
-        $userAgent = $request->header('User-Agent');
-        $isAndroid = preg_match('/android/i', $userAgent);
-        $isIOS = preg_match('/iphone/i', $userAgent);
+        $userAgent = (string) $request->header('User-Agent');
+        $isAndroid = (bool) preg_match('/android/i', $userAgent);
+        $isIOS = (bool) preg_match('/iphone/i', $userAgent);
+        $platform = $isAndroid ? AppLinkService::PLATFORM_ANDROID : AppLinkService::PLATFORM_IOS;
 
-        try {
-            if (Schema::hasTable('business_settings')) {
-                $isMobile = $isAndroid || $isIOS;
-                $appDeepLink = getWebConfig(name: 'app_deep_link') ?? [];
-                if ($isMobile && $isAndroid && empty($appDeepLink['playstore_redirect_url'])) {
-                    $isMobile = false;
-                }
+        // "Mobile" here means "we can actually send this visitor to the app store", not "small
+        // screen": the download banner is pointless without a store link to send them to.
+        $isMobile = ($isAndroid || $isIOS) && $this->appLinks->isConfigured($platform);
 
-                if ($isMobile && $isIOS && empty($appDeepLink['app_store_redirect_url'])) {
-                    $isMobile = false;
-                }
-            }
-        } catch (\Exception) {}
+        /*
+         * The install link carries the campaign this visit came from.
+         *
+         * This is the join between campaigns and the app. A customer arrives on an Instagram
+         * campaign, taps download, installs — and until now that install was attributed to nobody,
+         * because the banner sent them to a bare store URL. Now the campaign travels with them:
+         * Play hands the referrer to the app on first launch, and Apple records the campaign token
+         * against the install.
+         */
+        $appInstallUrl = $isMobile
+            ? $this->appLinks->storeUrl($platform, $this->appLinks->attributionFromRequest($request))
+            : null;
 
         view()->share([
             'isMobile' => $isMobile,
             'isAndroid' => $isAndroid,
             'isIOS' => $isIOS,
+            'appInstallUrl' => $appInstallUrl,
         ]);
+
         return $next($request);
     }
 }

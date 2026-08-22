@@ -5,9 +5,16 @@
      searches without counting what they found. --}}
 <x-k.card :title="translate('searches_that_found_nothing')">
     @if (($data['no_results']['rows'] ?? []) === [])
-        <x-k.empty
-            :title="translate('every_search_found_something')"
-            :text="translate('no_customer_searched_for_a_term_the_catalogue_could_not_answer_in_this_period')" />
+        {{-- "Every search found something" is a claim about the catalogue. An empty table can also
+             mean the tables are absent, the rollup has never run, or nobody searched at all — and
+             only one of those is good news. --}}
+        @if (($data['no_results']['state'] ?? 'ok') !== 'ok' && ($data['no_results']['state'] ?? '') !== 'no_traffic')
+            @include('admin-views.analytics.sections._empty', ['state' => $data['no_results']['state']])
+        @else
+            <x-k.empty
+                :title="translate('every_search_found_something')"
+                :text="translate('no_customer_searched_for_a_term_the_catalogue_could_not_answer_in_this_period')" />
+        @endif
     @else
         <p class="ana-note">{{ translate('each_of_these_is_a_customer_who_wanted_something_this_shop_does_not_sell_or_does_not_name_the_way_they_do') }}</p>
         <table class="ana-table">

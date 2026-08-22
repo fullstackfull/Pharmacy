@@ -246,7 +246,14 @@ if ($order->is_guest) {
             <tr>
                 <td>
                     <div class="my-4">
-                        <a href="{{ route('track-order.result', ['order_id'=>$order->id, 'phone_number'=>$userPhone]) }}"
+                        {{-- Tagged so email traffic can be told from direct, and rel=noreferrer so
+                             the address bar's contents are not handed to third-party assets on the
+                             page it opens. --}}
+                        <a href="{{ app(\App\Services\Analytics\Support\ShareLink::class)->forTransactionalEmail(
+                               route('track-order.result', ['order_id' => $order->id, 'phone_number' => $userPhone]),
+                               'order_confirmation',
+                           ) }}"
+                           rel="noreferrer"
                            class="p-3 radius-5 text-capitalize border-0 btn btn-primary">
                             {{ translate('track_your_order') }}
                         </a>

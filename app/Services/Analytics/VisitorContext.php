@@ -73,6 +73,23 @@ class VisitorContext
             return $this->visitorId;
         }
 
+        // API and app clients get an identity that does not depend on a cookie.
+        //
+        // The api middleware group carries no cookie middleware at all — verified: a request to
+        // /api/v1/config returns zero Set-Cookie headers where the storefront returns four. So the
+        // cookie minted below would never come back, and EVERY api request would look like a brand
+        // new visitor. That does not merely lose returning-visitor data, it inflates the visitor
+        // count by the entire api request volume. The authenticated user is the stable identity
+        // when there is one; otherwise the masked-and-salted address, which is the same convention
+        // the existing request telemetry already uses.
+        if ($this->isApiClient($request)) {
+            $identity = $this->userId !== null
+                ? "api:{$this->userType}:{$this->userId}"
+                : 'api:guest:' . ($this->hashIp($request) ?? 'unknown');
+
+            return $this->visitorId = Str::limit($identity, 60, '');
+        }
+
         $existing = $request->cookie(TelemetryRecorder::VISITOR_COOKIE)
             ?: $request->attributes->get('telemetry_new_visitor_id');
 
@@ -183,6 +200,17 @@ class VisitorContext
     }
 
     // -------------------------------------------------------------------------------------------
+
+    /**
+     * A caller that cannot hold a cookie.
+     *
+     * Both mobile apps and every server-to-server integration reach this application through the
+     * api group, which has no cookie middleware.
+     */
+    private function isApiClient(Request $request): bool
+    {
+        return $request->is('api/*') || $request->headers->has('X-App-Version');
+    }
 
     /** @return array{0: ?string, 1: ?int} */
     private function identify(Request $request): array

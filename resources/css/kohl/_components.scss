@@ -688,9 +688,9 @@
     justify-content: center;
     inline-size: 38px;
     block-size: 38px;
-    border-radius: var(--k-radius-2, 8px);
+    border-radius: var(--k-radius-md);
     border: 1px dashed var(--k-border-strong, rgba(128, 138, 157, .5));
-    background: var(--k-surface-2, rgba(128, 138, 157, .08));
+    background: var(--k-surface-sunk);
     color: var(--k-text-muted, #6b7a8d);
     font-weight: var(--k-weight-bold, 700);
     font-size: 15px;

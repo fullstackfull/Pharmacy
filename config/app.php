@@ -30,6 +30,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Mode
+    |--------------------------------------------------------------------------
+    |
+    | 'live' means this is a real shop: outside it the application accepts fixed
+    | OTP codes for testing. It has to be readable after config:cache, which stops
+    | the .env file being loaded — code calling env('APP_MODE') directly answers
+    | null on exactly the installations where the distinction matters most.
+    |
+    */
+
+    'mode' => env('APP_MODE', 'live'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |

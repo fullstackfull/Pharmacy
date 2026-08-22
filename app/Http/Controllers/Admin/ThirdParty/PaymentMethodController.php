@@ -122,7 +122,7 @@ class PaymentMethodController extends BaseController
 
     public function UpdatePaymentConfig(PaymentMethodUpdateRequest $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             Toastr::info(translate('This_option_is_disabled_for_demo'));
             return back();
         }

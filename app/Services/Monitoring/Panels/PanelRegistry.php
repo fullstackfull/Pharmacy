@@ -68,6 +68,14 @@ class PanelRegistry
     /**
      * @return array<string, mixed>
      */
+    /** Is there a panel behind this section, or does it open on the "not installed" page? */
+    public static function has(string $section): bool
+    {
+        $class = self::PANELS[$section] ?? null;
+
+        return $class !== null && class_exists($class);
+    }
+
     public function data(string $section, string $range, Request $request): array
     {
         $class = self::PANELS[$section] ?? null;

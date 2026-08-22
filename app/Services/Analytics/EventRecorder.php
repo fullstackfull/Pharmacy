@@ -42,6 +42,7 @@ class EventRecorder
     public function __construct(
         private readonly VisitorContext $context,
         private readonly PathNormalizer $paths,
+        private readonly \App\Services\Analytics\Support\PrivacyGate $privacy,
     ) {
     }
 
@@ -56,6 +57,15 @@ class EventRecorder
             }
 
             $request ??= request();
+
+            // Asked here as well as in the middleware, because commerce instrumentation records
+            // from services that never pass through it — an order placed from the POS, a status
+            // change made by an administrator — and a privacy setting that half the callers honour
+            // is not a privacy setting.
+            if (!$this->privacy->allows($request)) {
+                return;
+            }
+
             $this->context->resolve($request);
 
             $visitorId = $this->context->visitorId($request);
@@ -130,10 +140,23 @@ class EventRecorder
 
             // insertOrIgnore, not insert: the unique index on dedupe_key is the deduplication, and
             // a duplicate must be a no-op rather than an exception on the response path.
+            //
+            // The id watermark is taken first because the counters below must reflect what was
+            // ACTUALLY written. Incrementing them from the in-memory buffer counted every
+            // deduplicated event anyway, which put the session and visitor totals permanently
+            // above the event table they are supposed to summarise — and since the rollup reads
+            // orders and revenue off the session row while reading event counts off the event
+            // table, the same day's figures disagreed with each other depending on which screen
+            // asked.
+            $watermark = (int) ($this->connection()->table('analytics_events')->max('id') ?? 0);
             $written = $this->connection()->table('analytics_events')->insertOrIgnore($queued);
 
+            if ($written < count($queued)) {
+                $delta = $this->deltaOfWrittenRows($watermark, $queued, $sessionId);
+            }
+
             $this->applySessionDelta($sessionId, $delta);
-            $this->applyVisitorDelta($queued[0]['visitor_id'] ?? null, $delta, count($queued));
+            $this->applyVisitorDelta($queued[0]['visitor_id'] ?? null, $delta, max(0, $written));
             $this->health('events_written', $written);
 
             if ($this->dropped) {
@@ -205,6 +228,69 @@ class EventRecorder
         $clean = Redactor::make()->array($properties);
 
         return $clean === [] ? null : array_slice($clean, 0, 25, true);
+    }
+
+    /**
+     * Recompute the counters from the rows the insert actually created.
+     *
+     * Only runs when deduplication dropped something, which is rare — a double-clicked button, a
+     * page restored from the back/forward cache, a retried beacon. One indexed read after the
+     * response has already been sent is the right price for totals that agree with the events
+     * they summarise.
+     *
+     * @param  array<int, array<string, mixed>>  $queued  the rows this flush attempted
+     * @return array<string, float|int>
+     */
+    private function deltaOfWrittenRows(int $watermark, array $queued, ?string $sessionId): array
+    {
+        $delta = [];
+
+        $keys = array_values(array_filter(array_column($queued, 'dedupe_key')));
+
+        if ($keys === []) {
+            return $delta;
+        }
+
+        try {
+            $rows = $this->connection()->table('analytics_events')
+                // The id watermark alone is not this flush's rows: flush() runs in terminate(), so
+                // between the MAX(id) read and this one, other requests have inserted their own.
+                // Counting those put another customer's order and its revenue onto this visitor's
+                // session. The rows this flush owns are the ones carrying ITS dedupe keys, on ITS
+                // session — everything else above the watermark belongs to somebody else.
+                ->where('id', '>', $watermark)
+                ->whereIn('dedupe_key', $keys)
+                ->when($sessionId !== null, fn ($query) => $query->where('session_id', $sessionId))
+                ->get(['name', 'value']);
+        } catch (\Throwable) {
+            return $delta;
+        }
+
+        foreach ($rows as $row) {
+            $delta['events'] = ($delta['events'] ?? 0) + 1;
+
+            match ($row->name) {
+                AnalyticsEvent::PAGE_VIEWED => $delta['pageviews'] = ($delta['pageviews'] ?? 0) + 1,
+                AnalyticsEvent::CART_ADDED => $delta['cart_adds'] = ($delta['cart_adds'] ?? 0) + 1,
+                AnalyticsEvent::CHECKOUT_STARTED => $delta['checkouts'] = ($delta['checkouts'] ?? 0) + 1,
+                AnalyticsEvent::ORDER_PLACED => $delta = $this->addOrder($delta, (float) ($row->value ?? 0)),
+                default => null,
+            };
+        }
+
+        return $delta;
+    }
+
+    /**
+     * @param  array<string, float|int>  $delta
+     * @return array<string, float|int>
+     */
+    private function addOrder(array $delta, float $value): array
+    {
+        $delta['orders'] = ($delta['orders'] ?? 0) + 1;
+        $delta['revenue'] = ($delta['revenue'] ?? 0) + $value;
+
+        return $delta;
     }
 
     private function accumulate(AnalyticsEvent $event): void

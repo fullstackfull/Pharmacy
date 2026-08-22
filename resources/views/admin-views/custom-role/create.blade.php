@@ -78,6 +78,28 @@
                             </div>
                         @endforeach
                     </div>
+
+                    {{-- Analytics capabilities. Split the same way monitoring is, and for the same reason: the
+                         reports are one thing, following an individual visitor, issuing a public campaign
+                         link and changing what is collected are each another. Holding the Reports module
+                         keeps the read-only view working; the rest is deliberate. --}}
+                    <h5 class="mb-2">{{ translate('analytics') }}</h5>
+                    <div class="row gy-2 mb-4">
+                        @foreach (\App\Services\Analytics\AnalyticsPermissionService::all() as $analyticsKey => $analyticsLabel)
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="form-group d-flex gap-2">
+                                    <input type="checkbox" name="modules[]" value="{{ $analyticsKey }}"
+                                           class="form-check-input checkbox--input module-permission"
+                                           id="{{ $analyticsKey }}-permission"
+                                           >
+                                    <label class="" style="{{ $direction === "rtl" ? 'margin-right: 1.25rem;' : '' }};"
+                                           for="{{ $analyticsKey }}-permission">
+                                        {{ translate($analyticsLabel) }}
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                     <div class="d-flex justify-content-end ">
                         <button type="submit" class="btn btn-primary">
                             {{ translate('submit') }}

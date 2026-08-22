@@ -490,7 +490,12 @@ class QueueCollector implements Collector
                 'reserved' => $reservedTotal,
                 'stuck' => $totals['stuck_reserved'],
                 'stuck_note' => 'past the point Redis says their reservation expired',
-                'fresh_reservation' => $reservedTotal > 0 && $totals['stuck_reserved']->valueOr(0) < $reservedTotal,
+                // Null, not false, when the stuck count could not be read: valueOr(0) turned "we
+                // could not count expired reservations" into "none are expired", which is the
+                // reading that says the workers are healthy.
+                'fresh_reservation' => $totals['stuck_reserved']->isOk()
+                    ? ($reservedTotal > 0 && (float) $totals['stuck_reserved']->value < $reservedTotal)
+                    : null,
                 'paused' => $this->allPaused(),
                 'resume' => $this->resumeRemedy($connectionName),
                 // Migrating a due job from the delayed set onto the list is something only a

@@ -240,17 +240,11 @@ class LiveTrafficPanel implements Panel
     private function recordedRequests(int $minutes): array
     {
         if (!config('telemetry.enabled', true)) {
-            $off = [
+            return $this->unrecorded([
                 'state' => 'not_configured',
                 'note' => 'Per-request telemetry is switched off, so nothing has been written to ' . self::RECORDER . ' since it was disabled.',
                 'remedy' => 'Set TELEMETRY_ENABLED=true in .env, then run `php artisan optimize:clear`.',
-                'source' => self::RECORDER,
-            ];
-
-            return [
-                'traffic' => array_merge($off, ['hits' => 0, 'per_second' => null, 'per_minute' => null, 'errors' => 0, 'error_rate' => null]),
-                'statuses' => array_merge($off, ['total' => 0, 'classes' => [], 'top' => []]),
-            ];
+            ]);
         }
 
         try {
@@ -261,12 +255,7 @@ class LiveTrafficPanel implements Panel
                 ->limit(self::STATUS_ROWS)
                 ->get(['status', DB::raw('COUNT(*) as hits')]);
         } catch (\Throwable $exception) {
-            $failed = ['state' => 'failed', 'note' => $this->failureNote($exception), 'remedy' => null, 'source' => self::RECORDER];
-
-            return [
-                'traffic' => array_merge($failed, ['hits' => 0, 'per_second' => null, 'per_minute' => null, 'errors' => 0, 'error_rate' => null]),
-                'statuses' => array_merge($failed, ['total' => 0, 'classes' => [], 'top' => []]),
-            ];
+            return $this->unrecorded(['state' => 'failed', 'note' => $this->failureNote($exception), 'remedy' => null]);
         }
 
         $byClass = ['2xx' => 0, '3xx' => 0, '4xx' => 0, '5xx' => 0];
@@ -288,17 +277,11 @@ class LiveTrafficPanel implements Panel
         }
 
         if ($total === 0) {
-            $quiet = [
+            return $this->unrecorded([
                 'state' => 'no_data',
                 'note' => 'No request reached the shop in this window. Nothing is broken — this is a reading of zero traffic.',
                 'remedy' => null,
-                'source' => self::RECORDER,
-            ];
-
-            return [
-                'traffic' => array_merge($quiet, ['hits' => 0, 'per_second' => null, 'per_minute' => null, 'errors' => 0, 'error_rate' => null]),
-                'statuses' => array_merge($quiet, ['total' => 0, 'classes' => [], 'top' => []]),
-            ];
+            ]);
         }
 
         $classes = [];
@@ -307,18 +290,16 @@ class LiveTrafficPanel implements Panel
                 'class' => $class,
                 'hits' => $hits,
                 'share_pct' => round(100 * $hits / $total, 1),
-                'severity' => match ($class) {
-                    '5xx' => 'critical',
-                    '4xx' => 'warning',
-                    '3xx' => 'info',
-                    default => 'ok',
-                },
+                'severity' => $this->statusSeverity($class),
             ];
         }
 
         // Already ordered by the query; the slice is the cap on how many are worth reading.
         $top = array_map(
-            static fn (array $row) => array_merge($row, ['share_pct' => round(100 * $row['hits'] / $total, 1)]),
+            fn (array $row) => array_merge($row, [
+                'share_pct' => round(100 * $row['hits'] / $total, 1),
+                'severity' => $this->statusSeverity($row['class']),
+            ]),
             array_slice($top, 0, self::TOP_STATUS_ROWS),
         );
 
@@ -346,6 +327,38 @@ class LiveTrafficPanel implements Panel
                 'source' => self::RECORDER,
             ],
         ];
+    }
+
+    /**
+     * Both halves of the per-request read when there is nothing to divide.
+     *
+     * @param  array{state: string, note: string, remedy: string|null}  $reason
+     * @return array{traffic: array<string, mixed>, statuses: array<string, mixed>}
+     */
+    private function unrecorded(array $reason): array
+    {
+        $reason['source'] = self::RECORDER;
+
+        return [
+            // Counts stay at zero and rates stay null on purpose: no request arriving is a real
+            // zero, but a rate over a window nothing was measured in is not a number at all.
+            'traffic' => array_merge($reason, ['hits' => 0, 'per_second' => null, 'per_minute' => null, 'errors' => 0, 'error_rate' => null]),
+            'statuses' => array_merge($reason, ['total' => 0, 'classes' => [], 'top' => []]),
+        ];
+    }
+
+    /**
+     * A status class drawn in the same colour wherever it appears: red 5xx, amber 4xx, and neutral
+     * for a redirect, which is neither a success nor a fault.
+     */
+    private function statusSeverity(string $class): string
+    {
+        return match ($class) {
+            '5xx' => 'critical',
+            '4xx' => 'warning',
+            '3xx' => 'info',
+            default => 'ok',
+        };
     }
 
     private function statusClass(int $status): string

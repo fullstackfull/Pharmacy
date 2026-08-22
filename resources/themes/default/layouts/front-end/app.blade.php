@@ -100,7 +100,7 @@
 
     {!! getSystemDynamicPartials(type: 'analytics_script') !!}
 
-    @if(env('APP_MODE')=='demo')
+    @if(config('app.mode')=='demo')
         <!-- Google Tag Manager -->
         <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
                     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -111,7 +111,7 @@
     @endif
 </head>
 
-<body class="k k-store toolbar-enabled {{ env('APP_MODE')=='demo'?'demo':'' }}" id="demo">
+<body class="k k-store toolbar-enabled {{ config('app.mode')=='demo'?'demo':'' }}" id="demo">
 
 @include('layouts.front-end.partials._modals')
 
@@ -299,10 +299,9 @@
 
             const REOPEN_DELAY = 10 * 60 * 1000; // re-show 10 minutes after user closes
             const INITIAL_DELAY = 3000;
-            const STORE_URL = '{{ $isAndroid
-                ? (getWebConfig(name: "app_deep_link")["playstore_redirect_url"] ?? "")
-                : (getWebConfig(name: "app_deep_link")["app_store_redirect_url"] ?? "")
-            }}';
+            // Built by DetectMobile so it carries the campaign this visit arrived on: an install
+            // that came from a campaign is attributed to it instead of appearing out of nowhere.
+            const STORE_URL = @json($appInstallUrl ?? '');
 
             let reopenTimer = null;
 
@@ -334,6 +333,7 @@
             });
 
             installBtn.addEventListener("click", function () {
+                if (!STORE_URL) return;
                 window.location.href = STORE_URL;
             });
         });
@@ -415,7 +415,7 @@
         }
     });
 </script>
-@if(env('APP_MODE') == 'demo')
+@if(config('app.mode') == 'demo')
     <script>
         'use strict'
         function checkDemoResetTime() {
@@ -429,6 +429,14 @@
         checkDemoResetTime();
         setInterval(checkDemoResetTime, 60000);
     </script>
+@endif
+
+{{-- First-party analytics beacon. Loaded last and deferred, so it cannot delay anything a
+     customer is waiting for. It reports only what a server-side page load cannot see: the
+     filter's pushState navigations, and interactions that never navigate. --}}
+@if (config('analytics.enabled', true) && config('analytics.beacon.enabled', true))
+    <div id="analytics-beacon" data-endpoint="{{ route('analytics.collect') }}" hidden></div>
+    <script src="{{ asset('assets/front-end/js/analytics-beacon.js') }}" defer></script>
 @endif
 
 @stack('script')

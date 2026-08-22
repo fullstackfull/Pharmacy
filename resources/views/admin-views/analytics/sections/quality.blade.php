@@ -3,8 +3,11 @@
 <x-k.card :title="translate('collection_health')">
     <div class="ana-health ana-health--{{ $data['health']['state'] }}">
         <strong>{{ translate($data['health']['state']) }}</strong>
-        @if (isset($data['health']['message']))
-            <p>{{ $data['health']['message'] }}</p>
+        @if (isset($data['health']['message_key']))
+            <p>{{ translate($data['health']['message_key']) }}</p>
+            @if (!empty($data['health']['detail']))
+                <p><code>{{ $data['health']['detail'] }}</code></p>
+            @endif
         @endif
     </div>
     <ul class="ana-list">
@@ -38,8 +41,15 @@
             </div>
             <div class="ana-metric">
                 <small>{{ translate('excluded') }}</small>
-                <span class="k-num">{{ number_format($data['excluded']['excluded_sessions']) }}</span>
-                <span class="ana-change ana-change--none">{{ $data['excluded']['excluded_share'] }}% {{ translate('of_all_recorded_visits') }}</span>
+                <span class="k-num">
+                    {{ number_format($data['excluded']['excluded_sessions']) }}@if ($data['excluded']['overlaps'] ?? false)<i>–{{ number_format($data['excluded']['excluded_sessions_upper']) }}</i>@endif
+                </span>
+                <span class="ana-change ana-change--none">
+                    {{ $data['excluded']['excluded_share'] }}% {{ translate('of_all_recorded_visits') }}
+                    @if ($data['excluded']['overlaps'] ?? false)
+                        — {{ translate('a_range_because_a_visit_can_be_both_a_bot_and_staff') }}
+                    @endif
+                </span>
             </div>
         </div>
         <table class="ana-table">

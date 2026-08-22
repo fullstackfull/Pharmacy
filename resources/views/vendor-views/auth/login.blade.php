@@ -128,7 +128,7 @@
                         </button>
                     </form>
 
-                    @if (env('APP_MODE') == 'demo')
+                    @if (config('app.mode') == 'demo')
                         <div class="card-footer">
                             <div class="row">
                                 <div class="col-10">

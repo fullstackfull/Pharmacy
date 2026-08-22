@@ -274,6 +274,11 @@
     white-space: pre;
 }
 .dev-note { font-size: var(--k-text-sm, 13px); color: var(--k-text-muted); }
+/* A row of links out to the section holding the evidence behind the numbers above. */
+.dev-note--links { display: flex; flex-wrap: wrap; gap: var(--k-size-2, 8px); align-items: center;
+    a { color: var(--k-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+}
 .dev-muted { color: var(--k-text-muted); }
 .dev-warn { color: var(--k-warning, #d98d1a); font-size: var(--k-text-sm, 13px); }
 .dev-subhead { margin: var(--k-size-4, 16px) 0 var(--k-size-2, 8px); font-size: var(--k-text-sm, 13px); font-weight: 600; }

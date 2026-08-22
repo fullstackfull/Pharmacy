@@ -198,6 +198,79 @@
                     </form>
                 </div>
             </div>
+
+            {{-- Which links open the app, and whether the phone can actually see that list.
+                 The published file and the configured list drift apart the moment the list
+                 changes in code, and nothing on this screen used to say so. --}}
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ translate('links_that_open_the_app') }}</h3>
+                    <p class="mb-0 fs-12">
+                        {{ translate('a_tap_on_one_of_these_paths_opens_the_app_instead_of_the_browser_when_it_is_installed') }}
+                    </p>
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+                    @if ($publishedIsStale)
+                        <div class="bg-danger bg-opacity-10 fs-12 px-12 py-10 text-dark rounded">
+                            <div class="d-flex gap-2 align-items-center">
+                                <i class="fi fi-sr-triangle-warning text-danger"></i>
+                                <span>
+                                    {{ translate('the_published_file_does_not_match_the_list_below_so_the_newer_paths_do_not_open_the_app_yet') }}
+                                    — <code>php artisan deeplinks:publish</code>
+                                </span>
+                            </div>
+                        </div>
+                    @elseif (!$published['exists'])
+                        <div class="bg-warning bg-opacity-10 fs-12 px-12 py-10 text-dark rounded">
+                            <div class="d-flex gap-2 align-items-center">
+                                <i class="fi fi-sr-info text-warning"></i>
+                                <span>{{ translate('nothing_has_been_published_yet_save_this_form_to_write_the_association_files') }}</span>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h5 class="fs-14 mb-2">{{ translate('ios_universal_links') }}</h5>
+                            <p class="fs-12 text-muted mb-2">
+                                {{ translate('written_into_the_association_file_a_path_that_is_not_here_opens_safari') }}
+                            </p>
+                            <ul class="m-0 ps-20 fs-12 d-flex flex-column gap-1">
+                                @foreach ($linkPaths['ios'] as $path)
+                                    <li><code>{{ $path }}</code></li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="fs-14 mb-2">{{ translate('android_app_links') }}</h5>
+                            <p class="fs-12 text-muted mb-2">
+                                {{ translate('android_verifies_the_whole_domain_so_the_app_intent_filters_have_to_declare_these') }}
+                            </p>
+                            <ul class="m-0 ps-20 fs-12 d-flex flex-column gap-1">
+                                @foreach ($linkPaths['android'] as $path)
+                                    <li><code>{{ $path }}</code></li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-light fs-12 px-12 py-10 rounded d-flex flex-wrap gap-2 align-items-center">
+                        <i class="fi fi-sr-link"></i>
+                        <span>
+                            {{ translate('campaign_short_links_are_on_this_list_so_a_poster_or_a_whatsapp_link_opens_the_app_and_still_counts_towards_its_campaign') }}
+                        </span>
+                        <a class="btn btn-sm btn-outline-primary ms-auto"
+                           href="{{ route('admin.analytics.section', ['section' => 'campaigns']) }}">
+                            {{ translate('campaigns') }}
+                        </a>
+                    </div>
+
+                    <div class="fs-12 text-muted">
+                        {{ translate('the_apps_read_the_same_list_over_the_api') }}:
+                        <code>GET {{ rtrim(config('app.url'), '/') }}/api/v1/deep-link/config</code>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>

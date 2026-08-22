@@ -221,7 +221,8 @@
                 @foreach ($statuses['top'] as $status)
                     <tr>
                         <td>
-                            <span class="mon-pill mon-pill--{{ $status['class'] === '5xx' ? 'critical' : ($status['class'] === '4xx' ? 'warning' : 'ok') }}">{{ $status['status'] }}</span>
+                            {{-- The pill reads the same colour the panel gave its class in the bar above. --}}
+                            <span class="mon-pill mon-pill--{{ $status['severity'] }}">{{ $status['status'] }}</span>
                         </td>
                         <td class="k-table__num k-num">{{ number_format($status['hits']) }}</td>
                         <td class="k-table__num k-num">{{ $status['share_pct'] }}%</td>
@@ -231,8 +232,8 @@
             </table>
         </div>
         <p class="mon-note">
-            {{ translate('counted_from') }} <code>telemetry_requests</code>,
-            {{ translate('which_records_every_response_as_it_is_sent_rather_than_a_minute_later') }}
+            {{ translate('counted_from_the_per_request_log_which_records_every_response_as_it_is_sent_rather_than_a_minute_later') }}:
+            <code>telemetry_requests</code>
         </p>
     @else
         <x-k.empty icon="alert" :title="$stateTitle($statuses['state'] ?? null)" :text="$statuses['note'] ?? ''" />
@@ -249,7 +250,7 @@
      Neither carries a verdict, so neither is coloured like one. --}}
 @foreach ([
     ['key' => 'platforms', 'title' => 'traffic_by_platform', 'unit' => 'requests', 'why' => 'a_request_is_filed_under_the_platform_its_header_declares_or_the_one_its_user_agent_implies'],
-    ['key' => 'devices', 'title' => 'traffic_by_device', 'unit' => 'sessions', 'why' => 'classified_from_the_user_agent_when_the_session_opened_bot_is_a_pattern_match_not_a_verified_identity'],
+    ['key' => 'devices', 'title' => 'traffic_by_device', 'unit' => 'sessions', 'why' => 'classified_from_the_user_agent_at_the_moment_the_session_opened_so_bot_is_a_pattern_match_rather_than_a_verified_identity'],
 ] as $split)
     @php($part = $panel[$split['key']] ?? [])
     <x-k.card :title="translate($split['title'])">
@@ -281,8 +282,8 @@
                 @endforeach
             </ul>
             <p class="mon-note">
-                {{ number_format($part['total']) }} {{ translate($split['unit']) }} —
-                {{ translate('read_from') }} <code>{{ $part['source'] }}</code>
+                {{ translate($split['unit']) }}: {{ number_format($part['total']) }} —
+                <code>{{ $part['source'] }}</code>
             </p>
         @else
             <x-k.empty icon="reports" :title="$stateTitle($part['state'] ?? null)" :text="$part['note'] ?? ''" />
@@ -354,8 +355,8 @@
 </x-k.card>
 
 <p class="mon-note">
-    {{ translate('this_page_reads_two_recorders_of_the_same_traffic') }}:
-    <code>telemetry_requests</code> {{ translate('written_as_each_response_is_sent') }},
-    {{ translate('and') }} <code>monitoring_request_buckets</code> {{ translate('folded_per_minute_by_the_scheduled_flush') }}.
-    {{ translate('the_two_totals_can_differ_and_a_gap_between_them_is_itself_a_reading') }}
+    {{ translate('this_page_reads_two_recorders_of_the_same_traffic') }}.
+    <code>telemetry_requests</code> — {{ translate('written_as_each_response_is_sent') }}.
+    <code>monitoring_request_buckets</code> — {{ translate('folded_per_minute_by_the_scheduled_flush') }}.
+    {{ translate('the_two_totals_can_differ_and_the_gap_between_them_is_itself_a_reading') }}
 </p>

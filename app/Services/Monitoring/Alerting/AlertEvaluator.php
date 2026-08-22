@@ -122,6 +122,18 @@ class AlertEvaluator
         if ($samples === []) {
             // Rule 1. A rule cannot fire on a metric that is not arriving — that is the collector's
             // problem, reported by the self-health panel, not this rule's to shout about.
+            //
+            // A rule that was only BREACHING has its clock reset, because Rule 2 measures a breach
+            // that held CONTINUOUSLY and a gap in the data is not evidence that it did. Leaving the
+            // clock running turned `for_seconds` into wall-clock elapsed: after a collector outage,
+            // one breaching sample fired a full alert immediately. A rule that was already firing is
+            // left exactly as it is — silence is not recovery either.
+            if (($state?->state ?? 'ok') === 'pending') {
+                $this->writeState($rule, ['breached_since' => null, 'state' => 'ok']);
+
+                return $this->outcome($rule, 'ok', null, 'no data in the window; the breach clock was reset');
+            }
+
             return $this->outcome($rule, $state?->state ?? 'ok', null, 'no data in the window');
         }
 
@@ -271,6 +283,10 @@ class AlertEvaluator
             'last_value' => $value,
             'breached_since' => null,
             'recovered_at' => $wasFiring ? Clock::stamp() : $state->recovered_at,
+            // Rule 4 gates repeat messages about ONE episode. Carrying the timestamp past a
+            // recovery gated the first message of the NEXT one: a rule that recovered and broke
+            // again inside the cooldown opened an incident, flipped to firing, and told nobody.
+            'last_notified_at' => $wasFiring ? null : ($state->last_notified_at ?? null),
         ]);
 
         if ($wasFiring && $state->incident_id !== null) {

@@ -134,7 +134,7 @@ class ForgotPasswordController extends BaseController
             if (isset($vendor)) {
                 $response = "not_found";
                 $smsErrorMsg = translate('something_went_wrong.') . ' ' . translate('please_try_again_after_sometime');
-                $token = (env('APP_MODE') == 'live') ? rand(111111, 999999) : 123456;
+                $token = (config('app.mode') == 'live') ? rand(111111, 999999) : 123456;
 
                 $firebaseOTPVerification = getWebConfig(name: 'firebase_otp_verification') ?? [];
                 if ($firebaseOTPVerification && $firebaseOTPVerification['status']) {
@@ -152,14 +152,14 @@ class ForgotPasswordController extends BaseController
                     }
                 } else {
                     $response = SMSModule::sendCentralizedSMS($request['identity'], $token);
-                    if (env('APP_MODE') == 'dev') {
+                    if (config('app.mode') == 'dev') {
                         $response = 'success';
                     }
                 }
 
                 $this->passwordResetRepo->add($this->passwordResetService->getAddData(identity: $request['identity'], token: $token, userType: 'seller'));
 
-                if (env('APP_MODE') == 'dev') {
+                if (config('app.mode') == 'dev') {
                     if ($request->ajax()) {
                         return response()->json([
                             'verificationBy' => 'phone',

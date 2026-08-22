@@ -65,7 +65,7 @@ class AIProviderManager
         $aiUsage = new AIUsageManagerService();
         $aiValidator = new AIResponseValidatorService();
         $isAdmin = CurrentAuthUser::isAdmin();
-        $appMode = env('APP_MODE');
+        $appMode = config('app.mode');
         $section = $options['section'] ?? '';
 
         if ($appMode === 'demo') {

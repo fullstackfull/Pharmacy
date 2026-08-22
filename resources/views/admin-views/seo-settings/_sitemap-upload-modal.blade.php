@@ -8,7 +8,7 @@
                 </div>
             </div>
             <div class="modal-body">
-                <form action="{{ env('APP_MODE') == 'demo' ? 'javascript:' :  route('admin.seo-settings.sitemap-manual-upload') }}" method="POST"
+                <form action="{{ config('app.mode') == 'demo' ? 'javascript:' :  route('admin.seo-settings.sitemap-manual-upload') }}" method="POST"
                       id="xml_file_upload_form" enctype="multipart/form-data" class="form-advance-validation form-advance-inputs-validation form-advance-file-validation non-ajax-form-validate" novalidate="novalidate">
                     @csrf
 

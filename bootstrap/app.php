@@ -49,6 +49,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ConvertEmptyStringsToNull::class,
             DatabaseRefreshMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
+            // Global, not group-scoped: a request that matches no route never enters the web or api
+            // group, so every 404 — a broken link, a scanner sweeping the site — was invisible to
+            // monitoring, and the __unmatched__ series the recorder documents could not be reached.
+            // Out here it also measures the whole pipeline rather than the part inside the group.
+            // It binds a context on first pass and skips on the second, so the group entries below
+            // cost a container lookup and record nothing twice.
+            \App\Http\Middleware\MonitorRequest::class,
         ]);
         $middleware->group('web', [
             \App\Http\Middleware\EncryptCookies::class,
@@ -177,6 +184,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
         $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();
+        // Yesterday, once it is over. The hourly run only ever covers the current day, so its last
+        // pass at 23:07 left 23:07 to midnight in no daily row at all — fifty-three minutes of
+        // every day missing, permanently, once the raw rows aged out.
+        $schedule->command('telemetry:rollup --date=yesterday')->dailyAt('00:20')->withoutOverlapping();
         $schedule->command('telemetry:rollup --prune')->dailyAt('01:30')->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions) {

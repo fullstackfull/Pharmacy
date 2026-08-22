@@ -110,6 +110,10 @@ class MonitoringNavigation
                 'icon' => $section['icon'],
                 'hint' => $section['hint'],
                 'active' => $key === $current,
+                // Seventeen of these thirty-three have no panel behind them yet. The page they
+                // open says so honestly, but the rail did not, so more than half the sidebar was
+                // an invitation to a dead end. Marked here rather than guessed at in the view.
+                'built' => \App\Services\Monitoring\Panels\PanelRegistry::has($key),
             ];
         }
 

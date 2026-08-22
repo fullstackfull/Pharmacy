@@ -11,7 +11,7 @@ class AIUsageManagerService
 {
     protected function getTextGenerateLimit(AISetting $provider): int
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             return 10;
         }
 
@@ -24,7 +24,7 @@ class AIUsageManagerService
 
     protected function getImageUploadLimit(AISetting $provider): int
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             return 10;
         }
 

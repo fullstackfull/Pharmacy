@@ -276,7 +276,9 @@
     /* Colour carries the value here, so the shape of retention is readable without reading every
        cell. The alpha is driven straight from the percentage. */
     &[style*='--pct'] {
-        background: rgba(47, 111, 208, calc(var(--pct) / 130));
+        /* The accent, so the grid follows the merchant's colour and the dark theme, rather
+           than a blue hardcoded once and left behind by both. */
+        background: color-mix(in srgb, var(--k-accent) calc(var(--pct) * 1%), transparent);
     }
 }
 
@@ -323,6 +325,8 @@
 }
 
 .ana-note { font-size: var(--k-text-sm, 13px); color: var(--k-text-muted); }
+/* A note that is a problem rather than an aside: the app is set up but the link will not open it. */
+.ana-note--warning { color: var(--k-warning-text); }
 .ana-muted { color: var(--k-text-muted); }
 .ana-warn { color: var(--k-warning, #d98d1a); }
 .ana-export { margin-top: var(--k-size-2, 8px); }

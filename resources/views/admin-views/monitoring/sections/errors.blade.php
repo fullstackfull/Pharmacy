@@ -27,6 +27,7 @@
         'severity' => $filters['severity'],
         'channel' => $filters['channel'],
         'release' => $filters['release'],
+        'route' => $filters['route'],
     ], static fn ($value) => $value !== null && $value !== '');
 
     $linkTo = static fn (array $extra = []) => route(
@@ -82,12 +83,14 @@
 @endif
 
 <div class="k-stats mon-stats">
+    {{-- The fallback prints the state the panel reported, not "no data": a window that could not
+         be read and a window that held nothing are different answers. --}}
     <x-k.stat :label="translate('error_groups_in_this_window')"
-              :value="$summary['state'] === 'ok' ? $count($summary['groups']) : translate('no_data')"
+              :value="$summary['state'] === 'ok' ? $count($summary['groups']) : translate($summary['state'])"
               icon="alert" :caption="translate('grouped_by_fingerprint')" />
 
     <x-k.stat :label="translate('new_groups')"
-              :value="$summary['state'] === 'ok' ? $count($summary['new_groups']) : translate('no_data')"
+              :value="$summary['state'] === 'ok' ? $count($summary['new_groups']) : translate($summary['state'])"
               icon="sparkles"
               :caption="$summary['state'] === 'ok'
                     ? $count($summary['recurring_groups']) . ' ' . translate('recurring')
@@ -99,7 +102,9 @@
                     : translate($summary['occurrences']['state'] ?? 'no_data')"
               icon="reports" :caption="translate('rows_in_monitoring_errors')" />
 
-    <x-k.stat :label="translate('signed_in_shoppers_affected')"
+    {{-- Accounts, not shoppers: an error on an admin or vendor route is recorded against that
+         guard, and the tile counts every signed-in one of them. --}}
+    <x-k.stat :label="translate('signed_in_accounts_affected')"
               :value="($summary['affected_users']['state'] ?? '') === 'ok'
                     ? $count($summary['affected_users']['value'])
                     : translate($summary['affected_users']['state'] ?? 'no_data')"
@@ -181,7 +186,28 @@
             <x-k.button type="submit" variant="primary" size="sm" icon="filter">{{ translate('apply') }}</x-k.button>
             <x-k.button :href="$clearUrl" variant="ghost" size="sm">{{ translate('clear') }}</x-k.button>
         </div>
+
+        {{-- Arrived from an endpoint's page. A list scoped to one route that does not say so reads
+             as "this shop has one error", so the scope is stated and removable. --}}
+        @if (!empty($filters['route']))
+            <input type="hidden" name="route" value="{{ $filters['route'] }}">
+            <p class="mon-note" style="margin-block-end:0">
+                {{ translate('showing_only') }} <code>{{ $filters['route'] }}</code>
+                — <a href="{{ route('admin.monitoring.section', array_merge(['section' => 'errors'], collect($carried)->except('route')->all())) }}">{{ translate('every_route') }}</a>
+            </p>
+        @endif
     </form>
+
+    {{-- An unreadable filter list renders as "any severity, any channel, any release" with nothing
+         behind it, which is indistinguishable from a window that simply holds none of them. Say
+         which of the two it is. --}}
+    @if (($options['state'] ?? 'ok') !== 'ok')
+        <div class="k-card__body">
+            <p class="mon-note mon-note--critical">
+                {{ translate('the_filter_values_for_this_window_could_not_be_read_so_the_lists_above_are_empty') }}@if (!empty($options['message'])): {{ $options['message'] }}@endif
+            </p>
+        </div>
+    @endif
 
     @if ($groupList['state'] === 'unavailable')
         <div class="k-card__body">
@@ -313,6 +339,15 @@
                     @endif
                 </div>
             </div>
+
+            {{-- The offset is capped, so beyond this point "next" is disabled with pages still
+                 behind it. A disabled control that does not say why reads as "this is the end". --}}
+            @if (!empty($pagination['capped']) && $pagination['page'] >= $pagination['max_page'])
+                <p class="mon-note">
+                    {{ translate('paging_stops_at_page') }} {{ number_format($pagination['max_page']) }} —
+                    {{ translate('narrow_the_window_or_the_filters_to_reach_the_rest') }}
+                </p>
+            @endif
         @endif
     @endif
 
@@ -423,6 +458,12 @@
                 <p class="mon-note">{{ translate('secrets_are_masked_before_this_is_stored_and_again_before_it_is_shown') }}</p>
             @elseif (($occurrences['state'] ?? '') === 'ok')
                 <p class="mon-note">{{ translate('no_stack_trace_was_stored_with_this_occurrence') }}</p>
+            @elseif (($occurrences['state'] ?? '') === 'unavailable')
+                <p class="mon-note mon-note--critical">{{ translate('the_occurrence_that_carries_the_stack_trace_could_not_be_read') }}</p>
+            @else
+                {{-- The heading used to stand alone here with nothing under it, which reads as a
+                     trace that is missing rather than one that was never in range. --}}
+                <p class="mon-note">{{ translate('the_stack_trace_comes_from_an_occurrence_row_and_none_of_this_groups_occurrences_fall_inside_this_window') }}</p>
             @endif
 
             <h3 class="mon-heading">{{ translate('recent_occurrences') }}</h3>
@@ -446,8 +487,24 @@
                             <tr>
                                 <td class="k-table__num k-num">{{ $occurrence['at']['at'] ?? translate('no_data') }}</td>
                                 <td class="k-num">{{ $occurrence['request_id'] ?? translate('no_data') }}</td>
-                                <td class="k-num">{{ $occurrence['trace_id'] ?? translate('no_data') }}</td>
-                                <td>{{ $occurrence['route'] ?? translate('no_route') }}</td>
+                                {{-- The two ways out of this row: the trace that recorded the request,
+                                     and what the route it hit actually is. The traces section takes a
+                                     trace filter and the Developer Portal resolves a path, so both are
+                                     one link rather than a copy and a search. --}}
+                                <td class="k-num">
+                                    @if (!empty($occurrence['trace_id']))
+                                        <a href="{{ route('admin.monitoring.section', ['section' => 'traces', 'trace' => $occurrence['trace_id'], 'range' => $range]) }}#mon-trace">{{ $occurrence['trace_id'] }}</a>
+                                    @else
+                                        {{ translate('no_data') }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if (!empty($occurrence['route']))
+                                        <a href="{{ route('admin.developer.lookup', ['path' => $occurrence['route'], 'method' => $occurrence['method'] ?? null]) }}">{{ $occurrence['route'] }}</a>
+                                    @else
+                                        {{ translate('no_route') }}
+                                    @endif
+                                </td>
                                 <td>{{ $occurrence['method'] ?? translate('no_data') }}</td>
                                 <td class="k-table__num k-num">{{ $occurrence['status'] ?? translate('no_data') }}</td>
                                 <td>{{ $occurrence['platform'] ?? translate('no_data') }}</td>
@@ -457,6 +514,14 @@
                         </tbody>
                     </table>
                 </div>
+                {{-- Ten rows under a tile reading "forty in this window" is a contradiction unless
+                     the table says it is the newest slice. --}}
+                @if (!empty($occurrences['limited']))
+                    <p class="mon-note">
+                        {{ translate('showing_the_most_recent') }} {{ number_format($occurrences['limit']) }}
+                        {{ translate('occurrences_of_this_group_in_this_window') }}
+                    </p>
+                @endif
             @elseif (($occurrences['state'] ?? '') === 'unavailable')
                 <p class="mon-note mon-note--critical">{{ translate('the_occurrences_could_not_be_read') }}: {{ $occurrences['message'] ?? '' }}</p>
             @else

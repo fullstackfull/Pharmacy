@@ -523,7 +523,7 @@ class ThemeBuilderController extends BaseController
      */
     public function deleteMedia(Request $request): JsonResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             return $this->fail(translate('you_can_not_update_this_on_demo_mode'));
         }
         if (!app(ThemePermissionService::class)->canEdit()) {

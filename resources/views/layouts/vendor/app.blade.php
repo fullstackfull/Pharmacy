@@ -26,9 +26,9 @@
     @stack('css_or_js')
 </head>
 
-<body class="k k-console footer-offset {{ env('APP_MODE')=='demo'?'demo':'' }} v2-active" id="{{ env('APP_MODE')=='demo'?'demo':'' }}">
+<body class="k k-console footer-offset {{ config('app.mode')=='demo'?'demo':'' }} v2-active" id="{{ config('app.mode')=='demo'?'demo':'' }}">
 
-@if(env('APP_MODE')=='demo')
+@if(config('app.mode')=='demo')
     <!-- Google Tag Manager (noscript) -->
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TTLMKMHQ"
                       height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -69,7 +69,7 @@
     @stack("script")
     @stack("script_2")
 
-    @if(env('APP_MODE')=='demo')
+    @if(config('app.mode')=='demo')
         <script src="{{ dynamicAsset(path: 'public/js/demo.js')}}"></script>
     @endif
 
@@ -104,7 +104,7 @@
         if (/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) document.write(
             '<script src="{{ dynamicAsset(path: 'public/assets/back-end') }}/vendor/babel-polyfill/polyfill.min.js"><\/script>');
     </script>
-    @if(env('APP_MODE') == 'demo')
+    @if(config('app.mode') == 'demo')
         <script>
             'use strict'
             function checkDemoResetTime() {

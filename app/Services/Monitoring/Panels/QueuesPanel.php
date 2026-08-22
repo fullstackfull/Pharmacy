@@ -75,6 +75,14 @@ class QueuesPanel implements Panel
      */
     private const MAX_SERIES_GROUPS = 200;
 
+    /**
+     * Hard ceiling on the timeline read.
+     *
+     * The real bound is the number of buckets the chosen window can hold, which never exceeds 360;
+     * this is the backstop that keeps a mis-sized window from turning a chart into a table scan.
+     */
+    private const MAX_TIMELINE_BUCKETS = 1500;
+
     public function __construct(
         private readonly CollectorRegistry $collectors,
         private readonly SeriesReader $reader,
@@ -335,13 +343,7 @@ class QueuesPanel implements Panel
                 continue;
             }
 
-            $columns[$column] = [
-                'state' => $metric instanceof Metric && !$metric->isOk() ? $metric->state : 'no_data',
-                'note' => $metric instanceof Metric
-                    ? $metric->note
-                    : 'This driver does not report that figure per queue.',
-                'remedy' => $metric instanceof Metric ? $metric->remedy : null,
-            ];
+            $columns[$column] = $this->backendColumnGap($metric);
         }
 
         if ($throughput['state'] !== 'ok') {
@@ -355,6 +357,33 @@ class QueuesPanel implements Panel
         }
 
         return $columns;
+    }
+
+    /**
+     * The reason one backend column is blank on every row.
+     *
+     * A readable metric with no per-queue rows behind it is the case worth separating. Calling that
+     * "no data" contradicts the very figure this page prints in the totals directly above — the
+     * page would say "1 failed job" and "failed jobs: no data" in the same screen — and it left the
+     * reason blank, because a successful Metric carries no note to borrow.
+     *
+     * @return array<string, mixed>
+     */
+    private function backendColumnGap(?Metric $metric): array
+    {
+        if (!$metric instanceof Metric) {
+            return ['state' => 'no_data', 'note' => 'This driver does not report that figure per queue.', 'remedy' => null];
+        }
+
+        if (!$metric->isOk()) {
+            return ['state' => $metric->state, 'note' => $metric->note, 'remedy' => $metric->remedy];
+        }
+
+        return [
+            'state' => 'not_supported',
+            'note' => 'This figure was read for the connection as a whole but not per queue, so the total above is the real number and the column beside it has nothing to fill.',
+            'remedy' => null,
+        ];
     }
 
     /**
@@ -482,16 +511,24 @@ class QueuesPanel implements Panel
      * rollup that has not caught up, and a worker running an older release that has no listener.
      * They draw the same blank columns and lead to different actions.
      *
+     * Two of the four also take the totals down with them. Nothing was recorded because nothing was
+     * listening, so a total of zero would be a number this panel made up — and the same payload is
+     * served as JSON, where a caller reading `totals.processed` has no state beside it to warn them.
+     * The fourth case keeps its zero, because there nothing running IS the measurement.
+     *
      * @param  array{minutes: int, resolution: string, points: int}  $window
      * @return array<string, mixed>
      */
     private function noRecordedJobs(array $window): array
     {
+        $unmeasured = ['processed' => null, 'failed' => null, 'per_minute' => null, 'avg_runtime_ms' => null];
+
         if (!config('monitoring.enabled', true)) {
             return [
                 'state' => 'not_configured',
                 'note' => 'Monitoring collection is switched off, so no completed job has been recorded since it was disabled — this is not a reading of zero jobs.',
                 'remedy' => 'Set MONITORING_ENABLED=true in .env, then run `php artisan optimize:clear`.',
+                'totals' => $unmeasured,
             ];
         }
 
@@ -503,6 +540,7 @@ class QueuesPanel implements Panel
                 'state' => 'no_data',
                 'note' => 'This range reads ' . $window['resolution'] . ' rows, which the monitoring rollup builds from the minute samples the workers write directly.',
                 'remedy' => 'Choose a shorter range to read the minute samples, or check the rollup is running: `php artisan schedule:list`.',
+                'totals' => $unmeasured,
             ];
         }
 
@@ -525,41 +563,52 @@ class QueuesPanel implements Panel
      */
     private function timeline(string $range, array $window): array
     {
+        // Both metrics are folded inside one grouped row per bucket rather than read as a row each.
+        // Grouping by bucket and metric returns two rows per bucket while any limit is counted in
+        // buckets, and because the read is ordered oldest first it is the NEWEST rows that fall off
+        // the end: a six-hour chart that stops two hours short while the workers are still running,
+        // which reads as an outage that is not there. It also splits a bucket across the cut, so
+        // the last point keeps its completions and loses its failures — a zero nobody measured.
+        $limit = min(self::MAX_TIMELINE_BUCKETS, $this->bucketsInWindow($window) + 1);
+
         try {
-            $rows = $this->reader->connection()->table('monitoring_series')
+            $connection = $this->reader->connection();
+            $rows = $connection->table('monitoring_series')
+                ->selectRaw(
+                    'bucket_at,'
+                    . ' SUM(CASE WHEN metric = ? THEN samples ELSE 0 END) AS jobs,'
+                    . ' SUM(CASE WHEN metric = ? THEN value_sum ELSE 0 END) AS total_ms,'
+                    . ' SUM(CASE WHEN metric = ? THEN samples ELSE 0 END) AS failures',
+                    [self::PROCESSED_METRIC, self::PROCESSED_METRIC, self::FAILED_METRIC],
+                )
                 ->whereIn('metric', [self::PROCESSED_METRIC, self::FAILED_METRIC])
                 ->where('resolution', $window['resolution'])
                 ->where('bucket_at', '>=', $this->reader->since($range))
-                ->groupBy('bucket_at', 'metric')
+                ->groupBy('bucket_at')
                 ->orderBy('bucket_at')
-                ->limit(max(1, $window['points']) * 4)
-                ->get([
-                    'bucket_at',
-                    'metric',
-                    $this->reader->connection()->raw('SUM(samples) AS jobs'),
-                    $this->reader->connection()->raw('SUM(value_sum) AS total_ms'),
-                ]);
+                ->limit($limit)
+                ->get();
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => class_basename($exception) . ': ' . $exception->getMessage(), 'points' => []];
+            return [
+                'state' => 'failed',
+                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'points' => [],
+                'truncated' => false,
+            ];
         }
 
         $points = [];
         foreach ($rows as $row) {
-            $at = Clock::parse($row->bucket_at)->toIso8601String();
             $jobs = (int) $row->jobs;
-            $points[$at] ??= ['t' => $at, 'hits' => 0, 'errors' => 0, 'avg_ms' => null];
-
-            if ($row->metric === self::FAILED_METRIC) {
-                $points[$at]['errors'] = $jobs;
-
-                continue;
-            }
-
-            $points[$at]['hits'] = $jobs;
-            $points[$at]['avg_ms'] = $jobs > 0 ? round((float) $row->total_ms / $jobs, 1) : null;
+            $points[] = [
+                't' => Clock::parse($row->bucket_at)->toIso8601String(),
+                'hits' => $jobs,
+                'errors' => (int) $row->failures,
+                // Nothing completed in this bucket means there is no runtime to average, which is a
+                // different fact from an average of zero milliseconds.
+                'avg_ms' => $jobs > 0 ? round((float) $row->total_ms / $jobs, 1) : null,
+            ];
         }
-
-        $points = array_values($points);
 
         // One bucket is a reading; a line needs two. Saying which of the two this is stops a single
         // sample being read as a flat trend across the whole window.
@@ -571,7 +620,26 @@ class QueuesPanel implements Panel
                     ? 'Only one bucket in this window recorded a completed job, and one point is not a line.'
                     : 'No completed job was recorded in this window.'),
             'points' => $points,
+            // Only reachable on a window larger than any this controller offers, and said out loud
+            // rather than drawn as a line that quietly ends early.
+            'truncated' => count($points) >= $limit,
         ];
+    }
+
+    /**
+     * How many buckets the chosen window can hold — the figure the timeline read is bounded by.
+     *
+     * @param  array{minutes: int, resolution: string, points: int}  $window
+     */
+    private function bucketsInWindow(array $window): int
+    {
+        $minutesPerBucket = match ($window['resolution']) {
+            'day' => 1440,
+            'hour' => 60,
+            default => 1,
+        };
+
+        return (int) max(1, ceil($window['minutes'] / $minutesPerBucket));
     }
 
     // -------------------------------------------------------------------------------------------
@@ -677,11 +745,17 @@ class QueuesPanel implements Panel
     /**
      * A failed_at stamp, converted for rendering from the timezone Laravel wrote it in.
      *
-     * This is the one timestamp on the page that is not monitoring's own. Laravel writes failed_at
-     * with the application timezone (Asia/Dhaka here), not UTC, so handing it to Clock::parse —
-     * which reads a naive string as UTC by design — would move every failure six hours and put it
-     * beside monitoring's own timestamps at the wrong moment. It is therefore parsed in the
-     * timezone it was written in and then converted the same way everything else on the page is.
+     * This is the one timestamp on the page that is not monitoring's own, and it carries no offset,
+     * so it has to be told which zone it was stamped in before it can be shown. Laravel writes it
+     * with Date::now(), which resolves in PHP's process timezone — and that is not app.timezone
+     * here: ConfigServiceProvider sets the process default from the merchant's own timezone
+     * setting, leaving the process on Asia/Kuwait while app.timezone stays Asia/Dhaka. Reading it
+     * as app.timezone therefore shows every failure three hours early, which is how a job that died
+     * a minute ago appears before the start of the window printed on this same card.
+     *
+     * date_default_timezone_get() is not a clock read — it is the zone Carbon::now() resolves in,
+     * which is the only honest answer to "how was this row stamped". Same reasoning, and the same
+     * call, as LiveTrafficPanel uses for the shop's own tables.
      */
     private function failedAtForDisplay(string $stored): ?string
     {
@@ -690,7 +764,7 @@ class QueuesPanel implements Panel
         }
 
         try {
-            return Carbon::parse($stored, config('app.timezone', 'UTC'))
+            return Carbon::parse($stored, date_default_timezone_get())
                 ->setTimezone(Clock::displayTimezone())
                 ->toDateTimeString();
         } catch (\Throwable) {

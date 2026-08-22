@@ -46,9 +46,18 @@ class AnalyticsReporting
      */
     public function collectionHealth(): array
     {
+        /*
+         * Each branch returns a translation KEY as well as its sentence. The bar this feeds renders
+         * on every analytics section, and it was printing hardcoded English at an Arabic-speaking
+         * merchant; the sentence itself cannot go through translate() because two of them carry a
+         * path and an hour count, and a runtime-composed string mints a new language key per value.
+         * So: the explanation is a key from a fixed set, and what varies is rendered beside it.
+         */
         if (!$this->ready()) {
             return [
                 'state' => 'not_installed',
+                'message_key' => 'the_analytics_tables_are_not_present_on_this_installation',
+                'detail' => 'php artisan migrate',
                 'message' => 'The analytics tables are not present on this installation. Run php artisan migrate.',
             ];
         }
@@ -56,6 +65,8 @@ class AnalyticsReporting
         if (!config('analytics.enabled', true)) {
             return [
                 'state' => 'disabled',
+                'message_key' => 'analytics_collection_is_switched_off_so_nothing_is_being_recorded',
+                'detail' => 'ANALYTICS_ENABLED=false',
                 'message' => 'Analytics collection is switched off (ANALYTICS_ENABLED=false). Nothing is being recorded.',
             ];
         }
@@ -70,6 +81,8 @@ class AnalyticsReporting
         if ($lastEvent === null) {
             return [
                 'state' => 'no_events',
+                'message_key' => 'no_event_has_ever_been_recorded_visit_the_storefront_once_and_if_nothing_appears_check_that_the_analytics_middleware_is_in_the_web_group',
+                'detail' => null,
                 'message' => 'No event has ever been recorded. Visit the storefront once — if nothing appears, check that the RecordAnalytics middleware is in the web group.',
             ];
         }
@@ -79,6 +92,8 @@ class AnalyticsReporting
         if ($lastRollup === null) {
             return [
                 'state' => 'rollup_never_ran',
+                'message_key' => 'events_are_being_collected_but_the_rollup_has_never_run_so_every_window_except_today_is_empty',
+                'detail' => '* * * * * cd ' . base_path() . ' && php artisan schedule:run',
                 'message' => 'Events are being collected but analytics:rollup has never run, so every window except today is empty. Install the scheduler cron: * * * * * cd ' . base_path() . ' && php artisan schedule:run',
                 'last_event_at' => $lastEvent,
             ];
@@ -87,6 +102,8 @@ class AnalyticsReporting
         if ($rollupAgeHours !== null && $rollupAgeHours > 6) {
             return [
                 'state' => 'rollup_stale',
+                'message_key' => 'the_rollup_has_not_run_recently_so_the_most_recent_days_may_be_incomplete',
+                'detail' => $rollupAgeHours . 'h',
                 'message' => "The rollup last ran {$rollupAgeHours} hours ago, so recent days may be incomplete. Check that the scheduler is running.",
                 'last_event_at' => $lastEvent,
                 'last_rollup_at' => $lastRollup,
@@ -110,6 +127,13 @@ class AnalyticsReporting
      */
     public function totals(Window $window): array
     {
+        if (!$this->ready()) {
+            // The same keys, with nothing in them. A different shape here is a crash on the screen
+            // rather than a message on it — which is how a missing migration became a 500 rather
+            // than "analytics is not installed".
+            return $this->unavailableTotals();
+        }
+
         $current = $this->totalsFor($window->fromDate(), $window->toDate(), $window->includesToday());
         $previous = $this->totalsFor($window->previousFromDate(), $window->previousToDate(), false);
 
@@ -146,6 +170,13 @@ class AnalyticsReporting
      */
     public function trend(Window $window): array
     {
+        if (!$this->ready()) {
+            // A list, like every other return from this method: the state travels to the view in
+            // its own key rather than by changing the shape, because a shape change here is a
+            // crash on the page instead of a message on it.
+            return [];
+        }
+
         $rows = $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'totals')
             ->where('dimension_key', 'all')
@@ -191,6 +222,10 @@ class AnalyticsReporting
      */
     public function breakdown(Window $window, string $dimension, int $limit = 25): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed', 'rows' => []];
+        }
+
         if (!in_array($dimension, self::DIMENSIONS, true)) {
             return ['state' => 'unknown_dimension', 'rows' => []];
         }
@@ -211,7 +246,11 @@ class AnalyticsReporting
             ->selectRaw('SUM(orders) orders')
             ->selectRaw('SUM(revenue) revenue')
             ->groupBy('dimension_key')
-            ->orderByDesc(DB::raw('SUM(sessions) + SUM(events)'))
+            // Ordered on every metric a dimension might populate, not just sessions and events.
+            // The rollup fills a different subset per dimension — `vendor` carries only orders,
+            // visitors and revenue, and `search_term` carries no orders at all — so sorting on
+            // sessions alone returned the vendor list in arbitrary order.
+            ->orderByDesc(DB::raw('SUM(sessions) + SUM(events) + SUM(pageviews) + SUM(orders)'))
             ->limit($limit)
             ->get();
 
@@ -219,10 +258,25 @@ class AnalyticsReporting
             return ['state' => $this->emptyReason($window), 'rows' => []];
         }
 
-        $total = (float) $rows->sum('sessions') ?: (float) $rows->sum('events');
+        // The DIMENSION's total, not the page's. Summing only the rows that survived the top-N cut
+        // made every share add up to 100% however much tail was left out, so a source with a fifth
+        // of the traffic was reported as having half of it.
+        $dimensionTotal = $this->rollupQuery($window->fromDate(), $window->toDate())
+            ->where('dimension', $dimension)
+            ->selectRaw('COALESCE(SUM(sessions), 0) sessions, COALESCE(SUM(events), 0) events')
+            ->first();
+
+        $total = (float) ($dimensionTotal->sessions ?? 0) ?: (float) ($dimensionTotal->events ?? 0);
+        $shown = (float) $rows->sum('sessions') ?: (float) $rows->sum('events');
+        $tail = max(0.0, $total - $shown);
 
         return [
             'state' => 'ok',
+            // What the page is not showing, so a table that does not add up says why.
+            'total' => $total,
+            'shown' => $shown,
+            'other' => $tail,
+            'truncated' => $rows->count() >= $limit && $tail > 0,
             'rows' => $rows->map(function ($row) use ($total) {
                 $sessions = (int) $row->sessions;
                 $weight = $sessions > 0 ? $sessions : (int) $row->events;
@@ -258,6 +312,10 @@ class AnalyticsReporting
      */
     public function excludedTraffic(Window $window): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed'];
+        }
+
         $rows = $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'excluded_traffic')
             ->selectRaw('dimension_key, SUM(sessions) sessions, SUM(visitors) visitors, SUM(pageviews) pageviews')
@@ -267,7 +325,14 @@ class AnalyticsReporting
         $counted = (int) $this->rollupQuery($window->fromDate(), $window->toDate())
             ->where('dimension', 'totals')->where('dimension_key', 'all')->sum('sessions');
 
-        $excluded = (int) $rows->sum('sessions');
+        // The two kinds OVERLAP: a staff member browsing with a crawler-shaped user agent is
+        // counted under both, because each is its own filter rather than a partition. Adding them
+        // would over-report the exclusion, so the honest total is the larger of the two as a floor
+        // and their sum as a ceiling — and the screen is told which it is looking at.
+        $bot = (int) $rows->firstWhere('dimension_key', 'bot')?->sessions;
+        $internal = (int) $rows->firstWhere('dimension_key', 'internal')?->sessions;
+        $atLeast = max($bot, $internal);
+        $atMost = $bot + $internal;
 
         return [
             'rows' => $rows->map(fn ($row) => [
@@ -276,9 +341,11 @@ class AnalyticsReporting
                 'visitors' => (int) $row->visitors,
                 'pageviews' => (int) $row->pageviews,
             ])->all(),
-            'excluded_sessions' => $excluded,
+            'excluded_sessions' => $atLeast,
+            'excluded_sessions_upper' => $atMost,
+            'overlaps' => $atMost > $atLeast,
             'counted_sessions' => $counted,
-            'excluded_share' => ($excluded + $counted) > 0 ? round(100 * $excluded / ($excluded + $counted), 1) : null,
+            'excluded_share' => ($atLeast + $counted) > 0 ? round(100 * $atLeast / ($atLeast + $counted), 1) : null,
         ];
     }
 
@@ -293,6 +360,10 @@ class AnalyticsReporting
      */
     public function funnel(Window $window): array
     {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed', 'steps' => []];
+        }
+
         $steps = [
             ['key' => 'visited', 'label' => 'visited_the_shop', 'event' => null],
             ['key' => 'viewed_product', 'label' => 'viewed_a_product', 'event' => AnalyticsEvent::PRODUCT_VIEWED],
@@ -311,8 +382,13 @@ class AnalyticsReporting
             return ['state' => $this->emptyReason($window), 'steps' => []];
         }
 
+        // Restricted to the sessions the denominator counts. Without this the two sides were
+        // measured on different clocks — the denominator on when a session STARTED, the steps on
+        // when an event HAPPENED — so a session that began before the window and acted inside it
+        // was a step without being a visit, and a step could exceed the visits above it.
         $reached = $this->realEvents($from, $to)
             ->whereNotNull('session_id')
+            ->whereIn('session_id', $this->realSessions($from, $to)->select('id'))
             ->selectRaw('name, COUNT(DISTINCT session_id) sessions')
             ->groupBy('name')
             ->pluck('sessions', 'name');
@@ -363,8 +439,11 @@ class AnalyticsReporting
             ->where('v.is_bot', false)
             ->where('v.is_internal', false)
             ->where('s.is_bot', false)
-            ->selectRaw('YEARWEEK(v.first_seen_at, 3) cohort_week')
-            ->selectRaw('YEARWEEK(s.started_at, 3) active_week')
+            // Staff were excluded on the visitor side and not on the session side, so the shop's
+            // own people counted as returning customers in every retention cohort.
+            ->where('s.is_internal', false)
+            ->selectRaw($this->isoWeekStart('v.first_seen_at') . ' cohort_week')
+            ->selectRaw($this->isoWeekStart('s.started_at') . ' active_week')
             ->selectRaw('COUNT(DISTINCT s.visitor_id) visitors')
             ->groupBy('cohort_week', 'active_week')
             ->get();
@@ -484,11 +563,19 @@ class AnalyticsReporting
             ->limit(60)
             ->get(['name', 'category', 'entity_type', 'entity_id', 'value', 'path', 'channel', 'occurred_at']);
 
+        // How many there ARE in the window. The screen used to show the size of the sixty-row feed
+        // above, so a busy shop's headline silently stopped at sixty.
+        $totalEvents = (int) $this->connection()->table('analytics_events')
+            ->where('occurred_at', '>=', $since)
+            ->where('is_bot', false)
+            ->where('is_internal', false)
+            ->count();
+
         $perMinute = $this->connection()->table('analytics_events')
             ->where('occurred_at', '>=', $since)
             ->where('is_bot', false)
             ->where('is_internal', false)
-            ->selectRaw("DATE_FORMAT(occurred_at, '%Y-%m-%d %H:%i:00') minute, COUNT(*) events")
+            ->selectRaw($this->minuteExpression('occurred_at') . ' minute, COUNT(*) events')
             ->groupBy('minute')
             ->orderBy('minute')
             ->get();
@@ -497,9 +584,29 @@ class AnalyticsReporting
             'state' => $active === 0 && $events->isEmpty() ? 'quiet' : 'ok',
             'window_minutes' => $minutes,
             'active_sessions' => $active,
+            'total_events' => $totalEvents,
+            'feed_limit' => 60,
             'events' => $events->all(),
             'per_minute' => $perMinute->all(),
         ];
+    }
+
+    /**
+     * A timestamp truncated to the minute, in the dialect the active connection speaks.
+     *
+     * DATE_FORMAT is MySQL's; writing it literally meant the live screen could not run — or be
+     * tested — on any other driver.
+     */
+    private function minuteExpression(string $column): string
+    {
+        $wrapped = $this->connection()->getQueryGrammar()->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m-%d %H:%M:00', {$wrapped})",
+            'pgsql' => "to_char(date_trunc('minute', {$wrapped}), 'YYYY-MM-DD HH24:MI:00')",
+            'sqlsrv' => "FORMAT({$wrapped}, 'yyyy-MM-dd HH:mm:00')",
+            default => "DATE_FORMAT({$wrapped}, '%Y-%m-%d %H:%i:00')",
+        };
     }
 
     /**
@@ -560,6 +667,29 @@ class AnalyticsReporting
     /**
      * @return array<string, float|int>
      */
+    /**
+     * Every headline metric, unmeasured.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function unavailableTotals(): array
+    {
+        $keys = [
+            'sessions', 'visitors', 'new_visitors', 'pageviews', 'events', 'bounces',
+            'engaged_sessions', 'duration_seconds', 'cart_adds', 'checkouts', 'orders', 'revenue',
+            'bounce_rate', 'engagement_rate', 'conversion_rate', 'pages_per_session',
+            'average_order_value', 'session_duration',
+        ];
+
+        $metrics = ['state' => 'not_installed'];
+
+        foreach ($keys as $key) {
+            $metrics[$key] = ['value' => null, 'previous' => null, 'change_pct' => null];
+        }
+
+        return $metrics;
+    }
+
     private function totalsFor(string $from, string $to, bool $spliceToday): array
     {
         $row = $this->rollupQuery($from, $to)
@@ -600,15 +730,29 @@ class AnalyticsReporting
 
         $live = $this->liveTotals($today);
 
+        /*
+         * The live figure replaces the rolled one for today, whichever way it moved.
+         *
+         * The "only if larger" guard was there to stop a partial live read from shrinking a
+         * complete rollup, and it works for counts, which only ever grow through the day. Bounces
+         * do not: a bounce becomes a non-bounce the moment that session opens a second page, and
+         * so does the count. Guarding it meant today's bounces could only ever go up, so the
+         * bounce rate on any window containing today was reported higher than it was — and it is a
+         * number a merchant changes the shop over.
+         */
+        $monotonic = ['sessions', 'visitors', 'new_visitors', 'pageviews', 'events', 'cart_adds', 'checkouts', 'orders', 'revenue', 'duration_seconds'];
+
         foreach ($totals as $metric => $value) {
             $rolled = (float) ($rolledToday->{$metric} ?? 0);
             $liveValue = (float) ($live[$metric] ?? 0);
 
-            if ($liveValue > $rolled) {
-                $totals[$metric] = $metric === 'revenue'
-                    ? round($value - $rolled + $liveValue, 2)
-                    : (int) ($value - $rolled + $liveValue);
+            if (in_array($metric, $monotonic, true) && $liveValue <= $rolled) {
+                continue;
             }
+
+            $totals[$metric] = $metric === 'revenue'
+                ? round($value - $rolled + $liveValue, 2)
+                : (int) ($value - $rolled + $liveValue);
         }
 
         return $totals;
@@ -745,8 +889,32 @@ class AnalyticsReporting
             : (int) round($cohortStart->diffInDays($activeStart) / 7);
     }
 
+    /**
+     * The Monday of a timestamp's ISO week, as YYYY-MM-DD, in the dialect this connection speaks.
+     *
+     * YEARWEEK is MySQL's, so the retention grid — like the hour-of-day rollup and the live feed —
+     * could not run anywhere else. A date is also a better key than 202634: it sorts naturally and
+     * it is already the label the screen prints.
+     */
+    private function isoWeekStart(string $column): string
+    {
+        $wrapped = $this->connection()->getQueryGrammar()->wrap($column);
+
+        return match ($this->connection()->getDriverName()) {
+            'sqlite' => "date({$wrapped}, 'weekday 1', '-7 days')",
+            'pgsql' => "to_char(date_trunc('week', {$wrapped}), 'YYYY-MM-DD')",
+            'sqlsrv' => "CONVERT(varchar(10), DATEADD(day, -((DATEPART(weekday, {$wrapped}) + 5) % 7), {$wrapped}), 23)",
+            default => "DATE_FORMAT(DATE_SUB({$wrapped}, INTERVAL WEEKDAY({$wrapped}) DAY), '%Y-%m-%d')",
+        };
+    }
+
     private function weekStart(string $yearWeek): ?Carbon
     {
+        // Already a date: what isoWeekStart() emits.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $yearWeek) === 1) {
+            return Carbon::parse($yearWeek)->startOfDay();
+        }
+
         if (!preg_match('/^(\d{4})(\d{2})$/', $yearWeek, $matches)) {
             return null;
         }

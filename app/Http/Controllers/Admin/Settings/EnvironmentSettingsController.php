@@ -30,14 +30,14 @@ class EnvironmentSettingsController extends BaseController
 
     public function update(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('you_can_not_update_this_on_demo_mode'));
             return back();
         }
 
         try {
             $this->setEnvironmentValue(envKey: 'APP_DEBUG', envValue: $request['app_debug'] ?? env('APP_DEBUG'));
-            $this->setEnvironmentValue(envKey: 'APP_MODE', envValue: $request['app_mode'] ?? env('APP_MODE'));
+            $this->setEnvironmentValue(envKey: 'APP_MODE', envValue: $request['app_mode'] ?? config('app.mode'));
             ToastMagic::success(translate('environment_variables_updated_successfully'));
         } catch (Exception $exception) {
             ToastMagic::error(translate('environment_variables_updated_failed'));
@@ -47,7 +47,7 @@ class EnvironmentSettingsController extends BaseController
 
     public function updateForceHttps(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('you_can_not_update_this_on_demo_mode'));
             return back();
         }
@@ -63,7 +63,7 @@ class EnvironmentSettingsController extends BaseController
 
     public function optimizeSystem(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('you_can_not_update_this_on_demo_mode'));
             return back();
         }
@@ -86,7 +86,7 @@ class EnvironmentSettingsController extends BaseController
 
     public function installPassport(Request $request): RedirectResponse
     {
-        if (env('APP_MODE') == 'demo') {
+        if (config('app.mode') == 'demo') {
             ToastMagic::info(translate('you_can_not_update_this_on_demo_mode'));
             return back();
         }
