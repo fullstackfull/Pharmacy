@@ -243,6 +243,10 @@
                 <thead>
                 <tr>
                     <th>{{ translate('exception') }}</th>
+                    {{-- Status sits second, before the wide prose column, so the one field that
+                         decides whether a row needs attention is readable without scrolling a
+                         nine-column table sideways. --}}
+                    <th>{{ translate('status') }}</th>
                     <th>{{ translate('message') }}</th>
                     <th>{{ translate('route') }}</th>
                     <th class="k-table__num" title="{{ translate('total_since_the_group_was_first_seen') }}">{{ translate('occurrences') }}</th>
@@ -250,7 +254,6 @@
                     <th class="k-table__num" title="{{ translate('total_since_the_group_was_first_seen') }}">{{ translate('users') }}</th>
                     <th>{{ translate('first_seen') }}</th>
                     <th>{{ translate('last_seen') }}</th>
-                    <th>{{ translate('status') }}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -263,10 +266,11 @@
                                 <span class="mon-pill mon-pill--warning">{{ translate('new') }}</span>
                             @endif
                         </td>
+                        <td><span class="mon-pill mon-pill--{{ $statusTone($group['status']) }}">{{ translate($group['status']) }}</span></td>
                         {{-- One line per group: an exception message is prose, and prose in an
                              auto-laid-out table wraps to four lines and drags every row with it.
                              The full text is in the title and in the group card below. --}}
-                        <td class="k-truncate" title="{{ $group['message'] }}">{{ \Illuminate\Support\Str::limit($group['message'], 55) }}</td>
+                        <td class="k-truncate" title="{{ $group['message'] }}">{{ \Illuminate\Support\Str::limit($group['message'], 48) }}</td>
                         <td>{{ $group['route'] ?? translate('no_route') }}</td>
                         <td class="k-table__num k-num">{{ number_format($group['occurrences_all_time']) }}</td>
                         <td class="k-table__num k-num">
@@ -279,7 +283,6 @@
                         <td class="k-table__num k-num">{{ number_format($group['affected_users_all_time']) }}</td>
                         <td class="k-num" title="{{ $group['first_seen']['at'] ?? '' }}">{{ $ago($group['first_seen']) }}</td>
                         <td class="k-num" title="{{ $group['last_seen']['at'] ?? '' }}">{{ $ago($group['last_seen']) }}</td>
-                        <td><span class="mon-pill mon-pill--{{ $statusTone($group['status']) }}">{{ translate($group['status']) }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -441,7 +444,7 @@
                         <tbody>
                         @foreach ($occurrences['rows'] as $occurrence)
                             <tr>
-                                <td class="k-num">{{ $occurrence['at']['at'] ?? translate('no_data') }}</td>
+                                <td class="k-table__num k-num">{{ $occurrence['at']['at'] ?? translate('no_data') }}</td>
                                 <td class="k-num">{{ $occurrence['request_id'] ?? translate('no_data') }}</td>
                                 <td class="k-num">{{ $occurrence['trace_id'] ?? translate('no_data') }}</td>
                                 <td>{{ $occurrence['route'] ?? translate('no_route') }}</td>

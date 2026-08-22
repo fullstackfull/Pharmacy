@@ -397,3 +397,176 @@
     .mon-range { inline-size: 100%; }
     .mon-range__option { flex: 1; text-align: center; }
 }
+
+/* ── Trace waterfall ───────────────────────────────────────────────────────── */
+/*
+ | The traces section needs one thing no other section does: a bar whose position carries meaning.
+ | A span's offset and length ARE the finding — "the 410ms query started 90ms in" — so the row has
+ | to be a track with an absolutely-placed bar on it, which no existing class does.
+ |
+ | Positions arrive from the panel as percentages and are written as inline logical properties
+ | (inset-inline-start / inline-size), so the same numbers read left-to-right in English and
+ | right-to-left in Arabic without a second set of styles.
+ |
+ | Kinds get their own hues rather than the state palette: a database span is not "healthy" or
+ | "critical", it is a category, and reusing the semantic colours here would teach the eye the
+ | wrong thing. Failure is drawn on top of the kind colour instead of replacing it.
+ */
+.mon-waterfall {
+    --mon-kind-db: #3b5bdb;
+    --mon-kind-cache: #7048e8;
+    --mon-kind-http: #0c8599;
+    --mon-kind-queue: #ae3ec9;
+    --mon-kind-view: #1f9d55;
+    --mon-kind-middleware: #868e96;
+    --mon-kind-controller: #2b8a3e;
+    --mon-kind-auth: #d6336c;
+    --mon-kind-app: #adb5bd;
+
+    display: flex;
+    flex-direction: column;
+    margin-block-start: 6px;
+}
+
+.mon-waterfall__axis {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--k-text-xs, 12px);
+    color: var(--k-text-muted);
+    padding-block-end: 4px;
+    border-block-end: 1px solid var(--k-border);
+}
+
+.mon-waterfall__row {
+    display: grid;
+    grid-template-columns: minmax(120px, 240px) minmax(0, 1fr) 84px;
+    gap: 8px;
+    align-items: center;
+    padding-block: 3px;
+    border-block-end: 1px solid var(--k-border);
+    font-size: var(--k-text-xs, 12px);
+}
+.mon-waterfall__row:last-child { border-block-end: 0; }
+.mon-waterfall__row:hover { background: var(--k-surface-2); }
+
+.mon-waterfall__label { display: flex; align-items: center; gap: 6px; min-inline-size: 0; }
+.mon-waterfall__label .k-truncate { min-inline-size: 0; }
+
+/* The kind tag and the legend swatch take their background from the same custom properties as the
+   bars, so a colour is defined once per kind and cannot drift between the three places it appears. */
+.mon-waterfall__kind {
+    flex: 0 0 auto;
+    padding: 1px 5px;
+    border-radius: var(--k-radius-sm, 4px);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #fff;
+}
+
+.mon-waterfall__swatch {
+    display: inline-block;
+    inline-size: 9px;
+    block-size: 9px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+}
+
+.mon-waterfall__track {
+    position: relative;
+    display: block;
+    block-size: 12px;
+    border-radius: var(--k-radius-sm, 4px);
+    background: var(--k-surface-2);
+    overflow: hidden;
+}
+
+.mon-waterfall__bar {
+    position: absolute;
+    inset-block: 0;
+    border-radius: var(--k-radius-sm, 4px);
+    background: var(--mon-kind-app);
+}
+/* A failed span keeps its kind colour and gains an outline: losing the colour would hide which
+   kind of work failed, which is the first thing anybody asks. */
+.mon-waterfall__bar.is-failed { box-shadow: inset 0 0 0 2px var(--mon-critical); }
+
+.mon-waterfall__bar--db { background: var(--mon-kind-db); }
+.mon-waterfall__bar--cache { background: var(--mon-kind-cache); }
+.mon-waterfall__bar--http { background: var(--mon-kind-http); }
+.mon-waterfall__bar--queue { background: var(--mon-kind-queue); }
+.mon-waterfall__bar--view { background: var(--mon-kind-view); }
+.mon-waterfall__bar--middleware { background: var(--mon-kind-middleware); }
+.mon-waterfall__bar--controller { background: var(--mon-kind-controller); }
+.mon-waterfall__bar--auth { background: var(--mon-kind-auth); }
+.mon-waterfall__bar--app { background: var(--mon-kind-app); }
+
+.mon-waterfall__ms { text-align: end; color: var(--k-text-muted); white-space: nowrap; }
+.mon-waterfall__ms i { font-style: normal; color: var(--mon-degraded); }
+
+.mon-waterfall__attrs {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-block-end: 4px;
+    padding-inline-start: 12px;
+}
+.mon-waterfall__attrs code {
+    font-size: 10px;
+    color: var(--k-text-muted);
+    background: var(--k-surface-2);
+    padding: 1px 5px;
+    border-radius: var(--k-radius-sm, 4px);
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+}
+
+/* The by-kind split: one bar that adds up to the whole request, above the waterfall that explains
+   it. Segments are inline-size percentages so the row reverses correctly in RTL. */
+.mon-waterfall-split {
+    /* Repeated rather than inherited: this bar sits outside .mon-waterfall in the markup, and the
+       kind colours have to resolve on both. */
+    --mon-kind-db: #3b5bdb;
+    --mon-kind-cache: #7048e8;
+    --mon-kind-http: #0c8599;
+    --mon-kind-app: #adb5bd;
+
+    display: flex;
+    inline-size: 100%;
+    block-size: 16px;
+    margin-block-start: 8px;
+    border-radius: var(--k-radius-sm, 4px);
+    overflow: hidden;
+    background: var(--k-surface-2);
+}
+.mon-waterfall-split__part { display: block; block-size: 100%; }
+
+.mon-waterfall-split__legend {
+    --mon-kind-db: #3b5bdb;
+    --mon-kind-cache: #7048e8;
+    --mon-kind-http: #0c8599;
+    --mon-kind-app: #adb5bd;
+
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px 18px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    font-size: var(--k-text-xs, 12px);
+}
+/* The remainder's caption drops to its own line rather than squeezing the label column: the
+   millisecond figure and its share have to stay side by side to be read as one reading. */
+.mon-waterfall-split__key { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.mon-waterfall-split__key span:nth-child(2) { flex: 1 1 auto; min-inline-size: 0; }
+.mon-waterfall-split__key small { flex-basis: 100%; color: var(--k-text-muted); font-size: 10px; }
+.mon-waterfall-split__key i { font-style: normal; color: var(--k-text-muted); margin-inline-start: 4px; }
+
+@media (max-width: 640px) {
+    /* The label column is the first thing to give way: a span name can be truncated, but a bar
+       narrower than its own offset stops carrying any meaning at all. */
+    .mon-waterfall__row { grid-template-columns: minmax(90px, 130px) minmax(0, 1fr) 64px; }
+}

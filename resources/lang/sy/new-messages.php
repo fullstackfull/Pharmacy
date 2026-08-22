@@ -1222,4 +1222,12 @@ return [
 	'unavailable' => 'غير متاح',
 	'No_scheduled_task_has_ever_reported_a_run.' => 'No scheduled task has ever reported a run.',
 	'92.6_%' => '92.6 %',
+	'6_error_group(s)_active_in_the_last_hour' => '6 error group(s) active in the last hour',
+	'92.7_%' => '92.7 %',
+	'traces_are_kept_for' => 'Traces are kept for',
+	'window' => 'Window',
+	'every_figure_on_this_page_is_read_from' => 'Every figure on this page is read from',
+	'APP_URL_is_http://127.0.0.1:8000:_127.0.0.1_never_leaves_this_machine_and_no_certificate_authority_issues_for_it,_so_there_is_no_certificate_here_to_read.' => 'APP URL is http://127.0.0.1:8000: 127.0.0.1 never leaves this machine and no certificate authority issues for it, so there is no certificate here to read.',
+	'secrets_are_masked_before_a_span_is_stored_and_again_before_it_is_shown' => 'Secrets are masked before a span is stored and again before it is shown',
+	'these_totals_count_nested_spans_twice_over_so_they_measure_what_was_instrumented_rather_than_how_the_request_spent_its_time' => 'These totals count nested spans twice over so they measure what was instrumented rather than how the request spent its time',
 ];
