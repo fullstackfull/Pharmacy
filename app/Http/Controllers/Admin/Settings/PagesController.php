@@ -62,7 +62,7 @@ class PagesController extends BaseController
             }
         }
 
-        $businessPages = $this->businessPageRepo->getListWhere(orderBy: ['default_status' => 'desc'], searchValue: $request['search'] ?? '', dataLimit: 'all');
+        $businessPages = $this->businessPageRepo->getListWhere(orderBy: ['default_status' => 'desc'], searchValue: requestString('search') ?: null ?? '', dataLimit: 'all');
         if ($businessPages->count() <= 0) {
             $this->addOrUpdateBusinessPagesData();
             $businessPages = $this->businessPageRepo->getListWhere(orderBy: ['default_status' => 'desc'], dataLimit: 'all');

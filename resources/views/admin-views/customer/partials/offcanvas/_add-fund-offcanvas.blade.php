@@ -17,7 +17,7 @@
                         {{ translate('Select_Customer') }} <span class="text-danger">*</span>
                     </label>
                     <input type="hidden" id='customer-id' name="customer_id"
-                           value="{{ request('customer_id') ?? 'all' }}">
+                           value="{{ requestString('customer_id') ?: 'all' }}">
                     <select name="customer_id" class="custom-select">
                         <option value="" disabled selected>{{ translate('Choose_customer_to_add_fund') }}</option>
                         @foreach($sidebarCustomers as $customer)

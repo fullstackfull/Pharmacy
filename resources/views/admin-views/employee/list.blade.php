@@ -11,12 +11,12 @@
             </h2>
         </div>
         <x-k.data-view :title="translate('employee_table')" :count="$employees->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_name_or_email_or_phone')">
 
             <x-slot:actions>
                 <form action="{{ url()->current() }}" method="GET" class="k-row">
-                    <input type="hidden" name="searchValue" value="{{ request('searchValue') }}">
+                    <input type="hidden" name="searchValue" value="{{ requestString('searchValue') }}">
                     <select class="k-input" style="inline-size:auto" name="admin_role_id"
                             aria-label="{{ translate('role') }}">
                         <option value="all" {{ request('admin_role_id') == 'all' ? 'selected' : '' }}>{{translate('all')}}</option>

@@ -11,7 +11,7 @@
             </div>
 
             <div class="offcanvas-body p-3 overflow-auto flex-grow-1">
-                <input type="hidden" name="product_type" value="{{ request('product_type') }}">
+                <input type="hidden" name="product_type" value="{{ requestString('product_type') }}">
                 @include("vendor-views.partials._product-filters-sections", [
                     'filterSection' => ['sorting', 'brand', 'category'],
                     'productBrands' => $productBrands,

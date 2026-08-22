@@ -111,7 +111,7 @@ class VendorController extends BaseController
         $current_date = date('Y-m-d');
         $vendors = $this->vendorRepo->getListWhere(
             orderBy: $orderBy,
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             relations: ['orders', 'product', 'shop', 'wallet'],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT)
         );
@@ -268,7 +268,7 @@ class VendorController extends BaseController
     {
         $vendors = $this->vendorRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             relations: ['orders', 'product'],
             dataLimit: 'all'
         );
@@ -287,7 +287,7 @@ class VendorController extends BaseController
     public function exportOrderList(Request $request, $vendorId): BinaryFileResponse
     {
         $shop = $this->shopRepo->getFirstWhere(params: ['seller_id' => $vendorId]);
-        $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request['searchValue'], filters: ['seller_id' => $vendorId, 'seller_is' => 'seller'], dataLimit: 'all');
+        $orders = $this->orderRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: requestString('searchValue') ?: null, filters: ['seller_id' => $vendorId, 'seller_is' => 'seller'], dataLimit: 'all');
         $statusArray = [
             'pending' => 0,
             'confirmed' => 0,
@@ -509,7 +509,7 @@ class VendorController extends BaseController
     {
         $orders = $this->orderRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => $seller['id'], 'seller_is' => 'seller', 'order_type' => 'default_type', 'order_status' => $request['order_status']],
             relations: ['details', 'customer', 'seller.shop', 'orderEditHistory'],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
@@ -571,7 +571,7 @@ class VendorController extends BaseController
 
         $products = $this->productRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => $seller['id'], 'added_by' => 'seller'],
             relations: ['translations'],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT)
@@ -626,7 +626,7 @@ class VendorController extends BaseController
         ];
         $transactions = $this->orderTransactionRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: $filters,
             relations: ['order.customer'],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
@@ -642,7 +642,7 @@ class VendorController extends BaseController
     {
         if ($request->has('searchValue')) {
             $product_id = $this->productRepo->getListWhere(
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 filters: ['added_by' => 'seller', 'seller_id' => $seller['id']],
                 dataLimit: 'all')->pluck('id')->toArray();
             $filtersBy = [
@@ -702,7 +702,7 @@ class VendorController extends BaseController
     {
         $withdrawRequests = $this->withdrawRequestRepo->getListWhereNull(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['approved' => $request['approved']],
             nullFilters: ['delivery_man_id'],
             relations: ['seller','seller.shop'],

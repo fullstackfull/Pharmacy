@@ -37,14 +37,14 @@
                     <x-k.field :label="translate('Order_Date')" name="order_date">
                         <input type="text" id="order_date" name="order_date"
                                class="k-input js-daterangepicker-with-range cursor-pointer"
-                               value="{{ request('order_date') }}" placeholder="{{ translate('Select_Date') }}"
+                               value="{{ requestString('order_date') }}" placeholder="{{ translate('Select_Date') }}"
                                autocomplete="off" readonly>
                     </x-k.field>
 
                     <x-k.field :label="translate('Customer_Joining_Date')" name="customer_joining_date">
                         <input type="text" id="customer_joining_date" name="customer_joining_date"
                                class="k-input js-daterangepicker-with-range cursor-pointer"
-                               value="{{ request('customer_joining_date') }}" placeholder="{{ translate('Select_Date') }}"
+                               value="{{ requestString('customer_joining_date') }}" placeholder="{{ translate('Select_Date') }}"
                                autocomplete="off" readonly>
                     </x-k.field>
 
@@ -68,7 +68,7 @@
                     <x-k.field :label="translate('Choose_First')" name="choose_first"
                                :hint="translate('Ex') . ' : 100'">
                         <input type="number" id="choose_first" class="k-input" min="1"
-                               value="{{ request('choose_first') }}" name="choose_first"
+                               value="{{ requestString('choose_first') }}" name="choose_first"
                                placeholder="{{ translate('Ex') }} : 100">
                     </x-k.field>
 
@@ -81,7 +81,7 @@
         </x-k.card>
 
         <x-k.data-view :title="translate('Customer_List')" :count="$customers->total()" :selectable="true"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_Name_or_Email_or_Phone')">
 
             <x-slot:bulk>

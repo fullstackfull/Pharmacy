@@ -211,7 +211,7 @@
                                                    class="form-control"
                                                    placeholder="{{ translate('search_orders') }}"
                                                    aria-label="Search orders"
-                                                   value="{{ request('searchValue') }}"
+                                                   value="{{ requestString('searchValue') }}"
                                             >
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">

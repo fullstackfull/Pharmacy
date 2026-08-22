@@ -74,7 +74,7 @@ class RefundTransactionController extends BaseController
     {
         return $this->refundTransactionRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['payment_method' => $request['payment_method'] == 'all' ? null : $request['payment_method']],
             relations: ['order.seller.shop', 'orderDetails.product'],
             dataLimit: getWebConfig(WebConfigKey::PAGINATION_LIMIT),

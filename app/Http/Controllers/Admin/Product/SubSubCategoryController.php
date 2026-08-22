@@ -44,7 +44,7 @@ class SubSubCategoryController extends BaseController
     {
         $categories = $this->categoryRepo->getListWhere(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 2],
             relations: ['parent' => function ($query) {
                 return $query->with(['parent']);
@@ -53,7 +53,7 @@ class SubSubCategoryController extends BaseController
 
         $categoriesWithTrans = $this->categoryRepo->getListWhere(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 2],
             relations: ['translations', 'seo', 'parent'],
             dataLimit: getWebConfig(name: 'pagination_limit'));
@@ -111,7 +111,7 @@ class SubSubCategoryController extends BaseController
 
     public function getExportList(Request $request): BinaryFileResponse
     {
-        $subSubCategories = $this->categoryRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request->get('searchValue'), filters: ['position' => 2], dataLimit: 'all');
+        $subSubCategories = $this->categoryRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: requestString('searchValue') ?: null, filters: ['position' => 2], dataLimit: 'all');
         $active = $subSubCategories->where('home_status', 1)->count();
         $inactive = $subSubCategories->where('home_status', 0)->count();
         return Excel::download(new CategoryListExport([

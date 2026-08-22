@@ -97,7 +97,7 @@
                         <form action="{{route('admin.most-demanded.index') }}" method="GET">
                             <div class="input-group">
                                 <input id="datatableSearch_" type="search" name="searchValue"
-                                               class="form-control" value="{{ request('searchValue') }}"
+                                               class="form-control" value="{{ requestString('searchValue') }}"
                                                placeholder="{{ translate('search_by_product_name') }}"
                                                aria-label="Search orders">
                                 <div class="input-group-append search-submit">

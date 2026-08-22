@@ -41,7 +41,7 @@ class EmployeeController extends BaseController
         $employee_roles = $this->adminRoleRepo->getEmployeeRoleList(dataLimit: 'all');
         $employees = $this->adminRepo->getEmployeeListWhere(
             orderBy:['id'=>'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters:['admin_role_id' => $request['admin_role_id'] ?? 'all'] ,
             relations: ['role'],
             dataLimit:getWebConfig(name: WebConfigKey::PAGINATION_LIMIT)
@@ -85,7 +85,7 @@ class EmployeeController extends BaseController
     public function exportList(Request $request): BinaryFileResponse
     {
         $employees = $this->adminRepo->getEmployeeListWhere(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['admin_role_id' => $request['role']],
             relations: ['role'],
             dataLimit: 'all');

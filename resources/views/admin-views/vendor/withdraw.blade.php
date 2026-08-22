@@ -12,7 +12,7 @@
         </div>
 
         <x-k.data-view :title="translate('withdraw_request_table')" :count="$withdrawRequests->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_Name_or_Shop')">
 
             <x-slot:actions>
@@ -25,7 +25,7 @@
                     <option value="pending" {{request('approved') == 'pending' ? 'selected' : ''}}>{{translate('pending')}}</option>
                 </select>
                 <a class="k-btn k-btn--secondary"
-                   href="{{ route('admin.vendors.withdraw-list-export-excel') }}?approved={{request('approved')}}">
+                   href="{{ route('admin.vendors.withdraw-list-export-excel') }}?approved={{ requestString('approved') }}">
                     <x-k.icon name="download" :size="15" /> {{ translate('export') }}
                 </a>
             </x-slot:actions>

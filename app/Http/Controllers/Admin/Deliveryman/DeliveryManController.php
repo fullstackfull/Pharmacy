@@ -55,7 +55,7 @@ class DeliveryManController extends Controller
             $relations = ['deliveredOrders', 'rating', 'review'];
         }
         $deliveryMens = $this->deliveryManRepo->getListWhere(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => 0, 'sort_by' => $request['sort_by'] ?? 'latest'],
             relations: $relations,
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
@@ -84,7 +84,7 @@ class DeliveryManController extends Controller
 
         $deliveryMens = $this->deliveryManRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => 0, 'sort_by' => $request['sort_by'] ?? 'latest'],
             relations: $relations,
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
@@ -161,7 +161,7 @@ class DeliveryManController extends Controller
 
         $orders = $this->orderRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['delivery_man_id' => $id, 'whereHas_deliveryMan' => 0],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
         );
@@ -182,7 +182,7 @@ class DeliveryManController extends Controller
 
         $orders = $this->orderRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['delivery_man_id' => $id,
                 'whereHas_deliveryMan' => 0,
                 // is_string, not truthiness: `?order_status[]=x` is truthy and explode() rejects it.
@@ -202,7 +202,7 @@ class DeliveryManController extends Controller
     {
         $orders = $this->orderRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['delivery_man_id' => $id, 'whereHas_deliveryMan' => 0],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
         );
@@ -219,7 +219,7 @@ class DeliveryManController extends Controller
     {
         $orders = $this->orderRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['delivery_man_id' => $id,
                 'whereHas_deliveryMan' => 0,
                 'whereIn_order_status' => $request['order_status'] ?? 'all',
@@ -254,7 +254,7 @@ class DeliveryManController extends Controller
 
         $reviews_collection = $this->reviewRepo->getListWhere(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'delivery_man_id' => $id,
                 'from' => $request['from_date'],

@@ -284,7 +284,7 @@
                                             <div class="input-group">
                                                 <input type="search" name="order_search" class="form-control"
                                                        placeholder="{{ translate('Search_by_title') }}"
-                                                       value="{{ request('order_search') }}">
+                                                       value="{{ requestString('order_search') }}">
                                                 <div class="input-group-append search-submit">
                                                     <button type="submit">
                                                         <i class="fi fi-rr-search"></i>
@@ -396,7 +396,7 @@
                                         <div class="input-group">
                                             <input type="search" name="category_search" class="form-control"
                                                    placeholder="{{ translate('Search_by_category_name') }}"
-                                                   value="{{ request('category_search') }}">
+                                                   value="{{ requestString('category_search') }}">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">
                                                     <i class="fi fi-rr-search"></i>

@@ -26,7 +26,7 @@
                         <div>
                             <label for="start-date-time" class="form-label fs-12 mb-2">{{ translate('Start_Date') }}</label>
                             <input type="date" name="from" id="start-date-time"
-                                   value="{{ request('from') }}"
+                                   value="{{ requestString('from') }}"
                                    class="form-control"
                                    title="{{ translate('from_date') }}">
                         </div>
@@ -35,7 +35,7 @@
                         <div>
                             <label for="end-date-time" class="form-label fs-12 mb-2">{{ translate('End_Date') }}</label>
                             <input type="date" name="to" id="end-date-time"
-                                   value="{{ request('to') }}"
+                                   value="{{ requestString('to') }}"
                                    class="form-control"
                                    title="{{ translate('to_date') }}">
                         </div>
@@ -46,7 +46,7 @@
                 <div class="mb-20">
                     <label for="name" class="form-label mb-2">{{ translate('products')}}</label>
                     <div class="dropdown select-product-search w-100">
-                        <input type="text" class="product_id" name="product_id" value="{{request('product_id')}}"
+                        <input type="text" class="product_id" name="product_id" value="{{ requestString('product_id') }}"
                                hidden>
                         <button
                             class="form-control d-flex justify-content-between align-items-center gap-2 text-start dropdown-toggle text-truncate pe-10px select-product-button"
@@ -73,7 +73,7 @@
                 <div class="mb-20">
                     <label for="name" class="form-label mb-2">{{ translate('vendor')}}</label>
                     <div class="dropdown select-vendor-search w-100">
-                        <input type="hidden" class="vendor_id" name="vendor_id" value="{{ request('vendor_id') }}"
+                        <input type="hidden" class="vendor_id" name="vendor_id" value="{{ requestString('vendor_id') }}"
                                hidden>
                         <button
                             class="form-control d-flex justify-content-between align-items-center gap-2 text-start dropdown-toggle text-truncate pe-10px select-vendor-button"
@@ -105,7 +105,7 @@
                 <div class="mb-20">
                     <label class="form-label mb-2" for="customer">{{translate('customer')}}</label>
                     <input type="hidden" id='customer-id' name="customer_id"
-                           value="{{ request('customer_id') ?? 'all' }}">
+                           value="{{ requestString('customer_id') ?: 'all' }}">
                     <select name="customer_id" class="custom-select">
                         @foreach($customers as $customer)
                             <option value="{{ $customer['id'] }}"

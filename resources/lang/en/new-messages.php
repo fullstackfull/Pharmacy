@@ -6509,4 +6509,10 @@ return [
 	'unsupported_action' => 'Unsupported action',
 	'select_at_least_one_product' => 'Select at least one product',
 	'Update_product' => 'Update product',
+	'no_subscriber_matches_your_search' => 'No subscriber matches your search',
+	'customer_removed' => 'Customer removed',
+	'no_review_matches_your_search' => 'No review matches your search',
+	'no_employee_found' => 'No employee found',
+	'product_tabs' => 'Product tabs',
+	'shop_by_price' => 'Shop by price',
 ];

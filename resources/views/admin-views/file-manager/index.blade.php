@@ -56,11 +56,11 @@
                     <div class="d-flex flex-wrap flex-sm-nowrap align-items-center justify-content-sm-end gap-2 flex-grow-1">
                         <form action="{{ url()->current() }}" method="get" class="flex-grow-1 max-w-300 min-w-100-mobile">
                             <div class="input-group">
-                                <input type="search" name="search" value="{{ request('search') }}" class="form-control"
+                                <input type="search" name="search" value="{{ requestString('search') }}" class="form-control"
                                        placeholder="{{ translate('Search_with_item_name') }}">
-                                <input name="targetFolder" value="{{ request('targetFolder') }}" hidden
+                                <input name="targetFolder" value="{{ requestString('targetFolder') }}" hidden
                                        data-value="{{ base64_decode(request('targetFolder', '')) }}">
-                                <input name="storage" value="{{ request('storage', 'public') }}" hidden>
+                                <input name="storage" value="{{ requestString('storage', 'public') }}" hidden>
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>

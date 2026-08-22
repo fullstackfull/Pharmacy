@@ -33,7 +33,7 @@ class AttributeController extends BaseController
      */
     public function index(Request|null $request, ?string $type = null): View
     {
-        $attributes = $this->attributeRepo->getListWhere(searchValue: $request->get('searchValue'), dataLimit: getWebConfig(name: 'pagination_limit'));
+        $attributes = $this->attributeRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: getWebConfig(name: 'pagination_limit'));
         $language = getWebConfig(name: 'pnc_language') ?? null;
         $defaultLanguage = $language[0];
         return view('admin-views.attribute.view', compact('attributes', 'language', 'defaultLanguage'));

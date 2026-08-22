@@ -120,7 +120,7 @@
             </div>
         </div>
         <x-k.data-view :title="translate('transactions')" :count="$transactions->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_By_Transaction_Id,Customer Name')">
 
             <x-slot:actions>

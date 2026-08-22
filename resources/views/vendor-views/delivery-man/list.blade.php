@@ -15,7 +15,7 @@
         </div>
 
         <x-k.data-view :title="translate('deliveryman_List')" :count="$deliveryMen->total()"
-                       searchName="search" :searchValue="request('search')"
+                       searchName="search" :searchValue="requestString('search')"
                        :searchPlaceholder="translate('search_by_name').','.translate('_contact_info')">
 
             <x-slot:actions>

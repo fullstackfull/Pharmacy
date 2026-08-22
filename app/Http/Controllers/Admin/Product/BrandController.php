@@ -44,7 +44,7 @@ class BrandController extends BaseController
     {
         $brands = $this->brandRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             relations: ['storage','seo'],
             dataLimit: getWebConfig(name: 'pagination_limit')
         );
@@ -132,7 +132,7 @@ class BrandController extends BaseController
 
     public function exportList(Request $request): BinaryFileResponse
     {
-        $brands = $this->brandRepo->getListWhere(searchValue: $request->get('searchValue'), dataLimit: 'all');
+        $brands = $this->brandRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: 'all');
         $active = $this->brandRepo->getListWhere(filters: ['status' => 1], dataLimit: 'all')->count();
         $inactive = $this->brandRepo->getListWhere(filters: ['status' => 0], dataLimit: 'all')->count();
         return Excel::download(new BrandListExport(

@@ -29,7 +29,7 @@
                             <form action="{{ url()->current() }}" method="GET" class="flex-grow-1">
                                 <div class="form-group">
                                     <div class="input-group">
-                                        <input type="search" name="searchValue" class="form-control" value="{{ request('searchValue') }}" placeholder="{{translate('search_by_Name_or_Mobile_No_or_Email')}}">
+                                        <input type="search" name="searchValue" class="form-control" value="{{ requestString('searchValue') }}" placeholder="{{translate('search_by_Name_or_Mobile_No_or_Email')}}">
                                         <div class="input-group-append search-submit">
                                             <button type="submit">
                                                 <i class="fi fi-rr-search"></i>

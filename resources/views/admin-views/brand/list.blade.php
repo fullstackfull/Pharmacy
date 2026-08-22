@@ -14,7 +14,7 @@
         <div class="row mt-20">
             <div class="col-md-12">
                 <x-k.data-view :title="translate('brand_list')" :count="$brands->total()"
-                               searchName="searchValue" :searchValue="request('searchValue')"
+                               searchName="searchValue" :searchValue="requestString('searchValue')"
                                :searchPlaceholder="translate('search_by_brand_name')">
 
                     <x-slot:actions>

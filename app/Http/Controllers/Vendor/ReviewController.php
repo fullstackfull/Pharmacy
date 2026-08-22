@@ -59,10 +59,10 @@ class ReviewController extends BaseController
             })->values()->toArray();
         if ($request->has('searchValue')) {
             $productId = $this->productRepo->getListWhere(
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 filters: ['added_by' => 'seller', 'seller_id' => $vendorId],
                 dataLimit: 'all')->pluck('id')->toArray();
-            $customerIds = $this->customerRepo->getListWhere(searchValue: $request['searchValue'], dataLimit: 'all')->pluck('id')->toArray();
+            $customerIds = $this->customerRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: 'all')->pluck('id')->toArray();
             $whereInFilters = [
                 'product_id' => $productId,
                 'customer_id' => $customerIds,
@@ -70,7 +70,7 @@ class ReviewController extends BaseController
             $reviews = $this->reviewRepo->getListWhereIn(
                 globalScope: false,
                 orderBy: ['id' => 'desc'],
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 whereInFilters: $whereInFilters,
                 relations: ['product', 'customer', 'reply'],
                 nullFields: ['delivery_man_id'],
@@ -92,7 +92,7 @@ class ReviewController extends BaseController
         }
 
         $products = $this->productRepo->getListWithScope(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => $vendorId, 'added_by' => 'seller', 'has_reviews' => true],
             whereNotIn:['request_status' => [0,2]],
             dataLimit: getWebConfig('pagination_limit'),
@@ -152,10 +152,10 @@ class ReviewController extends BaseController
 
         if ($request->has('searchValue')) {
             $productId = $this->productRepo->getListWhere(
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 filters: ['added_by' => 'seller', 'seller_id' => $vendorId],
                 dataLimit: 'all')->pluck('id')->toArray();
-            $customerIds = $this->customerRepo->getListWhere(searchValue: $request['searchValue'], dataLimit: 'all')->pluck('id')->toArray();
+            $customerIds = $this->customerRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: 'all')->pluck('id')->toArray();
             $whereInFilters = [
                 'product_id' => $productId,
                 'customer_id' => $customerIds,

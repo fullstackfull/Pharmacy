@@ -15,12 +15,12 @@
                     <div class="flex-grow-1 min-w-300 min-w-100-mobile">
                         <form action="{{ route('admin.products.product-gallery') }}">
                             <div class="input-group">
-                                <input type="hidden" name="brand_id" value="{{ request('brand_id') }}">
-                                <input type="hidden" name="category_id" value="{{ request('category_id') }}">
-                                <input type="hidden" name="vendor_id" value="{{ request('vendor_id') }}">
+                                <input type="hidden" name="brand_id" value="{{ requestString('brand_id') }}">
+                                <input type="hidden" name="category_id" value="{{ requestString('category_id') }}">
+                                <input type="hidden" name="vendor_id" value="{{ requestString('vendor_id') }}">
                                 <input type="search" name="searchValue" class="form-control"
                                        placeholder="{{ translate('search_by_product_name') }}"
-                                       aria-label="Search orders" value="{{ request('searchValue') }}">
+                                       aria-label="Search orders" value="{{ requestString('searchValue') }}">
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>
@@ -195,8 +195,8 @@
     @endforeach
 
     <span id="get-product-gallery-route" data-action="{{ route('admin.products.product-gallery') }}"
-          data-brand-id="{{ request('brand_id') }}" data-category-id="{{ request('category_id') }}"
-          data-vendor-id="{{ request('vendor_id') }}">
+          data-brand-id="{{ requestString('brand_id') }}" data-category-id="{{ requestString('category_id') }}"
+          data-vendor-id="{{ requestString('vendor_id') }}">
     </span>
 @endsection
 

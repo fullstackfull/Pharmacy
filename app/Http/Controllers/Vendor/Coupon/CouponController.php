@@ -174,7 +174,7 @@ class CouponController extends BaseController
     {
         $vendorId = auth('seller')->id();
         $vendor = $this->vendorRepo->getFirstWhere(params: ['id' => $vendorId]);
-        $coupons = $this->couponRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request['searchValue'], filters: ['added_by' => 'seller', 'vendorId' => $vendorId], dataLimit: 'all');
+        $coupons = $this->couponRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: requestString('searchValue') ?: null, filters: ['added_by' => 'seller', 'vendorId' => $vendorId], dataLimit: 'all');
         return Excel::download(new CouponListExport([
             'data-from' => 'vendor',
             'vendor' => $vendor,

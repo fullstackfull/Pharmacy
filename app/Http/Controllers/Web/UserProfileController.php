@@ -1086,7 +1086,7 @@ class UserProfileController extends Controller
     {
         $restockProducts = $this->restockProductRepo->getListWhere(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['customer_id' => auth('customer')->id()],
             relations: ['product.clearanceSale' => function ($query) {
                 return $query->active();

@@ -71,7 +71,7 @@ class CustomerWalletController extends BaseController
         ];
 
         $data = $this->walletTransactionRepo->getListWhereSelect(filters: $filters, dataLimit: 'all');
-        $transactions = $this->walletTransactionRepo->getListWhere(searchValue: $request['searchValue'], filters: $filters, relations: ['user'], dataLimit: getWebConfig(name: 'pagination_limit'));
+        $transactions = $this->walletTransactionRepo->getListWhere(searchValue: requestString('searchValue') ?: null, filters: $filters, relations: ['user'], dataLimit: getWebConfig(name: 'pagination_limit'));
         $customer = "all";
         if (isset($request['customer_id']) && $request['customer_id'] != 'all' && !is_null($request['customer_id']) && $request->has('customer_id')) {
             $customer = $this->customerRepo->getFirstWhere(params: ['id' => $request['customer_id']]);
@@ -151,7 +151,7 @@ class CustomerWalletController extends BaseController
         $this->addFundBonusCategoriesRepo->updatePastDateStatus();
         $data = $this->addFundBonusCategoriesRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['search'],
+            searchValue: requestString('search') ?: null,
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT),
         );
         return view('admin-views.customer.wallet.wallet-bonus-setup', compact('data'));

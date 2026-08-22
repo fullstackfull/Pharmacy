@@ -60,14 +60,14 @@ class ReviewController extends BaseController
         array_unshift($customers, ['id' => 'all', 'text' => translate('All_Customer')]);
         if ($request->filled('searchValue')) {
             $productIds = $this->productRepo->getListWhere(
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 filters: [
                     'added_by' => $request['vendor_id'] == 0 ? 'in_house' : '',
                     'user_id' => $request['vendor_id'],
                 ],
                 dataLimit: 'all'
             )->pluck('id')->toArray();
-            $customerIds = $this->customerRepo->getListWhere(searchValue: $request['searchValue'], dataLimit: 'all')->pluck('id')->toArray();
+            $customerIds = $this->customerRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: 'all')->pluck('id')->toArray();
             $filtersBy = [
                 'product_id' => $productIds,
                 'customer_id' => $customerIds,
@@ -75,7 +75,7 @@ class ReviewController extends BaseController
             $reviews = $this->reviewRepo->getListWhereIn(
                 globalScope: false,
                 orderBy: ['id' => 'desc'],
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 whereInFilters: $filtersBy,
                 relations: ['product', 'customer', 'reply', 'order.details'],
                 nullFields: ['delivery_man_id'],
@@ -106,7 +106,7 @@ class ReviewController extends BaseController
         }
 
         $products = $this->productRepo->getListWithScope(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['has_reviews' => true],
             relations: ['category', 'brand', 'seller'],
             dataLimit: getWebConfig(name: 'pagination_limit')
@@ -167,7 +167,7 @@ class ReviewController extends BaseController
 
     public function searchVendor(Request $request): JsonResponse
     {
-        $shopList = $this->shopRepo->getListWhere(searchValue: $request['searchValue'], filters: ['author_type' => 'vendor'], relations: ['products', 'products.reviews'], dataLimit: 'all')->each(function ($shopItem) {
+        $shopList = $this->shopRepo->getListWhere(searchValue: requestString('searchValue') ?: null, filters: ['author_type' => 'vendor'], relations: ['products', 'products.reviews'], dataLimit: 'all')->each(function ($shopItem) {
             $productReviews = $shopItem->products->pluck('reviews')->collapse();
             $productReviews = $productReviews->where('status', 1);
             $shopItem->average_rating = $productReviews->avg('rating');
@@ -219,9 +219,9 @@ class ReviewController extends BaseController
 
         if ($request->has('searchValue')) {
             $productIds = $this->productRepo->getListWhere(
-                searchValue: $request['searchValue'],
+                searchValue: requestString('searchValue') ?: null,
                 dataLimit: 'all')->pluck('id')->toArray();
-            $customerIds = $this->customerRepo->getListWhere(searchValue: $request['searchValue'], dataLimit: 'all')->pluck('id')->toArray();
+            $customerIds = $this->customerRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: 'all')->pluck('id')->toArray();
             $filtersBy = [
                 'product_id' => $productIds,
                 'customer_id' => $customerIds,
@@ -270,7 +270,7 @@ class ReviewController extends BaseController
     public function search(Request $request): JsonResponse
     {
         $products = $this->productRepo->getListWithScope(
-            searchValue: $request['name'],
+            searchValue: requestString('name') ?: null,
             scope: 'active',
             relations: ['category', 'brand', 'seller.shop'],
             dataLimit: 'all');

@@ -160,7 +160,7 @@ class ProductController extends BaseController
         }
         $restockProducts = $this->restockProductRepo->getListWhereBetween(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: $filters,
             relations: ['product'],
             whereBetween: 'created_at',
@@ -613,7 +613,7 @@ class ProductController extends BaseController
         }
         $restockProducts = $this->restockProductRepo->getListWhereBetween(
             orderBy: ['updated_at' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: $filters,
             relations: ['product'],
             whereBetween: 'created_at',
@@ -920,7 +920,7 @@ class ProductController extends BaseController
 
         $filterWhereIn = ProductManager::getSortFilterWhereInArrays(request: $request);
         $products = $this->productRepo->getWebListWithScope(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: $filters,
             whereIn: $filterWhereIn,
             relations: ['clearanceSale' => function ($query) {

@@ -19,7 +19,7 @@
             <div class="col-md-12">
                 <x-k.data-view :title="translate($type=='new-request'?'pending_for_approval_products':($type=='approved'?'approved_products':'product_list'))"
                                :count="$products->total()"
-                               searchName="searchValue" :searchValue="request('searchValue')"
+                               searchName="searchValue" :searchValue="requestString('searchValue')"
                                :searchPlaceholder="translate('search_by_Product_Name')">
 
                     <x-slot:actions>

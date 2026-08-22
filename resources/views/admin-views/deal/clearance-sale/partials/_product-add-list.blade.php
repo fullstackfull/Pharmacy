@@ -9,7 +9,7 @@
                     <form action="{{ url()->current() }}" method="GET">
                         <div class="input-group input-group-custom input-group-merge">
                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                   placeholder="{{ translate('search_by_product_name') }}..." aria-label="Search by Order ID" value="{{ request('searchValue') }}">
+                                   placeholder="{{ translate('search_by_product_name') }}..." aria-label="Search by Order ID" value="{{ requestString('searchValue') }}">
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>
@@ -103,7 +103,7 @@
                     <form action="{{ url()->current() }}" method="GET">
                         <div class="input-group">
                             <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
-                                   placeholder="{{ translate('search_by_product_name') }}..." aria-label="Search by Order ID" value="{{ request('searchValue') }}">
+                                   placeholder="{{ translate('search_by_product_name') }}..." aria-label="Search by Order ID" value="{{ requestString('searchValue') }}">
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>

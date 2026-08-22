@@ -118,11 +118,11 @@
                         </h3>
                     </div>
                     <div class="col-md-8 col-lg-6 d-flex flex-wrap flex-sm-nowrap justify-content-sm-end gap-3">
-                        <form action="{{url()->current() }}?search={{ request('searchValue') }}" method="GET">
+                        <form action="{{url()->current() }}?search={{ requestString('searchValue') }}" method="GET">
                             <div class="input-group">
                                 <input id="datatableSearch_" type="search" name="searchValue" class="form-control"
                                        placeholder="{{ translate('search_role') }}"
-                                       value="{{ request('searchValue') }}">
+                                       value="{{ requestString('searchValue') }}">
                                 <div class="input-group-append search-submit">
                                     <button type="submit">
                                         <i class="fi fi-rr-search"></i>

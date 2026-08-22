@@ -269,6 +269,25 @@ if (!function_exists('getFCMTopicListToSubscribe')) {
     }
 }
 
+if (!function_exists('requestString')) {
+    /**
+     * What the visitor typed, in a form that is safe to echo back into the field they typed it in.
+     *
+     * Filter forms repopulate themselves with `{{ request('x') }}`. Blade compiles that to e(), e()
+     * calls htmlspecialchars(), and htmlspecialchars() rejects an array — so `?searchValue[]=x`
+     * took the page down at the VIEW even where the controller had already refused the value. The
+     * guard has to be on what the page prints, not only on what the query uses.
+     *
+     * Anything that is not a string was not typed into that box, so the box comes back empty.
+     */
+    function requestString(string $key, string $default = ''): string
+    {
+        $value = request($key, $default);
+
+        return is_string($value) ? $value : $default;
+    }
+}
+
 if (!function_exists('searchTerms')) {
     /**
      * The words a search box was filled with, or none at all.

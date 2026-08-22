@@ -70,7 +70,7 @@ class ShippingMethodController extends BaseController
         }
         $allCategoryShippingCost = $this->categoryShippingCostRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['seller_id' => $vendorId],
             relations: ['category']
         );

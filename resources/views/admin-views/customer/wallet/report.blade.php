@@ -92,7 +92,7 @@
                                     $transaction_status = request()->get('transaction_type');
                                 @endphp
                                 <input type="hidden" id='customer-id' name="customer_id"
-                                    value="{{ request('customer_id') ?? 'all' }}">
+                                    value="{{ requestString('customer_id') ?: 'all' }}">
                                 <select name="customer_id" class="custom-select">
                                     @foreach($customers as $customer)
                                         <option value="{{ $customer['id'] }}"
@@ -158,7 +158,7 @@
             </div>
         </div>
         <x-k.data-view :title="translate('transactions')" :count="$transactions->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_Name_or_Email_or_Phone')">
 
             <x-slot:actions>

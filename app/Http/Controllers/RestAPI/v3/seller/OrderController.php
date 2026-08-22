@@ -82,7 +82,7 @@ class OrderController extends Controller
 
         $orders = $this->orderRepo->getListWhereIn(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['search_value'],
+            searchValue: requestString('search_value') ?: null,
             filters: $filters,
             whereIn: $filterWhereIn,
             relations: ['customer', 'shipping', 'deliveryMan', 'orderDetails', 'offlinePayments'],

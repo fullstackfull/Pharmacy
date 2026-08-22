@@ -237,7 +237,7 @@ use Illuminate\Support\Facades\Session;
                     <div class="input-group">
                         <input type="search" name="searchValue" class="form-control"
                                placeholder="{{ translate('Search_by_category_name') }}"
-                               value="{{ request('category_search') }}">
+                               value="{{ requestString('category_search') }}">
                         <div class="input-group-append search-submit">
                             <button type="submit">
                                 <i class="fi fi-rr-search"></i>

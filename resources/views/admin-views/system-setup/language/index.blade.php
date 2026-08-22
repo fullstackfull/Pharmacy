@@ -132,7 +132,7 @@
                             <div class="form-group">
                                 <div class="input-group">
                                     <input type="search" class="form-control" name="search"
-                                           value="{{ request('search') }}"
+                                           value="{{ requestString('search') }}"
                                            placeholder="{{ translate('Search_Language') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">

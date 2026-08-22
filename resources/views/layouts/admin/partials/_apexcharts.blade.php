@@ -19,7 +19,7 @@
 </div>
 <span id="statistics-data" data-statistics-title="{{translate($statisticsTitle)}}"
       data-statistics-value="{{json_encode($statisticsValue)}}" data-label="{{ json_encode($label) }}"></span>
-<input name="dateType" value="{{request('date_type')}}" data-count="{{count($label)}}"
+<input name="dateType" value="{{ requestString('date_type') }}" data-count="{{count($label)}}"
        data-start="{{Carbon::parse(request('from'))->format('d')}}"
        data-end="{{Carbon::parse(request('to'))->format('d')}}"
        data-from="{{Carbon::parse(request('from'))->format('m')}}"

@@ -27,7 +27,7 @@
                                 <div class="flex-grow-1 max-w-300 min-w-100-mobile">
                                     <form action="" method="GET">
                                         <div class="input-group">
-                                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control" placeholder="{{ translate('search_by_order_no') }}" aria-label="Search orders" value="{{ request('searchValue') }}">
+                                            <input id="datatableSearch_" type="search" name="searchValue" class="form-control" placeholder="{{ translate('search_by_order_no') }}" aria-label="Search orders" value="{{ requestString('searchValue') }}">
                                             <input type="hidden" name="page_name" value="active_log">
                                             <div class="input-group-append search-submit">
                                                 <button type="submit">

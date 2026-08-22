@@ -58,7 +58,7 @@ class CustomerLoyaltyController extends BaseController
         $data = $this->loyaltyPointTransactionRepo->getListWhereSelect(filters: $filters, dataLimit: 'all');
         $transactions = $this->loyaltyPointTransactionRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: $filters,
             relations: ['user'],
             dataLimit: getWebConfig(name: WebConfigKey::PAGINATION_LIMIT)

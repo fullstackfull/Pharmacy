@@ -14,7 +14,7 @@
 
         @php($refundStatus = request('status'))
         <x-k.data-view :title="translate('refund_requests')" :count="$refundList->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_order_id_or_refund_id')">
 
             <x-slot:tabs>

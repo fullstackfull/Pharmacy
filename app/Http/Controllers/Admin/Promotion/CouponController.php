@@ -52,7 +52,7 @@ class CouponController extends BaseController
         if ($request->filled('status')) {
             $filters['status'] = (int) $request['status'];
         }
-        $coupons = $this->couponRepo->getListWhere(searchValue: $request['searchValue'], filters: $filters, dataLimit: getWebConfig(name: 'pagination_limit'));
+        $coupons = $this->couponRepo->getListWhere(searchValue: requestString('searchValue') ?: null, filters: $filters, dataLimit: getWebConfig(name: 'pagination_limit'));
         $customers = $this->customerRepo->getListWhereNotIn([0]);
         return view('admin-views.coupon.add-new', compact('coupons', 'customers'));
     }
@@ -190,7 +190,7 @@ class CouponController extends BaseController
 
     public function exportList(Request $request): BinaryFileResponse
     {
-        $coupons = $this->couponRepo->getListWhere(searchValue: $request['searchValue'], filters: ['added_by' => 'admin'], dataLimit: 'all');
+        $coupons = $this->couponRepo->getListWhere(searchValue: requestString('searchValue') ?: null, filters: ['added_by' => 'admin'], dataLimit: 'all');
         return Excel::download(new CouponListExport([
             'coupon' => $coupons,
             'search' => $request['searchValue'],

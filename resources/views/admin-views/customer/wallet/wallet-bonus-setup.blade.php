@@ -147,7 +147,7 @@
                             <div class="input-group">
                                 <input id="datatableSearch_" type="search" name="search" class="form-control"
                                        placeholder="{{translate('search_by_bonus_title')}}"
-                                       value="{{ request('search') }}"
+                                       value="{{ requestString('search') }}"
                                        aria-label="Search orders">
                                 <div class="input-group-append search-submit">
                                     <button type="submit">

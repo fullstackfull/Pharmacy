@@ -55,7 +55,7 @@ class CategoryController extends BaseController
 
         $categories = $this->categoryRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 0],
             relations: $categoryWiseTax ? ['taxVats' => function ($query) {
                 return $query->with(['tax'])->wherehas('tax', function ($query) {
@@ -67,7 +67,7 @@ class CategoryController extends BaseController
 
         $categoriesWithTrans = $this->categoryRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 0],
             relations: $categoryWiseTax ? ['taxVats' => function ($query) {
                 return $query->with(['tax'])->wherehas('tax', function ($query) {
@@ -247,7 +247,7 @@ class CategoryController extends BaseController
 
         $categories = $this->categoryRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->get('searchValue'),
+            searchValue: requestString('searchValue') ?: null,
             filters: ['position' => 0],
             relations: $categoryWiseTax ? ['taxVats' => function ($query) {
                 return $query->with(['tax'])->wherehas('tax', function ($query) {

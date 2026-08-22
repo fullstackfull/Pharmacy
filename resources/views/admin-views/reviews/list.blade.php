@@ -14,7 +14,7 @@
 
         @php($reviewFilterActive = request('product_id') || request('customer_id') || request('status') || request('from') || request('to'))
         <x-k.data-view :title="translate('Customer_Reviews_List')" :count="$reviews->total()"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_Id, Product, Reviewer, Review')">
 
             <x-slot:actions>

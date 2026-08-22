@@ -65,7 +65,7 @@ class DeliveryRestrictionController extends BaseController
         $zipCodeAreaRestrictionStatus = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'delivery_zip_code_area_restriction']);
         $zipCodeFieldStatus = getWebConfig(name: 'zip_code_field_status');
         $storedCountryCode = $storedCountries->pluck('country_code')->toArray();
-        $storedZip = $this->deliveryZipCodeRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: $request->search_zip_code, dataLimit: getWebConfig(name: 'pagination_limit'));
+        $storedZip = $this->deliveryZipCodeRepo->getListWhere(orderBy: ['id' => 'desc'], searchValue: requestString('search_zip_code') ?: null, dataLimit: getWebConfig(name: 'pagination_limit'));
         return view('admin-views.business-settings.delivery-restriction', compact('countries', 'storedCountries', 'storedCountryCode', 'storedZip', 'countryRestrictionStatus', 'zipCodeAreaRestrictionStatus', 'zipCodeFieldStatus'));
     }
 

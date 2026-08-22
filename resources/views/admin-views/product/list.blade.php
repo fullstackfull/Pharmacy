@@ -45,7 +45,7 @@
         </x-k.page-header>
 
         <x-k.data-view :title="translate('product_List')" :count="$products->total()" :selectable="true"
-                       searchName="searchValue" :searchValue="request('searchValue')"
+                       searchName="searchValue" :searchValue="requestString('searchValue')"
                        :searchPlaceholder="translate('search_by_Product_Name')">
 
             <x-slot:actions>

@@ -36,7 +36,7 @@
                             <div class="form-group">
                                 <div class="input-group">
                                     <input type="search" class="form-control" name="search"
-                                           value="{{ request('search') }}"
+                                           value="{{ requestString('search') }}"
                                            placeholder="{{ translate('search_by_name') }}">
                                     <div class="input-group-append search-submit">
                                         <button type="submit">

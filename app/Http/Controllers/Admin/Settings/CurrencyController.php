@@ -48,7 +48,7 @@ class CurrencyController extends BaseController
             $activePaymentGateway = $this->settingRepo->getListWhereIn(filters: ['settings_type' => 'payment_config', 'is_active' => 1], whereInFilters: ['key_name' => GlobalConstant::DEFAULT_PAYMENT_GATEWAYS], dataLimit: 'all');
         }
         $currencies = $this->currencyRepo->getListWhere(
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             dataLimit: 10,
         );
 
@@ -194,7 +194,7 @@ class CurrencyController extends BaseController
             } else {
                 $activePaymentGateway = $this->settingRepo->getListWhereIn(filters: ['settings_type' => 'payment_config', 'is_active' => 1], whereInFilters: ['key_name' => GlobalConstant::DEFAULT_PAYMENT_GATEWAYS], dataLimit: 'all');
             }
-            $currencies = $this->currencyRepo->getListWhere(searchValue: $request['searchValue'], dataLimit: getWebConfig(name: 'pagination_limit'));
+            $currencies = $this->currencyRepo->getListWhere(searchValue: requestString('searchValue') ?: null, dataLimit: getWebConfig(name: 'pagination_limit'));
             $currency = $this->currencyRepo->getFirstWhere(params: ['id' => $request['id']]);
             $checkedData = self::checkPaymentGatewaySupportedCurrencies($currency->code, $currencies, $activePaymentGateway);
             if ($checkedData['must_required_for_gateway']) {

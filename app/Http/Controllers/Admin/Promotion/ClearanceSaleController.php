@@ -54,7 +54,7 @@ class ClearanceSaleController extends BaseController
         $clearanceConfig = $this->stockClearanceSetupRepo->getFirstWhere(params: ['setup_by' => 'admin'], relations: ['seo']);
         $stockClearanceProduct = $this->stockClearanceProductRepo->getListWhere(
             orderBy: ['id' => 'desc'],
-            searchValue: $request->searchValue,
+            searchValue: requestString('searchValue') ?: null,
             filters: ['added_by' => 'admin'],
             relations: ['product'],
             dataLimit: 5

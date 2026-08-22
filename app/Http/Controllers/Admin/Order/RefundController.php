@@ -56,7 +56,7 @@ class RefundController extends BaseController
         $walletAddRefund = getWebConfig(name: 'wallet_add_refund');
         $refundList = $this->refundRequestRepo->getListWhereHas(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'status'    => $status,
                 'from_date' => $fromDate,
@@ -180,7 +180,7 @@ class RefundController extends BaseController
         $toDate = $request['to_date'];
         $refundList = $this->refundRequestRepo->getListWhereHas(
             orderBy: ['id' => 'desc'],
-            searchValue: $request['searchValue'],
+            searchValue: requestString('searchValue') ?: null,
             filters: [
                 'status'    => $status,
                 'from_date' => $fromDate,
