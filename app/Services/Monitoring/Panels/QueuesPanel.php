@@ -437,7 +437,7 @@ class QueuesPanel implements Panel
             // while letting it escape would blank the depth and lag figures that were read fine.
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'source' => $source,
                 'window_minutes' => $window['minutes'],
@@ -591,7 +591,7 @@ class QueuesPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'points' => [],
                 'truncated' => false,
             ];

@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\EventLog;
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -248,7 +249,7 @@ class TimelinePanel implements Panel
             // letting it escape would blank the legend that explains what this page can even hold.
             return $this->emptyAxis(
                 'failed',
-                class_basename($exception) . ': ' . $exception->getMessage(),
+                Metric::describeFailure($exception),
                 null,
             );
         }
@@ -437,7 +438,7 @@ class TimelinePanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'source' => self::SOURCE,
                 'by_type' => [],
@@ -499,7 +500,7 @@ class TimelinePanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'source' => self::SOURCE,
                 'by_type' => [],
             ];
@@ -602,7 +603,7 @@ class TimelinePanel implements Panel
                 ->limit(self::MAX_ROWS + 1)
                 ->get(['id', 'release', 'commit_sha', 'branch', 'environment', 'deployed_by', 'status', 'duration_seconds', 'migrations_run', 'notes', 'deployed_at']);
         } catch (\Throwable $exception) {
-            return $this->emptyTable('failed', class_basename($exception) . ': ' . $exception->getMessage(), null, $source);
+            return $this->emptyTable('failed', Metric::describeFailure($exception), null, $source);
         }
 
         $truncated = $rows->count() > self::MAX_ROWS;
@@ -669,7 +670,7 @@ class TimelinePanel implements Panel
                 ->limit(self::MAX_ROWS + 1)
                 ->get(['id', 'reference', 'title', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at']);
         } catch (\Throwable $exception) {
-            return $this->emptyTable('failed', class_basename($exception) . ': ' . $exception->getMessage(), null, $source);
+            return $this->emptyTable('failed', Metric::describeFailure($exception), null, $source);
         }
 
         $truncated = $rows->count() > self::MAX_ROWS;

@@ -463,7 +463,7 @@ class NetworkPanel implements Panel
             // Failing the charts alone leaves every live reading on the page readable.
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'truncated' => false,
                 'points' => [],
             ];

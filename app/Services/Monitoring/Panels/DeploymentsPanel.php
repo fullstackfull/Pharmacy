@@ -204,7 +204,7 @@ class DeploymentsPanel implements Panel
             // card, while letting it escape would blank the running release too — the one thing
             // this section can always say.
             return array_merge($this->emptyLatest('failed'), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 
@@ -298,7 +298,7 @@ class DeploymentsPanel implements Panel
                 ]);
         } catch (\Throwable $exception) {
             return array_merge($this->emptyReleases('failed'), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 
@@ -577,7 +577,7 @@ class DeploymentsPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'source' => $source,
                 'by_release' => [],

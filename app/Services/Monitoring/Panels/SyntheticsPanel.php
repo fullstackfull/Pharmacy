@@ -1355,7 +1355,7 @@ class SyntheticsPanel implements Panel
     private function failureNote(\Throwable $exception): string
     {
         return Str::limit(
-            $this->redactor->text(class_basename($exception) . ': ' . $exception->getMessage()),
+            $this->redactor->text(Metric::describeFailure($exception)),
             self::NOTE_LIMIT,
         );
     }

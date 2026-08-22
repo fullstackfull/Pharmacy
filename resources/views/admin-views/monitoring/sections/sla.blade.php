@@ -77,6 +77,11 @@
         if ($value === null) {
             return null;
         }
+        // A budget of a fifth of a probe is a real budget. Rounding it to a whole minute prints
+        // "0 minutes" next to a figure that is not zero, which is the one thing this page may not do.
+        if ($value < 10) {
+            return rtrim(rtrim(number_format((float) $value, 1), '0'), '.') . ' ' . translate('minutes');
+        }
         if ($value < 120) {
             return $count($value) . ' ' . translate('minutes');
         }

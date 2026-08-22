@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Environment;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\Redis;
@@ -53,11 +54,11 @@ class RedisCheck implements Check
                 ? CheckResult::notConfigured(
                     $this->key(),
                     'Nothing in this application uses Redis (cache, session and queue all point elsewhere), and the server did not answer a PING. Set CACHE_STORE=redis or QUEUE_CONNECTION=redis to put it in the path.',
-                    ['error' => class_basename($exception) . ': ' . $exception->getMessage()],
+                    ['error' => Metric::describeFailure($exception)],
                 )
                 : CheckResult::failing(
                     $this->key(),
-                    class_basename($exception) . ': ' . $exception->getMessage(),
+                    Metric::describeFailure($exception),
                     context: ['used_by' => $used],
                 );
         }

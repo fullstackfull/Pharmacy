@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Ingest\MetricSink;
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -175,7 +176,7 @@ class SettingsPanel implements Panel
                 // operator far less than six correct tables and one named failure.
                 $failures[] = [
                     'part' => $key,
-                    'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                    'message' => Metric::describeFailure($exception),
                 ];
             }
         }
@@ -845,7 +846,7 @@ class SettingsPanel implements Panel
             return [
                 'state' => 'unavailable',
                 'rows' => [],
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -913,7 +914,7 @@ class SettingsPanel implements Panel
         } catch (\Throwable $exception) {
             $failures[] = [
                 'part' => 'self_health',
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
 
             return null;

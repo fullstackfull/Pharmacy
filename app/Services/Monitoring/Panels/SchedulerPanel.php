@@ -465,7 +465,7 @@ class SchedulerPanel implements Panel
             // while letting it escape would blank the cron verdict that was read perfectly well.
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'source' => $source,
                 'by_task' => [],
@@ -575,7 +575,7 @@ class SchedulerPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'source' => $source,
                 'rows' => [],

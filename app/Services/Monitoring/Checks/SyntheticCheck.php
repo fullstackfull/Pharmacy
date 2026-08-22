@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -127,7 +128,7 @@ class SyntheticCheck implements Check
         } catch (\Throwable $exception) {
             return CheckResult::failing(
                 $key,
-                class_basename($exception) . ': ' . $exception->getMessage(),
+                Metric::describeFailure($exception),
                 context: ['name' => $name, 'url' => $target['url']],
                 kind: $this->kind(),
             );

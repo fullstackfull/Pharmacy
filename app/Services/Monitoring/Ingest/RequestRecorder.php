@@ -116,9 +116,36 @@ class RequestRecorder
         $this->sink->increment($bucket, 'req_bytes', (int) $request->headers->get('Content-Length', '0'));
 
         // Platform mix, so "is it only the Android app?" is answerable without a second system.
+        //
+        // The error counts are separate metrics rather than extra fields: monitoring_series stores
+        // samples, a sum and three extremes, and nothing else — a counter that needs its own total
+        // needs its own name. Without them the platform cards could say how much an app talked and
+        // how slowly, but not whether it was being answered, which is the question actually being
+        // asked when somebody opens the Android section.
         if ($context->platform !== null) {
-            $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_platform|' . $context->platform, 'n');
-            $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_platform|' . $context->platform, 'sum', (int) round($durationMs));
+            $platform = BucketWriter::SERIES_PREFIX . 'requests.by_platform|' . $context->platform;
+            $this->sink->increment($platform, 'n');
+            $this->sink->increment($platform, 'sum', (int) round($durationMs));
+
+            if ($status >= 500) {
+                $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_platform.errors|' . $context->platform, 'n');
+            } elseif ($status >= 400) {
+                $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_platform.client_errors|' . $context->platform, 'n');
+            }
+
+            // The version the app announced. Captured by the middleware since this system was
+            // built and then dropped on the floor — so "the crashes are all on 4.2.1" was a
+            // question nothing here could answer. The label is bounded by BucketWriter's
+            // client-labelled cap, because this string comes from a header.
+            if ($context->appVersion !== null) {
+                $version = $context->platform . ':' . $context->appVersion;
+                $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_app_version|' . $version, 'n');
+                $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_app_version|' . $version, 'sum', (int) round($durationMs));
+
+                if ($status >= 500) {
+                    $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_app_version.errors|' . $version, 'n');
+                }
+            }
         }
         $this->sink->increment(BucketWriter::SERIES_PREFIX . 'requests.by_status|' . $this->statusClass($status), 'n');
 

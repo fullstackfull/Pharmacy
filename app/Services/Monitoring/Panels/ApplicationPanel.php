@@ -250,7 +250,7 @@ class ApplicationPanel implements Panel
                 'severity' => 'info',
                 'title' => 'the_configuration_checks_could_not_run',
                 'detail' => 'the_cards_below_are_unaffected_but_nothing_on_this_page_is_asserting_that_the_settings_are_safe',
-                'remedy' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'remedy' => Metric::describeFailure($exception),
             ]];
         }
     }
@@ -763,7 +763,7 @@ class ApplicationPanel implements Panel
         } catch (\Throwable $exception) {
             return [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ];
         }
@@ -793,7 +793,7 @@ class ApplicationPanel implements Panel
                 $gauges[$key] = array_merge($definition, [
                     'key' => $key,
                     'state' => 'failed',
-                    'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                    'note' => Metric::describeFailure($exception),
                     'remedy' => null,
                     'latest' => null,
                     'samples' => 0,

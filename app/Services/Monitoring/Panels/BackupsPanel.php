@@ -226,7 +226,7 @@ class BackupsPanel implements Panel
             // age card, while letting it escape would blank the recorder instructions too — the
             // one thing this section can say when there is nothing in the table at all.
             return array_merge($this->emptyFreshness('failed', $thresholds), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 
@@ -447,7 +447,7 @@ class BackupsPanel implements Panel
                 ->get(['status', $connection->raw('COUNT(*) AS runs')]);
         } catch (\Throwable $exception) {
             return array_merge($this->emptyCheck('failed'), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 
@@ -528,7 +528,7 @@ class BackupsPanel implements Panel
                 ->get();
         } catch (\Throwable $exception) {
             return array_merge($this->emptyHistory('failed'), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 
@@ -777,7 +777,7 @@ class BackupsPanel implements Panel
                 ->exists();
         } catch (\Throwable $exception) {
             return array_merge($this->emptyRestore('failed', self::RESTORE_UNKNOWN), [
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ]);
         }
 

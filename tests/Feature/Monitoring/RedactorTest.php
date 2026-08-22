@@ -3,6 +3,8 @@
 namespace Tests\Feature\Monitoring;
 
 use App\Services\Monitoring\Support\Redactor;
+use App\Services\Monitoring\Metric;
+use Illuminate\Database\QueryException;
 use Tests\TestCase;
 
 /**
@@ -170,5 +172,36 @@ class RedactorTest extends TestCase
         config()->set('monitoring.privacy.mask_ip', false);
 
         $this->assertSame('192.168.11.55', $this->redactor->ip('192.168.11.55'));
+    }
+    public function test_a_failed_probe_never_prints_the_query_it_failed_on(): void
+    {
+        // Laravel appends the statement WITH ITS BOUND VALUES after " (Connection: ", so the raw
+        // message of a QueryException carries whatever the customer typed. Sixty-two places in
+        // monitoring report a failure, and every one of them goes through this.
+        $note = Metric::describeFailure(new QueryException(
+            'mysql',
+            'select * from `users` where `email` = ? and `api_token` = ?',
+            ['shopper@example.com', 'sk_live_7f3a9b'],
+            new \RuntimeException("SQLSTATE[42S22]: Column not found: 1054 Unknown column 'x'"),
+        ));
+
+        $this->assertStringNotContainsString('shopper@example.com', $note);
+        $this->assertStringNotContainsString('sk_live_7f3a9b', $note);
+        $this->assertStringContainsString('QueryException', $note);
+        $this->assertStringContainsString('Unknown column', $note, 'the half an operator can act on must survive');
+    }
+
+    public function test_a_failure_note_is_bounded_so_a_card_stays_a_card(): void
+    {
+        $note = Metric::describeFailure(new \RuntimeException(str_repeat('long ', 400)));
+
+        $this->assertLessThan(220, mb_strlen($note));
+    }
+
+    public function test_a_secret_in_any_exception_message_is_masked(): void
+    {
+        $note = Metric::describeFailure(new \RuntimeException('Refused: Authorization: Bearer sk_live_7f3a9b0c2d'));
+
+        $this->assertStringNotContainsString('sk_live_7f3a9b0c2d', $note);
     }
 }

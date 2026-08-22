@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Http\Request;
@@ -175,7 +176,7 @@ class LogsPanel implements Panel
                 'source' => 'config/logging.php',
             ];
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => class_basename($exception) . ': ' . $exception->getMessage(), 'source' => 'config/logging.php'];
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception), 'source' => 'config/logging.php'];
         }
     }
 
@@ -276,7 +277,7 @@ class LogsPanel implements Panel
                 'directory' => $this->relative($directory),
                 'items' => [],
                 'total' => 0,
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -396,7 +397,7 @@ class LogsPanel implements Panel
                 'requested_missing' => $filters['file_rejected'],
             ];
         } catch (\Throwable $exception) {
-            return ['state' => 'failed', 'note' => class_basename($exception) . ': ' . $exception->getMessage()];
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception)];
         }
     }
 
@@ -476,7 +477,7 @@ class LogsPanel implements Panel
                 ],
             ];
         } catch (\Throwable $exception) {
-            return $empty('failed', ['bytes_total' => $total, 'note' => class_basename($exception) . ': ' . $exception->getMessage()]);
+            return $empty('failed', ['bytes_total' => $total, 'note' => Metric::describeFailure($exception)]);
         } finally {
             fclose($handle);
         }
@@ -548,7 +549,7 @@ class LogsPanel implements Panel
                 'counts' => $counts,
             ];
         } catch (\Throwable $exception) {
-            return $noEntries('failed', class_basename($exception) . ': ' . $exception->getMessage());
+            return $noEntries('failed', Metric::describeFailure($exception));
         }
     }
 

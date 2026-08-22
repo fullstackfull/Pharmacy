@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Checks;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class BackupCheck implements Check
                 ->orderByDesc('started_at')
                 ->first();
         } catch (\Throwable $exception) {
-            return CheckResult::unknown($this->key(), class_basename($exception) . ': ' . $exception->getMessage());
+            return CheckResult::unknown($this->key(), Metric::describeFailure($exception));
         }
 
         if ($latest === null) {

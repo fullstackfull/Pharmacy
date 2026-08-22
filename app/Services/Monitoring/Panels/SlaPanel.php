@@ -121,6 +121,17 @@ class SlaPanel implements Panel
         'incidents_started_in_this_window',
     ];
 
+    /**
+     * The exception behind each failed block, kept out of the payload.
+     *
+     * Metric's only FAILED factory takes a Throwable, and a card built from a block's note alone
+     * would have to invent an exception class to wrap it in. The real one is kept here — never
+     * serialised, so the payload stays plain arrays — and handed back when the card is built.
+     *
+     * @var array<string, \Throwable>
+     */
+    private array $failures = [];
+
     public function __construct(
         private readonly SeriesReader $reader,
         private readonly MonitoringSettings $settings,
@@ -238,7 +249,7 @@ class SlaPanel implements Panel
 
         $readings = [
             'availability_across_checks' => $unavailable || $totals['availability_pct'] === null
-                ? $this->missing($availability, self::SERIES_SOURCE)
+                ? $this->missing($availability, self::SERIES_SOURCE, 'availability')
                 : Metric::of(
                     value: $totals['availability_pct'],
                     source: self::SERIES_SOURCE,
@@ -246,13 +257,13 @@ class SlaPanel implements Panel
                     note: 'Pooled over every probe of every check that ran.',
                 ),
             'checks_in_the_denominator' => $unavailable
-                ? $this->missing($availability, self::SERIES_SOURCE)
+                ? $this->missing($availability, self::SERIES_SOURCE, 'availability')
                 : Metric::of(value: $totals['checks'], source: self::SERIES_SOURCE),
             'probes_recorded' => $unavailable
-                ? $this->missing($availability, self::SERIES_SOURCE)
+                ? $this->missing($availability, self::SERIES_SOURCE, 'availability')
                 : Metric::of(value: $totals['samples'], source: self::SERIES_SOURCE),
             'probe_coverage' => $unavailable || $totals['coverage_pct'] === null
-                ? $this->missing($availability, self::SERIES_SOURCE)
+                ? $this->missing($availability, self::SERIES_SOURCE, 'availability')
                 : Metric::of(
                     value: $totals['coverage_pct'],
                     source: self::SERIES_SOURCE,
@@ -260,7 +271,7 @@ class SlaPanel implements Panel
                     note: 'Of the probes a ' . self::PROBE_INTERVAL_MINUTES . '-minute cadence should have produced.',
                 ),
             'mean_time_to_detect' => $incidents['mttd_seconds'] === null
-                ? $this->missing($incidents, self::INCIDENTS_SOURCE)
+                ? $this->missing($incidents, self::INCIDENTS_SOURCE, 'incidents')
                 : Metric::of(
                     value: $incidents['mttd_seconds'],
                     source: self::INCIDENTS_SOURCE,
@@ -268,7 +279,7 @@ class SlaPanel implements Panel
                     note: 'Averaged over ' . $incidents['mttd_samples'] . '.',
                 ),
             'mean_time_to_recover' => $incidents['mttr_seconds'] === null
-                ? $this->missing($incidents, self::INCIDENTS_SOURCE)
+                ? $this->missing($incidents, self::INCIDENTS_SOURCE, 'incidents')
                 : Metric::of(
                     value: $incidents['mttr_seconds'],
                     source: self::INCIDENTS_SOURCE,
@@ -276,7 +287,7 @@ class SlaPanel implements Panel
                     note: 'Averaged over ' . $incidents['mttr_samples'] . '.',
                 ),
             'incidents_started_in_this_window' => $incidents['state'] === 'failed'
-                ? $this->missing($incidents, self::INCIDENTS_SOURCE)
+                ? $this->missing($incidents, self::INCIDENTS_SOURCE, 'incidents')
                 : Metric::of(value: $incidents['started'], source: self::INCIDENTS_SOURCE),
         ];
 
@@ -300,8 +311,9 @@ class SlaPanel implements Panel
      * A block's unavailability, lifted into a Metric so a card can carry the same reason the table does.
      *
      * @param  array<string, mixed>  $block
+     * @param  string  $key  the block's name in $failures, so a failed card names the real exception
      */
-    private function missing(array $block, string $source): Metric
+    private function missing(array $block, string $source, string $key): Metric
     {
         $state = (string) ($block['state'] ?? 'no_data');
         $note = $block['note'] ?? null;
@@ -328,8 +340,12 @@ class SlaPanel implements Panel
                 note: (string) ($note ?? 'Nothing has written to this store.'),
                 remedy: $remedy,
             ),
-            // A failed read has no remedy an operator can run, so its note — the exception — is the
-            // whole content, and Metric::noData is the only factory that carries a note without one.
+            // A read that threw must not be labelled "no data": that reads as "nothing happened",
+            // which is the single most reassuring thing this page could say about a failure.
+            'failed' => Metric::failed(
+                source: $source,
+                exception: $this->failures[$key] ?? new \RuntimeException((string) ($note ?? 'The read failed and left no message.')),
+            ),
             default => Metric::noData(source: $source, note: $note),
         };
     }
@@ -417,9 +433,11 @@ class SlaPanel implements Panel
         } catch (\Throwable $exception) {
             // Caught here rather than left to PanelRegistry: losing availability must not take the
             // incident timings, the route table and the dependency table down with it.
+            $this->failures['availability'] = $exception;
+
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ]);
         }
@@ -640,9 +658,12 @@ class SlaPanel implements Panel
         }
 
         if ($history['state'] === 'failed') {
+            // The series was read and held nothing; it is the EXPLANATION that could not be read.
+            // Calling the whole block failed would report a probe store that answered perfectly
+            // well as broken, so the state stays no_data and the missing explanation is named.
             return [
-                'state' => 'failed',
-                'note' => 'No availability series was found, and the check history that would explain why could not be read either: ' . (string) $history['note'],
+                'state' => 'no_data',
+                'note' => 'No probe of any check is recorded in this window. Why is not answerable here: the check history that would explain it could not be read — ' . (string) $history['note'],
                 'remedy' => null,
             ];
         }
@@ -734,7 +755,7 @@ class SlaPanel implements Panel
         } catch (\Throwable $exception) {
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ]);
         }
@@ -916,6 +937,18 @@ class SlaPanel implements Panel
 
         $targets = $this->targets();
 
+        if ($targets['error'] !== null) {
+            // MonitoringSettings answers an unreadable store with "no settings", which would print
+            // "no objective is stored" over an objective that may well be stored. The store is
+            // probed separately so the two can be told apart.
+            return array_merge($base, [
+                'state' => 'failed',
+                'note' => $targets['error'],
+                'remedy' => null,
+                'invalid' => [],
+            ]);
+        }
+
         if ($targets['default'] === null && $targets['by_check'] === []) {
             return array_merge($base, [
                 'state' => 'not_configured',
@@ -1034,7 +1067,7 @@ class SlaPanel implements Panel
     /**
      * Stored objectives, with anything unusable named rather than silently dropped.
      *
-     * @return array{default: float|null, by_check: array<string, float>, invalid: array<int, string>}
+     * @return array{default: float|null, by_check: array<string, float>, invalid: array<int, string>, error: string|null}
      */
     private function targets(): array
     {
@@ -1042,10 +1075,19 @@ class SlaPanel implements Panel
         $invalid = [];
 
         try {
+            // The reachability probe MonitoringSettings does not expose: it turns an unreadable
+            // store into an empty one, which here would become a false "nothing is configured".
+            $this->reader->connection()->table('monitoring_settings')->limit(1)->exists();
+
             $stored = $this->settings->get('sla.targets', []);
             $default = $this->settings->get('sla.target');
-        } catch (\Throwable) {
-            return ['default' => null, 'by_check' => [], 'invalid' => []];
+        } catch (\Throwable $exception) {
+            return [
+                'default' => null,
+                'by_check' => [],
+                'invalid' => [],
+                'error' => Metric::describeFailure($exception),
+            ];
         }
 
         if (is_array($stored)) {
@@ -1070,6 +1112,7 @@ class SlaPanel implements Panel
             'default' => $this->percentage($default),
             'by_check' => array_slice($byCheck, 0, self::MAX_CHECKS, preserve_keys: true),
             'invalid' => array_slice(array_values(array_unique($invalid)), 0, self::MAX_CHECKS),
+            'error' => null,
         ];
     }
 
@@ -1130,9 +1173,11 @@ class SlaPanel implements Panel
                 ->limit(self::MAX_INCIDENTS + 1)
                 ->get(['reference', 'title', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at']);
         } catch (\Throwable $exception) {
+            $this->failures['incidents'] = $exception;
+
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ]);
         }
@@ -1244,12 +1289,20 @@ class SlaPanel implements Panel
         ];
 
         try {
+            // Reachability, asked before the reader is trusted. SeriesReader swallows its own
+            // throwables and hands back an empty summary, so an unreadable store and a quiet hour
+            // arrive here as the same value — and only one of them is "no request was recorded".
+            $present = $this->reader->connection()->table('monitoring_request_buckets')
+                ->where('bucket_at', '>=', $this->reader->since($range))
+                ->limit(1)
+                ->exists();
+
             $summary = $this->reader->requestSummary($range);
             $breakdown = $this->reader->routeBreakdown($range, sort: 'errors', limit: self::MAX_ROUTES + 1);
         } catch (\Throwable $exception) {
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ]);
         }
@@ -1257,7 +1310,9 @@ class SlaPanel implements Panel
         if (($summary['has_data'] ?? false) !== true) {
             return array_merge($base, [
                 'state' => 'no_data',
-                'note' => 'No request was recorded in this window, so no route has a success rate. Zero traffic and zero successes are different facts.',
+                'note' => $present
+                    ? 'Traffic rows exist in this window but none of them folded into a summary at ' . $window['resolution'] . ' resolution, so no route has a success rate here.'
+                    : 'No request was recorded in this window, so no route has a success rate. Zero traffic and zero successes are different facts.',
                 'remedy' => $window['resolution'] === 'minute'
                     ? 'Widen the range, or confirm the ingest is flushing: `php artisan monitoring:flush`.'
                     : 'This range reads the ' . $window['resolution'] . ' rows the rollup builds. Choose a shorter range to read the minute rows directly, or check the rollup with `php artisan schedule:list`.',
@@ -1359,7 +1414,7 @@ class SlaPanel implements Panel
         } catch (\Throwable $exception) {
             return array_merge($base, [
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
             ]);
         }

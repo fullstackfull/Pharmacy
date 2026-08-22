@@ -4,6 +4,7 @@ namespace App\Services\Monitoring\Checks;
 
 use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Ingest\BucketWriter;
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Facades\DB;
 
@@ -82,7 +83,7 @@ class CheckRunner
             // The contract says checks handle their own failures; this is the belt to those braces.
             return [CheckResult::failing(
                 $check->key(),
-                class_basename($exception) . ': ' . $exception->getMessage(),
+                Metric::describeFailure($exception),
                 kind: $check->kind(),
             )];
         }

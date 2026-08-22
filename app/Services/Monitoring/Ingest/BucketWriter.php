@@ -20,6 +20,19 @@ class BucketWriter
     public const DEPENDENCY_PREFIX = 'dep|';
     public const SERIES_PREFIX = 'ser|';
 
+    /**
+     * Series whose label is client-supplied, and therefore the only named series with a ceiling.
+     *
+     * @var array<int, string>
+     */
+    public const CLIENT_LABELLED_SERIES = [
+        'requests.by_app_version',
+        'requests.by_app_version.errors',
+        'app.health.sessions',
+        'app.health.crashes',
+        'app.health.anrs',
+    ];
+
     private function connection(): \Illuminate\Database\Connection
     {
         return DB::connection(config('monitoring.connection', 'monitoring'));
@@ -70,6 +83,8 @@ class BucketWriter
      */
     private function capSeries(array $buckets): array
     {
+        $buckets = $this->capClientLabelledSeries($buckets);
+
         $limit = max(50, (int) config('monitoring.max_series_per_minute', 400));
 
         if (count($buckets) <= $limit) {
@@ -90,11 +105,59 @@ class BucketWriter
         return array_merge(
             $this->capRequests($families[self::REQUEST_PREFIX], $limit),
             $this->capDependencies($families[self::DEPENDENCY_PREFIX], $limit),
-            // Named series are not capped. Their names come from the collectors in this codebase,
-            // not from anything a visitor can influence, so the cap protects nothing here and
-            // dropping one loses a gauge the whole dashboard is built on.
+            // Named series are not capped here. Their names come from the collectors in this
+            // codebase, so the cap protects nothing and dropping one loses a gauge the whole
+            // dashboard is built on. The exception is the handful whose LABEL comes from a client
+            // header, and those were already bounded by capClientLabelledSeries() above.
             $families[self::SERIES_PREFIX],
         );
+    }
+
+    /**
+     * Bound the series whose LABEL is supplied by the caller rather than by this codebase.
+     *
+     * Named series are otherwise uncapped, and that is right for a gauge whose name is a constant
+     * in a collector. It is NOT right for `requests.by_app_version`, whose label is an X-App-Version
+     * header, or the app-health counters, whose label is a platform and version posted to a public
+     * endpoint. Both are validated to a short character set, which bounds their LENGTH and not
+     * their NUMBER: a few thousand requests carrying a few thousand invented version strings would
+     * write a few thousand rows a minute into a table with no ceiling.
+     *
+     * The tail is folded rather than dropped, so the totals stay exact and only the split loses its
+     * long tail. Folding is safe here — unlike across the whole series family — because every row
+     * under one of these metrics counts the same thing in the same unit.
+     *
+     * @param  array<string, array<string, float|int>>  $buckets
+     * @return array<string, array<string, float|int>>
+     */
+    private function capClientLabelledSeries(array $buckets): array
+    {
+        $limit = max(5, (int) config('monitoring.max_labels_per_client_series', 40));
+        $byMetric = [];
+
+        foreach ($buckets as $identity => $fields) {
+            // ser|metric|label
+            $parts = explode('|', $identity, 3);
+            if (($parts[0] ?? '') !== rtrim(self::SERIES_PREFIX, '|') || !in_array($parts[1] ?? '', self::CLIENT_LABELLED_SERIES, true)) {
+                continue;
+            }
+            $byMetric[$parts[1]][$identity] = $fields;
+        }
+
+        foreach ($byMetric as $metric => $labels) {
+            if (count($labels) <= $limit) {
+                continue;
+            }
+
+            uasort($labels, static fn ($a, $b) => ($b['n'] ?? 0) <=> ($a['n'] ?? 0));
+
+            foreach (array_slice($labels, $limit, null, true) as $identity => $fields) {
+                unset($buckets[$identity]);
+                $buckets = $this->fold($buckets, self::SERIES_PREFIX . $metric . '|__other__', $fields);
+            }
+        }
+
+        return $buckets;
     }
 
     /**

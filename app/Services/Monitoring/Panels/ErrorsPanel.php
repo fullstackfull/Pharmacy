@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -213,7 +214,7 @@ class ErrorsPanel implements Panel
                 'releases' => [],
                 'groups_in_window' => null,
                 'truncated' => false,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -267,7 +268,7 @@ class ErrorsPanel implements Panel
             $summary['occurrences_all_time'] = (int) ($row->lifetime_occurrences ?? 0);
         } catch (\Throwable $exception) {
             $summary['state'] = 'unavailable';
-            $summary['message'] = class_basename($exception) . ': ' . $exception->getMessage();
+            $summary['message'] = Metric::describeFailure($exception);
         }
 
         $totals = $this->occurrenceTotals($since, $filters);
@@ -340,7 +341,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'value' => null,
                 'source' => 'monitoring_errors',
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
 
             return ['occurrences' => $failure, 'affected_users' => $failure];
@@ -400,7 +401,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'rows' => [],
                 'pagination' => null,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
                 'remedy' => 'monitoring_error_groups could not be read on the `' . (string) config('monitoring.connection', 'monitoring') . '` connection. Run `php artisan migrate` to create the monitoring tables, and check that connection\'s credentials.',
                 'source' => 'monitoring_error_groups',
             ];
@@ -520,7 +521,7 @@ class ErrorsPanel implements Panel
             return [
                 'state' => 'unavailable',
                 'id' => $groupId,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -593,7 +594,7 @@ class ErrorsPanel implements Panel
                 'state' => 'unavailable',
                 'rows' => [],
                 'stack_trace' => null,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
             ];
         }
     }
@@ -649,7 +650,7 @@ class ErrorsPanel implements Panel
                 'ever_recorded' => null,
                 'collection_enabled' => $collecting,
                 'retention_days' => $retentionDays,
-                'message' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'message' => Metric::describeFailure($exception),
                 'remedy' => 'The monitoring tables could not be read on the `' . (string) config('monitoring.connection', 'monitoring') . '` connection. Run `php artisan migrate` and check MONITORING_DB_* in .env.',
             ];
         }

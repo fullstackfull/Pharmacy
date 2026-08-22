@@ -511,7 +511,7 @@ class RedisPanel implements Panel
             return array_merge($definition, [
                 'key' => $key,
                 'state' => 'failed',
-                'note' => class_basename($exception) . ': ' . $exception->getMessage(),
+                'note' => Metric::describeFailure($exception),
                 'remedy' => null,
                 'latest' => null,
                 // Null, not zero: a read that failed did not find nothing, it did not look.
