@@ -34,7 +34,10 @@ class MonitoringPermissionService
     /** See server internals: processes, hardware, energy, deployments. */
     public const INFRASTRUCTURE = 'monitoring_infrastructure';
 
-    /** Read grouped exceptions with their stack traces, and resolve or ignore them. */
+    /**
+     * Read grouped exceptions with their stack traces, resolve or ignore them, and read the
+     * per-route failure detail underneath them: which endpoint is failing, how often, how slow.
+     */
     public const ERRORS = 'monitoring_errors';
 
     /** Change thresholds, retention, alert rules and privacy settings. */
@@ -129,7 +132,12 @@ class MonitoringPermissionService
     {
         return match ($tab) {
             'logs' => self::LOGS,
-            'errors', 'traces', 'requests' => self::ERRORS,
+            // 'apis' and 'live' reach monitoring_request_buckets through the same SeriesReader
+            // calls as 'requests' and publish the same per-route hits, errors, error_rate and
+            // percentiles, so leaving either on the default made monitoring_errors optional for
+            // the table it exists to gate. 'live' costs a view-only operator the traffic page,
+            // which is the cheaper loss: the alternative was handing them the failing endpoints.
+            'errors', 'traces', 'requests', 'apis', 'live' => self::ERRORS,
             'security' => self::SECURITY,
             // 'webserver' was the one member of this group that was missing, so it fell through to
             // the default and was readable by anyone holding monitoring_view — a page naming the

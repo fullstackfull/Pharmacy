@@ -567,7 +567,7 @@ class ProductController extends BaseController
     public function bulkUpdateStatus(Request $request): JsonResponse
     {
         $ids = array_values(array_unique(array_filter((array) $request->input('ids', []))));
-        $action = (string) $request->input('action', '');
+        $action = $this->stringOr($request->input('action'));
 
         if (empty($ids)) {
             return response()->json(['status' => 0, 'message' => translate('select_at_least_one_product')], 422);
@@ -700,12 +700,12 @@ class ProductController extends BaseController
             'sub_sub_category' => $subSubCategory,
             'brand' => $brand,
             'searchValue' => $request['searchValue'],
-            'type' => $request->type ?? '',
+            'type' => $this->stringOr($request->type, $type),
             'seller' => $seller,
             'status' => $request->status ?? '',
             'productWiseTax' => $productWiseTax
         ];
-        return Excel::download(new ProductListExport($data), ucwords($request['type']) . '-' . 'product-list.xlsx');
+        return Excel::download(new ProductListExport($data), ucwords($this->stringOr($request['type'], $type)) . '-' . 'product-list.xlsx');
     }
 
     public function getBarcodeView(Request $request, string|int $id): View|RedirectResponse
@@ -985,7 +985,7 @@ class ProductController extends BaseController
      */
     public function getProductPickerOptions(Request $request): JsonResponse
     {
-        $term = trim((string) $request->get('searchValue', ''));
+        $term = $this->stringOr($request->get('searchValue'));
 
         $products = $this->productRepo->getListWhere(
             searchValue: $term !== '' ? $term : null,
@@ -1005,7 +1005,11 @@ class ProductController extends BaseController
     /** Names and thumbnails for already-picked ids, so a saved list shows products not numbers. */
     public function getProductPickerLabels(Request $request): JsonResponse
     {
-        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $request->get('ids'))), fn ($id) => $id > 0));
+        $requestedIds = $request->get('ids');
+        // The picker posts its selection back comma-joined, but ?ids[]=1&ids[]=2 says the same thing
+        // unambiguously, so honour both rather than blanking a list the operator has already chosen.
+        $candidates = is_array($requestedIds) ? $requestedIds : explode(',', $this->stringOr($requestedIds));
+        $ids = array_values(array_filter(array_map('intval', array_filter($candidates, 'is_scalar')), fn ($id) => $id > 0));
         if ($ids === []) {
             return response()->json(['options' => []]);
         }
@@ -1163,13 +1167,14 @@ class ProductController extends BaseController
             'sub_category_id' => $request['sub_category_id'],
         ];
 
+        $restockDate = $this->stringOr($request['restock_date']);
         $startDate = '';
         $endDate = '';
         $subCategories = collect();
 
         try {
-            if (isset($request['restock_date']) && !empty($request['restock_date'])) {
-                $dates = explode(' - ', $request['restock_date']);
+            if (!empty($restockDate)) {
+                $dates = explode(' - ', $restockDate);
                 $startDate = Carbon::createFromFormat('d M Y', $dates[0])->startOfDay();
                 $endDate = Carbon::createFromFormat('d M Y', $dates[1])->endOfDay();
             }
@@ -1216,10 +1221,11 @@ class ProductController extends BaseController
             'sub_category_id' => $request['sub_category_id'],
         ];
 
+        $restockDate = $this->stringOr($request['restock_date']);
         $startDate = '';
         $endDate = '';
-        if (isset($request['restock_date']) && !empty($request['restock_date'])) {
-            $dates = explode(' - ', $request['restock_date']);
+        if (!empty($restockDate)) {
+            $dates = explode(' - ', $restockDate);
             $startDate = Carbon::createFromFormat('m/d/Y', $dates[0])->startOfDay();
             $endDate = Carbon::createFromFormat('m/d/Y', $dates[1])->endOfDay();
         }
@@ -1249,4 +1255,16 @@ class ProductController extends BaseController
         return Excel::download(new RestockProductListExport($data), 'restock-product-list.xlsx');
     }
 
+    /**
+     * One request value as a string, or the fallback when it cannot be read as one.
+     *
+     * Every filter on these screens comes off a hand-editable URL and can be sent as an array —
+     * `?searchValue[]=x`. Casting one to a string is a warning this application's handler turns
+     * into a throw, so an unreadable filter would take the whole page down instead of simply not
+     * being applied. A filter nobody can spell is not a filter.
+     */
+    private function stringOr(mixed $value, string $fallback = ''): string
+    {
+        return is_string($value) ? trim($value) : $fallback;
+    }
 }

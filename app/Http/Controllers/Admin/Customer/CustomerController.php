@@ -83,19 +83,16 @@ class CustomerController extends BaseController
         ];
         $takeItem = $request->get('choose_first');
 
-        if (isset($request['order_date']) && !empty($request['order_date'])) {
-            $dates = explode(' - ', $request['order_date']);
-            if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
-                ToastMagic::error(translate('Invalid_date_range_format'));
-                return back();
-            }
+        if (!empty($request['order_date']) && !$this->getDateRangeInMDY(request: $request, key: 'order_date')) {
+            ToastMagic::error(translate('Invalid_date_range_format'));
+            return back();
         }
 
         $joiningStartDate = '';
         $joiningEndDate = '';
-        if (isset($request['customer_joining_date']) && !empty($request['customer_joining_date'])) {
-            $dates = explode(' - ', $request['customer_joining_date']);
-            if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
+        if (!empty($request['customer_joining_date'])) {
+            $dates = $this->getDateRangeInMDY(request: $request, key: 'customer_joining_date');
+            if (!$dates) {
                 ToastMagic::error(translate('Invalid_date_range_format'));
                 return back();
             }
@@ -118,6 +115,29 @@ class CustomerController extends BaseController
             'customers' => $customers,
             'totalCustomers' => $totalCustomers,
         ]);
+    }
+
+    /**
+     * Both ends of a picker range, or null when there is no range to read.
+     *
+     * `?order_date[]=x` hands the request an ARRAY, which explode() rejects outright, and a
+     * half-typed range leaves the second end undefined at Carbon — either one takes the page down
+     * with a 500. Every caller here, and the repository behind them, reads the two ends positionally,
+     * so a range that cannot be spelled is reported as absent and simply not applied.
+     */
+    private function getDateRangeInMDY(Request $request, string $key): ?array
+    {
+        $value = $request[$key] ?? null;
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $dates = explode(' - ', $value);
+        if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
+            return null;
+        }
+
+        return $dates;
     }
 
 
@@ -316,9 +336,9 @@ class CustomerController extends BaseController
         $takeItem = $request->get('choose_first');
         $startDate = '';
         $endDate = '';
-        if (isset($request['subscription_date']) && !empty($request['subscription_date'])) {
-            $dates = explode(' - ', $request['subscription_date']);
-            if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
+        if (!empty($request['subscription_date'])) {
+            $dates = $this->getDateRangeInMDY(request: $request, key: 'subscription_date');
+            if (!$dates) {
                 ToastMagic::error(translate('Invalid_date_range_format'));
                 return back();
             }
@@ -340,9 +360,13 @@ class CustomerController extends BaseController
 
     public function exportList(Request $request): BinaryFileResponse
     {
+        $orderDates = $this->getDateRangeInMDY(request: $request, key: 'order_date');
+        $joiningDates = $this->getDateRangeInMDY(request: $request, key: 'customer_joining_date');
         $filters = [
             'is_active' => $request['is_active'] ?? null,
-            'order_date' => $request['order_date'],
+            // The repository splits this range again on its own, so it only ever gets a range that
+            // has already parsed here; an unreadable one exports unfiltered instead of failing.
+            'order_date' => $orderDates ? implode(' - ', $orderDates) : null,
             'sort_by' => $request['sort_by'] ?? null,
             'avoid_walking_customer' => 1,
         ];
@@ -350,18 +374,16 @@ class CustomerController extends BaseController
 
         $orderStartDate = '';
         $orderEndDate = '';
-        if (isset($request['order_date'])) {
-            $dates = explode(' - ', $request['order_date']);
-            $orderStartDate = Carbon::createFromFormat('m/d/Y', $dates[0])->startOfDay();
-            $orderEndDate = Carbon::createFromFormat('m/d/Y', $dates[1])->endOfDay();
+        if ($orderDates) {
+            $orderStartDate = Carbon::createFromFormat('m/d/Y', $orderDates[0])->startOfDay();
+            $orderEndDate = Carbon::createFromFormat('m/d/Y', $orderDates[1])->endOfDay();
         }
 
         $joiningStartDate = '';
         $joiningEndDate = '';
-        if (isset($request['customer_joining_date'])) {
-            $dates = explode(' - ', $request['customer_joining_date']);
-            $joiningStartDate = Carbon::createFromFormat('m/d/Y', $dates[0])->startOfDay();
-            $joiningEndDate = Carbon::createFromFormat('m/d/Y', $dates[1])->endOfDay();
+        if ($joiningDates) {
+            $joiningStartDate = Carbon::createFromFormat('m/d/Y', $joiningDates[0])->startOfDay();
+            $joiningEndDate = Carbon::createFromFormat('m/d/Y', $joiningDates[1])->endOfDay();
         }
 
         $customers = $this->customerRepo->getListWhereBetween(
@@ -397,8 +419,8 @@ class CustomerController extends BaseController
         $takeItem = $request->get('choose_first');
         $startDate = '';
         $endDate = '';
-        if (isset($request['subscription_date'])) {
-            $dates = explode(' - ', $request['subscription_date']);
+        $dates = $this->getDateRangeInMDY(request: $request, key: 'subscription_date');
+        if ($dates) {
             $startDate = Carbon::createFromFormat('m/d/Y', $dates[0])->startOfDay();
             $endDate = Carbon::createFromFormat('m/d/Y', $dates[1])->endOfDay();
         }

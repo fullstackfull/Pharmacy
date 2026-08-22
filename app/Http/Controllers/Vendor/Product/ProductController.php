@@ -146,10 +146,11 @@ class ProductController extends BaseController
             'sub_category_id' => $request['sub_category_id'],
         ];
 
+        $restockDate = $this->stringOr($request['restock_date']);
         $startDate = '';
         $endDate = '';
-        if (isset($request['restock_date']) && !empty($request['restock_date'])) {
-            $dates = explode(' - ', $request['restock_date']);
+        if (!empty($restockDate)) {
+            $dates = explode(' - ', $restockDate);
             if (count($dates) !== 2 || !checkDateFormatInMDY($dates[0]) || !checkDateFormatInMDY($dates[1])) {
                 ToastMagic::error(translate('Invalid_date_range_format'));
                 return back();
@@ -582,12 +583,12 @@ class ProductController extends BaseController
             'sub_sub_category' => $subSubCategory,
             'brand' => $brand,
             'searchValue' => $request['searchValue'],
-            'type' => $request->type ?? '',
+            'type' => $this->stringOr($request->type, $type),
             'seller' => $seller,
             'status' => $request->status ?? '',
             'productWiseTax' => $productWiseTax
         ];
-        return Excel::download(new ProductListExport($data), ucwords($request['type']) . '-' . 'product-list.xlsx');
+        return Excel::download(new ProductListExport($data), ucwords($this->stringOr($request['type'], $type)) . '-' . 'product-list.xlsx');
     }
 
     public function exportRestockList(Request $request): BinaryFileResponse
@@ -602,10 +603,11 @@ class ProductController extends BaseController
             'sub_category_id' => $request['sub_category_id'],
         ];
 
+        $restockDate = $this->stringOr($request['restock_date']);
         $startDate = '';
         $endDate = '';
-        if (isset($request['restock_date']) && !empty($request['restock_date'])) {
-            $dates = explode(' - ', $request['restock_date']);
+        if (!empty($restockDate)) {
+            $dates = explode(' - ', $restockDate);
             $startDate = Carbon::createFromFormat('m/d/Y', $dates[0])->startOfDay();
             $endDate = Carbon::createFromFormat('m/d/Y', $dates[1])->endOfDay();
         }
@@ -1013,5 +1015,18 @@ class ProductController extends BaseController
             'hiddenCount' => max(0, $hiddenCount),
             'totalBrands' => $totalBrands,
         ]);
+    }
+
+    /**
+     * One request value as a string, or the fallback when it cannot be read as one.
+     *
+     * Every filter on these screens comes off a hand-editable URL and can be sent as an array —
+     * `?restock_date[]=x`. Casting one to a string is a warning this application's handler turns
+     * into a throw, so an unreadable filter would take the whole page down instead of simply not
+     * being applied. A filter nobody can spell is not a filter.
+     */
+    private function stringOr(mixed $value, string $fallback = ''): string
+    {
+        return is_string($value) ? trim($value) : $fallback;
     }
 }

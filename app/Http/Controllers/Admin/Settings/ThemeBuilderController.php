@@ -259,6 +259,22 @@ class ThemeBuilderController extends BaseController
     }
 
     /**
+     * One picker parameter as a single string, or empty when it is not one.
+     *
+     * Every value here comes off a URL the inspector builds and anybody can hand-edit, so any of
+     * them can arrive as an array — `?resource[]=x`. Casting one to a string is a PHP warning this
+     * application's handler turns into a throw, which 500s the picker instead of simply answering
+     * with no options. A term nobody can spell is not searched, and an unreadable resource name
+     * falls through to the match's default arm.
+     */
+    private function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key, '');
+
+        return is_string($value) ? trim($value) : '';
+    }
+
+    /**
      * Catalogue records a `resource` field can pick from — categories, brands, products, flash
      * deals — as {value,label} pairs.
      *
@@ -267,11 +283,11 @@ class ThemeBuilderController extends BaseController
      */
     public function resources(Request $request): JsonResponse
     {
-        $term = trim((string) $request->get('q', ''));
+        $term = $this->queryString($request, 'q');
         $like = '%' . $term . '%';
         $limit = 40;
 
-        $rows = match ((string) $request->get('resource')) {
+        $rows = match ($this->queryString($request, 'resource')) {
             'category' => \App\Models\Category::query()
                 ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
                 ->orderBy('position')->orderBy('priority')
@@ -335,12 +351,12 @@ class ThemeBuilderController extends BaseController
     /** Labels for already-picked ids, so the inspector can show names instead of numbers. */
     public function resourceLabels(Request $request): JsonResponse
     {
-        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $request->get('ids'))), fn ($id) => $id > 0));
+        $ids = array_values(array_filter(array_map('intval', explode(',', $this->queryString($request, 'ids'))), fn ($id) => $id > 0));
         if ($ids === []) {
             return $this->ok(['options' => []]);
         }
 
-        $rows = match ((string) $request->get('resource')) {
+        $rows = match ($this->queryString($request, 'resource')) {
             'category'   => \App\Models\Category::whereIn('id', $ids)->get(['id', 'name'])
                 ->map(fn ($row) => ['value' => $row->id, 'label' => $row->name]),
             'brand'      => \App\Models\Brand::whereIn('id', $ids)->get(['id', 'name'])

@@ -39,7 +39,12 @@ class AnalyticsController extends BaseController
     public function index(?Request $request = null, ?string $type = null): View|JsonResponse|RedirectResponse
     {
         $request ??= request();
-        $section = $type ?: (string) $request->query('section', 'overview');
+
+        // `?section[]=x` hands the request an array, and casting one to string is a PHP warning the
+        // error handler turns into a throw — a 500 raised before the check below ever gets to say
+        // there is no such section. A section nobody can spell is simply the default one.
+        $requestedSection = $request->query('section', 'overview');
+        $section = $type ?: (is_string($requestedSection) ? $requestedSection : 'overview');
 
         if (!AnalyticsNavigation::has($section)) {
             $section = 'overview';
@@ -195,7 +200,12 @@ class AnalyticsController extends BaseController
             return Window::between($from, $to);
         }
 
-        return Window::make($request->query('range'));
+        $range = $request->query('range');
+
+        // Window::make is typed `?string`, so `?range[]=x` is an uncatchable TypeError rather than
+        // a warning — and this line runs for every section and for the CSV export. A range nobody
+        // can spell falls back to the default window.
+        return Window::make(is_string($range) ? $range : null);
     }
 
     /**
@@ -267,7 +277,7 @@ class AnalyticsController extends BaseController
                 'weekdays' => $this->reporting->breakdown($window, 'weekday', 7),
             ],
             'events' => ['events' => $this->reporting->breakdown($window, 'event', 60)],
-            'journeys' => ['journey' => $this->journey($request)],
+            'journeys' => $this->journeyData($request),
             'quality' => [
                 'health' => $this->reporting->collectionHealth(),
                 'excluded' => $this->reporting->excludedTraffic($window),
@@ -278,15 +288,23 @@ class AnalyticsController extends BaseController
     }
 
     /**
-     * @return array<string, mixed>|null
+     * One visitor's trail, and the id that was actually accepted.
+     *
+     * The id travels to the view so the lookup form repopulates from what passed this check and
+     * never from the raw query: `?visitor[]=x` reaching htmlspecialchars() in the blade took the
+     * whole section down, and a guard here that the view then works around buys nothing.
+     *
+     * @return array<string, mixed>
      */
-    private function journey(Request $request): ?array
+    private function journeyData(Request $request): array
     {
-        $visitorId = $request->query('visitor');
+        $value = $request->query('visitor');
+        $visitorId = is_string($value) ? trim($value) : '';
 
-        return is_string($visitorId) && $visitorId !== ''
-            ? $this->reporting->journey($visitorId)
-            : null;
+        return [
+            'visitor' => $visitorId,
+            'journey' => $visitorId !== '' ? $this->reporting->journey($visitorId) : null,
+        ];
     }
 
     /**

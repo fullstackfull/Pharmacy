@@ -4,10 +4,13 @@ namespace App\Providers;
 
 use App\Services\Monitoring\EventLog;
 use App\Services\Monitoring\Ingest\BucketWriter;
+use App\Services\Monitoring\Ingest\DependencyRecorder;
 use App\Services\Monitoring\Ingest\MetricSink;
 use App\Services\Monitoring\Ingest\RequestContext;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\Create;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
@@ -18,9 +21,12 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Wires monitoring into the framework's own events.
@@ -50,6 +56,7 @@ class MonitoringServiceProvider extends ServiceProvider
 
         $this->recordScheduledTasks();
         $this->recordQueuedJobs();
+        $this->recordOutboundCalls();
         $this->tagLogsWithCorrelationId();
     }
 
@@ -159,6 +166,54 @@ class MonitoringServiceProvider extends ServiceProvider
             $sink->increment(BucketWriter::SERIES_PREFIX . 'queue.failed|' . Str::limit($queue, 90, ''), 'n');
         }
         $sink->flush(intdiv(time(), 60) * 60);
+    }
+
+    /**
+     * Outbound calls, measured where the client already is.
+     *
+     * One registration on Laravel's HTTP client instead of an edit at each of its 23 call sites —
+     * and, more to the point, one registration that a fifteenth payment gateway is covered by
+     * without anybody remembering to instrument it. It is the raw Guzzle middleware on purpose: the
+     * request-only and response-only forms cannot see each other, and a duration needs both ends of
+     * the same call.
+     *
+     * It leaves most of this shop unmeasured — the curl gateways, the vendor SDKs and the mailer
+     * all have their own transport — so the recorder announces which transport it covers as well as
+     * what it saw, and the integrations page can tell a service nobody called from a service
+     * nothing can measure.
+     */
+    private function recordOutboundCalls(): void
+    {
+        $this->safely(function () {
+            $recorder = $this->app->make(DependencyRecorder::class);
+
+            Http::globalMiddleware(fn (callable $handler) => function (RequestInterface $request, array $options) use ($handler, $recorder) {
+                $startedAt = microtime(true);
+
+                return $handler($request, $options)->then(
+                    function (ResponseInterface $response) use ($recorder, $request, $startedAt) {
+                        $recorder->record(request: $request, response: $response, failure: null, startedAt: $startedAt);
+
+                        return $response;
+                    },
+                    function (mixed $reason) use ($recorder, $request, $startedAt) {
+                        // A connection that never answered has no response; one that answered badly
+                        // enough to be thrown still carries its status, and losing it would file a
+                        // 502 as an unexplained failure.
+                        $recorder->record(
+                            request: $request,
+                            response: $reason instanceof RequestException ? $reason->getResponse() : null,
+                            failure: $reason instanceof \Throwable ? $reason : null,
+                            startedAt: $startedAt,
+                        );
+
+                        return Create::rejectionFor($reason);
+                    },
+                );
+            });
+
+            $recorder->announceTransport();
+        });
     }
 
     /**

@@ -591,15 +591,18 @@ class WebServerPanel implements Panel
         foreach (self::GAUGES as $key => $definition) {
             $live = $readings[$definition['collector']][$definition['source']] ?? null;
 
-            try {
-                $series = $this->reader->series($definition['metric'], $range);
-            } catch (\Throwable $exception) {
-                // PanelRegistry would catch this too, but it can only blank the whole section.
-                // Failing one gauge by name leaves every card above it readable.
+            $series = $this->reader->series($definition['metric'], $range);
+
+            if ($series['state'] !== 'ok') {
+                // Answered here rather than in gaugeGap, which explains only the silences of a read
+                // that happened: a store nothing could reach would otherwise be blamed on the host,
+                // the range or an empty window. PanelRegistry sees the same failure, but it can only
+                // blank the whole section — failing one gauge by name leaves every card above it
+                // readable.
                 $gauges[$key] = array_merge($definition, [
                     'key' => $key,
-                    'state' => 'failed',
-                    'note' => Metric::describeFailure($exception),
+                    'state' => $series['state'],
+                    'note' => $series['note'],
                     'remedy' => null,
                     // Null, not zero: a read that failed did not find nothing, it did not look.
                     'latest' => null,
@@ -618,7 +621,9 @@ class WebServerPanel implements Panel
             $gauge = array_merge($definition, [
                 'key' => $key,
                 'latest' => $series['latest'],
-                'samples' => count($points),
+                // The window's own sample count, not the number of points it drew: one bucket holds
+                // every sample taken inside it, so counting points understates a rolled-up range.
+                'samples' => $series['samples'],
                 'points' => $points,
             ]);
 

@@ -328,19 +328,41 @@ class BucketWriter
                 'duration_buckets' => json_encode($this->histogramCounts($fields)),
                 'duration_sum_ms' => (int) ($fields['dur_sum'] ?? 0),
                 'duration_max_ms' => isset($fields['dur:max']) ? (int) $fields['dur:max'] : null,
+                // The three readings that are not counters, produced by DependencyRecorder. The two
+                // stamps ride the buffer as epoch seconds under the extremes channel, because
+                // numbers are all it carries; the error text cannot, so the recorder writes it
+                // straight into the bucket. Null means this write has nothing to say about them —
+                // never that a call succeeded silently — and the update below keeps what is stored.
+                'last_success_at' => isset($fields['ok_at:max']) ? Clock::stamp((int) $fields['ok_at:max']) : null,
+                'last_failure_at' => isset($fields['bad_at:max']) ? Clock::stamp((int) $fields['bad_at:max']) : null,
+                'last_error' => isset($fields['err']) ? mb_substr((string) $fields['err'], 0, 191) : null,
             ];
         }
 
-        foreach (array_chunk($rows, 100) as $chunk) {
-            $this->connection()->table('monitoring_dependency_buckets')->upsert(
-                $chunk,
-                ['resolution', 'bucket_at', 'service', 'operation'],
-                $this->summingUpdate(
-                    ['calls', 'failures', 'timeouts', 'client_errors', 'server_errors', 'rate_limited', 'duration_sum_ms'],
-                    extremes: ['duration_max_ms' => 'max'],
-                    histogram: 'duration_buckets',
-                ),
-            );
+        // The error text is REPLACED only by the rows that carry one. Listing it unconditionally
+        // would blank it on the next write into the same bucket — the next successful call, or the
+        // flush that drains the minute's counters a minute later — leaving a row that says a call
+        // failed and cannot say what it said. So the rows are written in two statements, split by
+        // whether they have an error to tell.
+        foreach ([false, true] as $carriesError) {
+            $group = array_values(array_filter($rows, static fn (array $row) => ($row['last_error'] !== null) === $carriesError));
+
+            foreach (array_chunk($group, 100) as $chunk) {
+                $this->connection()->table('monitoring_dependency_buckets')->upsert(
+                    $chunk,
+                    ['resolution', 'bucket_at', 'service', 'operation'],
+                    $this->summingUpdate(
+                        ['calls', 'failures', 'timeouts', 'client_errors', 'server_errors', 'rate_limited', 'duration_sum_ms'],
+                        // The stamps are extremes rather than replacements for the same reason the
+                        // recorder sends them as numbers: GREATEST over COALESCE keeps the later of
+                        // the two and never erases a stored one, so a bucket written again by a
+                        // second web server, or by a call with the opposite outcome, keeps both.
+                        extremes: ['duration_max_ms' => 'max', 'last_success_at' => 'max', 'last_failure_at' => 'max'],
+                        replace: $carriesError ? ['last_error'] : [],
+                        histogram: 'duration_buckets',
+                    ),
+                );
+            }
         }
     }
 

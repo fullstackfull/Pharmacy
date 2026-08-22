@@ -499,6 +499,11 @@ class LiveTrafficPanel implements Panel
     /**
      * What the shop is answering most right now.
      *
+     * The per-route errors and error_rate published here are the same reading the Requests
+     * section is gated on, which is why this whole section sits behind monitoring_errors in
+     * MonitoringPermissionService. Dropping those two columns is what would hand it back to a
+     * view-only operator; nothing in this panel decides that, and nothing in it should.
+     *
      * @return array<string, mixed>
      */
     private function busiestRoutes(string $range, array $collection): array

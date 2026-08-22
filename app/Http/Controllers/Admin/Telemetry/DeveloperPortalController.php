@@ -38,7 +38,7 @@ class DeveloperPortalController extends BaseController
     public function index(?Request $request = null, ?string $type = null): View|JsonResponse|RedirectResponse
     {
         $request ??= request();
-        $section = $type ?: (string) $request->query('section', 'overview');
+        $section = $type ?: $this->stringOr($request->query('section'), 'overview');
 
         if (!PortalNavigation::has($section)) {
             $section = 'overview';
@@ -84,9 +84,9 @@ class DeveloperPortalController extends BaseController
      */
     public function lookup(Request $request): RedirectResponse
     {
-        $path = (string) $request->query('path', '');
-        $method = $request->query('method');
-        $endpoint = $path === '' ? null : $this->manifest->findByPath($path, is_string($method) ? $method : null);
+        $path = $this->stringOr($request->query('path'));
+        $method = $this->stringOr($request->query('method'));
+        $endpoint = $path === '' ? null : $this->manifest->findByPath($path, $method !== '' ? $method : null);
 
         if ($endpoint === null) {
             return redirect()->route('admin.developer.section', [
@@ -135,7 +135,7 @@ class DeveloperPortalController extends BaseController
      */
     public function snapshot(Request $request): RedirectResponse
     {
-        $label = trim((string) $request->input('label')) ?: 'manual-' . now()->format('Y-m-d H:i');
+        $label = $this->stringOr($request->input('label')) ?: 'manual-' . now()->format('Y-m-d H:i');
         $result = $this->snapshots->captureAndRecord($label, auth('admin')->id());
 
         if ($result['unavailable'] ?? false) {
@@ -168,7 +168,7 @@ class DeveloperPortalController extends BaseController
             return response()->json(['ok' => false, 'message' => translate('that_endpoint_is_not_in_the_manifest')], 404);
         }
 
-        $method = strtoupper((string) $request->input('method', $endpoint['methods'][0] ?? 'GET'));
+        $method = strtoupper($this->stringOr($request->input('method'), $endpoint['methods'][0] ?? 'GET'));
         $verdict = $guard->verdict($endpoint, $method);
 
         if (!$verdict['allowed']) {
@@ -184,7 +184,7 @@ class DeveloperPortalController extends BaseController
         // submission, not about the endpoint: the guard answers "may this ever be sent", and a
         // typed word answers "did a person mean to send it now".
         if ($verdict['needs_confirmation']
-            && strtoupper(trim((string) $request->input('confirm'))) !== $guard->confirmationFor($method)) {
+            && strtoupper($this->stringOr($request->input('confirm'))) !== $guard->confirmationFor($method)) {
             return response()->json([
                 'ok' => false,
                 'tier' => $verdict['tier'],
@@ -206,12 +206,14 @@ class DeveloperPortalController extends BaseController
 
         RateLimiter::hit($key, 60);
 
+        $token = $this->stringOr($request->input('token'));
+
         return response()->json($console->send(
             endpoint: $endpoint,
             method: $method,
             pathParameters: (array) $request->input('path', []),
             payload: (array) $request->input('payload', []),
-            token: $request->filled('token') ? (string) $request->input('token') : null,
+            token: $token !== '' ? $token : null,
         ));
     }
 
@@ -245,27 +247,46 @@ class DeveloperPortalController extends BaseController
             'partner' => $this->portal->explorer(['audience' => 'partner'] + $this->filters($request), 100),
             'authentication', 'errors', 'rate_limits', 'pagination', 'uploads' => $this->portal->conventions($section),
             'versions' => $this->portal->versions(),
-            'changelog' => $this->portal->changelog($request->query('severity')),
+            'changelog' => $this->portal->changelog($this->stringOr($request->query('severity')) ?: null),
             'deprecations' => ['endpoints' => $this->portal->deprecations()],
             'quality' => $this->portal->quality(),
-            'health' => ['api' => $this->portal->apiHealth((string) $request->query('range', '24h'))],
+            'health' => ['api' => $this->portal->apiHealth($this->stringOr($request->query('range'), '24h'))],
             default => [],
         };
     }
 
     /**
-     * @return array<string, mixed>
+     * The filter set every list and download reads, string-only by construction.
+     *
+     * Whatever survives here is lowercased, uppercased and concatenated into filenames further
+     * down, so a value that is not a string has to be dropped at this one point rather than
+     * defended against at each of the places it would otherwise be cast.
+     *
+     * @return array<string, string>
      */
     private function filters(Request $request): array
     {
         return array_filter([
-            'search' => $request->query('search'),
-            'audience' => $request->query('audience'),
-            'version' => $request->query('version'),
-            'group' => $request->query('group'),
-            'method' => $request->query('method'),
-            'visibility' => $request->query('visibility'),
-            'auth' => $request->query('auth'),
-        ], static fn ($value) => $value !== null && $value !== '');
+            'search' => $this->stringOr($request->query('search')),
+            'audience' => $this->stringOr($request->query('audience')),
+            'version' => $this->stringOr($request->query('version')),
+            'group' => $this->stringOr($request->query('group')),
+            'method' => $this->stringOr($request->query('method')),
+            'visibility' => $this->stringOr($request->query('visibility')),
+            'auth' => $this->stringOr($request->query('auth')),
+        ], static fn (string $value) => $value !== '');
+    }
+
+    /**
+     * One request value as a string, or the fallback when it is not one.
+     *
+     * Every parameter here comes off a URL or a form somebody can hand-edit, and any of them can
+     * arrive as an array — `?section[]=x`. Casting one to a string is a warning this application's
+     * handler turns into a throw, so an unreadable value would take the whole section down instead
+     * of simply not being applied. A filter nobody can spell is not a filter.
+     */
+    private function stringOr(mixed $value, string $fallback = ''): string
+    {
+        return is_string($value) ? trim($value) : $fallback;
     }
 }
