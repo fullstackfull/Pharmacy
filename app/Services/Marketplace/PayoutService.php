@@ -115,6 +115,26 @@ class PayoutService
                 'reserve_entry_id' => $reserve?->id,
             ]);
 
+            // A seller-initiated request had no trace of its own: the audit log only ever saw an
+            // admin's later approve/pay. Recorded here rather than in the controllers so the vendor
+            // panel and the seller app both produce it.
+            app(\App\Services\AuditLogger::class)->record(
+                action: 'payout.requested',
+                subject: $request,
+                context: ['reference' => $request->reference, 'amount' => $amount, 'method' => $method],
+            );
+
+            try {
+                app(\App\Services\Analytics\Analytics::class)->payoutRequested(
+                    sellerId: (int) $sellerId,
+                    reference: (string) $request->reference,
+                    amount: $amount,
+                    method: $method,
+                );
+            } catch (\Throwable) {
+                // A payout that cannot be described is still a payout.
+            }
+
             return ['ok' => true, 'request' => $request];
         }, attempts: 3);
     }

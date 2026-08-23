@@ -4,6 +4,7 @@ namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\SellerVerificationDocument;
+use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Marketplace\SellerVerificationService;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,16 @@ class SellerVerificationController extends Controller
     {
     }
 
+    #[ApiDoc(
+        summary: "The seller's KYC documents, required types and overall status",
+        description: 'Admin review internals (reviewer id, internal notes, the private-disk filename) are never '
+            . 'serialized; a document reports has_file instead of its path.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
     public function index(Request $request): JsonResponse
     {
         $sellerId = $request->seller->id;
@@ -35,6 +46,17 @@ class SellerVerificationController extends Controller
         ], 200);
     }
 
+    #[ApiDoc(
+        summary: 'Submit a KYC document for review',
+        description: 'multipart/form-data: document_type (required), document_number, expires_at, document_file '
+            . '(pdf/jpg/jpeg/png, max 5 MB). Files are stored on the private disk under a high-entropy name and '
+            . 'are only ever served through the ownership-checked document route.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        emits: ['kyc_submitted'],
+        group: 'vendors',
+    )]
     public function submit(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -69,6 +91,16 @@ class SellerVerificationController extends Controller
      * Stream one of the token's own KYC documents from the private disk — scoped by seller_id,
      * so a seller can never fetch another shop's document by id.
      */
+    #[ApiDoc(
+        summary: "Stream one of the seller's own KYC documents",
+        description: 'Scoped by seller_id, so a seller can never fetch another shop\'s document by id. '
+            . 'Returns the file stream, or 404 when the document is missing, has no file, or is not theirs.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
     public function document(Request $request, int $id): StreamedResponse|JsonResponse
     {
         $document = SellerVerificationDocument::where(['id' => $id, 'seller_id' => $request->seller->id])->first();
