@@ -42,18 +42,6 @@ class SellerVerificationService
     }
 
     /**
-     * The audit logger, resolved lazily.
-     *
-     * The constructor parameter is nullable with a default, which means the container never fills
-     * it — it just uses the default — so `$this->auditLogger()->record()` was a silent no-op and no KYC
-     * decision was ever audited. Callers that pass their own logger (tests) still win.
-     */
-    private function auditLogger(): AuditLogger
-    {
-        return $this->audit ?? app(AuditLogger::class);
-    }
-
-    /**
      * The document types a seller must have approved to be considered verified.
      *
      * Read from the `kyc_required_documents` setting (a comma-separated list) so a market can define
@@ -207,7 +195,7 @@ class SellerVerificationService
             'expires_at' => $expiresAt ?: null,
         ]);
 
-        $this->auditLogger()->record(
+        $this->audit?->record(
             action: 'seller.kyc_submitted',
             subject: ['type' => 'seller', 'id' => $sellerId],
             after: ['document_id' => $doc->id, 'document_type' => $type],
@@ -240,7 +228,7 @@ class SellerVerificationService
         }
         $ok = $doc->save();
 
-        $this->auditLogger()->record(
+        $this->audit?->record(
             action: 'seller.kyc_approved',
             subject: ['type' => 'seller', 'id' => $doc->seller_id],
             after: ['document_id' => $doc->id, 'document_type' => $doc->document_type],
@@ -257,7 +245,7 @@ class SellerVerificationService
         $doc->rejection_reason = $reason;
         $ok = $doc->save();
 
-        $this->auditLogger()->record(
+        $this->audit?->record(
             action: 'seller.kyc_rejected',
             subject: ['type' => 'seller', 'id' => $doc->seller_id],
             after: ['document_id' => $doc->id, 'reason' => $reason],

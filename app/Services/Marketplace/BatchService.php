@@ -99,7 +99,7 @@ class BatchService
             return ['ok' => false, 'reason' => 'batch_is_not_active'];
         }
 
-        $result = ($this->inventory ?? new InventoryService())->adjust(
+        $result = ($this->inventory ?? app(InventoryService::class))->adjust(
             productId: $batch->product_id,
             delta: -$batch->quantity,
             reason: 'expiry',

@@ -21,6 +21,7 @@ use App\Traits\AddonHelper;
 use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
+use App\Services\AuditLogger;
 use App\Traits\UpdateClass;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
@@ -59,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Services take the logger as `?AuditLogger $audit = null` so a test can
+        // construct them bare. Laravel's container returns a parameter's default
+        // without attempting resolution unless the class is explicitly bound, so
+        // without this line every one of those constructors received null and
+        // every `$this->audit?->record()` in the marketplace was a silent no-op.
+        $this->app->singleton(AuditLogger::class);
+
         $loader = AliasLoader::getInstance();
         $loader->alias('Helper', \App\Utils\Helpers::class);
         $loader->alias('Madzipper', \Madnest\Madzipper\Madzipper::class);
