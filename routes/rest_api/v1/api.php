@@ -31,6 +31,7 @@ use App\Http\Controllers\RestAPI\v1\ProductController;
 use App\Http\Controllers\RestAPI\v1\ReviewController;
 use App\Http\Controllers\RestAPI\v1\SellerController;
 use App\Http\Controllers\RestAPI\v1\ShippingMethodController;
+use App\Http\Controllers\RestAPI\v1\ThemeSectionController;
 use App\Http\Controllers\RestAPI\v1\UserLoyaltyController;
 use App\Http\Controllers\RestAPI\v1\UserWalletController;
 use Illuminate\Support\Facades\Route;
@@ -425,6 +426,15 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
             Route::post('due-payment-by-digital-payment', 'duePaymentByDigitalPayment');
         });
     });
+
+    /*
+     * The published theme, for the mobile app. Public because the storefront it mirrors is, and
+     * throttled because it walks the theme structure per call; the renderer behind it caches per
+     * page, so the throttle is about politeness, not protection.
+     */
+    Route::get('theme/sections', [ThemeSectionController::class, 'sections'])
+        ->middleware('throttle:60,1')
+        ->name('api.v1.theme.sections');
 
     Route::group(['prefix' => 'banners'], function () {
         Route::controller(BannerController::class)->group(function () {
