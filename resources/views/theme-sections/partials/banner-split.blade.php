@@ -22,6 +22,12 @@
                         <a href="{{ $card['link'] }}" class="ml-btn">{{ ($card['button_text'] ?? null) ?: translate('discover') }}</a>
                     @endif
                 </div>
+
+                @include('theme-sections.partials._card-link', [
+                    'link' => $card['link'] ?? null,
+                    'label' => $card['title'] ?? null,
+                    'bannerId' => $card['banner_id'] ?? null,
+                ])
             </div>
         @endforeach
     </div>

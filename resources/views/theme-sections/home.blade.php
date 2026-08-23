@@ -105,6 +105,14 @@
 
     /* ---- hero slider ------------------------------------------------------------------- */
     .ml-hero{ position:relative; overflow:hidden; border-radius:18px; background:var(--ml-dark); }
+    /* The whole banner is its link. A stretched overlay rather than a wrapper, because these
+       cards already contain a button and an <a> inside an <a> is markup browsers unnest. The
+       caption's own button sits one layer above so it keeps its hover and its focus ring; the
+       carousel arrows and dots are above both. */
+    .ml-stretch{ position:absolute; inset:0; z-index:2; }
+    .ml-hero__cap .ml-btn, .ml-split__body .ml-btn, .ml-strip__body .ml-btn{ position:relative; z-index:3; }
+    .ml-split{ position:relative; }
+    .ml-stretch:focus-visible{ outline:2px solid var(--ml-gold, #c9a227); outline-offset:-4px; }
     .ml-hero__track{ position:relative; }
     .ml-hero__slide{ position:absolute; inset:0; opacity:0; transition:opacity .8s var(--ml-ease); pointer-events:none; }
     .ml-hero__slide.is-active{ position:relative; opacity:1; pointer-events:auto; }

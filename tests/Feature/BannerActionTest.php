@@ -142,6 +142,25 @@ class BannerActionTest extends TestCase
         $this->assertNotSame('', $cards[0]['image_mobile']);
     }
 
+    public function test_a_builder_block_carries_the_banner_row_behind_it(): void
+    {
+        // A block linked to Banner Setup renders that row live. Its id has to travel with the card
+        // or the click it produces is anonymous — attributable to "a card in a section somewhere"
+        // rather than to the banner the merchant edits.
+        $banner = Banner::create([
+            'banner_type' => 'Theme Banner', 'theme' => 'default', 'published' => 1,
+            'resource_type' => 'custom', 'url' => 'https://shop.test/products', 'photo' => 'wide.webp',
+        ]);
+
+        $cards = app(SectionDataResolver::class)->blockCards([
+            ['settings' => ['banner_id' => $banner->id]],
+            ['settings' => ['image' => 'typed-in-the-builder.webp', 'title' => 'Hand written']],
+        ]);
+
+        $this->assertSame($banner->id, $cards[0]['banner_id']);
+        $this->assertNull($cards[1]['banner_id'], 'a card with no banner row must not claim one');
+    }
+
     public function test_a_banner_without_a_phone_image_says_so_rather_than_repeating_the_wide_one(): void
     {
         Banner::create([

@@ -480,6 +480,10 @@ class SectionDataResolver
             }
 
             $cards[] = [
+                // The Banner Setup row behind this block, where it has one. Carried through so a
+                // click on it is counted against that row rather than being anonymous; a block
+                // whose content was typed into the builder has no row and stays null.
+                'banner_id'    => $linkedId > 0 ? $linkedId : null,
                 'image'        => $settings['image'] ?? null,
                 'image_mobile' => $settings['image_mobile'] ?? null,
                 'eyebrow'      => $settings['eyebrow'] ?? null,
