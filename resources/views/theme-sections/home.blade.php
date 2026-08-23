@@ -495,6 +495,23 @@
     .ml-tile--large{ grid-column:span 2; grid-row:span 2 }
     .ml-mosaic{ display:grid; grid-template-columns:repeat(4,1fr); }
     @media (max-width:767px){ .ml-mosaic{ grid-template-columns:repeat(2,1fr) } .ml-tile--large,.ml-tile--wide{ grid-column:span 2 } }
+    /* Locked mosaic: the merchant's four-column composition on EVERY screen, scaled — never
+       reflowed. The wrapper is the measuring container; rows derive from its live width so the
+       block keeps the exact proportions it has at the 1140px design width. Browsers without
+       container queries keep the fixed row height (the layout still never reflows). */
+    .ml-mosaic-lockwrap{ container-type:inline-size; }
+    .ml-mosaic--locked{ grid-template-columns:repeat(4,1fr) !important; }
+    @supports (width: 1cqw){
+        .ml-mosaic--locked{ grid-auto-rows:calc((100cqw - 3 * var(--ml-mgap,16px)) / 4 * var(--ml-mratio,.85)) !important; }
+    }
+    @media (max-width:767px){
+        .ml-mosaic--locked .ml-tile--large, .ml-mosaic--locked .ml-tile--wide{ grid-column:span 2 }
+        .ml-mosaic--locked .ml-tile--large, .ml-mosaic--locked .ml-tile--tall{ grid-row:span 2 }
+        /* The locked grid ignores the two-column collapse above; captions shrink instead. */
+        .ml-mosaic--locked .ml-tile__body h4{ font-size:.85rem }
+        .ml-mosaic--locked .ml-tile__body{ padding:.6rem }
+        .ml-mosaic--locked .ml-btn{ display:none }
+    }
 
     .ml-split{ display:grid; grid-template-columns:repeat(2,1fr); align-items:stretch; overflow:hidden;
         border-radius:16px; border:1px solid var(--ml-line); background:#fff; }

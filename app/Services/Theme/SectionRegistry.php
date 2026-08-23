@@ -153,6 +153,10 @@ class SectionRegistry
                 'schema' => [
                     'height' => ['type' => 'number', 'label' => 'row_height', 'default' => 240, 'responsive' => true],
                     'gap'    => ['type' => 'number', 'label' => 'gap', 'default' => 16],
+                    // Locked = the composition never reflows: four columns on every screen, tiles
+                    // scaling with the container like one picture, instead of collapsing to two
+                    // columns on phones and stretching on wide monitors.
+                    'layout_lock' => ['type' => 'boolean', 'label' => 'lock_layout_on_all_screen_sizes', 'default' => false],
                 ],
             ],
             'banner_strip' => [

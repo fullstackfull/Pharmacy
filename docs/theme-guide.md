@@ -289,3 +289,16 @@ Brand Banner.
   wins over `height` in place). The app's home renderer is therefore one loop: for each section,
   switch on `type` to pick the widget, follow `source` for data — reorder or hide sections in the
   builder, publish, and the app follows with no release.
+- **Mosaic ⇄ Banner Setup, both directions.** A LINKED tile edited in the builder pushes the
+  changed fields into its Theme Banner row (title/link/button text/image), so the two screens are
+  two views of one record. The rule is last-editor-wins PER FIELD — only fields changed in that
+  save travel, so a Banner Setup edit is never undone by the builder's stale copy — and only rows
+  the builder itself minted are its to edit: a dashboard banner (Main Banner etc.) linked into a
+  tile keeps Banner Setup as its sole source of truth. Every card in the mobile API also carries a
+  structured `target` ({kind: product|category|brand|shop, id, slug, name} — or url/none), taken
+  from the banner's own resource picker or parsed from the storefront's URL shapes, so the app
+  knows what each tile OPENS without reverse-engineering links.
+- **Locked mosaic layout.** `layout_lock` on banner_mosaic keeps the four-column composition on
+  every screen: rows derive from the container's live width at the proportions the merchant
+  designed at the 1140px builder width (container queries; browsers without them keep the fixed
+  row height). Unlocked keeps today's behavior — two columns under 768px, fixed row heights.
