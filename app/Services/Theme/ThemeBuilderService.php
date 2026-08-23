@@ -5,6 +5,7 @@ namespace App\Services\Theme;
 use App\Models\ThemeBlock;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
+use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -39,7 +40,7 @@ class ThemeBuilderService
         $nextOrder = (int) ThemeSection::where('theme_version_id', $version->id)
             ->where('page', $page)->max('sort_order');
 
-        return ThemeSection::create([
+        $section = ThemeSection::create([
             'theme_version_id' => $version->id,
             'page'             => $page,
             'type'             => $type,
@@ -47,6 +48,15 @@ class ThemeBuilderService
             'is_visible'       => true,
             'settings'         => $this->registry->normalizeSettings($type, $settings),
         ]);
+
+        app(AuditLogger::class)->record(
+            action: 'theme.section_added',
+            subject: $section,
+            after: ['type' => $type, 'page' => $page],
+            context: ['theme_version_id' => $version->id],
+        );
+
+        return $section;
     }
 
     /** Update a section's settings (normalized against its schema — unknown keys are dropped). */
@@ -56,8 +66,20 @@ class ThemeBuilderService
             return false;
         }
 
+        $before = $section->settings;
         $section->settings = $this->registry->normalizeSettings($section->type, $settings);
-        return $section->save();
+        $saved = $section->save();
+
+        if ($saved) {
+            app(AuditLogger::class)->record(
+                action: 'theme.section_updated',
+                subject: $section,
+                before: ['settings' => $before],
+                after: ['settings' => $section->settings],
+            );
+        }
+
+        return $saved;
     }
 
     /**
@@ -90,13 +112,31 @@ class ThemeBuilderService
 
         $section->starts_at = $startsAt;
         $section->ends_at = $endsAt;
+        $before = [
+            'starts_at' => $section->getOriginal('starts_at'),
+            'ends_at'   => $section->getOriginal('ends_at'),
+            'platforms' => $section->getOriginal('platforms'),
+            'audience'  => $section->getOriginal('audience'),
+        ];
+
         $section->platforms = $this->ruleTokens(
             $rules['platforms'] ?? null,
             [...\App\Services\Theme\ViewerContext::PLATFORMS, ...\App\Services\Theme\ViewerContext::DEVICES],
         );
         $section->audience = $this->ruleTokens($rules['audience'] ?? null, \App\Services\Theme\ViewerContext::AUDIENCES);
 
-        return $section->save();
+        $saved = $section->save();
+
+        if ($saved) {
+            app(AuditLogger::class)->record(
+                action: 'theme.delivery_rules_updated',
+                subject: $section,
+                before: $before,
+                after: $this->deliverySummary($section),
+            );
+        }
+
+        return $saved;
     }
 
     private function parseRuleTime(mixed $value): ?\Illuminate\Support\Carbon
@@ -156,7 +196,7 @@ class ThemeBuilderService
             return false;
         }
 
-        return DB::transaction(function () use ($version, $page, $orderedIds) {
+        DB::transaction(function () use ($version, $page, $orderedIds) {
             $sections = ThemeSection::where('theme_version_id', $version->id)
                 ->where('page', $page)->orderBy('sort_order')->get();
 
@@ -179,6 +219,14 @@ class ThemeBuilderService
 
             return true;
         });
+
+        app(AuditLogger::class)->record(
+            action: 'theme.sections_reordered',
+            subject: $version,
+            after: ['page' => $page, 'order' => array_values(array_map('intval', $orderedIds))],
+        );
+
+        return true;
     }
 
     /** Duplicate a section (with its blocks) directly after the original. */
@@ -229,7 +277,9 @@ class ThemeBuilderService
             return false;
         }
 
-        return DB::transaction(function () use ($section) {
+        $identity = ['id' => $section->id, 'type' => $section->type, 'page' => $section->page];
+
+        $deleted = DB::transaction(function () use ($section) {
             $versionId = $section->theme_version_id;
             $page = $section->page;
             $order = $section->sort_order;
@@ -243,6 +293,16 @@ class ThemeBuilderService
 
             return true;
         });
+
+        if ($deleted) {
+            app(AuditLogger::class)->record(
+                action: 'theme.section_deleted',
+                subject: ['type' => \App\Models\ThemeSection::class, 'id' => $identity['id']],
+                before: $identity,
+            );
+        }
+
+        return $deleted;
     }
 
     // -----------------------------------------------------------------------------------------

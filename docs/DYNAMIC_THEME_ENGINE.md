@@ -391,10 +391,15 @@ fetch removed).
   failure can never fail a publish.
 * Sections typed outside the app's 24 renderable types render on web only (declared in
   `APP_EXCLUSIONS` with reasons; visible in `compatibility.withheld`).
+* Theme lifecycle and builder mutations are recorded through the system-wide `AuditLogger`
+  (spec §49): `theme.published / restored / activated / section_added / section_updated /
+  section_deleted / sections_reordered / delivery_rules_updated`, each after its transaction
+  commits, with before/after where a value changed — and never for a refused edit.
 * ~~Builder UI for scheduling/platform/audience~~ — built: the inspector's **Visibility** tab
   edits the schedule window and platform/audience targeting per section
   (`POST admin/theme/builder/section/delivery-rules` → `ThemeBuilderService::setDeliveryRules`,
   validated: unknown tokens dropped, an end-before-start window cleared rather than saved).
   Scheduled/targeted sections carry badges in the structure panel.
-* Tablet-specific layouts inherit the mobile resolution in-app (the payload still carries
-  `*_tablet` siblings for a future pass).
+* ~~Tablet layouts inherit mobile~~ — built: the app reports its real device class
+  (600dp shortest-side, the same rule `ResponsiveHelper` applies) and the server resolves
+  `*_tablet` overrides for it; per-device payloads are cached separately by the fingerprint.
