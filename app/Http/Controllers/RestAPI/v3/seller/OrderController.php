@@ -124,7 +124,15 @@ class OrderController extends Controller
             return $query->orderBy('updated_at', 'desc');
         }])->where(['seller_id' => $seller['id'], 'order_id' => $id])->get();
 
-        $productList = $this->getProductListWithAllDetails(ids: $detailsList?->pluck('product_id')->toArray());
+        if ($detailsList->isEmpty()) {
+            // Either no such order, or one belonging to another seller. Both are the same answer
+            // from here: this seller has no order by that id.
+            return response()->json(['errors' => [
+                ['code' => 'order', 'message' => translate('order_not_found')],
+            ]], 404);
+        }
+
+        $productList = $this->getProductListWithAllDetails(ids: $detailsList->pluck('product_id')->toArray());
 
         $orderEditPaymentHistory = OrderEditHistory::where('order_id', $id)->orderBy('id', 'asc')->get();
         $filteredEditPaymentHistory = $orderEditPaymentHistory->filter(function ($item) {
@@ -140,8 +148,11 @@ class OrderController extends Controller
         $paymentInfo = collect()->merge($filteredEditPaymentHistory)->merge($unpaidDue)->values();
 
         $firstDetails = $detailsList->first();
-        if ($firstDetails?->init_order_amount <= 0) {
-            Order::where('id', $firstDetails->order?->id)->update(['init_order_amount' => $firstDetails->order['order_amount']]);
+        // `null <= 0` is true in PHP, so a missing order used to pass this guard and then fatal on
+        // the next line — an order that was deleted, or that belongs to another seller, answered a
+        // 500 HTML page instead of a not-found.
+        if ($firstDetails?->order && $firstDetails->init_order_amount <= 0) {
+            $firstDetails->order->update(['init_order_amount' => $firstDetails->order['order_amount']]);
         }
 
         foreach ($detailsList as $detail) {

@@ -21,6 +21,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
@@ -308,6 +309,18 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::controller(SellerAnalyticsController::class)->group(function () {
                     Route::get('/', 'index');
                     Route::get('activities', 'activities');
+                });
+            });
+
+            // The panel's report pages, as data. Every figure comes from SellerReportService, which
+            // the vendor controllers read too, so the app and the panel cannot drift apart.
+            Route::group(['prefix' => 'reports'], function () {
+                Route::controller(SellerReportController::class)->group(function () {
+                    Route::get('orders', 'orders');
+                    Route::get('orders/export', 'exportOrders');
+                    Route::get('products', 'products');
+                    Route::get('stock', 'stock');
+                    Route::get('stock/export', 'exportStock');
                 });
             });
 

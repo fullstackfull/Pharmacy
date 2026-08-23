@@ -188,9 +188,18 @@ class SellerController extends Controller
 
     public function shop_product_reviews_status(Request $request):JsonResponse
     {
-        $reviews = Review::find($request->id);
-        $reviews->status = $request->status;
-        $reviews->save();
+        // A review that has since been deleted used to fatal here rather than answer, so the app
+        // received a 500 HTML page in place of a JSON error it could show.
+        $review = Review::find($request['id']);
+        if (!$review) {
+            return response()->json(['errors' => [
+                ['code' => 'review', 'message' => translate('review_not_found')],
+            ]], 404);
+        }
+
+        $review->status = $request['status'];
+        $review->save();
+
         return response()->json(['message' => translate('status updated successfully!!')], 200);
     }
 
@@ -365,13 +374,20 @@ class SellerController extends Controller
             'updated_at' => now()
         ]);
 
+        // Changing the password ends every other session, which is right — but the caller is not
+        // one of them. This used to rotate the token and answer 200 with no way to learn the new
+        // one, so the app kept sending the credential it had just invalidated and every request
+        // after a password change came back 401, all the way to the login screen.
+        $token = null;
         if ($request['password'] != null) {
-            Seller::where(['id' => $seller['id']])->update([
-                'auth_token' => Str::random('50')
-            ]);
+            $token = Str::random(50);
+            Seller::where(['id' => $seller['id']])->update(['auth_token' => $token]);
         }
 
-        return response()->json(translate('Info updated successfully!'), 200);
+        return response()->json([
+            'message' => translate('Info updated successfully!'),
+            'token' => $token,
+        ], 200);
     }
 
     public function withdraw_method_list(Request $request): JsonResponse
@@ -668,7 +684,9 @@ class SellerController extends Controller
 
     public function getEarningStatics(Request $request): JsonResponse
     {
-        $dateType = $request['type'];
+        // Coerced: getDateTypeData is typed `string`, so a `?type[]=` array would be an uncatchable
+        // TypeError rather than a value it can fall back from.
+        $dateType = is_string($request['type']) ? $request['type'] : '';
         $dateTypeArray = $this->dashboardService->getDateTypeData(dateType: $dateType);
         $from = $dateTypeArray['from'];
         $to = $dateTypeArray['to'];

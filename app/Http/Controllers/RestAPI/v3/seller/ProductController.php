@@ -1963,9 +1963,20 @@ class ProductController extends Controller
 
     public function deleteImage(Request $request):JsonResponse
     {
-        $product = Product::withCount('reviews')->find($request['id']);
+        // Scoped to the seller asking. Found by id alone, this deleted images from any seller's
+        // product — and a product that did not exist fatalled on the next line instead of answering.
+        $product = Product::withCount('reviews')
+            ->where(['id' => $request['id'], 'added_by' => 'seller', 'user_id' => $request->seller->id])
+            ->first();
+
+        if (!$product) {
+            return response()->json(['errors' => [
+                ['code' => 'product', 'message' => translate('product_not_found')],
+            ]], 404);
+        }
+
         $array = [];
-        if (count(json_decode($product['images'])) < 2) {
+        if (count(json_decode($product['images']) ?? []) < 2) {
             return response()->json(['message' => translate('you_can_not_delete_all_images')], 403);
         }
         $colors = json_decode($product['colors']);
@@ -1999,10 +2010,11 @@ class ProductController extends Controller
                 $this->deleteFile('/product/' . $request['name']);
             }
         }
-        Product::withCount('reviews')->where('id', $request['id'])->update([
+        $product->update([
             'images' => json_encode($array),
             'color_image' => json_encode($color_image_arr),
         ]);
+
         return response()->json(translate('product_image_removed_successfully'), 200);
     }
 
@@ -2027,7 +2039,20 @@ class ProductController extends Controller
 
     public function deletePreviewFile(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['product_id']]);
+        // Scoped to the seller asking. Found by id alone, this cleared the preview file on any
+        // seller's product.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
+
+        if (!$product) {
+            return response()->json(['errors' => [
+                ['code' => 'product', 'message' => translate('product_not_found')],
+            ]], 404);
+        }
+
         $this->productService->deletePreviewFile(product: $product);
         $this->productRepo->update(id: $request['product_id'], data: ['preview_file' => null]);
         return response()->json([
