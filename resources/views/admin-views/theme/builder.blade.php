@@ -64,6 +64,7 @@
         .tb-item__flag--needs_choice { color: #f0b429; }
         .tb-item__flag--no_content, .tb-item__flag--not_now { color: #7d8794; }
         .tb-item__flag--rules { color: #6ea8fe; }
+        .tb-item__flag--webonly { color: #d4a054; }
 
         /* delivery (visibility) tab */
         .tb-delivery-group { margin-bottom: 1rem; }
@@ -458,6 +459,9 @@
                                      The storefront is right to skip those, but until this badge the
                                      builder gave no hint, so the merchant either thought the theme
                                      was broken or thought the section was there. --}}
+                                @if (empty($section['app_safe']))
+                                    <span class="tb-item__flag tb-item__flag--webonly" title="{{ translate('this_section_renders_on_the_website_only_the_mobile_app_has_no_renderer_for_it') }}"><i class="fi fi-rr-browser"></i></span>
+                                @endif
                                 @if (!empty($section['delivery']['scheduled']))
                                     <span class="tb-item__flag tb-item__flag--rules" title="{{ translate('this_section_runs_on_a_schedule') }}"><i class="fi fi-rr-clock"></i></span>
                                 @endif
