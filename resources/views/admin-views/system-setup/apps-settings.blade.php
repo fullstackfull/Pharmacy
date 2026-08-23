@@ -52,6 +52,25 @@
                                 </div>
                                 <input type="hidden" name="type" value="user_app_version_control">
                                 <div class="bg-section rounded p-12 p-sm-20">
+
+                                    {{-- The switch the data model always had and this form never
+                                         offered: `status` was a hidden 1, so a merchant whose
+                                         customers were being held at the update screen had no way
+                                         to stop it but to edit the version number. The hidden 0
+                                         below it is what an unticked checkbox posts, since a
+                                         checkbox that is off sends nothing at all. --}}
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-20">
+                                        <label class="form-label mb-0 text-capitalize" for="for_android-force-update">
+                                            {{ translate('force_customers_to_update') }} ({{ translate('android') }})
+                                        </label>
+                                        <input type="hidden" name="for_android[status]" value="0">
+                                        <label class="switcher" for="for_android-force-update">
+                                            <input class="switcher_input" type="checkbox" value="1"
+                                                   name="for_android[status]" id="for_android-force-update"
+                                                   {{ ($userAppVersionControl['for_android']['status'] ?? 1) ? 'checked' : '' }}>
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </div>
                                     <div class="form-group">
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <label class="form-label mb-0 text-capitalize" for="">{{ translate('minimum_user_app_version_for_force_update') }} ({{ translate('android') }})
@@ -63,7 +82,6 @@
                                                     </span>
                                             </label>
                                         </div>
-                                        <input type="hidden" name="for_android[status]" value="1">
                                         <input type="text" class="form-control" name="for_android[version]"
                                                placeholder="{{translate('ex').':'.'2.1'}}" data-required-msg="{{ translate('android_version_is_required') }}" required
                                                value="{{ $userAppVersionControl['for_android']['version'] ?? '' }}">
@@ -91,6 +109,25 @@
                                     <h3 class="mb-0 text-capitalize">{{translate('for_iOS')}}</h3>
                                 </div>
                                 <div class="bg-section rounded p-12 p-sm-20">
+
+                                    {{-- The switch the data model always had and this form never
+                                         offered: `status` was a hidden 1, so a merchant whose
+                                         customers were being held at the update screen had no way
+                                         to stop it but to edit the version number. The hidden 0
+                                         below it is what an unticked checkbox posts, since a
+                                         checkbox that is off sends nothing at all. --}}
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-20">
+                                        <label class="form-label mb-0 text-capitalize" for="for_ios-force-update">
+                                            {{ translate('force_customers_to_update') }} ({{ translate('ios') }})
+                                        </label>
+                                        <input type="hidden" name="for_ios[status]" value="0">
+                                        <label class="switcher" for="for_ios-force-update">
+                                            <input class="switcher_input" type="checkbox" value="1"
+                                                   name="for_ios[status]" id="for_ios-force-update"
+                                                   {{ ($userAppVersionControl['for_ios']['status'] ?? 1) ? 'checked' : '' }}>
+                                            <span class="switcher_control"></span>
+                                        </label>
+                                    </div>
                                     <div class="form-group">
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <label class="form-label mb-0 text-capitalize" for="">
@@ -103,7 +140,6 @@
                                                 </span>
                                             </label>
                                         </div>
-                                        <input type="hidden" name="for_ios[status]" value="1">
                                         <input type="text" class="form-control" name="for_ios[version]"
                                                placeholder="{{translate('ex').':'.'2.1'}}" data-required-msg="{{ translate('ios_version_is_required') }}" required
                                                value="{{ $userAppVersionControl['for_ios']['version'] ?? '' }}">

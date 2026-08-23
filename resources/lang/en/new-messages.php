@@ -3444,6 +3444,7 @@ return [
 	'category_Section_Banner' => 'Category section banner',
 	'mobile_app_image' => 'Mobile app image',
 	'banner_clicks' => 'Banner clicks',
+	'force_customers_to_update' => 'Force customers to update',
 	'used_by_the_mobile_apps_where_a_wide_banner_would_crop_badly_on_a_phone' => 'Used by the mobile apps, where a wide banner would crop badly on a phone',
 	'remove_the_mobile_image_and_use_the_web_image' => 'Remove the mobile image and use the web image',
 	'shown_by_the_mobile_apps_wherever_this_category_appears' => 'Shown by the mobile apps wherever this category appears',
