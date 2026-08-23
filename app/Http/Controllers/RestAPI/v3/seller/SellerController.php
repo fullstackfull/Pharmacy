@@ -374,13 +374,20 @@ class SellerController extends Controller
             'updated_at' => now()
         ]);
 
+        // Changing the password ends every other session, which is right — but the caller is not
+        // one of them. This used to rotate the token and answer 200 with no way to learn the new
+        // one, so the app kept sending the credential it had just invalidated and every request
+        // after a password change came back 401, all the way to the login screen.
+        $token = null;
         if ($request['password'] != null) {
-            Seller::where(['id' => $seller['id']])->update([
-                'auth_token' => Str::random('50')
-            ]);
+            $token = Str::random(50);
+            Seller::where(['id' => $seller['id']])->update(['auth_token' => $token]);
         }
 
-        return response()->json(translate('Info updated successfully!'), 200);
+        return response()->json([
+            'message' => translate('Info updated successfully!'),
+            'token' => $token,
+        ], 200);
     }
 
     public function withdraw_method_list(Request $request): JsonResponse

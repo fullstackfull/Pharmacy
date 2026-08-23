@@ -6560,4 +6560,8 @@ return [
 	'access_denied!' => 'Access denied!',
 	'review_not_found' => 'Review not found',
 	'product_not_found' => 'Product not found',
+	'Profile_image_is_required.' => 'Profile image is required.',
+	'The_profile_image_must_be_a_file_of_type:_' => 'The profile image must be a file of type: ',
+	'The_profile_image_may_not_be_greater_than_' => 'The profile image may not be greater than ',
+	'Info_updated_successfully!' => 'Info updated successfully!',
 ];
