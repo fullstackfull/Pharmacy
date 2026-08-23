@@ -230,6 +230,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
                 Route::get('digital-author-list', 'getDigitalProductsAuthorList');
                 Route::get('digital-publishing-house-list', 'getDigitalPublishingHouseList');
                 Route::get('clearance-sale', 'getClearanceSale');
+                // Exactly these products in exactly this order — the endpoint behind a theme
+                // section whose product source is "manual".
+                Route::get('by-ids', 'getProductsByIds');
             });
         });
 

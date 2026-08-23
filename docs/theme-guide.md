@@ -281,7 +281,10 @@ Brand Banner.
   `source` describing where its DATA lives: `inline` (render from the payload — banners, text,
   stats, FAQs), `api` (fetch the named v1 endpoint with the given params — product rails, category
   grids, deals, brands, vendors; send the usual `guest_id`/token), or `none` (no public API feeds
-  it yet — currently `blog_posts` and `recently_viewed`; hide those). `product_tabs` returns one
+  it yet — currently `blog_posts` and `recently_viewed`; hide those). Product rails cover every
+  source: featured/best-selling/new-arrival/top-rated, `category` and `brand` via the id in
+  `source_id`, and `manual` via `/api/v1/products/by-ids?ids=...` — the merchant's picks in the
+  merchant's order, inactive ones silently absent. `product_tabs` returns one
   source per tab. Responsive settings arrive resolved for the mobile breakpoint (`height_mobile`
   wins over `height` in place). The app's home renderer is therefore one loop: for each section,
   switch on `type` to pick the widget, follow `source` for data — reorder or hide sections in the

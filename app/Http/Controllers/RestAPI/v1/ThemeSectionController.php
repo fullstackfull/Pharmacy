@@ -208,13 +208,28 @@ class ThemeSectionController extends Controller
             'best_selling' => ['kind' => 'api', 'endpoint' => '/api/v1/products/best-sellings', 'params' => ['limit' => $limit, 'offset' => 1]],
             'new_arrival' => ['kind' => 'api', 'endpoint' => '/api/v1/products/new-arrival', 'params' => ['limit' => $limit, 'offset' => 1]],
             'top_rated' => ['kind' => 'api', 'endpoint' => '/api/v1/products/top-rated', 'params' => ['limit' => $limit, 'offset' => 1]],
-            'category' => ['kind' => 'api', 'endpoint' => '/api/v1/categories/products/' . (int) ($settings['category_id'] ?? 0), 'params' => ['limit' => $limit, 'offset' => 1]],
-            'brand' => ['kind' => 'none',
-                'note' => 'v1 has no public brand-products endpoint; render from another source or hide.'],
-            'manual' => ['kind' => 'none',
-                'note' => 'A hand-picked list; the ids are in this section\'s settings and v1 has no products-by-ids endpoint.'],
+            // The picked category or brand lives in `source_id` — the picker follows the source
+            // dropdown, so one key serves both. (An earlier map read `category_id`, a key the
+            // schema never stores, and pointed every category rail at /products/0.)
+            'category' => ['kind' => 'api', 'endpoint' => '/api/v1/categories/products/' . (int) ($settings['source_id'] ?? 0), 'params' => ['limit' => $limit, 'offset' => 1]],
+            'brand' => ['kind' => 'api', 'endpoint' => '/api/v1/brands/products/' . (int) ($settings['source_id'] ?? 0), 'params' => ['limit' => $limit, 'offset' => 1]],
+            'manual' => ['kind' => 'api', 'endpoint' => '/api/v1/products/by-ids',
+                'params' => ['ids' => implode(',', $this->pickedIds($settings['product_ids'] ?? null))]],
             default => ['kind' => 'api', 'endpoint' => '/api/v1/products/featured', 'params' => ['limit' => $limit, 'offset' => 1]],
         };
+    }
+
+    /**
+     * The merchant's hand-picked ids, in their order — the same normalization the storefront's
+     * resolver applies, so the app and the web can never disagree about what "these products" means.
+     *
+     * @return array<int, int>
+     */
+    private function pickedIds(string|array|null $picked): array
+    {
+        $ids = is_array($picked) ? $picked : explode(',', (string) $picked);
+
+        return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
     }
 
     /**
