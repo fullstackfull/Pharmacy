@@ -30,6 +30,7 @@ class BannerUpdateRequest extends FormRequest
                 rules: ['nullable', 'image'],
                 skipMimes: ['.svg', '.gif'],
             ),
+            'remove_mobile_image' => 'nullable|boolean',
         ];
     }
 

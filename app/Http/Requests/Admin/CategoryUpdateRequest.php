@@ -40,6 +40,11 @@ class CategoryUpdateRequest extends FormRequest
                 maxSize: getFileUploadMaxSize(unit: 'kb'),
                 isDisallowed: true
             ),
+            'mobile_image' => getRulesStringForImageValidation(
+                rules: ['nullable', 'image'],
+                skipMimes: ['.svg', '.gif'],
+            ),
+            'remove_mobile_image' => 'nullable|boolean',
             'page_banner' => getRulesStringForImageValidation(
                 rules: ['nullable', 'image'],
                 skipMimes: ['.svg', '.gif'],

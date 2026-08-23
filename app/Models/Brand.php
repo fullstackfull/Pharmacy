@@ -26,6 +26,7 @@ class Brand extends Model
         'name',
         'slug',
         'image',
+        'mobile_image',
         'image_storage_type',
         'image_alt_text',
         'status'
@@ -35,6 +36,7 @@ class Brand extends Model
         'name' => 'string',
         'slug' => 'string',
         'image' => 'string',
+        'mobile_image' => 'string',
         'image_storage_type' => 'string',
         'image_alt_text' => 'string',
         'status' => 'integer',
@@ -101,7 +103,21 @@ class Brand extends Model
         return $this->storageLink('brand', $value, $this->image_storage_type ?? 'public');
     }
 
-    protected $appends = ['image_full_url'];
+    /**
+     * The phone-shaped logo, falling back to the web one.
+     *
+     * The fallback lives here rather than in each client: an app that had to decide for itself
+     * would be one release away from showing nothing where a merchant never uploaded a second
+     * image — which is almost every brand.
+     */
+    public function getMobileImageFullUrlAttribute(): array
+    {
+        return empty($this->mobile_image)
+            ? $this->image_full_url
+            : $this->storageLink('brand', $this->mobile_image, $this->image_storage_type ?? 'public');
+    }
+
+    protected $appends = ['image_full_url', 'mobile_image_full_url'];
 
     protected static function boot(): void
     {

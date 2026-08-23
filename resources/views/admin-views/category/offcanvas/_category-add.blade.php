@@ -274,6 +274,13 @@
                                     {{ THEME_RATIO[theme_root_path()]['Category Image'] }}
                                 </span>
                             </p>
+
+                            @include('admin-views.partials._mobile-image-field', [
+                                'storedImage' => null,
+                                'inputId' => 'category-add-mobile-image',
+                                'hint' => translate('shown_by_the_mobile_apps_wherever_this_category_appears'),
+                            ])
+
                     </div>
                 </div>
 

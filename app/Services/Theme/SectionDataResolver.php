@@ -384,6 +384,12 @@ class SectionDataResolver
             // array fatals the whole home page the moment a theme with a banner section
             // is published.
             'image'       => getStorageImages(path: $banner->photo_full_url, type: 'banner'),
+            // The merchant's phone-shaped image, where they uploaded one. Without this key the
+            // apps drew the wide web image on a phone — the mobile image was set in Banner Setup
+            // and honoured everywhere except the sections that read banners from the dashboard.
+            'image_mobile' => $banner->mobile_photo
+                ? getStorageImages(path: $banner->mobile_photo_full_url, type: 'banner')
+                : null,
             'title'       => $banner->title,
             'subtitle'    => $banner->sub_title,
             'link'        => $banner->url,

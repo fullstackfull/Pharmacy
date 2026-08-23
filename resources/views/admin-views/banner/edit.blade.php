@@ -200,7 +200,8 @@
                                             </p>
 
                                             {{-- Optional phone-shaped image served to the mobile apps; leaving
-                                                 it empty keeps whatever is already stored. --}}
+                                                 it empty keeps whatever is already stored, and the checkbox
+                                                 below is how it is taken away again. --}}
                                             <div class="text-center">
                                                 <label for="banner-mobile" class="form-label fw-semibold mb-1">
                                                     {{ translate('mobile_app_image') }}
@@ -246,6 +247,19 @@
                                             <p class="fs-12 text-center max-w-360 m-auto">
                                                 {{ translate('used_by_the_mobile_apps_where_a_wide_banner_would_crop_badly_on_a_phone') }}
                                             </p>
+
+                                            @if ($banner['mobile_photo'])
+                                                {{-- Uploading replaces; this is the only way to take one away.
+                                                     The apps fall back to the image above, so removing it is a
+                                                     safe action rather than a banner with nothing to draw. --}}
+                                                <div class="d-flex justify-content-center align-items-center gap-2 mt-2">
+                                                    <input class="form-check-input m-0" type="checkbox"
+                                                           name="remove_mobile_image" value="1" id="remove-mobile-image">
+                                                    <label class="form-check-label fs-12 m-0" for="remove-mobile-image">
+                                                        {{ translate('remove_the_mobile_image_and_use_the_web_image') }}
+                                                    </label>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

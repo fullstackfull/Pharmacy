@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Traits\FileManagerTrait;
 use App\Traits\GeneratesUniqueSlug;
-use Illuminate\Support\Str;
+use App\Traits\ManagesOptionalImage;
 
 class CategoryService
 {
-    use FileManagerTrait, GeneratesUniqueSlug;
+    use ManagesOptionalImage, GeneratesUniqueSlug;
 
     public function getAddData(object $request): array
     {
@@ -19,6 +18,9 @@ class CategoryService
             'name' => $name,
             'slug' => $this->generateModelUniqueSlug(name: $name, type: 'category'),
             'icon' => $this->upload('category/', 'webp', $request->file('image')),
+            'mobile_icon' => $request->file('mobile_image')
+                ? $this->upload('category/', 'webp', $request->file('mobile_image'))
+                : null,
             'icon_storage_type' => $request->has('image') ? $storage : null,
             'parent_id' => $request->get('parent_id', 0),
             'position' => $request['position'] ?? 0,
@@ -30,13 +32,20 @@ class CategoryService
     public function getUpdateData(object $request, object $data): array
     {
         $storage = config('filesystems.disks.default') ?? 'public';
-        $image = $request->file('image') ? $this->update('category/', $data['image'], 'webp', $request->file('image')) : $data['icon'];
+        // The old file name is `icon`; passing `image` (an attribute categories do not have) meant
+        // every replacement orphaned the file it replaced instead of deleting it.
+        $image = $request->file('image') ? $this->update('category/', $data['icon'], 'webp', $request->file('image')) : $data['icon'];
         $name = $request['name'][array_search('en', $request['lang'])];
 
         $result = [
             'name' => $name,
             'slug' => $this->generateModelUniqueSlug(name: $name, type: 'category', id: $data['id']),
             'icon' => $image,
+            'mobile_icon' => $this->getProcessedMobileImage(
+                request: $request,
+                directory: 'category/',
+                storedImage: $data['mobile_icon'],
+            ),
             'icon_storage_type' => $request->has('image') ? $storage : $data['icon_storage_type'],
             'priority' => $request['priority'],
         ];
@@ -77,6 +86,9 @@ class CategoryService
         }
         if ($data['icon']) {
             $this->delete('category/' . $data['icon']);
+        }
+        if ($data['mobile_icon']) {
+            $this->delete('category/' . $data['mobile_icon']);
         }
         return true;
     }

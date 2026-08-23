@@ -24,6 +24,7 @@ trait CreatesCatalogueSchema
             $table->string('name')->nullable();
             $table->string('slug')->nullable();
             $table->string('icon')->nullable();
+            $table->string('mobile_icon')->nullable();
             $table->string('icon_storage_type')->nullable();
             $table->integer('parent_id')->default(0);
             $table->integer('position')->default(0);
@@ -37,6 +38,7 @@ trait CreatesCatalogueSchema
             $table->string('name')->nullable();
             $table->string('slug')->nullable();
             $table->string('image')->nullable();
+            $table->string('mobile_image')->nullable();
             $table->string('image_storage_type')->nullable();
             $table->string('image_alt_text')->nullable();
             $table->integer('status')->default(1);

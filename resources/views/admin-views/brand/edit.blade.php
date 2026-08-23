@@ -138,6 +138,13 @@
                                     <p class="fs-10 mb-0 text-center">
                                         {{ getFileUploadFormats(skip:'.svg,.gif') }} : {{ translate('Max_'.getFileUploadMaxSize().'_MB') }}
                                     </p>
+
+                                    @include('admin-views.partials._mobile-image-field', [
+                                        'storedImage' => $brand?->mobile_image,
+                                        'previewUrl' => getStorageImages($brand?->mobile_image_full_url, 'backend-brand'),
+                                        'inputId' => 'brand-mobile-image',
+                                        'hint' => translate('shown_by_the_mobile_apps_wherever_this_brand_appears'),
+                                    ])
                                 </div>
                             </div>
                         </div>
