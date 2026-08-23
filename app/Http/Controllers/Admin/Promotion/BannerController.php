@@ -59,6 +59,10 @@ class BannerController extends BaseController
         $brands = $this->brandRepo->getListWhere(dataLimit: 'all');
         $products = $this->productRepo->getListWithScope(scope: 'active', dataLimit: 'all');
         $themeUsage = app(\App\Services\Theme\ThemeBannerLink::class)->usage();
+        // The organized panel: every theme section that shows banners, with its images laid out as
+        // the storefront lays them — so "which picture is the mosaic's large tile" is answered on
+        // THIS screen, not on a page the merchant has to know exists.
+        $themeGroups = app(\App\Services\Theme\ThemeBannerLink::class)->themeLayout();
 
         // Resource names for the placement tag: "Category page — skin care" reads at a glance,
         // "resource_id 7" does not.
@@ -67,7 +71,7 @@ class BannerController extends BaseController
             'brand'    => \App\Models\Brand::pluck('name', 'id'),
         ];
 
-        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes', 'themeUsage', 'resourceNames'));
+        return view('admin-views.banner.view', compact('banners', 'categories', 'shops', 'brands', 'products', 'bannerTypes', 'themeUsage', 'themeGroups', 'resourceNames'));
     }
 
     /**

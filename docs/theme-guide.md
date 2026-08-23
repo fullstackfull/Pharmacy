@@ -302,3 +302,14 @@ Brand Banner.
   every screen: rows derive from the container's live width at the proportions the merchant
   designed at the 1140px builder width (container queries; browsers without them keep the fixed
   row height). Unlocked keeps today's behavior — two columns under 768px, fixed row heights.
+- **Mosaic shapes, swipe display, multi-frame tiles.** Tile shapes: small/square (1×1), wide (2×1),
+  tall (1×2), large (2×2), strip (full-width rectangle). `display: swipe` turns the section into
+  one horizontally swipeable snap row — small squares side by side that scroll; squares over a
+  rectangle strip = a swipe section stacked above a grid one. `image_2`/`image_3` give a tile extra
+  frames it crossfades through every `rotate_ms`. All of it rides the mobile API (`settings.display`,
+  card `span`, card `images[]` absolutized) and is documented on the theme/sections endpoint in the
+  Developer Portal.
+- **Banner Setup, organized.** The list screen opens with "Theme banners grouped by section": one
+  card per banner section (mosaic, hero, strip…) with its images side by side — shape badge, link
+  state (Edit ↔ In builder), unpublished flag — so "which picture is the mosaic's large tile" is
+  answered right there, with a click through to edit the banner or open the builder.

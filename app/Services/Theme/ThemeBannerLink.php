@@ -275,7 +275,7 @@ class ThemeBannerLink
             $resolver = app(SectionDataResolver::class);
             $groups = [];
 
-            foreach ($this->activeThemeSections() as $section) {
+            foreach ($this->activeThemeSections(bannerOnly: true) as $section) {
                 $settings = $section->settings ?? [];
                 $cards = [];
 
@@ -336,7 +336,7 @@ class ThemeBannerLink
     }
 
     /** Banner-carrying sections of the active theme, published version first, then drafts. */
-    private function activeThemeSections()
+    private function activeThemeSections(bool $bannerOnly = false)
     {
         $theme = Theme::query()->where('is_active', true)->first();
         if (!$theme) {
@@ -350,8 +350,11 @@ class ThemeBannerLink
                 ->whereIn('status', ['published', 'draft']))
             ->where('is_visible', true)
             ->get()
+            // usage() needs every block-carrying section (a linked banner can sit anywhere);
+            // the LAYOUT panel wants only the banner family — footer columns with ten images
+            // "in builder" are exactly the noise a screen called organized must not show.
             ->filter(fn (ThemeSection $section) => in_array($section->type, $bannerSections, true)
-                || $section->blocks->isNotEmpty())
+                || (!$bannerOnly && $section->blocks->isNotEmpty()))
             ->sortBy(fn (ThemeSection $section) => [
                 $section->version->status === 'published' ? 0 : 1,
                 $section->page,

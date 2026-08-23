@@ -267,6 +267,40 @@ class ThemeSectionApiTest extends TestCase
         $this->assertSame('url', $targets[4]['kind'], 'a link to something deleted must not present a resolvable target');
     }
 
+    public function test_a_swipe_mosaic_carries_its_shapes_and_every_frame_of_a_multi_image_tile(): void
+    {
+        // The merchant's ask verbatim: small squares side by side that swipe, a rectangle strip,
+        // and extra frames on one tile. The app must receive all three structurally.
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+        $section = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['display' => 'swipe', 'rotate_ms' => 2500, 'height' => 200],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile', 'sort_order' => 0, 'is_visible' => true,
+            'settings' => ['image' => '/storage/a.webp', 'image_2' => '/storage/b.webp', 'span' => 'square'],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile', 'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['image' => '/storage/c.webp', 'span' => 'strip'],
+        ]);
+
+        $data = $this->getJson('/api/v1/theme/sections?type=banner_mosaic')->json('sections.0');
+
+        $this->assertSame('swipe', $data['settings']['display']);
+        $this->assertSame(2500, $data['settings']['rotate_ms']);
+
+        [$square, $strip] = $data['cards'];
+        $this->assertSame('square', $square['span']);
+        $this->assertCount(2, $square['images'], 'both frames of the tile travel');
+        foreach ($square['images'] as $frame) {
+            $this->assertStringStartsWith('http', $frame, 'frames are absolute like every other image');
+        }
+        $this->assertSame('strip', $strip['span']);
+        $this->assertCount(1, $strip['images'], 'a still tile is one frame, not a missing key');
+    }
+
     public function test_input_nobody_can_spell_falls_back_instead_of_failing(): void
     {
         $this->mosaic(ThemeVersion::STATUS_PUBLISHED);
