@@ -107,20 +107,25 @@ class SectionVisibility
      * Platform, device and audience rules. An empty or absent rule means "no restriction", which
      * is what every section written before this existed means.
      *
+     * The place list is a UNION: the section shows wherever ANY ticked token matches the viewer —
+     * their platform (web/app) or their device class (desktop/tablet/mobile). A row of checkboxes
+     * reads as "show it here, and here"; the earlier reading, where the two kinds of token were
+     * separate FILTERS that both had to pass, made "app + desktop" hide the section from the app
+     * the merchant had explicitly ticked — a checked box must never be the reason something
+     * disappears from the very place it names.
+     *
+     * The invariant this buys, and the tests pin: a subset containing "app" is ALWAYS visible in
+     * the app, whatever else is ticked beside it; same for "web" on the web.
+     *
      * @param  array<string, mixed>  $section
      */
     private function targetingReason(array $section, ViewerContext $viewer): ?string
     {
-        $platforms = $this->tokens($section['platforms'] ?? null);
-        if ($platforms !== [] && !in_array($viewer->platform, $platforms, true)) {
+        $places = $this->tokens($section['platforms'] ?? null);
+        if ($places !== []
+            && !in_array($viewer->platform, $places, true)
+            && !in_array($viewer->device, $places, true)) {
             return self::REASON_PLATFORM;
-        }
-
-        // Devices ride in the same list as platforms: one flat set of tokens the merchant ticks,
-        // rather than two lists that can contradict each other ("app only, desktop only").
-        $devices = array_values(array_intersect($platforms, ViewerContext::DEVICES));
-        if ($devices !== [] && !in_array($viewer->device, $devices, true)) {
-            return self::REASON_DEVICE;
         }
 
         $audience = $this->tokens($section['audience'] ?? null);
