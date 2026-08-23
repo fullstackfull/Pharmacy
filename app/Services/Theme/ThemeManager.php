@@ -104,8 +104,14 @@ class ThemeManager
             // smart link included), so Banner Setup always lists what the storefront shows.
             app(ThemeBannerLink::class)->syncVersion($version);
 
-            // The storefront caches the published structure; drop it so the change is live at once.
+            // Stamp the revision and checksum a client syncs against INSIDE the publishing
+            // transaction: a version must never be observable as live without an addressable
+            // revision, or a phone would be told to refetch a page it cannot identify.
+            app(ThemeDelivery::class)->stampVersion($version);
+
+            // Both caches: the storefront's rendered structure and the app's negotiated payloads.
             app(StorefrontThemeRenderer::class)->flush();
+            app(ThemeDelivery::class)->flush();
 
             return $version->refresh();
         });
@@ -131,6 +137,11 @@ class ThemeManager
                     'sort_order'       => $section->sort_order,
                     'is_visible'       => $section->is_visible,
                     'settings'         => $section->settings,
+                    // The SAME uuid, deliberately: a draft's copy of a section is the same logical
+                    // section, and clients key per-section state and checksums by this identity.
+                    // Schedules and targeting travel too — a Ramadan schedule that silently
+                    // vanished on the next edit would be worse than no scheduling at all.
+                    ...$section->copyableDeliveryRules(keepUuid: true),
                 ]);
 
                 foreach ($section->blocks as $block) {

@@ -435,9 +435,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
      * throttled because it walks the theme structure per call; the renderer behind it caches per
      * page, so the throttle is about politeness, not protection.
      */
-    Route::get('theme/sections', [ThemeSectionController::class, 'sections'])
-        ->middleware('throttle:60,1')
-        ->name('api.v1.theme.sections');
+    Route::group(['prefix' => 'theme', 'middleware' => ['throttle:60,1']], function () {
+        Route::controller(ThemeSectionController::class)->group(function () {
+            Route::get('sections', 'sections')->name('api.v1.theme.sections');
+
+            /*
+             * The versioned pair the app syncs against. `version` is deliberately separate and
+             * deliberately tiny: every cold start and every resume of every installed app asks
+             * "has anything changed", and that question must not cost a home page to answer.
+             */
+            Route::get('home', 'home')->name('api.v1.theme.home');
+            Route::get('version', 'version')->name('api.v1.theme.version');
+        });
+    });
 
     Route::group(['prefix' => 'banners'], function () {
         Route::controller(BannerController::class)->group(function () {

@@ -126,6 +126,10 @@ class ThemeBuilderService
                 'sort_order'       => $section->sort_order + 1,
                 'is_visible'       => $section->is_visible,
                 'settings'         => $section->settings,
+                // No uuid: an explicit duplicate is a NEW section, so the model mints a fresh
+                // identity — unlike a version draft, where the copy stays the same section. The
+                // merchant duplicating a scheduled campaign banner expects the schedule though.
+                ...$section->copyableDeliveryRules(keepUuid: false),
             ]);
 
             foreach ($section->blocks as $block) {

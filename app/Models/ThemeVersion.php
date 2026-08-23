@@ -18,11 +18,13 @@ class ThemeVersion extends Model
 
     protected $fillable = [
         'theme_id', 'label', 'status', 'settings', 'based_on_version_id', 'published_at',
+        'revision', 'checksum',
     ];
 
     protected $casts = [
         'settings'     => 'array',
         'published_at' => 'datetime',
+        'revision'     => 'integer',
     ];
 
     public function theme(): BelongsTo

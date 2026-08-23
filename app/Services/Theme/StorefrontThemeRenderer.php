@@ -26,8 +26,12 @@ class StorefrontThemeRenderer
     public const GLOBAL_SETTINGS_CACHE_KEY = 'storefront_theme_global_settings';
     private const CACHE_TTL = 600; // seconds
 
-    public function __construct(private readonly SectionRegistry $registry)
-    {
+    public function __construct(
+        private readonly SectionRegistry $registry,
+        // Defaulted (PHP 8.1 new-in-initializers) so every existing construction — tests
+        // included — keeps working; the container still injects a shared instance in normal boot.
+        private readonly SectionVisibility $visibility = new SectionVisibility(),
+    ) {
     }
 
     /**
@@ -56,7 +60,7 @@ class StorefrontThemeRenderer
         $previewVersionId = $this->activePreviewVersionId();
         if ($previewVersionId !== null) {
             try {
-                return $this->buildSections($previewVersionId, $page);
+                return $this->runnable($this->buildSections($previewVersionId, $page));
             } catch (\Throwable) {
                 return null;
             }
@@ -73,10 +77,57 @@ class StorefrontThemeRenderer
                 return ['sections' => $version ? $this->buildSections($version->id, $page) : null];
             });
 
-            return $cached['sections'] ?? null;
+            // Scheduling and audience targeting are applied to the CACHED structure, never inside
+            // the cache: a campaign that opens at 09:00 would otherwise open up to a TTL late, and
+            // a guest and a signed-in customer would share whichever of them warmed the entry.
+            // What is cached is the shape of the page; what varies per request is who may see it.
+            return $this->runnable($cached['sections'] ?? null);
         } catch (\Throwable) {
             // A theme problem must never take the storefront down.
             return null;
+        }
+    }
+
+    /**
+     * The sections that actually run right now, for the visitor making this request.
+     *
+     * @param  array<int, array<string, mixed>>|null  $sections
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function runnable(?array $sections): ?array
+    {
+        if ($sections === null) {
+            return null;
+        }
+
+        $viewer = new ViewerContext(
+            platform: ViewerContext::PLATFORM_WEB,
+            // One response serves every width on the web, so breakpoint hiding stays a CSS
+            // concern; only rules that cannot be expressed in CSS are decided here.
+            device: ViewerContext::DEVICE_DESKTOP,
+            // Guarded because this also runs from the console and from early-boot paths where no
+            // session guard is resolvable. A viewer we cannot identify is a guest, which is the
+            // narrower audience and therefore the safe assumption.
+            authenticated: $this->customerIsSignedIn(),
+            locale: app()->getLocale(),
+        );
+
+        $runnable = array_values(array_filter(
+            $sections,
+            fn (array $section) => $this->visibility->passes($section, $viewer),
+        ));
+
+        // An empty result means the same thing as no theme: keep the storefront's own templates,
+        // rather than publishing a page whose every section happens to be out of schedule.
+        return $runnable === [] ? null : $runnable;
+    }
+
+    private function customerIsSignedIn(): bool
+    {
+        try {
+            return auth('customer')->check();
+        } catch (\Throwable) {
+            return false;
         }
     }
 
@@ -201,7 +252,15 @@ class StorefrontThemeRenderer
             // The id travels to the storefront as a data attribute so the visual builder can map a
             // click in its preview iframe back to the section in its structure panel.
             'id'       => $section->id,
+            'uuid'     => $section->uuid,
             'type'     => $section->type,
+            // Delivery rules travel with the section so the post-cache filter can apply them
+            // without a second query on a page a customer is waiting for.
+            'is_visible' => true,
+            'starts_at'  => $section->starts_at,
+            'ends_at'    => $section->ends_at,
+            'platforms'  => $section->platforms,
+            'audience'   => $section->audience,
             'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
             'blocks'   => $section->blocks
                 ->where('is_visible', true)
