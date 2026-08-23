@@ -277,3 +277,12 @@ Brand Banner.
   published for that page → the app renders its default layout. The endpoint self-documents in the
   Developer Portal (`/admin/developer` → search "theme"); rebuild the manifest with
   `php artisan api:manifest` after deploying. Do not query `theme_sections` directly from a client.
+- **Flutter home, driven by the builder.** Each section in the mobile API response carries a
+  `source` describing where its DATA lives: `inline` (render from the payload — banners, text,
+  stats, FAQs), `api` (fetch the named v1 endpoint with the given params — product rails, category
+  grids, deals, brands, vendors; send the usual `guest_id`/token), or `none` (no public API feeds
+  it yet — currently `blog_posts` and `recently_viewed`; hide those). `product_tabs` returns one
+  source per tab. Responsive settings arrive resolved for the mobile breakpoint (`height_mobile`
+  wins over `height` in place). The app's home renderer is therefore one loop: for each section,
+  switch on `type` to pick the widget, follow `source` for data — reorder or hide sections in the
+  builder, publish, and the app follows with no release.

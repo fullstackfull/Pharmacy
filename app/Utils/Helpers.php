@@ -107,7 +107,10 @@ class Helpers
 
     public static function set_data_format($data)
     {
-        $colors = is_array($data['colors']) ? $data['colors'] : json_decode($data['colors']);
+        // json_decode(null) and json_decode('bad') both return null, and whereIn() rejects null —
+        // so ONE product with no colours took the whole listing endpoint down with a 500. A product
+        // without colours has no colours, not no listing.
+        $colors = is_array($data['colors']) ? $data['colors'] : (json_decode($data['colors'] ?? '') ?: []);
         $query_data = Color::whereIn('code', $colors)->pluck('name', 'code')->toArray();
         $color_process = [];
         foreach ($query_data as $key => $color) {
@@ -148,7 +151,9 @@ class Helpers
         }
         $data['attributes'] = $attributes;
         $data['choice_options'] = is_array($data['choice_options']) ? $data['choice_options'] : json_decode($data['choice_options']);
-        $variation_arr = is_array($data['variation']) ? $data['variation'] : json_decode($data['variation'], true);
+        // Same null trap as the colours above: a simple product stores no variations, and
+        // foreach(null) is a throw, not an empty loop.
+        $variation_arr = is_array($data['variation']) ? $data['variation'] : (json_decode($data['variation'] ?? '', true) ?: []);
         foreach ($variation_arr as $var) {
             $variation[] = [
                 'type' => $var['type'],

@@ -133,6 +133,55 @@ class ThemeSectionApiTest extends TestCase
         $this->assertCount(0, $section['cards'], 'but the phone must not render an unpublished banner');
     }
 
+    public function test_every_section_names_where_its_data_lives(): void
+    {
+        // The app's home renderer is one loop over sections; `source` is what lets it follow the
+        // merchant's arrangement without hardcoding which rail calls which endpoint.
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+
+        $slider = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'product_slider',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['source' => 'best_selling', 'limit' => 6],
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'faq',
+            'sort_order' => 2, 'is_visible' => true, 'settings' => [],
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'blog_posts',
+            'sort_order' => 3, 'is_visible' => true, 'settings' => [],
+        ]);
+
+        $sections = $this->getJson('/api/v1/theme/sections?page=home')->assertOk()->json('sections');
+        $byType = collect($sections)->keyBy('type');
+
+        $this->assertSame('api', $byType['product_slider']['source']['kind']);
+        $this->assertSame('/api/v1/products/best-sellings', $byType['product_slider']['source']['endpoint']);
+        $this->assertSame(6, $byType['product_slider']['source']['params']['limit'], 'the merchant\'s limit travels');
+
+        $this->assertSame('inline', $byType['faq']['source']['kind']);
+
+        // A section with no API behind it says so, so an absent rail is a known gap, not a mystery.
+        $this->assertSame('none', $byType['blog_posts']['source']['kind']);
+        $this->assertNotEmpty($byType['blog_posts']['source']['note']);
+    }
+
+    public function test_responsive_settings_arrive_resolved_for_the_phone(): void
+    {
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['height' => 240, 'height_mobile' => 140, 'gap' => 16],
+        ]);
+
+        $settings = $this->getJson('/api/v1/theme/sections?type=banner_mosaic')->json('sections.0.settings');
+
+        $this->assertSame(140, $settings['height'], 'this endpoint has exactly one breakpoint, and it is not desktop');
+        $this->assertSame(140, $settings['height_mobile'], 'the sibling stays for a client that wants the full picture');
+    }
+
     public function test_input_nobody_can_spell_falls_back_instead_of_failing(): void
     {
         $this->mosaic(ThemeVersion::STATUS_PUBLISHED);
