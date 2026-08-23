@@ -17,6 +17,7 @@ use App\Http\Controllers\RestAPI\v3\seller\POSCartController;
 use App\Http\Controllers\RestAPI\v3\seller\POSController;
 use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
@@ -300,6 +301,13 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index');
                     Route::post('submit', 'submit');
                     Route::get('document/{id}', 'document')->whereNumber('id');
+                });
+            });
+
+            Route::group(['prefix' => 'analytics'], function () {
+                Route::controller(SellerAnalyticsController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('activities', 'activities');
                 });
             });
 
