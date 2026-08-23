@@ -6547,4 +6547,8 @@ return [
 	'split' => 'Split',
 	'carousel' => 'Carousel',
 	'strip' => 'Strip',
+	'document_submitted_for_review' => 'Document submitted for review',
+	'payout_requested' => 'Payout requested',
+	'payout_request_cancelled' => 'Payout request cancelled',
+	'this_payout_can_no_longer_be_cancelled' => 'This payout can no longer be cancelled',
 ];

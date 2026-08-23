@@ -22,6 +22,11 @@ class SellerVerificationDocument extends Model
         'status', 'rejection_reason', 'reviewed_by', 'reviewed_at', 'expires_at', 'notes',
     ];
 
+    /** Admin review internals and the private-disk filename — never serialized to the API. */
+    protected $hidden = ['notes', 'reviewed_by', 'file_path'];
+
+    protected $appends = ['has_file'];
+
     protected $casts = [
         'seller_id' => 'integer',
         'reviewed_by' => 'integer',
@@ -45,5 +50,10 @@ class SellerVerificationDocument extends Model
         }
 
         return $this->expires_at->endOfDay()->greaterThanOrEqualTo($now ?? now());
+    }
+
+    public function getHasFileAttribute(): bool
+    {
+        return !empty($this->file_path);
     }
 }

@@ -29,6 +29,9 @@ class VendorPayoutRequest extends Model
         'payout_currency', 'payout_amount', 'exchange_rate',
     ];
 
+    /** Admin review internals — never serialized to the seller-facing API. */
+    protected $hidden = ['reviewed_by', 'review_note', 'reserve_entry_id', 'payout_entry_id'];
+
     protected $casts = [
         'seller_id' => 'integer',
         'amount' => 'float',

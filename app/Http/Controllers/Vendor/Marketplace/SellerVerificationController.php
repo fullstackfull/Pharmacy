@@ -19,10 +19,6 @@ use Illuminate\Http\Request;
  */
 class SellerVerificationController extends BaseController
 {
-    /** The document extensions a seller may upload. Server-controlled — the client extension is mapped
-     *  onto this whitelist, never trusted, so an upload can't smuggle an executable extension. */
-    private const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
-
     public function __construct(private readonly SellerVerificationService $verification)
     {
     }
@@ -62,17 +58,12 @@ class SellerVerificationController extends BaseController
             'document_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        $filePath = null;
-        if ($request->hasFile('document_file')) {
-            $clientExt = strtolower($request->file('document_file')->getClientOriginalExtension());
-            $ext = in_array($clientExt, self::ALLOWED_EXTENSIONS, true) ? $clientExt : 'pdf';
-            // KYC documents (identity / business licence) are stored on the PRIVATE 'local' disk with a
-            // high-entropy name, never the public default disk, and are served only through the
-            // ownership-checked document() route — so they can't be fetched by guessing a public URL.
-            $fileName = date('Y-m-d') . '-' . bin2hex(random_bytes(16)) . '.' . $ext;
-            \Illuminate\Support\Facades\Storage::disk('local')->put('seller/kyc/' . $fileName, file_get_contents($request->file('document_file')));
-            $filePath = $fileName;
-        }
+        // KYC documents (identity / business licence) go to the PRIVATE 'local' disk with a
+        // high-entropy name, never the public default disk, and are served only through the
+        // ownership-checked document() route — so they can't be fetched by guessing a public URL.
+        $filePath = $request->hasFile('document_file')
+            ? $this->verification->storeDocumentFile($request->file('document_file'))
+            : null;
 
         $this->verification->submit(
             sellerId: auth('seller')->id(),
