@@ -112,7 +112,7 @@ class ReturnLogisticsService
                     DB::table('products')->where('id', $rma->product_id)
                         ->update(['current_stock' => $balanceAfter, 'updated_at' => now()]);
 
-                    ($this->inventory ?? new InventoryService())->record(
+                    ($this->inventory ?? app(InventoryService::class))->record(
                         productId: $rma->product_id,
                         type: StockMovement::TYPE_RETURN,
                         qtyChange: (int) $rma->qty,

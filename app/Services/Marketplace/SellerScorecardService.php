@@ -184,7 +184,7 @@ class SellerScorecardService
 
     private function kycStatus(int|string $sellerId): string
     {
-        $service = $this->verification ?? new SellerVerificationService();
+        $service = $this->verification ?? app(SellerVerificationService::class);
 
         return $service->overallStatus($sellerId);
     }
