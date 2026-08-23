@@ -624,7 +624,7 @@
                 deliveryEnds: @json(translate('ends_at')),
                 deliveryScheduleHint: @json(translate('leave_empty_to_run_always_times_are_the_stores_clock_not_the_visitors')),
                 deliveryPlatforms: @json(translate('where_it_appears')),
-                deliveryPlatformsHint: @json(translate('nothing_ticked_means_everywhere')),
+                deliveryPlatformsHint: @json(translate('shows_in_every_place_you_tick_nothing_ticked_means_everywhere')),
                 deliveryAudience: @json(translate('who_sees_it')),
                 deliveryAudienceHint: @json(translate('nothing_ticked_means_everyone')),
                 platformWeb: @json(translate('website')),
