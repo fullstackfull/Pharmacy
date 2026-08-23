@@ -267,3 +267,13 @@ Brand Banner.
   `banner_id` picker over Promotion -> Banners rows and render the linked row live (unpublished =
   hidden); an image uploaded straight in the builder is auto-registered as a `Theme Banner` row and
   linked back; the Banner Setup list badges every banner the theme shows.
+- **Mobile API.** `GET /api/v1/theme/sections?page=home|header|footer` (optional
+  `&type=banner_mosaic`) serves the PUBLISHED theme through the same pipeline as the web:
+  `StorefrontThemeRenderer` picks the published version (never a hardcoded id — a version id goes
+  stale on the next publish) and `SectionDataResolver::blockCards()` resolves every banner-backed
+  block against its Promotion → Banners row live. Each section returns `settings`, its visible
+  `blocks`, and render-ready `cards` (banner-backed sections only) with ABSOLUTE image URLs; an
+  unpublished banner drops out of `cards`, exactly as on the web. Empty `sections` = nothing
+  published for that page → the app renders its default layout. The endpoint self-documents in the
+  Developer Portal (`/admin/developer` → search "theme"); rebuild the manifest with
+  `php artisan api:manifest` after deploying. Do not query `theme_sections` directly from a client.
