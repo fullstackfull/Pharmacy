@@ -355,6 +355,39 @@ class Analytics
     }
 
     /**
+     * A seller asked to withdraw from their ledger balance.
+     *
+     * Recorded in PayoutService, so the vendor panel and the seller app produce one row each and
+     * the reference is the identity — a retried submit is still one request.
+     */
+    public function payoutRequested(int $sellerId, string $reference, float $amount, ?string $method = null): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::PAYOUT_REQUESTED,
+            entityType: 'payout',
+            entityId: $reference,
+            vendorId: $sellerId,
+            value: $amount,
+            currency: $this->currency(),
+            properties: array_filter(['method' => $method], static fn ($value) => $value !== null && $value !== ''),
+            dedupeKey: "payout:{$reference}",
+        ));
+    }
+
+    /** A seller submitted a KYC document for review. */
+    public function kycSubmitted(int $sellerId, int $documentId, string $documentType): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::KYC_SUBMITTED,
+            entityType: 'seller_verification_document',
+            entityId: (string) $documentId,
+            vendorId: $sellerId,
+            properties: ['document_type' => $documentType],
+            dedupeKey: "kyc:{$documentId}",
+        ));
+    }
+
+    /**
      * A search term worth storing.
      *
      * Search terms are typed by customers, which means they occasionally contain a phone number, an

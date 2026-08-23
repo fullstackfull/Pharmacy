@@ -5,6 +5,7 @@ namespace App\Http\Controllers\RestAPI\v3\seller;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\VendorPayoutRequest;
+use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Marketplace\PayoutService;
 use App\Services\Marketplace\SellerVerificationService;
 use App\Services\Marketplace\VendorLedger;
@@ -29,6 +30,16 @@ class SellerPayoutController extends Controller
     {
     }
 
+    #[ApiDoc(
+        summary: 'Ledger balances, withdrawable amount and the seller\'s payout requests',
+        description: 'Also reports whether a bank-change cooling period is in force and whether KYC currently '
+            . 'allows a payout, so a client can explain a refusal before the seller submits one.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'wallet',
+    )]
     public function index(Request $request): JsonResponse
     {
         $sellerId = $request->seller->id;
@@ -58,6 +69,17 @@ class SellerPayoutController extends Controller
         ], 200);
     }
 
+    #[ApiDoc(
+        summary: 'Request a payout against the withdrawable ledger balance',
+        description: 'Reserves the amount atomically. Refused with 403 when the amount exceeds the withdrawable '
+            . 'balance, KYC is required but unmet, or bank details changed inside the cooling period. Large '
+            . 'requests open a dual-control approval when a threshold is configured.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        emits: ['payout_requested'],
+        group: 'wallet',
+    )]
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -97,6 +119,16 @@ class SellerPayoutController extends Controller
     }
 
     /** A seller may withdraw a request they made, as long as it has not been paid. */
+    #[ApiDoc(
+        summary: 'Cancel a payout request that has not been paid yet',
+        description: 'Releases the reservation back to the available balance. Refused with 403 once the request '
+            . 'is no longer open, and scoped to the token\'s own requests.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        destructive: true,
+        group: 'wallet',
+    )]
     public function cancel(Request $request, int $id): JsonResponse
     {
         $payout = VendorPayoutRequest::where(['id' => $id, 'seller_id' => $request->seller->id])->first();
