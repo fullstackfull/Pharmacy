@@ -223,6 +223,41 @@ the app's own `RouterHelper` route; unknown future types fall back to the carrie
 with nowhere to go renders as not-tappable. **No executable code ever travels** — an action is a
 type plus scalar parameters.
 
+### Links arriving from outside the app
+
+The same principle applies to a link the phone receives — a universal link, a pasted URL, a poster
+QR code. The app does not parse the shop's URL structure; it asks:
+
+```
+GET /api/v1/deep-link/resolve?url=…
+  → {resolved, target, parameter, subject, path, web_url, attribution, campaign, reason}
+```
+
+`target` is the same closed vocabulary (`home · product · brand · product_list · order_tracking ·
+web`). `subject` carries what the app's screen actually opens with where a slug is not enough —
+today the brand's `{id, name}`, because the app's brand screen opens by id and has no slug index.
+A campaign short link (`/go/{code}`) is followed server-side to its destination, its click is
+counted against the campaign (surface `app`), and its attribution rides back with the answer: this
+is the only way a campaign tap that opens the app is counted at all.
+
+App side: both platforms have Flutter deep linking enabled, so the engine hands the link to
+`RouterHelper`, and each published path (`/brand/:slug`, `/products`, `/track-order/:orderId`,
+`/go/:code`) routes to `DeepLinkGatewayScreen`, which resolves and replaces itself with the answer.
+A link opened cold always leaves the home screen underneath, so the first back press stays in the
+app. `DeepLinkResolver.readLocally` reads the published paths offline when the shop cannot be
+reached; a short link it cannot resolve lands on home rather than on a guess.
+`android/app/src/main/AndroidManifest.xml`'s path list and `config/deeplinks.php` mirror each
+other — `GET /api/v1/deep-link/config` publishes the shop's list so the app team reads it from the
+shop rather than from a message.
+
+### Crash-free rate (Monitoring)
+
+A crash produces no request, so the app reports what only it knows. `AppHealthReporter` chains
+`PlatformDispatcher.onError` (never `FlutterError.onError` — a render overflow is not a crash),
+persists a capped counter, and the **next** launch posts `{platform, app_version, sessions,
+crashes, anrs}` to `POST /api/v1/app-health`, clearing the counter only after the server's 204.
+Counters only: no stack traces, no device or user ids leave the phone.
+
 ---
 
 ## 6. Compatibility model
@@ -274,10 +309,13 @@ static const List<SectionRenderer> renderers = [
   BannerSectionRenderer(),    // hero_banner, promotional_banner, split_banner,
                               // banner_mosaic, banner_strip, store_banner
   ProductSectionRenderer(),   // product_slider, featured_deal, clearance_sale,
-                              // deal_of_the_day, flash_deal
+                              // deal_of_the_day, flash_deal, category_showcase,
+                              // brand_showcase, bundle
   TaxonomySectionRenderer(),  // category_grid, brand_slider, vendor_slider
   ContentSectionRenderer(),   // usp_strip, stats_bar, testimonials, faq,
                               // interest_tiles, price_tiles, app_download
+  UtilitySectionRenderer(),   // product_tabs, stories, branches, before_after,
+                              // shipping_cutoff, coupon_strip, custom_html
   AnnouncementSectionRenderer(), // announcement_bar
   SpacerSectionRenderer(),    // spacer
 ];
@@ -294,9 +332,24 @@ naming every withheld type with its reason; Theme Management shows an `app X/Y` 
 and folds the warning into the publish confirmation. The report counts from the same
 `ComponentCapabilityRegistry` the delivery pipeline filters with — a test pins them together.
 
-`HomeHostScreen` wraps the dashboard's home tab: published theme renders when it exists and is
-drawable; otherwise the pre-existing `HomePage`/`AsterThemeHomeScreen` renders exactly as before.
-Nothing changes for any user until a merchant publishes.
+`DynamicHomeSections` is embedded **inside** the app's own home screens
+(`home_screens.dart`, `aster_theme_home_screen.dart`) — the header, search, drawer and bottom
+navigation are app chrome and are never theme-controlled. When a drawable theme exists, the home
+*content* comes from it and the screens' own banner/category/rail widgets are skipped (a
+`useThemedHome` guard, plus a matching guard around their fetches, so nothing loads twice and
+nothing renders twice). Otherwise the pre-existing home renders exactly as before. Nothing changes
+for any user until a merchant publishes.
+
+Heading affordances the shell owns, so every section behaves alike:
+
+* **`view_all`** — the builder setting the app used to ignore. `ThemeViewAll` renders the link only
+  where the storefront renders one (`product_slider · category_showcase · brand_showcase ·
+  brand_slider · vendor_slider`), expresses the destination as a `ThemeAction` and routes it
+  through `ThemeActionResolver`, so a heading link and the section's cards can never disagree. A
+  showcase with no subject chosen shows no link rather than a dead one, and the chevron follows the
+  reading direction.
+* **Carousel dots** — `ThemeCarouselDots` on a multi-slide hero, and on a product carousel when the
+  merchant ticked `pagination`. A slideshow with no indicator reads as a single image.
 
 ---
 
@@ -372,11 +425,13 @@ fetch removed).
 
 ## 12. Verified state
 
-* Backend: 21 pre-existing theme suites + 3 new ones — **188 theme tests / 1,091 assertions green**
-  (full Feature suite: 1,054/1,056; the 2 failures are pre-existing `CrossTenantAuthorizationTest`
-  errors present on a clean tree).
-* Flutter: `flutter analyze` clean on all new/modified files; **20 engine tests green** (parser
-  totality, sync decisions incl. rollback/304/offline, capability↔renderer contract).
+* Backend: full Feature suite **1,083 tests / 3,603 assertions**, 2 errors — both the pre-existing
+  `CrossTenantAuthorizationTest` auth-guard errors, reproduced on a clean tree.
+* Flutter: `flutter analyze` clean on every new/modified file (the 281 remaining warnings are all
+  in untouched legacy files); **43 tests green** — parser totality, sync decisions
+  (rollback/304/offline), capability↔renderer contract, the render matrix (every app-safe type ×
+  every builder style at 390pt RTL, asserting `takeException()` is null), and deep-link resolution
+  with its offline fallback.
 
 ## 13. Known limitations
 
@@ -389,8 +444,9 @@ fetch removed).
   a lost, delayed or duplicated beacon can never produce a wrong page, and the system keeps
   working with push disabled entirely. Sent after the publish transaction commits, and a send
   failure can never fail a publish.
-* Sections typed outside the app's 24 renderable types render on web only (declared in
-  `APP_EXCLUSIONS` with reasons; visible in `compatibility.withheld`).
+* Sections typed outside the app's 33 renderable types render on web only (declared in
+  `APP_EXCLUSIONS` with reasons; visible in `compatibility.withheld`): `recently_viewed`,
+  `blog_posts`, `newsletter`, `footer_columns`, `trending_searches`, `vendor_showcase`.
 * Theme lifecycle and builder mutations are recorded through the system-wide `AuditLogger`
   (spec §49): `theme.published / restored / activated / section_added / section_updated /
   section_deleted / sections_reordered / delivery_rules_updated`, each after its transaction
