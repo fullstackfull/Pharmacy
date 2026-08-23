@@ -52,8 +52,23 @@ class ThemeManagementController extends BaseController
             dataLimit: 20,
         );
 
+        // App coverage per theme's latest draft, for the publish confirmation: "publish and the
+        // app shows 9 of 11 sections" is a decision, the same sentence after publishing is a bug
+        // report (spec §55). Only drafts are counted — that is the version a publish would ship.
+        $compatibility = [];
+        if (Schema::hasColumn('theme_sections', 'uuid')) {
+            $report = app(\App\Services\Theme\ThemeCompatibilityReport::class);
+            foreach ($themes as $theme) {
+                $draft = $theme->versions->where('status', 'draft')->sortByDesc('id')->first();
+                if ($draft) {
+                    $compatibility[$theme->id] = $report->for($draft);
+                }
+            }
+        }
+
         return view('admin-views.theme.index', [
             'themes'       => $themes,
+            'compatibility' => $compatibility,
             'search'       => $request?->get('searchValue'),
             'presets'      => $this->portability->presets(),
             'assetsReady'  => Schema::hasTable('theme_assets'),

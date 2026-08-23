@@ -63,6 +63,23 @@
         .tb-item__flag { display: flex; font-size: .7rem; }
         .tb-item__flag--needs_choice { color: #f0b429; }
         .tb-item__flag--no_content, .tb-item__flag--not_now { color: #7d8794; }
+        .tb-item__flag--rules { color: #6ea8fe; }
+
+        /* delivery (visibility) tab */
+        .tb-delivery-group { margin-bottom: 1rem; }
+        .tb-delivery-group > label { display: block; font-size: .72rem; color: #8b95a3; margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .04em; }
+        .tb-delivery-group input[type="datetime-local"] { width: 100%; background: #12161c; border: 1px solid #2b323d;
+            color: #dfe5ec; border-radius: .4rem; padding: .4rem .55rem; font-size: .8rem; color-scheme: dark; }
+        .tb-delivery-check { display: flex; align-items: center; gap: .45rem; padding: .3rem 0; font-size: .82rem; color: #c9d1da; cursor: pointer; }
+        .tb-delivery-check input { accent-color: #3d8b7a; }
+        .tb-delivery-hint { font-size: .72rem; color: #7d8794; margin: .2rem 0 .8rem; }
+
+        /* app-coverage note under the go-live banner */
+        .tb-compat { display: flex; gap: .75rem; align-items: flex-start; margin: 0 1rem .75rem; padding: .65rem .85rem;
+            background: #1d2732; border: 1px solid #31445c; border-radius: .5rem; font-size: .8rem; color: #c9d5e3; }
+        .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
+        .tb-compat strong { color: #fff; display: block; }
+        .tb-compat ul { margin: .25rem 0 0; padding-inline-start: 1.1rem; color: #93a3b5; }
         .tb-empty { color: #7d8794; font-size: .8rem; text-align: center; padding: 1.5rem .5rem; }
 
         /* canvas */
@@ -297,7 +314,8 @@
              data-url-block-delete="{{ route('admin.theme.builder.block.delete') }}"
              data-url-media-upload="{{ route('admin.theme.builder.media.upload') }}"
              data-url-media-library="{{ route('admin.theme.builder.media.library') }}"
-             data-url-media-delete="{{ route('admin.theme.builder.media.delete') }}">
+             data-url-media-delete="{{ route('admin.theme.builder.media.delete') }}"
+             data-url-delivery="{{ route('admin.theme.builder.section.delivery-rules') }}">
 
             <header class="tb-bar">
                 <div class="tb-bar__group">
@@ -373,6 +391,31 @@
                 </div>
             @endif
 
+            {{-- App coverage: which of this version's sections the customer app cannot draw. Shown
+                 while the merchant can still act on it (swap the section, or accept the web-only
+                 gap knowingly) rather than discovered on a shopper's phone. --}}
+            @if (!empty($compatibility['withheld']))
+                <div class="tb-compat">
+                    <i class="fi fi-rr-mobile-notch"></i>
+                    <div>
+                        <strong>
+                            {{ translate('the_mobile_app_will_show') }}
+                            {{ $compatibility['app_supported'] }} / {{ $compatibility['sections'] }}
+                            {{ translate('of_this_versions_sections') }}
+                        </strong>
+                        {{ translate('these_render_on_the_website_only') }}:
+                        <ul>
+                            @foreach ($compatibility['withheld'] as $gap)
+                                <li>
+                                    {{ translate($gap['label']) }}@if($gap['count'] > 1) ×{{ $gap['count'] }}@endif
+                                    — {{ translate($gap['reason']) }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
             @if (!empty($bannerGaps) && $editable)
                 <div class="tb-gap-note" id="tb-gap-note">
                     <i class="fi fi-rr-triangle-warning"></i>
@@ -415,6 +458,12 @@
                                      The storefront is right to skip those, but until this badge the
                                      builder gave no hint, so the merchant either thought the theme
                                      was broken or thought the section was there. --}}
+                                @if (!empty($section['delivery']['scheduled']))
+                                    <span class="tb-item__flag tb-item__flag--rules" title="{{ translate('this_section_runs_on_a_schedule') }}"><i class="fi fi-rr-clock"></i></span>
+                                @endif
+                                @if (!empty($section['delivery']['targeted']))
+                                    <span class="tb-item__flag tb-item__flag--rules" title="{{ translate('this_section_is_limited_to_certain_platforms_or_visitors') }}"><i class="fi fi-rr-filter"></i></span>
+                                @endif
                                 @if (($section['readiness']['state'] ?? 'ready') !== 'ready')
                                     <span class="tb-item__flag tb-item__flag--{{ $section['readiness']['state'] }}"
                                           title="{{ translate($section['readiness']['reason_key']) }}">
@@ -470,6 +519,7 @@
                     <div class="tb-tabs" id="tb-tabs" hidden>
                         <button type="button" data-tab="content" class="is-active">{{ translate('content') }}</button>
                         <button type="button" data-tab="style">{{ translate('design') }}</button>
+                        <button type="button" data-tab="delivery">{{ translate('visibility') }}</button>
                     </div>
                     <div class="tb-pane__body">
                         <div id="tb-inspector">
@@ -565,6 +615,21 @@
                 backToSection: @json(translate('back_to_section')),
                 noBlocks: @json(translate('nothing_here_yet_add_the_first_item')),
                 settings: @json(translate('settings')),
+                deliverySchedule: @json(translate('schedule')),
+                deliveryStarts: @json(translate('starts_at')),
+                deliveryEnds: @json(translate('ends_at')),
+                deliveryScheduleHint: @json(translate('leave_empty_to_run_always_times_are_the_stores_clock_not_the_visitors')),
+                deliveryPlatforms: @json(translate('where_it_appears')),
+                deliveryPlatformsHint: @json(translate('nothing_ticked_means_everywhere')),
+                deliveryAudience: @json(translate('who_sees_it')),
+                deliveryAudienceHint: @json(translate('nothing_ticked_means_everyone')),
+                platformWeb: @json(translate('website')),
+                platformApp: @json(translate('mobile_app')),
+                platformDesktop: @json(translate('desktop')),
+                platformTablet: @json(translate('tablet')),
+                platformMobile: @json(translate('mobile')),
+                audienceGuest: @json(translate('guests')),
+                audienceCustomer: @json(translate('logged_in_customers')),
                 upload: @json(translate('upload')),
                 library: @json(translate('library')),
                 clear: @json(translate('clear')),
@@ -594,6 +659,7 @@
                 blockLabels: {},
                 blocks: [],
                 dataNote: null,
+                delivery: null,
                 dirty: false
             };
 
@@ -1142,11 +1208,15 @@
                     inspector.appendChild(dataNote);
                 }
 
-                var keys = state.tab === 'style' ? state.styleKeys : state.contentKeys;
-                renderFields(inspector, state.schema, state.settings, keys);
+                if (state.tab === 'delivery') {
+                    renderDeliveryForm();
+                } else {
+                    var keys = state.tab === 'style' ? state.styleKeys : state.contentKeys;
+                    renderFields(inspector, state.schema, state.settings, keys);
 
-                if (state.tab === 'content' && state.accepts.length) {
-                    renderBlockList();
+                    if (state.tab === 'content' && state.accepts.length) {
+                        renderBlockList();
+                    }
                 }
 
                 if (!editable) {
@@ -1386,6 +1456,7 @@
                     state.blockLabels = data.blockLabels || {};
                     state.blocks = data.blocks || [];
                     state.dataNote = data.dataNote || null;
+                    state.delivery = data.delivery || null;
                     renderInspector();
                     markSelectedInFrame(scrollPreview);
                 });
@@ -1421,6 +1492,97 @@
 
                 selectSection(item);
             });
+
+            // ---------- delivery rules -------------------------------------------------------
+            // Separate save path from the settings autosave: these post to their own endpoint and
+            // must never ride inside a settings payload, where they would be dropped by
+            // normalizeSettings and silently lost.
+            var deliveryTimer = null;
+
+            function renderDeliveryForm() {
+                var d = state.delivery || {starts_at: null, ends_at: null, platforms: [], audience: []};
+
+                function group(labelText, hintText, build) {
+                    var wrap = document.createElement('div');
+                    wrap.className = 'tb-delivery-group';
+                    var label = document.createElement('label');
+                    label.textContent = labelText;
+                    wrap.appendChild(label);
+                    build(wrap);
+                    if (hintText) {
+                        var hint = document.createElement('p');
+                        hint.className = 'tb-delivery-hint';
+                        hint.textContent = hintText;
+                        wrap.appendChild(hint);
+                    }
+                    inspector.appendChild(wrap);
+                }
+
+                function timeInput(key, value) {
+                    var input = document.createElement('input');
+                    input.type = 'datetime-local';
+                    input.dataset.deliveryKey = key;
+                    input.value = value || '';
+                    input.disabled = !editable;
+                    input.addEventListener('change', scheduleDeliverySave);
+                    return input;
+                }
+
+                function check(listKey, token, labelText, list) {
+                    var label = document.createElement('label');
+                    label.className = 'tb-delivery-check';
+                    var box = document.createElement('input');
+                    box.type = 'checkbox';
+                    box.dataset.deliveryList = listKey;
+                    box.value = token;
+                    box.checked = list.indexOf(token) !== -1;
+                    box.disabled = !editable;
+                    box.addEventListener('change', scheduleDeliverySave);
+                    label.appendChild(box);
+                    label.appendChild(document.createTextNode(labelText));
+                    return label;
+                }
+
+                group(T.deliveryStarts, null, function (wrap) { wrap.appendChild(timeInput('starts_at', d.starts_at)); });
+                group(T.deliveryEnds, T.deliveryScheduleHint, function (wrap) { wrap.appendChild(timeInput('ends_at', d.ends_at)); });
+
+                group(T.deliveryPlatforms, T.deliveryPlatformsHint, function (wrap) {
+                    [['web', T.platformWeb], ['app', T.platformApp],
+                     ['desktop', T.platformDesktop], ['tablet', T.platformTablet], ['mobile', T.platformMobile]]
+                        .forEach(function (pair) { wrap.appendChild(check('platforms', pair[0], pair[1], d.platforms || [])); });
+                });
+
+                group(T.deliveryAudience, T.deliveryAudienceHint, function (wrap) {
+                    [['guest', T.audienceGuest], ['customer', T.audienceCustomer]]
+                        .forEach(function (pair) { wrap.appendChild(check('audience', pair[0], pair[1], d.audience || [])); });
+                });
+            }
+
+            function collectDeliveryRules() {
+                var rules = {section_id: state.sectionId, platforms: [], audience: []};
+                inspector.querySelectorAll('[data-delivery-key]').forEach(function (input) {
+                    rules[input.dataset.deliveryKey] = input.value || null;
+                });
+                inspector.querySelectorAll('[data-delivery-list]:checked').forEach(function (box) {
+                    rules[box.dataset.deliveryList].push(box.value);
+                });
+                return rules;
+            }
+
+            function scheduleDeliverySave() {
+                if (!editable || !state.sectionId) return;
+                clearTimeout(deliveryTimer);
+                setStatus(T.unsaved, 'saving');
+                deliveryTimer = setTimeout(function () {
+                    setStatus(T.saving, 'saving');
+                    post(root.dataset.urlDelivery, collectDeliveryRules()).then(function (result) {
+                        if (!result.ok) { setStatus(T.failed, 'error'); return; }
+                        state.delivery = result.body.delivery || state.delivery;
+                        setStatus(T.saved, 'saved');
+                        refreshPreview();
+                    }).catch(function () { setStatus(T.failed, 'error'); });
+                }, 500);
+            }
 
             // ---------- autosave -------------------------------------------------------------
             var autosaveTimer = null;

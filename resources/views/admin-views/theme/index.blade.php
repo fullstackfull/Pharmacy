@@ -149,6 +149,15 @@
                                             @endif
                                             @if($latestDraft)
                                                 <span class="badge badge-soft-warning">{{ translate('draft') }} #{{ $latestDraft->id }}</span>
+                                                @php $report = $compatibility[$theme->id] ?? null; @endphp
+                                                @if($report && $report['sections'] > 0)
+                                                    <span class="badge {{ empty($report['withheld']) ? 'badge-soft-success' : 'badge-soft-danger' }}"
+                                                          title="{{ empty($report['withheld'])
+                                                              ? translate('every_section_of_this_draft_renders_in_the_mobile_app')
+                                                              : translate('sections_the_app_cannot_show') . ': ' . collect($report['withheld'])->map(fn ($gap) => translate($gap['label']) . ($gap['count'] > 1 ? ' ×' . $gap['count'] : ''))->implode(', ') }}">
+                                                        {{ translate('app') }} {{ $report['app_supported'] }}/{{ $report['sections'] }}
+                                                    </span>
+                                                @endif
                                             @endif
                                         </td>
                                         <td class="text-center">
@@ -168,8 +177,11 @@
                                                     </form>
                                                 @endif
                                                 @if($latestDraft)
+                                                    @php $report = $compatibility[$theme->id] ?? null; @endphp
                                                     <form action="{{ route('admin.theme.version.publish') }}" method="post"
-                                                          onsubmit="return confirm('{{ translate('publish_this_draft') }}?')">
+                                                          onsubmit="return confirm('{{ !empty($report['withheld'])
+                                                              ? translate('publish_this_draft') . '? ' . count($report['withheld']) . ' ' . translate('section_types_will_not_appear_in_the_mobile_app')
+                                                              : translate('publish_this_draft') . '?' }}')">
                                                         @csrf
                                                         <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
                                                         <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>

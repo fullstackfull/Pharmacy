@@ -288,6 +288,12 @@ reads tokens through `ThemeStyle` (merchant tokens with the app theme as fallbac
 merchant-typed number, declines to render (`canRender`) rather than drawing an empty band, and
 draws its own loading shimmer shaped like its real content.
 
+**Pre-publish compatibility check** (spec §54–55): `ThemeCompatibilityReport` counts, per draft,
+what the app will and will not show. The builder renders an "app will show X/Y sections" card
+naming every withheld type with its reason; Theme Management shows an `app X/Y` badge per draft
+and folds the warning into the publish confirmation. The report counts from the same
+`ComponentCapabilityRegistry` the delivery pipeline filters with — a test pins them together.
+
 `HomeHostScreen` wraps the dashboard's home tab: published theme renders when it exists and is
 drawable; otherwise the pre-existing `HomePage`/`AsterThemeHomeScreen` renders exactly as before.
 Nothing changes for any user until a merchant publishes.
@@ -336,11 +342,14 @@ version** when a renderer needs a primitive older builds lack.
 
 **Backend modified**: `app/Models/ThemeSection.php`, `app/Models/ThemeVersion.php`,
 `app/Services/Theme/{StorefrontThemeRenderer,ThemeManager,ThemeBuilderService}.php`,
-`app/Http/Controllers/RestAPI/v1/ThemeSectionController.php`, `routes/rest_api/v1/api.php`.
+`app/Http/Controllers/RestAPI/v1/ThemeSectionController.php`,
+`app/Http/Controllers/Admin/Settings/{ThemeBuilderController,ThemeManagementController}.php`,
+`resources/views/admin-views/theme/{builder,index}.blade.php`,
+`routes/rest_api/v1/api.php`, `routes/admin/routes.php`.
 
 **Backend added**: `app/Services/Theme/{ViewerContext,SectionVisibility,ActionResolver,
-ComponentCapabilityRegistry,ThemeDelivery,ThemeSourceMap}.php`, the two migrations above,
-`tests/Feature/{ThemeDeliveryTest,ThemeHomeApiTest}.php`.
+ComponentCapabilityRegistry,ThemeDelivery,ThemeSourceMap,ThemeCompatibilityReport}.php`, the two
+migrations above, `tests/Feature/{ThemeDeliveryTest,ThemeHomeApiTest,ThemeDeliveryRulesBuilderTest}.php`.
 
 **Flutter modified**: `lib/di_container.dart`, `lib/main.dart`,
 `lib/features/dashboard/screens/dashboard_screen.dart`, `lib/utill/app_constants.dart`
@@ -362,7 +371,7 @@ fetch removed).
 
 ## 12. Verified state
 
-* Backend: 21 pre-existing theme suites + 2 new ones — **196 tests / 1,066 assertions green**
+* Backend: 21 pre-existing theme suites + 3 new ones — **188 theme tests / 1,091 assertions green**
   (full Feature suite: 1,054/1,056; the 2 failures are pre-existing `CrossTenantAuthorizationTest`
   errors present on a clean tree).
 * Flutter: `flutter analyze` clean on all new/modified files; **20 engine tests green** (parser
@@ -377,8 +386,10 @@ fetch removed).
   makes polling nearly free.
 * Sections typed outside the app's 24 renderable types render on web only (declared in
   `APP_EXCLUSIONS` with reasons; visible in `compatibility.withheld`).
-* Builder UI for the new scheduling/platform/audience columns is not yet exposed (the engine,
-  API, storage and both renderers enforce them; rows can be set via import or DB until the
-  builder grows the panel).
+* ~~Builder UI for scheduling/platform/audience~~ — built: the inspector's **Visibility** tab
+  edits the schedule window and platform/audience targeting per section
+  (`POST admin/theme/builder/section/delivery-rules` → `ThemeBuilderService::setDeliveryRules`,
+  validated: unknown tokens dropped, an end-before-start window cleared rather than saved).
+  Scheduled/targeted sections carry badges in the structure panel.
 * Tablet-specific layouts inherit the mobile resolution in-app (the payload still carries
   `*_tablet` siblings for a future pass).
