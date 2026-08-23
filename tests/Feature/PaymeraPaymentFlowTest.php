@@ -287,7 +287,29 @@ class PaymeraPaymentFlowTest extends TestCase
         PaymeraHookSpy::$lastFailure = null;
         $this->newController()->index(Request::create('/payment/paymera/pay', 'GET', ['payment_id' => (string) $payment->id]));
 
-        $this->assertSame('gateway_not_configured', PaymeraHookSpy::$lastFailure['failure_reason']);
+        // And it names WHICH credential is missing — by field name, never by value. "Not configured"
+        // alone covered four different faults with four different places to go and fix them.
+        $reason = PaymeraHookSpy::$lastFailure['failure_reason'];
+        $this->assertStringStartsWith('gateway_not_configured:', $reason);
+        $this->assertStringContainsString('test_values', $reason, 'the mode in force must be named');
+        $this->assertStringContainsString('terminal_id', $reason);
+        Http::assertNothingSent();
+    }
+
+    public function test_credentials_saved_under_the_mode_that_is_switched_off_are_named_as_such(): void
+    {
+        // The fault an operator cannot guess at: the credentials ARE saved, under the other mode.
+        Setting::updateOrCreate(
+            ['key_name' => 'paymera', 'settings_type' => 'payment_config'],
+            ['mode' => 'sandbox', 'is_active' => 1],
+        );
+        $payment = $this->seedPayment(['failure_hook' => 'Tests\\Feature\\paymera_spy_failure_hook']);
+        Http::fake();
+
+        PaymeraHookSpy::$lastFailure = null;
+        $this->newController()->index(Request::create('/payment/paymera/pay', 'GET', ['payment_id' => (string) $payment->id]));
+
+        $this->assertStringContainsString("mode is 'sandbox'", PaymeraHookSpy::$lastFailure['failure_reason']);
         Http::assertNothingSent();
     }
 

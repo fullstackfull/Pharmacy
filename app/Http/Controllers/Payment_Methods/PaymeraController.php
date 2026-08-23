@@ -44,18 +44,52 @@ class PaymeraController extends Controller
 
     private string $baseUrl = self::TEST_BASE_URL;
 
+    /** Why the credentials could not be read, when they could not. Never carries a value. */
+    private ?string $configurationGap = null;
+
     public function __construct(PaymentRequest $payment)
     {
         $config = $this->payment_config('paymera', 'payment_config');
-        if (!is_null($config) && $config->mode == 'live') {
+
+        if (is_null($config)) {
+            $this->configurationGap = 'no addon_settings row for key_name=paymera settings_type=payment_config';
+        } elseif ($config->mode === 'live') {
             $this->values = json_decode($config->live_values);
             $this->baseUrl = self::LIVE_BASE_URL;
-        } elseif (!is_null($config) && $config->mode == 'test') {
+            $this->configurationGap = $this->gapIn($this->values, 'live_values');
+        } elseif ($config->mode === 'test') {
             $this->values = json_decode($config->test_values);
             $this->baseUrl = self::TEST_BASE_URL;
+            $this->configurationGap = $this->gapIn($this->values, 'test_values');
+        } else {
+            // The row exists and neither branch matched, so nothing was ever loaded. This is the
+            // one an operator cannot guess at: the credentials ARE saved, under the mode that is
+            // not switched on.
+            $this->configurationGap = 'mode is ' . var_export($config->mode, true) . ', expected "live" or "test"';
         }
 
         $this->payment = $payment;
+    }
+
+    /**
+     * Which credential is missing from the mode in force — by NAME, never by value.
+     *
+     * "Not configured" was one reason covering four faults: no row at all, a mode that matches
+     * neither branch, unreadable JSON, and a blank field. They send an operator to four different
+     * places, and the log has to be able to tell them apart without ever printing a token.
+     */
+    private function gapIn(?object $values, string $column): ?string
+    {
+        if (!is_object($values)) {
+            return $column . ' is empty or not valid JSON';
+        }
+
+        $missing = array_values(array_filter(
+            ['terminal_id', 'username', 'token'],
+            static fn (string $field): bool => empty($values->$field ?? null),
+        ));
+
+        return $missing === [] ? null : $column . ' has no ' . implode(', ', $missing);
     }
 
     /**
@@ -74,7 +108,7 @@ class PaymeraController extends Controller
         }
 
         if (!$this->isConfigured()) {
-            return $this->paymentFailed($data, 'gateway_not_configured');
+            return $this->paymentFailed($data, 'gateway_not_configured: ' . $this->configurationGap);
         }
 
         $callbackUrl = route('paymera.callback', ['payment_id' => $data->id]);
@@ -125,7 +159,9 @@ class PaymeraController extends Controller
         $additional = json_decode($data->additional_data, true) ?: [];
         $paymeraId = $additional['paymera_payment_id'] ?? null;
         if (empty($paymeraId) || !$this->isConfigured()) {
-            return $this->paymentFailed($data, empty($paymeraId) ? 'no_paymera_payment_id' : 'gateway_not_configured');
+            return $this->paymentFailed($data, empty($paymeraId)
+                ? 'no_paymera_payment_id'
+                : 'gateway_not_configured: ' . $this->configurationGap);
         }
 
         try {
@@ -175,10 +211,7 @@ class PaymeraController extends Controller
 
     private function isConfigured(): bool
     {
-        return $this->values
-            && !empty($this->values->terminal_id)
-            && !empty($this->values->username)
-            && !empty($this->values->token);
+        return $this->configurationGap === null;
     }
 
     private function lang(): string
