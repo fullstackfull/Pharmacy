@@ -44,6 +44,7 @@ class BrandController extends Controller
                 'name' => $brand['name'],
                 'slug' => $brand['slug'],
                 'image_full_url' => $brand->image_full_url,
+                'mobile_image_full_url' => $brand->mobile_image_full_url,
             ],
             'banner' => $banner ? [
                 'id' => $banner['id'],
@@ -59,6 +60,7 @@ class BrandController extends Controller
                 'slug' => $category['slug'],
                 'products_count' => $category['products_count'],
                 'icon_full_url' => $category->icon_full_url,
+                'mobile_icon_full_url' => $category->mobile_icon_full_url,
             ])->values(),
         ], 200);
     }

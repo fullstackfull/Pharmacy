@@ -2,6 +2,7 @@
 
 namespace App\Services\DeepLink;
 
+use App\Models\Brand;
 use App\Services\Analytics\CampaignService;
 use Illuminate\Support\Str;
 
@@ -35,6 +36,7 @@ class DeepLinkResolver
      *     resolved: bool,
      *     target: string,
      *     parameter: ?string,
+     *     subject: ?array{id: int, name: string},
      *     path: string,
      *     web_url: string,
      *     attribution: array<string, string>,
@@ -64,6 +66,7 @@ class DeepLinkResolver
                 'resolved' => false,
                 'target' => 'web',
                 'parameter' => null,
+                'subject' => null,
                 'path' => $path,
                 'web_url' => $this->absolute($path, $url),
                 'attribution' => $attribution,
@@ -76,6 +79,7 @@ class DeepLinkResolver
             'resolved' => true,
             'target' => $match['target'],
             'parameter' => $match['parameter'],
+            'subject' => $this->subjectFor(target: $match['target'], parameter: $match['parameter']),
             'path' => $path,
             'web_url' => $this->absolute($path, $url),
             'attribution' => $attribution,
@@ -101,6 +105,7 @@ class DeepLinkResolver
                 'resolved' => true,
                 'target' => 'home',
                 'parameter' => null,
+                'subject' => null,
                 'path' => '/',
                 'web_url' => rtrim((string) config('app.url'), '/') . '/',
                 'attribution' => [],
@@ -123,6 +128,10 @@ class DeepLinkResolver
             'resolved' => true,
             'target' => $match['target'] ?? 'web',
             'parameter' => $match['parameter'] ?? null,
+            'subject' => $this->subjectFor(
+                target: (string) ($match['target'] ?? 'web'),
+                parameter: $match['parameter'] ?? null,
+            ),
             'path' => $destinationPath,
             'web_url' => $destination,
             'attribution' => $attribution,
@@ -253,12 +262,41 @@ class DeepLinkResolver
             'resolved' => false,
             'target' => 'web',
             'parameter' => null,
+            'subject' => null,
             'path' => $path,
             'web_url' => rtrim((string) config('app.url'), '/') . $path,
             'attribution' => [],
             'campaign' => null,
             'reason' => $reason,
         ];
+    }
+
+    /**
+     * The parameter, resolved to what the app's screen actually opens with.
+     *
+     * A brand link carries a slug because that is what the web URL holds, but the app's brand
+     * screen opens by id and the app has no slug index to look one up in. Answering with the id
+     * here keeps this shop the only codebase that knows its own URL structure. Null when there is
+     * nothing to hydrate — the app then falls back to its brand list or the web URL.
+     *
+     * @return array{id: int, name: string}|null
+     */
+    private function subjectFor(string $target, ?string $parameter): ?array
+    {
+        if ($target !== 'brand' || $parameter === null) {
+            return null;
+        }
+
+        try {
+            $brand = Brand::active()->where('slug', $parameter)->first();
+        } catch (\Throwable) {
+            // A link has to open even when the lookup cannot run.
+            return null;
+        }
+
+        return $brand === null
+            ? null
+            : ['id' => (int) $brand->id, 'name' => (string) $brand->name];
     }
 
     public function appLinks(): AppLinkService

@@ -4,7 +4,9 @@ namespace Tests\Feature\DeepLink;
 
 use App\Services\Analytics\CampaignService;
 use App\Services\DeepLink\DeepLinkResolver;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -62,6 +64,50 @@ class DeepLinkResolverTest extends TestCase
         $this->assertTrue($resolved['resolved']);
         $this->assertSame('product', $resolved['target']);
         $this->assertSame('vitamin-c-1000', $resolved['parameter']);
+    }
+
+    public function test_a_brand_url_comes_back_with_the_id_the_app_screen_opens_with(): void
+    {
+        Schema::dropIfExists('brands');
+        Schema::create('brands', function (Blueprint $table) {
+            $table->id(); $table->string('name'); $table->string('slug')->nullable();
+            $table->integer('status')->default(1); $table->timestamps();
+        });
+        // The Brand model's global scope eager-loads translations for the viewer's locale.
+        Schema::dropIfExists('translations');
+        Schema::create('translations', function (Blueprint $table) {
+            $table->id(); $table->string('translationable_type'); $table->unsignedBigInteger('translationable_id');
+            $table->string('locale'); $table->string('key')->nullable(); $table->text('value')->nullable();
+            $table->timestamps();
+        });
+        session(['local' => 'en']);
+        DB::table('brands')->insert([
+            ['name' => 'Panadol', 'slug' => 'panadol', 'status' => 1],
+            ['name' => 'Hidden', 'slug' => 'hidden', 'status' => 0],
+        ]);
+
+        $resolved = app(DeepLinkResolver::class)->resolve('https://shop.test/brand/panadol');
+
+        $this->assertSame('brand', $resolved['target']);
+        $this->assertSame('panadol', $resolved['parameter']);
+        $this->assertSame(['id' => 1, 'name' => 'Panadol'], $resolved['subject']);
+
+        $inactive = app(DeepLinkResolver::class)->resolve('https://shop.test/brand/hidden');
+        $this->assertNull($inactive['subject'], 'an inactive brand must not be handed to the app');
+
+        $unknown = app(DeepLinkResolver::class)->resolve('https://shop.test/brand/nope');
+        $this->assertNull($unknown['subject']);
+    }
+
+    public function test_a_brand_link_still_resolves_when_the_lookup_cannot_run(): void
+    {
+        Schema::dropIfExists('brands');
+
+        $resolved = app(DeepLinkResolver::class)->resolve('https://shop.test/brand/panadol');
+
+        $this->assertSame('brand', $resolved['target']);
+        $this->assertSame('panadol', $resolved['parameter']);
+        $this->assertNull($resolved['subject']);
     }
 
     public function test_a_campaign_short_link_resolves_to_its_destination_with_its_attribution(): void

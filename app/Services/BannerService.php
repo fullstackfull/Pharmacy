@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Traits\FileManagerTrait;
+use App\Traits\ManagesOptionalImage;
 
 class BannerService
 {
-    use FileManagerTrait;
+    use ManagesOptionalImage;
 
     /** How a grid banner sits: its own row, half a row, or pooled into the slider. */
     public const LAYOUTS = ['full', 'half', 'slider'];
@@ -71,7 +71,11 @@ class BannerService
 
         return [
             'banner_type' => $request['banner_type'],
-            'mobile_photo' => $this->getProcessedMobileImage(request: $request, mobileImage: $mobileImage),
+            'mobile_photo' => $this->getProcessedMobileImage(
+                request: $request,
+                directory: 'banner/',
+                storedImage: $mobileImage,
+            ),
             'layout' => in_array($request['layout'], self::LAYOUTS) ? $request['layout'] : 'full',
             'priority' => (int)($request['priority'] ?? 0),
             'resource_type' => $request['resource_type'],
@@ -84,23 +88,6 @@ class BannerService
             'url' => $bannerUrl,
             'photo' => $imageName,
         ];
-    }
-
-    /**
-     * The optional phone-shaped image. Left alone when the form sends no new
-     * file, so editing a banner never silently drops the one already stored.
-     */
-    private function getProcessedMobileImage(object $request, ?string $mobileImage = null): ?string
-    {
-        if (!$request->file('mobile_image')) {
-            return $mobileImage;
-        }
-
-        if ($mobileImage) {
-            return $this->update(dir: 'banner/', oldImage: $mobileImage, format: 'webp', image: $request->file('mobile_image'));
-        }
-
-        return $this->upload(dir: 'banner/', format: 'webp', image: $request->file('mobile_image'));
     }
 
     public function getBannerTypes(): array

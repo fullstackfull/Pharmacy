@@ -33,6 +33,7 @@ class Category extends Model
         'name',
         'slug',
         'icon',
+        'mobile_icon',
         'icon_storage_type',
         'parent_id',
         'position',
@@ -45,6 +46,7 @@ class Category extends Model
         'name' => 'string',
         'slug' => 'string',
         'icon' => 'string',
+        'mobile_icon' => 'string',
         'icon_storage_type' => 'string',
         'parent_id' => 'integer',
         'position' => 'integer',
@@ -131,7 +133,22 @@ class Category extends Model
         $value = $this->icon;
         return $this->storageLink('category',$value,$this->icon_storage_type ?? 'public');
     }
-    protected $appends = ['icon_full_url'];
+
+    /**
+     * The phone-shaped icon, falling back to the web one.
+     *
+     * The fallback lives here rather than in each client: an app that had to decide for itself
+     * would be one release away from showing nothing where a merchant never uploaded a second
+     * image — which is almost every category.
+     */
+    public function getMobileIconFullUrlAttribute(): array
+    {
+        return empty($this->mobile_icon)
+            ? $this->icon_full_url
+            : $this->storageLink('category', $this->mobile_icon, $this->icon_storage_type ?? 'public');
+    }
+
+    protected $appends = ['icon_full_url', 'mobile_icon_full_url'];
 
     protected static function boot(): void
     {

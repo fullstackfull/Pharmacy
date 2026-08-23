@@ -2,6 +2,9 @@
 
 namespace App\Services\Theme;
 
+use App\Models\Brand;
+use App\Models\Category;
+
 /**
  * What a tap does, said once, in terms both clients understand.
  *
@@ -36,6 +39,9 @@ class ActionResolver
         self::NONE, self::PRODUCT, self::CATEGORY, self::BRAND, self::VENDOR,
         self::CAMPAIGN, self::SEARCH, self::CART, self::WISHLIST, self::COLLECTION, self::URL,
     ];
+
+    /** @var array<string, array{id: ?int, slug: ?string, label: ?string}>  subjects already looked up */
+    private array $subjects = [];
 
     /**
      * Storefront list pages that are a named product collection rather than a filtered catalogue.
@@ -87,8 +93,12 @@ class ActionResolver
 
         return match (true) {
             $head === 'product'     && $tail !== null => $this->slugged(self::PRODUCT, $tail, $link),
-            $head === 'category'    && $tail !== null => $this->slugged(self::CATEGORY, $tail, $link),
-            $head === 'brand'       && $tail !== null => $this->slugged(self::BRAND, $tail, $link),
+            // Category and brand carry their id as well: the app's list screen opens on an id and
+            // has no slug index, so a slug-only action would open an empty list.
+            $head === 'category'    && $tail !== null
+                => $this->subject(self::CATEGORY, id: null, slug: rawurldecode($tail), link: $link),
+            $head === 'brand'       && $tail !== null
+                => $this->subject(self::BRAND, id: null, slug: rawurldecode($tail), link: $link),
             $head === 'vendor-shop' && $tail !== null => $this->slugged(self::VENDOR, $tail, $link),
 
             $head === 'flash-deals' && $tail !== null
@@ -128,14 +138,26 @@ class ActionResolver
 
     /**
      * @param  array<string, mixed>  $query
-     * @return array{type: string, collection: string, url: string, id?: int}
+     * @return array{type: string, collection?: string, url: string, id?: int, label?: string}
      */
     private function collection(string $head, array $query, string $link): array
     {
+        // A catalogue filtered to ONE category or brand is not a collection — it is that category
+        // or that brand, which is a screen the app already has. This is how the admin's banner form
+        // stores a category link (`/products?category_id=44&data_from=category`), so reading it as
+        // the generic "all products" collection is what made a banner pointing at a category open
+        // the entire catalogue on the phone while the web opened the category.
+        foreach (['category' => self::CATEGORY, 'brand' => self::BRAND] as $filter => $type) {
+            $id = $query[$filter . '_id'] ?? null;
+
+            if ($head === 'products' && is_numeric($id) && (int) $id > 0) {
+                return $this->subject($type, id: (int) $id, slug: null, link: $link);
+            }
+        }
+
         $action = ['type' => self::COLLECTION, 'collection' => self::COLLECTIONS[$head], 'url' => $link];
 
-        // /products?category_id=44 is a filtered catalogue; carrying the filter is what lets the
-        // app open the same list instead of an unfiltered one.
+        // Any other filtered list keeps its filter, so a client that can apply one still may.
         foreach (['category_id', 'brand_id', 'id'] as $key) {
             if (isset($query[$key]) && is_numeric($query[$key])) {
                 $action['id'] = (int) $query[$key];
@@ -144,6 +166,62 @@ class ActionResolver
         }
 
         return $action;
+    }
+
+    /**
+     * A category or brand action carrying everything a client needs to open it: id, slug and name.
+     *
+     * The web navigates by URL and needs none of this. The app's list screen opens on an id and
+     * titles itself with a name, and a link gives it only one of the two — a slug from
+     * `/category/vitamins`, an id from `/products?category_id=44`. Filling in the other here is
+     * what makes both spellings of the same destination behave identically on the phone.
+     *
+     * Looked up once per subject per request (a home page can carry the same category on a banner,
+     * a showcase and a rail) and never allowed to fail: a lookup that cannot run costs the extra
+     * fields, never the action.
+     *
+     * @return array{type: string, url: string, id?: int, slug?: string, label?: string}
+     */
+    private function subject(string $type, ?int $id, ?string $slug, string $link): array
+    {
+        $key = $type . ':' . ($id ?? $slug);
+
+        $resolved = $this->subjects[$key] ??= $this->lookUp($type, $id, $slug);
+
+        return array_filter([
+            'type'  => $type,
+            'id'    => $id ?? $resolved['id'],
+            'slug'  => $slug ?? $resolved['slug'],
+            'label' => $resolved['label'],
+            'url'   => $link,
+        ], static fn ($value) => $value !== null);
+    }
+
+    /**
+     * @return array{id: ?int, slug: ?string, label: ?string}
+     */
+    private function lookUp(string $type, ?int $id, ?string $slug): array
+    {
+        $empty = ['id' => null, 'slug' => null, 'label' => null];
+
+        try {
+            $query = $type === self::CATEGORY ? Category::query() : Brand::query();
+            $model = $id !== null
+                ? $query->find($id)
+                : $query->where('slug', $slug)->first();
+
+            if ($model === null) {
+                return $empty;
+            }
+
+            return [
+                'id' => (int) $model->id,
+                'slug' => is_string($model->slug) && $model->slug !== '' ? $model->slug : null,
+                'label' => is_string($model->name) && $model->name !== '' ? $model->name : null,
+            ];
+        } catch (\Throwable) {
+            return $empty;
+        }
     }
 
     /** @return array{type: string, slug: string, url: string} */

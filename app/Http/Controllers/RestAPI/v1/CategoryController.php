@@ -100,6 +100,7 @@ class CategoryController extends Controller
                 'position' => $category['position'],
                 'parent_id' => $category['parent_id'],
                 'icon_full_url' => $category->icon_full_url,
+                'mobile_icon_full_url' => $category->mobile_icon_full_url,
             ],
             'banner' => $banner ? [
                 'id' => $banner['id'],
@@ -123,6 +124,7 @@ class CategoryController extends Controller
                     'position' => $subCategory['position'],
                     'products_count' => $subCategory['products_count'],
                     'icon_full_url' => $subCategory->icon_full_url,
+                    'mobile_icon_full_url' => $subCategory->mobile_icon_full_url,
                 ];
             })->values(),
         ], 200);

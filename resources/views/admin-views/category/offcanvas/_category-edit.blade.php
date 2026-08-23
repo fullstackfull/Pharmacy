@@ -248,6 +248,14 @@
                                     {{ THEME_RATIO[theme_root_path()]['Category Image'] }}
                                 </span>
                             </p>
+
+                            @include('admin-views.partials._mobile-image-field', [
+                                'storedImage' => $category->mobile_icon,
+                                'previewUrl' => getStorageImages(path: $category->mobile_icon_full_url, type: 'backend-basic'),
+                                'inputId' => 'category-edit-mobile-image',
+                                'hint' => translate('shown_by_the_mobile_apps_wherever_this_category_appears'),
+                            ])
+
                     </div>
                 </div>
 
