@@ -70,6 +70,9 @@ class ThemeBuilderController extends BaseController
             'sectionTypes'  => $version ? $this->registry->forPage($page) : [],
             'blockLabels'   => array_map(fn ($block) => $block['label'], $this->registry->blockTypes()),
             'goLive'        => $version ? $this->goLiveState($version) : null,
+            // What the customer app will and will not show of this version — surfaced while the
+            // merchant can still act on it, not discovered on a shopper's phone (spec §54–55).
+            'compatibility' => $version ? app(\App\Services\Theme\ThemeCompatibilityReport::class)->for($version) : null,
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
@@ -211,7 +214,36 @@ class ThemeBuilderController extends BaseController
             'blockLabels'  => $this->blockLabelMap($type),
             'blocks'       => $blocks,
             'dataNote'     => $this->dataNote($type, $settings),
+            'delivery'     => isset($section) && $section
+                ? $this->builder->deliverySummary($section)
+                : null,
         ]);
+    }
+
+    /**
+     * Save a section's delivery rules — schedule window, platforms, audience.
+     *
+     * Separate from updateSection on purpose: settings live in the normalized JSON blob the
+     * storefront renders from, while these are indexed columns the delivery pipeline filters on.
+     * One endpoint per storage shape keeps each side's validation honest.
+     */
+    public function updateDeliveryRules(Request $request): JsonResponse
+    {
+        $section = ThemeSection::find($request['section_id']);
+        if (!$section) {
+            return $this->fail(translate('section_not_found'));
+        }
+
+        $saved = $this->builder->setDeliveryRules($section, [
+            'starts_at' => $request->input('starts_at'),
+            'ends_at'   => $request->input('ends_at'),
+            'platforms' => $request->input('platforms'),
+            'audience'  => $request->input('audience'),
+        ]);
+
+        return $saved
+            ? $this->ok(['delivery' => $this->builder->deliverySummary($section->fresh())])
+            : $this->fail(translate('published_versions_cannot_be_edited_duplicate_it_to_a_draft_first'));
     }
 
     /**

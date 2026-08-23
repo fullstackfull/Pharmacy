@@ -1445,6 +1445,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('section/toggle', 'toggleSection')->name('section.toggle');
                 Route::post('section/duplicate', 'duplicateSection')->name('section.duplicate');
                 Route::post('section/delete', 'deleteSection')->name('section.delete');
+                // Delivery rules: schedule window + platform/audience targeting, stored as
+                // indexed columns rather than settings JSON — the delivery pipeline filters on them.
+                Route::post('section/delivery-rules', 'updateDeliveryRules')->name('section.delivery-rules');
 
                 // Blocks: the repeatable children of a section (hero slides, promo tiles, footer columns).
                 Route::get('block-schema', 'blockSchema')->name('block-schema');

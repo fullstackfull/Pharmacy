@@ -60,6 +60,82 @@ class ThemeBuilderService
         return $section->save();
     }
 
+    /**
+     * A section's delivery rules: when it runs, and who it runs for.
+     *
+     * Everything normalizes to "no restriction" rather than erroring: an empty date clears the
+     * bound, an unknown platform token is dropped, and an end before the start clears BOTH dates —
+     * a window that can never open would silently hide the section, which is precisely the state
+     * these rules exist to make impossible to reach by accident.
+     *
+     * @param  array{starts_at?: ?string, ends_at?: ?string, platforms?: mixed, audience?: mixed}  $rules
+     */
+    public function setDeliveryRules(ThemeSection $section, array $rules): bool
+    {
+        if (!$this->isEditable($section->version)) {
+            return false;
+        }
+
+        // Column-guarded like the copy paths: the builder can run against a database the delivery
+        // migration has not reached yet, and saving must not become the thing that 500s it.
+        if (!\Illuminate\Support\Facades\Schema::hasColumn($section->getTable(), 'starts_at')) {
+            return true;
+        }
+
+        $startsAt = $this->parseRuleTime($rules['starts_at'] ?? null);
+        $endsAt = $this->parseRuleTime($rules['ends_at'] ?? null);
+        if ($startsAt !== null && $endsAt !== null && $endsAt->lessThanOrEqualTo($startsAt)) {
+            $startsAt = $endsAt = null;
+        }
+
+        $section->starts_at = $startsAt;
+        $section->ends_at = $endsAt;
+        $section->platforms = $this->ruleTokens(
+            $rules['platforms'] ?? null,
+            [...\App\Services\Theme\ViewerContext::PLATFORMS, ...\App\Services\Theme\ViewerContext::DEVICES],
+        );
+        $section->audience = $this->ruleTokens($rules['audience'] ?? null, \App\Services\Theme\ViewerContext::AUDIENCES);
+
+        return $section->save();
+    }
+
+    private function parseRuleTime(mixed $value): ?\Illuminate\Support\Carbon
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * A submitted rule list reduced to known tokens; empty (= no restriction) is stored as null so
+     * an untouched section and a cleared one are the same row.
+     *
+     * @param  array<int, string>  $allowed
+     * @return array<int, string>|null
+     */
+    private function ruleTokens(mixed $value, array $allowed): ?array
+    {
+        if (is_string($value)) {
+            $value = explode(',', $value);
+        }
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $tokens = array_values(array_intersect(
+            array_map(fn ($token) => is_string($token) ? trim($token) : '', $value),
+            $allowed,
+        ));
+
+        return $tokens === [] ? null : $tokens;
+    }
+
     public function setSectionVisibility(ThemeSection $section, bool $visible): bool
     {
         if (!$this->isEditable($section->version)) {
@@ -357,6 +433,9 @@ class ThemeBuilderService
                 'sort_order' => $s->sort_order,
                 'is_visible' => $s->is_visible,
                 'settings'   => $s->settings,
+                // For the structure panel's small badges: a scheduled or targeted section should
+                // not look identical to one that always runs everywhere.
+                'delivery'   => $this->deliverySummary($s),
                 'accepts'    => $this->registry->blockTypesFor($s->type),
                 // Whether this section will actually appear, decided by the same object the
                 // storefront skips on. A section that will render nothing used to look exactly
@@ -368,5 +447,26 @@ class ThemeBuilderService
                 ),
                 'blocks'     => $s->blocks->map(fn (ThemeBlock $b) => $this->presentBlock($b))->all(),
             ])->all();
+    }
+
+    /**
+     * The delivery rules as the builder edits them: ISO datetimes the datetime-local input can
+     * hold, and plain token lists.
+     *
+     * @return array{starts_at: ?string, ends_at: ?string, platforms: array<int, string>, audience: array<int, string>, scheduled: bool, targeted: bool}
+     */
+    public function deliverySummary(ThemeSection $section): array
+    {
+        $platforms = is_array($section->platforms) ? $section->platforms : [];
+        $audience = is_array($section->audience) ? $section->audience : [];
+
+        return [
+            'starts_at' => $section->starts_at?->format('Y-m-d\TH:i'),
+            'ends_at'   => $section->ends_at?->format('Y-m-d\TH:i'),
+            'platforms' => $platforms,
+            'audience'  => $audience,
+            'scheduled' => $section->starts_at !== null || $section->ends_at !== null,
+            'targeted'  => $platforms !== [] || $audience !== [],
+        ];
     }
 }

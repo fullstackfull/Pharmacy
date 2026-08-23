@@ -89,7 +89,7 @@ class ThemeManager
     /** Publish a version: previous published version of the same theme is archived. Atomic. */
     public function publish(ThemeVersion $version): ThemeVersion
     {
-        return DB::transaction(function () use ($version) {
+        $published = DB::transaction(function () use ($version) {
             ThemeVersion::query()
                 ->where('theme_id', $version->theme_id)
                 ->where('status', ThemeVersion::STATUS_PUBLISHED)
@@ -115,6 +115,12 @@ class ThemeManager
 
             return $version->refresh();
         });
+
+        // Announced AFTER the commit, never inside it: a client woken by the beacon must find the
+        // new revision, and a rolled-back transaction must announce nothing.
+        app(ThemeSyncBeacon::class)->announce((int) ($published->revision ?: 1));
+
+        return $published;
     }
 
     /** Duplicate a version (with its sections + blocks) into a new draft. */
