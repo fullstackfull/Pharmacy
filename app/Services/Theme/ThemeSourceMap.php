@@ -41,8 +41,24 @@ class ThemeSourceMap
                 ),
             ],
 
-            'category_grid', 'category_showcase' => $this->api('/api/v1/categories'),
-            'brand_slider', 'brand_showcase' => $this->api('/api/v1/brands'),
+            'category_grid' => $this->api('/api/v1/categories'),
+            'brand_slider' => $this->api('/api/v1/brands'),
+
+            // The showcases are product rails scoped to one picked category/brand — their data is
+            // that scope's products, not the taxonomy list.
+            'category_showcase' => $this->api(
+                '/api/v1/categories/products/' . (int) ($settings['category_id'] ?? 0),
+                ['limit' => max(1, (int) ($settings['limit'] ?? 10)), 'offset' => 1],
+            ),
+            'brand_showcase' => $this->api(
+                '/api/v1/brands/products/' . (int) ($settings['brand_id'] ?? 0),
+                ['limit' => max(1, (int) ($settings['limit'] ?? 10)), 'offset' => 1],
+            ),
+
+            // A bundle is exactly these products in exactly this order.
+            'bundle' => $this->api('/api/v1/products/by-ids', [
+                'ids' => implode(',', $this->pickedIds($settings['product_ids'] ?? null)),
+            ]),
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
             'flash_deal' => $this->api('/api/v1/flash-deals', [], 'Then /api/v1/flash-deals/products/{deal_id} for the products.'),

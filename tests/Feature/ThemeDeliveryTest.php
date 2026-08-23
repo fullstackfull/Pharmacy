@@ -171,12 +171,12 @@ class ThemeDeliveryTest extends TestCase
     {
         $version = $this->publishedVersion();
         ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'product_slider', 'sort_order' => 1, 'settings' => ['source' => 'featured']]);
-        ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'custom_html', 'sort_order' => 2, 'settings' => ['html' => '<b>x</b>']]);
+        ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'recently_viewed', 'sort_order' => 2, 'settings' => []]);
 
         $payload = $this->delivery->payload('home', $this->appViewer());
 
         $this->assertSame(['product_slider'], array_column($payload['sections'], 'type'));
-        $this->assertArrayHasKey('custom_html', $payload['compatibility']['withheld'],
+        $this->assertArrayHasKey('recently_viewed', $payload['compatibility']['withheld'],
             'a withheld type must be named, with why, so a thin page is explainable');
     }
 
@@ -338,13 +338,24 @@ class ThemeDeliveryTest extends TestCase
         $this->assertSame('best_selling', $collection['collection']);
     }
 
-    public function test_capability_registry_never_marks_custom_html_app_safe(): void
+    public function test_custom_html_is_app_safe_as_data_never_as_code(): void
     {
-        $registry = new ComponentCapabilityRegistry();
+        // The stance shifted deliberately: the app renders custom_html through a script-free
+        // native HTML widget builder (no WebView, no JS engine), which is STRICTER than the web
+        // that executes the same markup raw. What the contract still forbids is the payload
+        // carrying anything marked executable — the markup must arrive as an ordinary string
+        // setting, nothing more.
+        $this->assertTrue((new ComponentCapabilityRegistry())->isAppSafe('custom_html'));
 
-        $this->assertFalse($registry->isAppSafe('custom_html'),
-            'arbitrary markup must never be declared renderable by the native client');
-        $this->assertNotNull($registry->exclusionReason('custom_html'));
-        $this->assertNull($registry->exclusionReason('product_slider'));
+        $version = $this->publishedVersion();
+        ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'custom_html',
+            'settings' => ['content' => '<b>x</b><script>alert(1)</script>']]);
+
+        $payload = $this->delivery->payload('home', $this->appViewer());
+        $section = collect($payload['sections'])->firstWhere('type', 'custom_html');
+
+        $this->assertNotNull($section, 'custom_html now reaches the app');
+        $this->assertIsString($section['settings']['content'],
+            'markup travels as a plain string the client may parse, never as anything executable');
     }
 }

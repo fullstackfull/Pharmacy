@@ -171,11 +171,11 @@ class ThemeDeliveryRulesBuilderTest extends TestCase
         $report = app(ThemeCompatibilityReport::class)->for($version);
 
         $this->assertSame(6, $report['sections']);
-        $this->assertSame(3, $report['app_supported']);
+        $this->assertSame(4, $report['app_supported'], 'custom_html gained a native renderer');
         $this->assertSame(1, $report['scheduled_waiting']);
 
         $withheldTypes = array_column($report['withheld'], 'count', 'type');
-        $this->assertSame(1, $withheldTypes['custom_html']);
+        $this->assertArrayNotHasKey('custom_html', $withheldTypes);
         $this->assertSame(2, $withheldTypes['blog_posts'], 'repeated types aggregate with a count');
 
         foreach ($report['withheld'] as $gap) {

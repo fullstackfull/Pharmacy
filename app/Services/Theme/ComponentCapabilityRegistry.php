@@ -50,11 +50,15 @@ class ComponentCapabilityRegistry
         'store_banner'       => ['version' => 1, 'engine' => 1],
 
         // Product family — one renderer, fed by the section's `source`.
-        'product_slider'  => ['version' => 1, 'engine' => 1],
-        'featured_deal'   => ['version' => 1, 'engine' => 1],
-        'clearance_sale'  => ['version' => 1, 'engine' => 1],
-        'deal_of_the_day' => ['version' => 1, 'engine' => 1],
-        'flash_deal'      => ['version' => 1, 'engine' => 1],
+        'product_slider'    => ['version' => 1, 'engine' => 1],
+        'featured_deal'     => ['version' => 1, 'engine' => 1],
+        'clearance_sale'    => ['version' => 1, 'engine' => 1],
+        'deal_of_the_day'   => ['version' => 1, 'engine' => 1],
+        'flash_deal'        => ['version' => 1, 'engine' => 1],
+        'category_showcase' => ['version' => 1, 'engine' => 1],
+        'brand_showcase'    => ['version' => 1, 'engine' => 1],
+        'bundle'            => ['version' => 1, 'engine' => 1],
+        'product_tabs'      => ['version' => 1, 'engine' => 1],
 
         // Taxonomy rails.
         'category_grid'  => ['version' => 1, 'engine' => 1],
@@ -71,6 +75,14 @@ class ComponentCapabilityRegistry
         'price_tiles'      => ['version' => 1, 'engine' => 1],
         'app_download'     => ['version' => 1, 'engine' => 1],
 
+        // Storytelling and utility — inline payloads, plus the authed coupon list.
+        'stories'         => ['version' => 1, 'engine' => 1],
+        'branches'        => ['version' => 1, 'engine' => 1],
+        'before_after'    => ['version' => 1, 'engine' => 1],
+        'shipping_cutoff' => ['version' => 1, 'engine' => 1],
+        'coupon_strip'    => ['version' => 1, 'engine' => 1],
+        'custom_html'     => ['version' => 1, 'engine' => 1],
+
         // Layout primitives.
         'spacer' => ['version' => 1, 'engine' => 1],
     ];
@@ -82,12 +94,12 @@ class ComponentCapabilityRegistry
      * @var array<string, string>
      */
     private const APP_EXCLUSIONS = [
-        'custom_html'       => 'arbitrary_markup_is_not_rendered_natively',
         'recently_viewed'   => 'backed_by_the_web_visitor_cookie_no_app_equivalent',
         'blog_posts'        => 'the_blog_module_exposes_no_public_api',
         'newsletter'        => 'the_app_has_no_newsletter_signup_surface',
         'footer_columns'    => 'the_app_draws_its_own_navigation_chrome',
         'trending_searches' => 'no_public_endpoint_for_search_terms',
+        'vendor_showcase'   => 'needs_a_by_id_shop_products_endpoint_the_api_only_serves_by_slug',
     ];
 
     /** Whether the app has any renderer for this type at all. */
