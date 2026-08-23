@@ -6,6 +6,7 @@ use App\Models\Theme;
 use App\Models\ThemeBlock;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
+use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -71,7 +72,7 @@ class ThemeManager
     /** Make a theme the single active one (deactivates all others). Atomic. */
     public function activate(Theme $theme): Theme
     {
-        return DB::transaction(function () use ($theme) {
+        $activated = DB::transaction(function () use ($theme) {
             Theme::query()
                 ->where('id', '!=', $theme->id)
                 ->where('is_active', true)
@@ -84,6 +85,12 @@ class ThemeManager
 
             return $theme->refresh();
         });
+
+        // After the commit, like every audit line here: a rolled-back activation never happened,
+        // and the trail must not say otherwise.
+        app(AuditLogger::class)->record(action: 'theme.activated', subject: $activated);
+
+        return $activated;
     }
 
     /** Publish a version: previous published version of the same theme is archived. Atomic. */
@@ -119,6 +126,15 @@ class ThemeManager
         // Announced AFTER the commit, never inside it: a client woken by the beacon must find the
         // new revision, and a rolled-back transaction must announce nothing.
         app(ThemeSyncBeacon::class)->announce((int) ($published->revision ?: 1));
+
+        // The system-wide trail (spec §49). Publishing is the action that changes what every
+        // customer sees, so it is the one that must always answer "who, and when".
+        app(AuditLogger::class)->record(
+            action: 'theme.published',
+            subject: $published,
+            after: ['revision' => $published->revision, 'label' => $published->label],
+            context: ['theme_id' => $published->theme_id],
+        );
 
         return $published;
     }
@@ -174,7 +190,15 @@ class ThemeManager
      */
     public function restoreVersion(ThemeVersion $source): ThemeVersion
     {
-        return $this->createDraftFrom($source, 'Restored from #' . $source->id);
+        $draft = $this->createDraftFrom($source, 'Restored from #' . $source->id);
+
+        app(AuditLogger::class)->record(
+            action: 'theme.restored',
+            subject: $draft,
+            context: ['restored_from_version_id' => $source->id, 'theme_id' => $source->theme_id],
+        );
+
+        return $draft;
     }
 
     /** Version history for a theme, newest first — what the revision list renders. */
