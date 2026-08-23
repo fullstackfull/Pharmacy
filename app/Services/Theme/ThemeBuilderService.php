@@ -491,6 +491,9 @@ class ThemeBuilderService
                 // For the structure panel's small badges: a scheduled or targeted section should
                 // not look identical to one that always runs everywhere.
                 'delivery'   => $this->deliverySummary($s),
+                // Whether the customer app can draw this type at all — the per-section half of
+                // the compatibility card, shown where the merchant is actually arranging sections.
+                'app_safe'   => app(\App\Services\Theme\ComponentCapabilityRegistry::class)->isAppSafe($s->type),
                 'accepts'    => $this->registry->blockTypesFor($s->type),
                 // Whether this section will actually appear, decided by the same object the
                 // storefront skips on. A section that will render nothing used to look exactly
