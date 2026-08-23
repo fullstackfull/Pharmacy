@@ -248,6 +248,64 @@ class PaymeraPaymentFlowTest extends TestCase
         $this->assertSame(1, (int) PaymentRequest::find($payment->id)->is_paid);
         $this->assertSame(1, PaymeraHookSpy::$successCalls, 'the money-moving success hook must fire exactly once');
     }
+
+    public function test_a_refusal_carries_egates_own_reason_into_the_record(): void
+    {
+        // The four failure paths used to return the same blank "payment failed", so a missing
+        // terminal id, a declined card and an unreachable gateway were indistinguishable — three
+        // faults with three different people to call.
+        $payment = $this->seedPayment([
+            'payment_amount' => 1860000.4,
+            'failure_hook' => 'Tests\\Feature\\paymera_spy_failure_hook',
+        ]);
+        Http::fake([
+            '*/api/create-payment' => Http::response(['ErrorCode' => 17, 'Message' => 'Invalid terminal'], 200),
+        ]);
+
+        PaymeraHookSpy::$lastFailure = null;
+        $this->newController()->index(Request::create('/payment/paymera/pay', 'GET', ['payment_id' => (string) $payment->id]));
+
+        $captured = PaymeraHookSpy::$lastFailure;
+        $this->assertNotNull($captured, 'the failure hook did not fire');
+        $this->assertStringContainsString('create_payment', $captured['failure_reason']);
+        $this->assertStringContainsString('code=17', $captured['failure_reason']);
+        $this->assertStringContainsString('Invalid terminal', $captured['failure_reason']);
+
+        // And the attempt is still legible to whoever reads the record. The hook casts what it is
+        // handed with (array), which on an Eloquent model drops every attribute — so every failure
+        // was being recorded as gateway "unknown" for an amount of 0.
+        $this->assertSame('paymera', $captured['payment_method']);
+        $this->assertSame(1860000.4, (float) $captured['payment_amount']);
+    }
+
+    public function test_a_gateway_with_no_credentials_says_so_rather_than_declining(): void
+    {
+        $this->configurePaymera('', '', '');
+        $payment = $this->seedPayment(['failure_hook' => 'Tests\\Feature\\paymera_spy_failure_hook']);
+        Http::fake();
+
+        PaymeraHookSpy::$lastFailure = null;
+        $this->newController()->index(Request::create('/payment/paymera/pay', 'GET', ['payment_id' => (string) $payment->id]));
+
+        $this->assertSame('gateway_not_configured', PaymeraHookSpy::$lastFailure['failure_reason']);
+        Http::assertNothingSent();
+    }
+
+    public function test_an_unreadable_status_is_not_recorded_as_a_decline(): void
+    {
+        // The customer may well have paid. Calling this a decline would be a claim nobody checked.
+        $payment = $this->seedPayment([
+            'failure_hook' => 'Tests\\Feature\\paymera_spy_failure_hook',
+            'additional_data' => json_encode(['paymera_payment_id' => 'pid-1']),
+        ]);
+        Http::fake(['*/api/get-payment-status/*' => fn () => throw new \RuntimeException('connection timed out')]);
+
+        PaymeraHookSpy::$lastFailure = null;
+        $this->newController()->callback(Request::create('/payment/paymera/callback', 'GET', ['payment_id' => (string) $payment->id]));
+
+        $this->assertNull(PaymeraHookSpy::$lastFailure, 'an unknown fate must not fire the failure hook');
+        $this->assertSame(0, (int) PaymentRequest::find($payment->id)->is_paid);
+    }
 }
 
 /**
@@ -257,9 +315,21 @@ class PaymeraPaymentFlowTest extends TestCase
 class PaymeraHookSpy
 {
     public static int $successCalls = 0;
+
+    /** @var array<string, mixed>|null what the controller handed the failure hook */
+    public static ?array $lastFailure = null;
 }
 
 function paymera_spy_success_hook($payment): void
 {
     PaymeraHookSpy::$successCalls++;
+}
+
+function paymera_spy_failure_hook($paymentData): void
+{
+    PaymeraHookSpy::$lastFailure = [
+        'failure_reason' => $paymentData['failure_reason'] ?? null,
+        'payment_method' => $paymentData['payment_method'] ?? null,
+        'payment_amount' => $paymentData['payment_amount'] ?? null,
+    ];
 }

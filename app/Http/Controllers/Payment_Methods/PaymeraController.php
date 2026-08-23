@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Payment_Methods;
 
 use App\Models\PaymentRequest;
+use App\Services\Monitoring\Support\Redactor;
 use App\Traits\Processor;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 /**
  * Paymera eGate — hosted payment page gateway (built-in gateway, same convention as the others).
@@ -71,7 +74,7 @@ class PaymeraController extends Controller
         }
 
         if (!$this->isConfigured()) {
-            return $this->paymentFailed($data);
+            return $this->paymentFailed($data, 'gateway_not_configured');
         }
 
         $callbackUrl = route('paymera.callback', ['payment_id' => $data->id]);
@@ -89,7 +92,7 @@ class PaymeraController extends Controller
                 ->acceptJson()->timeout(30)
                 ->post($this->baseUrl . '/api/create-payment', $body);
         } catch (\Throwable $e) {
-            return $this->paymentFailed($data);
+            return $this->paymentFailed($data, 'create_payment_unreachable: ' . class_basename($e));
         }
 
         $json = $response->json();
@@ -102,7 +105,7 @@ class PaymeraController extends Controller
             return redirect($json['Data']['url']);
         }
 
-        return $this->paymentFailed($data);
+        return $this->paymentFailed($data, $this->refusal('create_payment', $response->status(), $json));
     }
 
     /**
@@ -122,7 +125,7 @@ class PaymeraController extends Controller
         $additional = json_decode($data->additional_data, true) ?: [];
         $paymeraId = $additional['paymera_payment_id'] ?? null;
         if (empty($paymeraId) || !$this->isConfigured()) {
-            return $this->paymentFailed($data);
+            return $this->paymentFailed($data, empty($paymeraId) ? 'no_paymera_payment_id' : 'gateway_not_configured');
         }
 
         try {
@@ -130,7 +133,9 @@ class PaymeraController extends Controller
                 ->acceptJson()->timeout(30)
                 ->get($this->baseUrl . '/api/get-payment-status/' . $paymeraId);
         } catch (\Throwable $e) {
-            return $this->paymentFailed($data, fireHook: false);
+            // Not a decline: the status could not be read, so the payment's fate is unknown and the
+            // hook stays unfired. Still said out loud, because an unknown fate needs chasing.
+            return $this->paymentFailed($data, 'status_unreachable: ' . class_basename($e), fireHook: false);
         }
 
         $json = $response->json();
@@ -161,7 +166,11 @@ class PaymeraController extends Controller
 
         // 'F' failed / 'C' canceled are terminal failures; 'P' pending (or anything else) is left open
         // (not marked, no hook) so a later status check could still complete it.
-        return $this->paymentFailed($data, fireHook: in_array($status, ['F', 'C'], true));
+        return $this->paymentFailed(
+            $data,
+            $this->refusal('get_payment_status', $response->status(), $json, $status),
+            fireHook: in_array($status, ['F', 'C'], true),
+        );
     }
 
     private function isConfigured(): bool
@@ -177,8 +186,61 @@ class PaymeraController extends Controller
         return in_array(app()->getLocale(), ['ar', 'sy'], true) ? 'ar' : 'en';
     }
 
-    private function paymentFailed(PaymentRequest $data, bool $fireHook = true): Redirector|RedirectResponse|Application
+    /**
+     * What eGate actually said, in a form that is safe to keep.
+     *
+     * Every field here is remote text: ErrorCode and Message come straight off the wire, so they go
+     * through the same Redactor the rest of this system stores strings through, and are bounded.
+     * The status letter is eGate's own single-character verdict.
+     */
+    private function refusal(string $call, int $httpStatus, mixed $json, ?string $status = null): string
     {
+        $parts = [$call, 'http=' . $httpStatus];
+
+        if ($status !== null) {
+            $parts[] = 'status=' . $status;
+        }
+        if (is_array($json)) {
+            $parts[] = 'code=' . (string) ($json['ErrorCode'] ?? '?');
+            if (!empty($json['Message'])) {
+                $parts[] = 'msg=' . (string) $json['Message'];
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Fail the payment, and say why.
+     *
+     * The reason used to be discarded on all four failure paths, so a merchant saw "payment failed"
+     * and nothing in the system could tell a missing terminal id from a declined card from an
+     * unreachable gateway — three faults with three different people to call. It now reaches two
+     * places: the log, for whoever is looking now, and the failure hook, which carries it into the
+     * payments section as the attempt's failure_reason.
+     *
+     * failure_reason is set on the in-memory model only. payment_requests has no such column, and
+     * this controller finalizes with an explicit update() rather than save(), so nothing tries to
+     * persist it.
+     */
+    private function paymentFailed(PaymentRequest $data, string $reason, bool $fireHook = true): Redirector|RedirectResponse|Application
+    {
+        $reason = Str::limit(app(Redactor::class)->text($reason), 180, '');
+
+        Log::warning('Paymera payment failed', [
+            'payment_id' => $data->id,
+            'reason' => $reason,
+            'hook_fired' => $fireHook,
+        ]);
+
+        $data->failure_reason = $reason;
+
+        // payment_method is only stamped on the SUCCESS path, so a refusal reached the failure hook
+        // with whatever the row was created with — usually nothing — and every failed Paymera
+        // payment was recorded against the gateway "unknown". In memory only: the row is not marked
+        // paid and must not be made to look finalized.
+        $data->payment_method = 'paymera';
+
         if ($fireHook && function_exists($data->failure_hook)) {
             call_user_func($data->failure_hook, $data);
         }

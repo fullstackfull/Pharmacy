@@ -112,8 +112,15 @@ if (!function_exists('digital_payment_fail')) {
     function digital_payment_fail($payment_data): void
     {
         try {
-            $data = is_array($payment_data) ? $payment_data : (array) $payment_data;
-            $additional = json_decode($data['additional_data'] ?? '{}', true) ?: [];
+            // ArrayAccess, NOT (array). This hook is handed a PaymentRequest model, and casting an
+            // Eloquent model to an array returns its internal properties under null-byte-mangled
+            // keys — `payment_amount` and `payment_method` are simply absent from the result. Every
+            // failure was therefore recorded as `gateway=unknown, amount=0`, which is a row that
+            // proves a payment failed and cannot say whose or for how much. The success hook beside
+            // this one reads `$paymentData['is_paid']` directly; this now matches it, and the same
+            // subscript works whether an array or a model is passed.
+            $data = $payment_data;
+            $additional = json_decode((string) ($data['additional_data'] ?? '{}'), true) ?: [];
 
             app(\App\Services\Analytics\Analytics::class)->paymentAttempted(
                 gateway: (string) ($data['payment_method'] ?? 'unknown'),
