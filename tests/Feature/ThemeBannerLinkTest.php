@@ -313,6 +313,57 @@ class ThemeBannerLinkTest extends TestCase
         $this->assertSame('Dashboard truth', $banner->fresh()->title);
     }
 
+    public function test_a_multi_frame_tile_reports_every_frame_to_banner_setup(): void
+    {
+        // Banner Setup read only `image`, so a tile carrying three pictures looked exactly like a
+        // tile carrying one — the merchant could see the extra frames in the builder and nowhere
+        // else. The layout payload has to carry the whole set, and the section's display mode.
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'published']);
+        $section = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic',
+            'settings' => ['display' => 'swipe', 'columns' => 4],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+            'settings' => ['image' => 'one.png', 'image_2' => 'two.png', 'image_3' => 'three.png', 'span' => 'square'],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile', 'sort_order' => 1,
+            'settings' => ['image' => 'solo.png'],
+        ]);
+
+        $groups = app(ThemeBannerLink::class)->themeLayout();
+
+        $this->assertCount(1, $groups);
+        $this->assertSame('swipe', $groups[0]['display']);
+        $this->assertSame(['one.png', 'two.png', 'three.png'], $groups[0]['cards'][0]['frames']);
+        $this->assertSame('one.png', $groups[0]['cards'][0]['image']);
+        $this->assertSame('square', $groups[0]['cards'][0]['span']);
+        $this->assertSame(['solo.png'], $groups[0]['cards'][1]['frames']);
+    }
+
+    public function test_a_linked_banners_own_picture_leads_the_frames(): void
+    {
+        // The linked row stays the source of truth for the lead image; the builder-only extra
+        // frames follow it rather than being dropped.
+        $banner = $this->makeBanner();
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'published']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic']);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+            'settings' => ['banner_id' => $banner->id, 'image' => 'stale.png', 'image_2' => 'extra.png'],
+        ]);
+
+        $frames = app(ThemeBannerLink::class)->themeLayout()[0]['cards'][0]['frames'];
+
+        $this->assertCount(2, $frames);
+        $this->assertStringNotContainsString('stale.png', $frames[0]);
+        $this->assertSame('extra.png', $frames[1]);
+    }
+
     public function test_usage_reports_linked_blocks_and_store_banner_sections(): void
     {
         $banner = $this->makeBanner();

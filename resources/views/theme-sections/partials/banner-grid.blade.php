@@ -19,14 +19,37 @@
     $style = $style ?? ($settings['style'] ?? 'tiles');
 @endphp
 
+@php
+    // swipe = one horizontally snap-scrolling row, the same gesture the mosaic offers, available to
+    // every banner section that shows more than one card. Unlike 'rail' (which scrolls only when
+    // the tiles overflow), swipe is a deliberate carousel: fixed card width, snap points, touch.
+    $swipe = $style === 'swipe';
+    $rotateMs = max(1500, (int) ($settings['rotate_ms'] ?? 4000));
+@endphp
+
 @if (count($cards))
-    <div class="{{ $style === 'rail' ? 'ml-rail' : 'ml-mosaic' }} ml-banners--{{ $style }}"
-         @if ($style !== 'rail') style="grid-template-columns:repeat(var(--tb-cols,{{ $columns }}),minmax(0,1fr));gap:{{ $gap }}px" @endif>
+    <div class="{{ $swipe ? 'ml-mswipe' : ($style === 'rail' ? 'ml-rail' : 'ml-mosaic') }} ml-banners--{{ $style }}"
+         @if ($swipe)
+             style="--ml-sh:{{ max(120, (int) ($settings['height'] ?? 240)) }}px;gap:{{ $gap }}px"
+         @elseif ($style !== 'rail')
+             style="grid-template-columns:repeat(var(--tb-cols,{{ $columns }}),minmax(0,1fr));gap:{{ $gap }}px"
+         @endif>
         @foreach ($cards as $card)
-            <a class="ml-tile ml-reveal" data-delay="{{ $loop->index % 6 }}"
+            @php
+                // Extra frames travel with the card everywhere, not just in the mosaic: a banner
+                // with three pictures crossfades wherever it is placed.
+                $frames = array_values(array_filter($card['images'] ?? [$card['image'] ?? null]));
+                $shape = in_array($card['span'] ?? null, ['small', 'square', 'wide', 'tall', 'large', 'strip'], true)
+                    ? $card['span'] : null;
+            @endphp
+            <a class="ml-tile ml-reveal {{ count($frames) > 1 ? 'ml-tile--frames' : '' }} {{ $swipe && $shape ? 'ml-tile--' . $shape : '' }}"
+               data-delay="{{ $loop->index % 6 }}" @if (count($frames) > 1) data-rotate="{{ $rotateMs }}" @endif
                href="{{ ($card['link'] ?? null) ?: 'javascript:void(0)' }}"
-               style="{{ $aspect !== 'auto' ? 'aspect-ratio:' . $aspect . ';' : '' }}">
-                <img src="{{ ($card['image'] ?? null) ?: $placeholder }}" alt="{{ $card['title'] ?? '' }}" loading="lazy">
+               style="{{ $aspect !== 'auto' && !$swipe ? 'aspect-ratio:' . $aspect . ';' : '' }}">
+                @foreach ($frames === [] ? [$placeholder] : $frames as $frame)
+                    <img src="{{ $frame }}" alt="{{ $card['title'] ?? '' }}" loading="lazy"
+                         class="{{ count($frames) > 1 ? 'ml-tile__frame ' . ($loop->first ? 'is-on' : '') : '' }}">
+                @endforeach
                 @if (!empty($card['badge']))<span class="ml-tile__badge">{{ $card['badge'] }}</span>@endif
                 @if ($showText && (!empty($card['title']) || !empty($card['subtitle'])))
                     <span class="ml-tile__scrim"></span>

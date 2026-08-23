@@ -1907,11 +1907,13 @@
                             @elseif ($layout === 'strip')
                                 @include('theme-sections.partials.banner-strip', ['card' => $cards[0], 'settings' => $s, 'placeholder' => $__placeholder])
                             @else
-                                {{-- 'grid': the remaining layout, and the safe landing for a value
-                                     that is no longer offered. --}}
+                                {{-- 'grid' and 'swipe' share the banner-grid partial, which reads
+                                     the style; grid is also the safe landing for a value that is
+                                     no longer offered. --}}
                                 @include('theme-sections.partials.banner-grid', [
                                     'cards' => $cards, 'settings' => $s, 'placeholder' => $__placeholder,
                                     'columns' => max(1, (int) ($s['columns'] ?? 3)), 'gap' => $gap,
+                                    'style' => $layout === 'swipe' ? 'swipe' : 'tiles',
                                 ])
                             @endif
                         @endif
