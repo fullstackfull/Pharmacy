@@ -37,7 +37,11 @@
                             @if (!empty($slide['title']))<h3>{{ $slide['title'] }}</h3>@endif
                             @if (!empty($slide['subtitle']))<p>{{ $slide['subtitle'] }}</p>@endif
                             @if (!empty($slide['link']))
-                                <a href="{{ $slide['link'] }}" class="ml-btn ml-btn-light">{{ ($slide['button_text'] ?? null) ?: translate('shop_now') }}</a>
+                                {{-- Counted only when the slide came from a banner row: the analytics
+                                     table is keyed on the banner the merchant edits, and a card
+                                     typed straight into the builder has no such row. --}}
+                                <a href="{{ $slide['link'] }}" class="ml-btn ml-btn-light"
+                                   @if (!empty($slide['banner_id'])) data-analytics="banner_clicked" data-analytics-type="banner" data-analytics-id="{{ $slide['banner_id'] }}" @endif>{{ ($slide['button_text'] ?? null) ?: translate('shop_now') }}</a>
                             @endif
                         </div>
                     @endif

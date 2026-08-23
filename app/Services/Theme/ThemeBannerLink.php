@@ -129,6 +129,7 @@ class ThemeBannerLink
                 ->get()
                 ->keyBy('id')
                 ->map(fn (Banner $banner) => [
+                    'banner_id'    => (int) $banner->id,
                     'published'    => (int) $banner->published === 1,
                     'image'        => getStorageImages(path: $banner->photo_full_url, type: 'banner'),
                     'image_mobile' => $banner->mobile_photo

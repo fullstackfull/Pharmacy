@@ -379,6 +379,9 @@ class SectionDataResolver
         });
 
         return $rows->map(fn (Banner $banner) => [
+            // Which banner this card came from, so a click on it is counted against the row the
+            // merchant edits rather than against "a card in a section somewhere".
+            'banner_id'   => (int) $banner->id,
             // photo_full_url is the storage descriptor array, not a url. The section
             // partials echo `image` straight into src, so resolve it here — echoing the
             // array fatals the whole home page the moment a theme with a banner section

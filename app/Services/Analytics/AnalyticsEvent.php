@@ -57,6 +57,9 @@ final class AnalyticsEvent
     // Campaign.
     public const CAMPAIGN_CLICKED = 'campaign_clicked';
 
+    // Merchandising: what the merchant placed, and whether anyone took it.
+    public const BANNER_CLICKED = 'banner_clicked';
+
     /** Which family each event belongs to, for the reports that group by area. */
     private const CATEGORIES = [
         self::PAGE_VIEWED => 'page',
@@ -90,6 +93,7 @@ final class AnalyticsEvent
         self::SIGNED_IN => 'account',
         self::REVIEW_SUBMITTED => 'account',
         self::CAMPAIGN_CLICKED => 'campaign',
+        self::BANNER_CLICKED => 'merchandising',
     ];
 
     /**
@@ -119,6 +123,12 @@ final class AnalyticsEvent
      */
     private const CLIENT_ALLOWED = [
         self::PRODUCT_LIST_VIEWED,
+        // A banner click is a link being followed, and a link the server cannot see: the page it
+        // leads to is recorded as an ordinary pageview with nothing to say it came from a banner,
+        // and in the app there is no navigation at all. Whoever draws the banner is the only
+        // witness, so both clients report it — the web from its beacon, the app from its own
+        // ingest — and neither can double-count the other because neither is the server.
+        self::BANNER_CLICKED,
     ];
 
     public function __construct(

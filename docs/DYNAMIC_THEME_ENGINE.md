@@ -272,6 +272,29 @@ reached; a short link it cannot resolve lands on home rather than on a guess.
 other — `GET /api/v1/deep-link/config` publishes the shop's list so the app team reads it from the
 shop rather than from a message.
 
+### Banner clicks (Analytics)
+
+Nothing counted whether a banner worked. On the web the server sees the page a banner led to and
+nothing saying a banner led there; in the app the tap is not a navigation at all. So both clients
+report it, and neither can double-count the other because neither is the server:
+
+* **Web** — `data-analytics="banner_clicked"` on the banner anchors, read by the storefront beacon's
+  existing delegated handler. A banner click is a navigation, so it flushes immediately rather than
+  waiting for the 1.2s batch timer.
+* **App** — `POST /api/v1/analytics/events`, public and rate limited for the same reason the beacon
+  is: a banner is shown to guests, and an endpoint that counted only signed-in shoppers would report
+  a biased subset while looking complete.
+
+Both doors share one payload rule set (`ClientEventIngest`): only allow-listed names, nothing
+money-related ever accepted from a client, ids coerced to digits, everything else dropped, and 204
+to everything so a prober learns nothing. Theme-builder cards carry `banner_id` so a click on a
+builder-placed banner counts against the same Banner Setup row the merchant edits; a card typed
+straight into the builder has no banner row and reports nothing rather than a wrong attribution.
+
+The daily rollup adds a `banner` dimension, and Analytics → Catalogue shows the table, labelled by
+placement ("Main Banner", "Home Promo Banner") because the banner form has no title field and a
+column of blank names would be useless.
+
 ### The mobile image
 
 A picture that reads on a wide storefront is often unreadable once a phone draws it, so three
@@ -468,15 +491,15 @@ fetch removed).
 
 ## 12. Verified state
 
-* Backend: full Feature suite **1,099 tests / 3,639 assertions**, 2 errors — both the pre-existing
+* Backend: full Feature suite **1,104 tests / 3,659 assertions**, 2 errors — both the pre-existing
   `CrossTenantAuthorizationTest` auth-guard errors, reproduced on a clean tree. The
   categories/brands mobile-image migration was run live on sqlite (up, re-up, down, up).
 * Flutter: `flutter analyze` reports no errors on any new/modified file (the remaining warnings are
   all pre-existing lints in untouched legacy files); **50 tests green** — parser totality, sync
   decisions (rollback/304/offline), capability↔renderer contract, the render matrix (every
   app-safe type × every builder style at 390pt RTL, asserting `takeException()` is null),
-  deep-link resolution with its offline fallback, and the banner/category/brand image and action
-  contracts.
+  deep-link resolution with its offline fallback, and the banner/category/brand image, action
+  and click-attribution contracts.
 
 ## 13. Known limitations
 

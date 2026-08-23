@@ -713,6 +713,7 @@ return [
 	'home_promo_banners' => 'البانرات الترويجية بالرئيسية',
 	'one_call_returns_the_home_promo_grid_with_each_banners_layout_and_both_images' => 'استدعاء واحد يعيد شبكة البانرات الترويجية مع طريقة عرض كل بانر وصورتيه',
 	'banner' => 'بانر',
+	'banner_clicks' => 'نقرات البانرات',
 	'priority' => 'الأولوية',
 	'banner_placement_guide' => 'دليل مواضع البانرات',
 	'placement_guide' => 'دليل المواضع',

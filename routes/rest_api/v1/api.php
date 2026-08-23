@@ -8,6 +8,7 @@ use App\Http\Controllers\RestAPI\v1\auth\ForgotPasswordController;
 use App\Http\Controllers\RestAPI\v1\auth\PassportAuthController;
 use App\Http\Controllers\RestAPI\v1\auth\PhoneVerificationController;
 use App\Http\Controllers\RestAPI\v1\auth\SocialAuthController;
+use App\Http\Controllers\RestAPI\v1\AnalyticsEventController;
 use App\Http\Controllers\RestAPI\v1\BannerController;
 use App\Http\Controllers\RestAPI\v1\BrandController;
 use App\Http\Controllers\RestAPI\v1\CartController;
@@ -80,6 +81,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
     Route::post('app-health', AppHealthController::class)
         ->middleware('throttle:30,1')
         ->name('api.v1.app-health');
+
+    /*
+     * What only the app can see. Unauthenticated for the same reason the storefront's beacon is:
+     * a banner is shown to guests, and an endpoint that counted only signed-in shoppers would
+     * report a biased subset while looking complete. Only allow-listed event names are accepted,
+     * none of them carry money, and it always answers 204.
+     *
+     * Throttled per IP, like the beacon: a public write into an analytics table must not let
+     * whoever calls it most decide what the reports say.
+     */
+    Route::post('analytics/events', AnalyticsEventController::class)
+        ->middleware('throttle:' . (int) config('analytics.beacon.rate_limit_per_minute', 60) . ',1')
+        ->name('api.v1.analytics.events');
 
     /*
      * Rate limited: login, OTP verification/resend and password reset are credential-stuffing and

@@ -270,6 +270,10 @@ class AnalyticsRollup extends Command
             'category' => [AnalyticsEvent::CATEGORY_VIEWED],
             'shop' => [AnalyticsEvent::SHOP_VIEWED],
             'brand' => [AnalyticsEvent::BRAND_VIEWED],
+            // Which banner was taken, per banner. The merchant chooses the picture, the slot and
+            // the link; without this the only honest answer to "is that banner working?" was that
+            // nobody had ever counted.
+            'banner' => [AnalyticsEvent::BANNER_CLICKED],
             'gateway' => [AnalyticsEvent::PAYMENT_SUCCEEDED, AnalyticsEvent::PAYMENT_FAILED],
         ];
 

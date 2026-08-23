@@ -33,7 +33,7 @@ class AnalyticsReporting
     public const DIMENSIONS = [
         'source', 'medium', 'campaign', 'device', 'os', 'browser', 'country', 'language',
         'app_version', 'landing_path', 'attribution_basis', 'new_vs_returning', 'hour', 'weekday',
-        'path', 'event', 'product', 'category', 'shop', 'brand', 'gateway', 'vendor',
+        'path', 'event', 'product', 'category', 'shop', 'brand', 'banner', 'gateway', 'vendor',
         'search_term', 'search_no_results', 'campaign_link', 'excluded_traffic', 'totals',
     ];
 
