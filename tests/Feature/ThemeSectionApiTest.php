@@ -29,7 +29,7 @@ class ThemeSectionApiTest extends TestCase
         parent::setUp();
         Cache::flush();
 
-        foreach (['storages', 'banners', 'theme_blocks', 'theme_sections', 'theme_versions', 'themes', 'business_settings'] as $table) {
+        foreach (['translations', 'storages', 'banners', 'theme_blocks', 'theme_sections', 'theme_versions', 'themes', 'business_settings'] as $table) {
             Schema::dropIfExists($table);
         }
         // Banner::saved() records which disk each photo lives on; without the table the save throws.
@@ -62,6 +62,15 @@ class ThemeSectionApiTest extends TestCase
             $table->id(); $table->unsignedBigInteger('theme_section_id'); $table->string('type', 80);
             $table->unsignedInteger('sort_order')->default(0); $table->boolean('is_visible')->default(true);
             $table->json('settings')->nullable(); $table->timestamps();
+        });
+        // Category's global scope eager-loads its translations on EVERY query; without the table
+        // the target lookup throws (and safely() would turn a real category into a url fallback).
+        Schema::create('translations', function (Blueprint $table) {
+            $table->id(); $table->string('translationable_type')->nullable(); $table->unsignedBigInteger('translationable_id')->nullable();
+            $table->string('locale')->nullable(); $table->string('key')->nullable(); $table->text('value')->nullable(); $table->timestamps();
+        });
+        Schema::create('categories', function (Blueprint $table) {
+            $table->id(); $table->string('name')->nullable(); $table->string('slug')->nullable(); $table->timestamps();
         });
         Schema::create('banners', function (Blueprint $table) {
             $table->id(); $table->string('photo')->nullable(); $table->string('mobile_photo')->nullable();
@@ -215,6 +224,81 @@ class ThemeSectionApiTest extends TestCase
 
         $this->assertSame(140, $settings['height'], 'this endpoint has exactly one breakpoint, and it is not desktop');
         $this->assertSame(140, $settings['height_mobile'], 'the sibling stays for a client that wants the full picture');
+    }
+
+    public function test_every_card_says_what_tapping_it_opens(): void
+    {
+        // "This tile is linked, but to WHAT?" was unanswerable from the API — a card carried only
+        // a URL path for the app to reverse-engineer. The target is now structural: from the
+        // linked banner's own resource picker first, from the storefront's URL shapes second.
+        \Illuminate\Support\Facades\DB::table('categories')->insert(['id' => 9, 'name' => 'Vitamins', 'slug' => 'vitamins']);
+
+        $banner = Banner::create([
+            'photo' => 'x.png', 'banner_type' => 'Theme Banner', 'published' => 1,
+            'url' => '/category/vitamins', 'resource_type' => 'category', 'resource_id' => 9,
+        ]);
+
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+        $section = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic',
+            'sort_order' => 1, 'is_visible' => true, 'settings' => [],
+        ]);
+
+        foreach ([
+            ['banner_id' => $banner->id, 'image' => '/storage/a.webp'],                          // banner resource
+            ['image' => '/storage/b.webp', 'link' => '/category/vitamins', 'title' => 'ti'],     // parsed from the URL
+            ['image' => '/storage/c.webp', 'link' => '/brands', 'title' => 'tj'],                // a list page: plain url
+            ['image' => '/storage/d.webp', 'title' => 'tk'],                                     // opens nothing
+            ['image' => '/storage/e.webp', 'link' => '/category/deleted-slug', 'title' => 'tl'], // a ghost
+        ] as $order => $settings) {
+            ThemeBlock::create([
+                'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+                'sort_order' => $order, 'is_visible' => true, 'settings' => $settings,
+            ]);
+        }
+
+        $targets = array_column($this->getJson('/api/v1/theme/sections?type=banner_mosaic')->json('sections.0.cards'), 'target');
+
+        $this->assertSame(['kind' => 'category', 'id' => 9, 'slug' => 'vitamins', 'name' => 'Vitamins'], $targets[0]);
+        $this->assertSame('category', $targets[1]['kind']);
+        $this->assertSame(9, $targets[1]['id'], 'a slug-shaped link resolves to the same identity');
+        $this->assertSame('url', $targets[2]['kind'], 'a list page is honestly a url, not a guessed brand');
+        $this->assertSame('none', $targets[3]['kind']);
+        $this->assertSame('url', $targets[4]['kind'], 'a link to something deleted must not present a resolvable target');
+    }
+
+    public function test_a_swipe_mosaic_carries_its_shapes_and_every_frame_of_a_multi_image_tile(): void
+    {
+        // The merchant's ask verbatim: small squares side by side that swipe, a rectangle strip,
+        // and extra frames on one tile. The app must receive all three structurally.
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+        $section = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['display' => 'swipe', 'rotate_ms' => 2500, 'height' => 200],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile', 'sort_order' => 0, 'is_visible' => true,
+            'settings' => ['image' => '/storage/a.webp', 'image_2' => '/storage/b.webp', 'span' => 'square'],
+        ]);
+        ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile', 'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['image' => '/storage/c.webp', 'span' => 'strip'],
+        ]);
+
+        $data = $this->getJson('/api/v1/theme/sections?type=banner_mosaic')->json('sections.0');
+
+        $this->assertSame('swipe', $data['settings']['display']);
+        $this->assertSame(2500, $data['settings']['rotate_ms']);
+
+        [$square, $strip] = $data['cards'];
+        $this->assertSame('square', $square['span']);
+        $this->assertCount(2, $square['images'], 'both frames of the tile travel');
+        foreach ($square['images'] as $frame) {
+            $this->assertStringStartsWith('http', $frame, 'frames are absolute like every other image');
+        }
+        $this->assertSame('strip', $strip['span']);
+        $this->assertCount(1, $strip['images'], 'a still tile is one frame, not a missing key');
     }
 
     public function test_input_nobody_can_spell_falls_back_instead_of_failing(): void

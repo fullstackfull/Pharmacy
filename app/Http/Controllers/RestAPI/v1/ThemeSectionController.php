@@ -35,7 +35,7 @@ class ThemeSectionController extends Controller
     private const PAGES = ['home', 'header', 'footer'];
 
     /** Settings keys whose value is an image path a phone must be able to fetch. */
-    private const IMAGE_KEYS = ['image', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image'];
 
     public function __construct(
         private readonly StorefrontThemeRenderer $renderer,
@@ -56,7 +56,21 @@ class ThemeSectionController extends Controller
             . 'unpublish in Banner Setup changes this response without any theme change. Manage the '
             . 'images in Admin → Promotion → Banner Setup (builder uploads register themselves there '
             . 'as "Theme Banner" rows). All image URLs are absolute, and responsive settings arrive '
-            . 'resolved for the mobile breakpoint. Each section also carries `source` — where its DATA '
+            . 'resolved for the mobile breakpoint. Every banner section offers a swipeable row, '
+            . 'read from a different key per section: banner_mosaic uses `settings.display` '
+            . '("grid" or "swipe"), promotional_banner uses `settings.style` ("tiles", "rail", '
+            . '"overlap" or "swipe"), store_banner uses `settings.layout` ("grid", "split", '
+            . '"strip" or "swipe"). In swipe mode render one horizontally swipeable row of cards '
+            . 'sized against `settings.height` (px, default 240); in grid mode render a wall. A '
+            . "card's `span` names its shape — small/square 1x1, wide 2x1, tall 1x2, large 2x2, "
+            . 'strip full-width — which sets its cell in the wall and its width in the row. Any '
+            . 'card of any banner section may carry more than one picture: `images` is the ordered '
+            . 'frame list (`image` is always frames[0]), and a card with two or more frames '
+            . 'crossfades through them every `settings.rotate_ms` (ms, default 4000, floor 1500). Every card carries a structured `target` — what tapping it opens: '
+            . '{kind: product|category|brand|shop, id, slug, name} resolved from the linked banner\'s '
+            . 'own resource picker or from the link URL; {kind: url} for a link that matches no '
+            . 'catalogue shape (feed it to the deep-link resolve API); {kind: none} for a tile that '
+            . 'opens nothing. Each section also carries `source` — where its DATA '
             . 'lives: `inline` (everything is in this payload), `api` (fetch the named v1 endpoint with '
             . 'the given params, plus the standard guest_id/token the app already sends), or `none` '
             . '(no public API feeds it yet; the note says why — hide that section). `sections` is empty '
@@ -193,7 +207,7 @@ class ThemeSectionController extends Controller
                 'settings' => $this->absolutize($this->forPhone($block['settings'] ?? [])),
             ], $blocks),
             'cards' => $bannerBacked
-                ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks))
+                ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks, withTargets: true))
                 : null,
             'source' => $this->sources->for($section['type'], $section['settings'] ?? [], $blocks),
         ];
@@ -237,6 +251,14 @@ class ThemeSectionController extends Controller
             if (is_string($value) && str_starts_with($value, '/')) {
                 $settings[$key] = url($value);
             }
+        }
+
+        // A multi-frame tile's whole frame list, same rule as its lead image.
+        if (isset($settings['images']) && is_array($settings['images'])) {
+            $settings['images'] = array_map(
+                fn ($frame) => is_string($frame) && str_starts_with($frame, '/') ? url($frame) : $frame,
+                $settings['images'],
+            );
         }
 
         return $settings;

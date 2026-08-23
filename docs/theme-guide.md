@@ -223,6 +223,13 @@ Brand Banner.
 - شاشة البانرات تعرض على كل صف مكانه بدقة («Banner mosaic — الرئيسية — بلاطة عريضة»)، وزر
   **«بانرات الثيم كما تُعرض»** يفتح شاشة ترسم كل قسم بترتيبه الفعلي على الواجهة — الموزاييك
   بشبكته والبلاطات بأحجامها والهيرو بسلايداته — مع روابط تعديل مباشرة للبانر وللقسم في المحرر.
+- **السواب (السحب الأفقي) متاح لكل أنواع البانرات** لا للموزاييك فقط: `promotional_banner` عبر
+  `style: swipe`، و`store_banner` عبر `layout: swipe`، والموزاييك عبر `display: swipe` — صفّ واحد
+  يُسحب أفقياً، وعرض كل بطاقة يأتي من شكل البلاطة مقيساً على `height` (بكسل، الافتراضي 240).
+- **أكثر من صورة لنفس البطاقة** متاح لكل بلوك يحمل صورة: `banner` و`slide` صارا يدعمان
+  `image_2`/`image_3` مثل `mosaic_tile` تماماً، وتتبدّل الصور بتلاشٍ كل `rotate_ms`
+  (الافتراضي 4000 ملّي ثانية). وشاشة البانرات صارت تُظهر ذلك: شارة بعدد الصور فوق المصغّرة،
+  وشريط بكل الصور تحتها، ووضع العرض على رأس القسم — بعد أن كان ذلك ظاهراً داخل المحرر وحده.
 
 ---
 
@@ -289,3 +296,40 @@ Brand Banner.
   wins over `height` in place). The app's home renderer is therefore one loop: for each section,
   switch on `type` to pick the widget, follow `source` for data — reorder or hide sections in the
   builder, publish, and the app follows with no release.
+- **Mosaic ⇄ Banner Setup, both directions.** A LINKED tile edited in the builder pushes the
+  changed fields into its Theme Banner row (title/link/button text/image), so the two screens are
+  two views of one record. The rule is last-editor-wins PER FIELD — only fields changed in that
+  save travel, so a Banner Setup edit is never undone by the builder's stale copy — and only rows
+  the builder itself minted are its to edit: a dashboard banner (Main Banner etc.) linked into a
+  tile keeps Banner Setup as its sole source of truth. Every card in the mobile API also carries a
+  structured `target` ({kind: product|category|brand|shop, id, slug, name} — or url/none), taken
+  from the banner's own resource picker or parsed from the storefront's URL shapes, so the app
+  knows what each tile OPENS without reverse-engineering links.
+- **Locked mosaic layout.** `layout_lock` on banner_mosaic keeps the four-column composition on
+  every screen: rows derive from the container's live width at the proportions the merchant
+  designed at the 1140px builder width (container queries; browsers without them keep the fixed
+  row height). Unlocked keeps today's behavior — two columns under 768px, fixed row heights.
+- **Mosaic shapes, swipe display, multi-frame tiles.** Tile shapes: small/square (1×1), wide (2×1),
+  tall (1×2), large (2×2), strip (full-width rectangle). `display: swipe` turns the section into
+  one horizontally swipeable snap row — small squares side by side that scroll; squares over a
+  rectangle strip = a swipe section stacked above a grid one. `image_2`/`image_3` give a tile extra
+  frames it crossfades through every `rotate_ms`. All of it rides the mobile API (`settings.display`,
+  card `span`, card `images[]` absolutized) and is documented on the theme/sections endpoint in the
+  Developer Portal.
+- **Banner Setup, organized.** The list screen opens with "Theme banners grouped by section": one
+  card per banner section (mosaic, hero, strip…) with its images side by side — shape badge, link
+  state (Edit ↔ In builder), unpublished flag — so "which picture is the mosaic's large tile" is
+  answered right there, with a click through to edit the banner or open the builder. A tile holding
+  more than one picture says so: a frame-count badge over the thumbnail and a strip of every frame
+  beneath it, plus the section's display mode on its header — the multi-image state that used to be
+  visible only inside the builder.
+- **Swipe on every banner section, frames on every image block.** Swipe is no longer the mosaic's
+  alone: `promotional_banner` takes `style: swipe`, `store_banner` takes `layout: swipe`, and the
+  mosaic keeps `display: swipe` — each renders one horizontally snap-scrolling row whose card width
+  comes from the tile shape measured against `height` (px, default 240). Extra frames likewise
+  belong to every image-carrying block: `banner` and `slide` declare `image_2`/`image_3` alongside
+  `mosaic_tile`, so a promotional tile or a hero slide crossfades through its pictures every
+  `rotate_ms` (ms, default 4000, floor 1500) exactly as a mosaic tile does. Both halves ride the
+  mobile API — `settings.style` / `settings.layout` / `settings.display`, `settings.height`,
+  `settings.rotate_ms`, card `span` and card `images[]` — documented on the theme/sections endpoint
+  in the Developer Portal.

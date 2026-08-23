@@ -17,7 +17,10 @@ use App\Http\Controllers\RestAPI\v3\seller\POSCartController;
 use App\Http\Controllers\RestAPI\v3\seller\POSController;
 use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
 use App\Http\Controllers\RestAPI\v3\seller\ShopController;
@@ -279,6 +282,33 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::post('default', 'updateDefault');
                 Route::post('status', 'updateStatus');
                 Route::get('delete', 'delete');
+            });
+        });
+
+        /*
+         * Seller Center (marketplace suite) — the same services the web hub uses,
+         * exposed to the mobile app. Identity always from the auth token's seller.
+         */
+        Route::group(['prefix' => 'seller-center'], function () {
+            Route::controller(SellerCenterController::class)->group(function () {
+                Route::get('overview', 'overview');
+                Route::get('scorecard', 'scorecard');
+            });
+
+            Route::group(['prefix' => 'verification'], function () {
+                Route::controller(SellerVerificationController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::post('submit', 'submit');
+                    Route::get('document/{id}', 'document')->whereNumber('id');
+                });
+            });
+
+            Route::group(['prefix' => 'payouts'], function () {
+                Route::controller(SellerPayoutController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::post('/', 'store');
+                    Route::post('{id}/cancel', 'cancel')->whereNumber('id');
+                });
             });
         });
 

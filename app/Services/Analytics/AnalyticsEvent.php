@@ -60,6 +60,11 @@ final class AnalyticsEvent
     // Merchandising: what the merchant placed, and whether anyone took it.
     public const BANNER_CLICKED = 'banner_clicked';
 
+    // Seller (marketplace suite). Recorded in the services, so the vendor panel
+    // and the seller app produce the same rows.
+    public const PAYOUT_REQUESTED = 'payout_requested';
+    public const KYC_SUBMITTED = 'kyc_submitted';
+
     /** Which family each event belongs to, for the reports that group by area. */
     private const CATEGORIES = [
         self::PAGE_VIEWED => 'page',
@@ -94,6 +99,8 @@ final class AnalyticsEvent
         self::REVIEW_SUBMITTED => 'account',
         self::CAMPAIGN_CLICKED => 'campaign',
         self::BANNER_CLICKED => 'merchandising',
+        self::PAYOUT_REQUESTED => 'seller',
+        self::KYC_SUBMITTED => 'seller',
     ];
 
     /**

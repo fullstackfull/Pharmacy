@@ -450,7 +450,7 @@ class SectionDataResolver
         }));
     }
 
-    public function blockCards(array $blocks): array
+    public function blockCards(array $blocks, bool $withTargets = false): array
     {
         $cards = [];
 
@@ -495,10 +495,143 @@ class SectionDataResolver
                 'background'   => $settings['background'] ?? null,
                 'overlay'      => $settings['overlay'] ?? null,
                 'icon'         => $settings['icon'] ?? null,
+                // Every frame of the tile, lead image first. One entry means a still tile; more
+                // mean it crossfades through them in place. The linked banner's image, when there
+                // is one, replaces only the LEAD frame — the extra frames are the block's own.
+                'images'       => array_values(array_filter([
+                    $settings['image'] ?? null,
+                    $settings['image_2'] ?? null,
+                    $settings['image_3'] ?? null,
+                ], fn ($frame) => is_string($frame) && $frame !== '')),
+                'banner_id'    => $linkedId > 0 ? $linkedId : null,
+                // The Banner Setup form's own resource picker, carried raw; resolveTargets() below
+                // turns it (or, failing it, the link URL) into the card's structured target.
+                '_resource'    => $linked !== null
+                    ? ['type' => $linked['resource_type'] ?? null, 'id' => $linked['resource_id'] ?? null]
+                    : null,
             ];
         }
 
+        // The web render never reads targets, so it never pays for the lookups behind them.
+        $cards = $withTargets ? $this->resolveTargets($cards) : $cards;
+
+        foreach ($cards as &$card) {
+            unset($card['_resource']);
+        }
+
         return $cards;
+    }
+
+    /**
+     * What each card OPENS, structurally — so a client never reverse-engineers a URL.
+     *
+     * "This tile is linked to something, but to what?" was unanswerable from the API: a card
+     * carried only a `link` path. The banner row knows (its resource picker stores type + id), and
+     * when the tile was composed with a plain link instead, the storefront's own URL shapes are
+     * unambiguous — /product/{slug}, /category/{slug}, /brand/{slug}, /vendor-shop/{slug}. Anything
+     * else is honestly a `url`, and a card with no link at all says `none` rather than nothing.
+     *
+     * Names and slugs resolve in ONE query per entity type across the whole section, not one per
+     * tile — a mosaic of ten tiles must not cost ten lookups.
+     *
+     * @param  array<int, array<string, mixed>>  $cards
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolveTargets(array $cards): array
+    {
+        $slugShapes = ['product' => 'product', 'category' => 'category', 'brand' => 'brand', 'shop' => 'vendor-shop'];
+        $wantedIds = [];
+        $wantedSlugs = [];
+
+        foreach ($cards as $index => $card) {
+            $resource = $card['_resource'] ?? null;
+
+            if (is_array($resource) && in_array($resource['type'], array_keys($slugShapes), true) && (int) ($resource['id'] ?? 0) > 0) {
+                $cards[$index]['target'] = ['kind' => $resource['type'], 'id' => (int) $resource['id']];
+                $wantedIds[$resource['type']][] = (int) $resource['id'];
+                continue;
+            }
+
+            $link = trim((string) ($card['link'] ?? ''));
+            if ($link === '') {
+                $cards[$index]['target'] = ['kind' => 'none'];
+                continue;
+            }
+
+            $segments = array_values(array_filter(explode('/', (string) (parse_url($link, PHP_URL_PATH) ?: ''))));
+            $kind = array_search($segments[0] ?? '', $slugShapes, true);
+
+            if ($kind !== false && isset($segments[1])) {
+                $slug = rawurldecode($segments[1]);
+                $cards[$index]['target'] = ['kind' => $kind, 'slug' => $slug];
+                $wantedSlugs[$kind][] = $slug;
+                continue;
+            }
+
+            $cards[$index]['target'] = ['kind' => 'url', 'url' => $link];
+        }
+
+        $found = $this->lookupTargets($wantedIds, $wantedSlugs);
+
+        foreach ($cards as $index => $card) {
+            $target = $card['target'];
+            $key = isset($target['id']) ? 'id:' . $target['id'] : (isset($target['slug']) ? 'slug:' . $target['slug'] : null);
+            $row = $key !== null ? ($found[$target['kind']][$key] ?? null) : null;
+
+            if ($row !== null) {
+                $cards[$index]['target'] += ['id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name']];
+            } elseif ($key !== null) {
+                // A link to something that no longer exists (or was never real) must not present
+                // itself as a resolvable target — the app would build a screen around a ghost.
+                $cards[$index]['target'] = ['kind' => 'url', 'url' => $card['link'] ?? null];
+            }
+        }
+
+        return $cards;
+    }
+
+    /**
+     * One query per entity type, keyed both ways so id- and slug-shaped targets share it.
+     *
+     * @param  array<string, array<int, int>>  $ids
+     * @param  array<string, array<int, string>>  $slugs
+     * @return array<string, array<string, array{id: int, slug: ?string, name: ?string}>>
+     */
+    private function lookupTargets(array $ids, array $slugs): array
+    {
+        $models = [
+            'product' => Product::class,
+            'category' => Category::class,
+            'brand' => Brand::class,
+            'shop' => \App\Models\Shop::class,
+        ];
+        $found = [];
+
+        foreach ($models as $kind => $model) {
+            $wantIds = array_unique($ids[$kind] ?? []);
+            $wantSlugs = array_unique($slugs[$kind] ?? []);
+            if ($wantIds === [] && $wantSlugs === []) {
+                continue;
+            }
+
+            // An unpublished product is a ghost the app would 404 on; the url fallback above is
+            // the honest answer for it. The other types keep their own visibility rules at open.
+            $rows = $this->safely(fn () => ($kind === 'product' ? Product::active() : $model::query())
+                ->where(fn ($query) => $query
+                    ->when($wantIds !== [], fn ($inner) => $inner->whereIn('id', $wantIds))
+                    ->when($wantSlugs !== [], fn ($inner) => $inner->orWhereIn('slug', $wantSlugs)))
+                ->get(['id', 'slug', 'name']));
+
+            foreach ($rows as $row) {
+                $entry = ['id' => (int) $row->id, 'slug' => $row->slug, 'name' => $row->name];
+                $found[$kind]['id:' . $row->id] = $entry;
+                if ($row->slug !== null) {
+                    $found[$kind]['slug:' . $row->slug] = $entry;
+                }
+            }
+        }
+
+        return $found;
     }
 
     /**

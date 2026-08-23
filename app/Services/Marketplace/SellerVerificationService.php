@@ -4,8 +4,10 @@ namespace App\Services\Marketplace;
 
 use App\Models\SellerVerificationDocument;
 use App\Services\AuditLogger;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Resolves a seller's KYC standing and payout eligibility (Phase 3, Stage A).
@@ -25,6 +27,10 @@ class SellerVerificationService
     /** The required set an install ships with when the admin has configured none. */
     public const DEFAULT_REQUIRED_DOCUMENTS = ['identity', 'business_license'];
 
+    /** The document extensions a seller may upload. Server-controlled — the client extension is
+     *  mapped onto this whitelist, never trusted, so an upload can't smuggle an executable one. */
+    public const ALLOWED_FILE_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
+
     public const STATUS_NOT_REQUIRED = 'not_required';
     public const STATUS_UNVERIFIED = 'unverified';
     public const STATUS_PENDING = 'pending';
@@ -33,6 +39,18 @@ class SellerVerificationService
 
     public function __construct(private readonly ?AuditLogger $audit = null)
     {
+    }
+
+    /**
+     * The audit logger, resolved lazily.
+     *
+     * The constructor parameter is nullable with a default, which means the container never fills
+     * it — it just uses the default — so `$this->auditLogger()->record()` was a silent no-op and no KYC
+     * decision was ever audited. Callers that pass their own logger (tests) still win.
+     */
+    private function auditLogger(): AuditLogger
+    {
+        return $this->audit ?? app(AuditLogger::class);
     }
 
     /**
@@ -149,6 +167,21 @@ class SellerVerificationService
     }
 
     /**
+     * Store an uploaded KYC document on the PRIVATE 'local' disk under a high-entropy name and
+     * return the bare filename to persist. Shared by the web and API controllers so both surfaces
+     * store documents identically; serving always goes through an ownership-checked route.
+     */
+    public function storeDocumentFile(UploadedFile $file): string
+    {
+        $clientExtension = strtolower($file->getClientOriginalExtension());
+        $extension = in_array($clientExtension, self::ALLOWED_FILE_EXTENSIONS, true) ? $clientExtension : 'pdf';
+        $fileName = date('Y-m-d') . '-' . bin2hex(random_bytes(16)) . '.' . $extension;
+        Storage::disk('local')->put('seller/kyc/' . $fileName, file_get_contents($file));
+
+        return $fileName;
+    }
+
+    /**
      * The gate the payout flow asks about. When KYC is not required for payout this is always true,
      * so the withdrawal path is unchanged; when it is required, only a verified seller may withdraw.
      */
@@ -174,11 +207,21 @@ class SellerVerificationService
             'expires_at' => $expiresAt ?: null,
         ]);
 
-        $this->audit?->record(
+        $this->auditLogger()->record(
             action: 'seller.kyc_submitted',
             subject: ['type' => 'seller', 'id' => $sellerId],
             after: ['document_id' => $doc->id, 'document_type' => $type],
         );
+
+        try {
+            app(\App\Services\Analytics\Analytics::class)->kycSubmitted(
+                sellerId: (int) $sellerId,
+                documentId: (int) $doc->id,
+                documentType: $type,
+            );
+        } catch (\Throwable) {
+            // Verification progress must not depend on analytics being up.
+        }
 
         return $doc;
     }
@@ -197,7 +240,7 @@ class SellerVerificationService
         }
         $ok = $doc->save();
 
-        $this->audit?->record(
+        $this->auditLogger()->record(
             action: 'seller.kyc_approved',
             subject: ['type' => 'seller', 'id' => $doc->seller_id],
             after: ['document_id' => $doc->id, 'document_type' => $doc->document_type],
@@ -214,7 +257,7 @@ class SellerVerificationService
         $doc->rejection_reason = $reason;
         $ok = $doc->save();
 
-        $this->audit?->record(
+        $this->auditLogger()->record(
             action: 'seller.kyc_rejected',
             subject: ['type' => 'seller', 'id' => $doc->seller_id],
             after: ['document_id' => $doc->id, 'reason' => $reason],

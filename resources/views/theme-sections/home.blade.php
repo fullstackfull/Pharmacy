@@ -493,8 +493,40 @@
         background:rgba(255,255,255,.92); border-radius:99px; }
     .ml-tile--wide{ grid-column:span 2 } .ml-tile--tall{ grid-row:span 2 }
     .ml-tile--large{ grid-column:span 2; grid-row:span 2 }
+    /* square shares small's cell in the grid; strip is the full-width rectangle row. */
+    .ml-tile--strip{ grid-column:1 / -1 }
+    /* A multi-frame tile crossfades through its images in place. Frames stack; .is-on shows. */
+    .ml-tile--frames .ml-tile__frame{ position:absolute; inset:0; opacity:0; transition:opacity .9s var(--ml-ease); }
+    .ml-tile--frames .ml-tile__frame.is-on{ opacity:1; }
+    .ml-tile--frames{ min-height:80px; }
+    /* The swipe row: one horizontally snap-scrolling strip; shapes set width against the height. */
+    .ml-mswipe{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+        padding-bottom:6px; scrollbar-width:thin; }
+    .ml-mswipe .ml-tile{ flex:0 0 auto; scroll-snap-align:start; height:var(--ml-sh,240px); }
+    .ml-mswipe .ml-tile--small,.ml-mswipe .ml-tile--tall{ width:calc(var(--ml-sh,240px) * .75) }
+    .ml-mswipe .ml-tile--square{ width:var(--ml-sh,240px) }
+    .ml-mswipe .ml-tile--wide,.ml-mswipe .ml-tile--large{ width:calc(var(--ml-sh,240px) * 1.7) }
+    .ml-mswipe .ml-tile--strip{ width:calc(var(--ml-sh,240px) * 2.4) }
+    .ml-mswipe .ml-tile img{ height:100% }
     .ml-mosaic{ display:grid; grid-template-columns:repeat(4,1fr); }
     @media (max-width:767px){ .ml-mosaic{ grid-template-columns:repeat(2,1fr) } .ml-tile--large,.ml-tile--wide{ grid-column:span 2 } }
+    /* Locked mosaic: the merchant's four-column composition on EVERY screen, scaled — never
+       reflowed. The wrapper is the measuring container; rows derive from its live width so the
+       block keeps the exact proportions it has at the 1140px design width. Browsers without
+       container queries keep the fixed row height (the layout still never reflows). */
+    .ml-mosaic-lockwrap{ container-type:inline-size; }
+    .ml-mosaic--locked{ grid-template-columns:repeat(4,1fr) !important; }
+    @supports (width: 1cqw){
+        .ml-mosaic--locked{ grid-auto-rows:calc((100cqw - 3 * var(--ml-mgap,16px)) / 4 * var(--ml-mratio,.85)) !important; }
+    }
+    @media (max-width:767px){
+        .ml-mosaic--locked .ml-tile--large, .ml-mosaic--locked .ml-tile--wide{ grid-column:span 2 }
+        .ml-mosaic--locked .ml-tile--large, .ml-mosaic--locked .ml-tile--tall{ grid-row:span 2 }
+        /* The locked grid ignores the two-column collapse above; captions shrink instead. */
+        .ml-mosaic--locked .ml-tile__body h4{ font-size:.85rem }
+        .ml-mosaic--locked .ml-tile__body{ padding:.6rem }
+        .ml-mosaic--locked .ml-btn{ display:none }
+    }
 
     .ml-split{ display:grid; grid-template-columns:repeat(2,1fr); align-items:stretch; overflow:hidden;
         border-radius:16px; border:1px solid var(--ml-line); background:#fff; }
@@ -1875,11 +1907,13 @@
                             @elseif ($layout === 'strip')
                                 @include('theme-sections.partials.banner-strip', ['card' => $cards[0], 'settings' => $s, 'placeholder' => $__placeholder])
                             @else
-                                {{-- 'grid': the remaining layout, and the safe landing for a value
-                                     that is no longer offered. --}}
+                                {{-- 'grid' and 'swipe' share the banner-grid partial, which reads
+                                     the style; grid is also the safe landing for a value that is
+                                     no longer offered. --}}
                                 @include('theme-sections.partials.banner-grid', [
                                     'cards' => $cards, 'settings' => $s, 'placeholder' => $__placeholder,
                                     'columns' => max(1, (int) ($s['columns'] ?? 3)), 'gap' => $gap,
+                                    'style' => $layout === 'swipe' ? 'swipe' : 'tiles',
                                 ])
                             @endif
                         @endif
@@ -2534,6 +2568,20 @@
             range.addEventListener('input', paint);
             window.addEventListener('resize', paint);
             paint();
+        });
+
+        // Multi-frame mosaic tiles: crossfade through the frames in place, at the section's own
+        // interval. Paused while the tab is hidden — a background tab must not burn the cycle.
+        document.querySelectorAll('.ml-tile--frames').forEach(function (tile) {
+            var frames = tile.querySelectorAll('.ml-tile__frame');
+            if (frames.length < 2) return;
+            var at = 0;
+            setInterval(function () {
+                if (document.hidden) return;
+                frames[at].classList.remove('is-on');
+                at = (at + 1) % frames.length;
+                frames[at].classList.add('is-on');
+            }, parseInt(tile.dataset.rotate, 10) || 4000);
         });
 
     })();

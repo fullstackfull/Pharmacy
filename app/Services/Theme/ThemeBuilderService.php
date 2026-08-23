@@ -341,13 +341,18 @@ class ThemeBuilderService
             return false;
         }
 
+        // Captured before the overwrite: the smart link pushes builder edits into the linked
+        // Banner Setup row, and only a diff against these can say WHICH fields this save changed.
+        $previousSettings = $block->settings ?? [];
+
         $block->settings = $this->registry->normalizeBlockSettings($block->type, $settings);
         $saved = $block->save();
 
         // A banner image uploaded straight in the builder is registered in Promotion -> Banners
-        // and linked back, so Banner Setup always knows about it (see ThemeBannerLink).
+        // and linked back — and edits to an already-linked block travel into its Theme Banner row,
+        // so Banner Setup and the builder stay two views of one record (see ThemeBannerLink).
         if ($saved) {
-            app(ThemeBannerLink::class)->syncBlock($block);
+            app(ThemeBannerLink::class)->syncBlock($block, $previousSettings);
         }
 
         return $saved;
