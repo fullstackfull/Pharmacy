@@ -57,11 +57,19 @@ class PaymentGatewayCheck extends Command
 
         $table = [];
         $faults = [];
+        $inTestMode = [];
         $broken = 0;
 
         foreach ($rows as $row) {
             $active = (int) ($row->is_active ?? 0) === 1;
             $verdict = $this->verdict($row);
+
+            // Configured correctly and pointed at the wrong world. Not a fault — a shop is
+            // legitimately in test mode while it is being set up — but it is the difference between
+            // taking money and rehearsing, and nothing on the checkout says which is happening.
+            if ($active && $row->mode === 'test' && $verdict === 'ready') {
+                $inTestMode[] = $row->key_name;
+            }
 
             if ($verdict !== 'ready') {
                 // Below the table, not inside it. This sentence is the answer, and a table cell
@@ -90,6 +98,13 @@ class PaymentGatewayCheck extends Command
             foreach ($faults as $fault) {
                 $this->line($fault);
             }
+        }
+
+        if ($inTestMode !== []) {
+            $this->newLine();
+            $this->warn('Switched on, and in TEST mode: ' . implode(', ', $inTestMode));
+            $this->line('  Every real checkout goes to the gateway\'s test environment, so no money moves.');
+            $this->line('  To take real payments: set the gateway to Live and save the LIVE credentials under it.');
         }
 
         $this->newLine();
