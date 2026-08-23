@@ -7,6 +7,9 @@ use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Theme\SectionDataResolver;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
+use App\Services\Theme\ThemeDelivery;
+use App\Services\Theme\ThemeSourceMap;
+use App\Services\Theme\ViewerContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,6 +40,8 @@ class ThemeSectionController extends Controller
     public function __construct(
         private readonly StorefrontThemeRenderer $renderer,
         private readonly SectionDataResolver $resolver,
+        private readonly ThemeSourceMap $sources,
+        private readonly ThemeDelivery $delivery,
     ) {
     }
 
@@ -84,6 +89,82 @@ class ThemeSectionController extends Controller
         ]);
     }
 
+    #[ApiDoc(
+        summary: 'The published home page, negotiated against what this client can actually draw',
+        description: 'The versioned delivery endpoint: /api/v1/theme/home?page=home&device=mobile. '
+            . 'Unlike /theme/sections it carries the contract a client syncs against — `revision` '
+            . '(monotonic, one step per publish), `checksum` (the ETag), `schema_version` and '
+            . '`engine_version` — plus the theme\'s design `tokens` and a `compatibility` block '
+            . 'naming any section type withheld from this build and why. '
+            . 'Send `X-UI-Components` (comma-separated section types this build can render) and '
+            . '`X-UI-Engine` (renderer generation) to negotiate; a client that sends neither is '
+            . 'served every app-safe section, so builds predating capability reporting keep working. '
+            . 'Send `If-None-Match` with the last checksum to get 304 and no body. '
+            . 'Sections carry `source` (where to fetch their data), `cards` (banner-backed blocks '
+            . 'resolved live from Banner Setup) and typed `action` objects beside every link, so a '
+            . 'tap opens a native screen instead of a browser. '
+            . '`revision: 0` means no theme is published — render the built-in home page.',
+        audience: ApiDoc::CUSTOMER_APP,
+        visibility: ApiDoc::PARTNER_VISIBLE,
+        stability: ApiDoc::STABLE,
+        since: 'v1',
+    )]
+    public function home(Request $request): JsonResponse
+    {
+        $page = $request->query('page', 'home');
+        $page = is_string($page) && in_array($page, self::PAGES, true) ? $page : 'home';
+
+        $viewer = ViewerContext::fromRequest($request);
+        $payload = $this->delivery->payload($page, $viewer);
+
+        $etag = $payload['checksum'] !== null ? '"' . $payload['checksum'] . '"' : null;
+
+        // A client that already holds this exact page is told so and sent nothing. This is the
+        // difference between a resume costing a header and costing the whole home page, on every
+        // resume of every installed app.
+        if ($etag !== null && $this->matchesEtag($request, $etag)) {
+            return response()->json(null, 304)->setEtag($payload['checksum']);
+        }
+
+        $response = response()->json($payload);
+
+        return $etag !== null ? $response->setEtag($payload['checksum']) : $response;
+    }
+
+    #[ApiDoc(
+        summary: 'Whether the published theme has changed, without downloading it',
+        description: 'The cheap half of the sync: /api/v1/theme/version returns `revision`, '
+            . '`checksum`, `schema_version`, `engine_version` and `published_at` and nothing else. '
+            . 'A client holding revision N calls this on cold start and resume; only a higher '
+            . 'revision (or a different checksum) is worth a call to /theme/home. '
+            . '`revision: 0` means nothing has ever been published.',
+        audience: ApiDoc::CUSTOMER_APP,
+        visibility: ApiDoc::PARTNER_VISIBLE,
+        stability: ApiDoc::STABLE,
+        since: 'v1',
+    )]
+    public function version(): JsonResponse
+    {
+        return response()->json($this->delivery->revision());
+    }
+
+    /**
+     * Whether the client already holds this exact page.
+     *
+     * `If-None-Match` may carry several validators and a weak prefix; a substring test over the
+     * raw header is what keeps a proxy-rewritten `W/"abc"` from being read as a miss and costing
+     * the download the header exists to avoid.
+     */
+    private function matchesEtag(Request $request, string $etag): bool
+    {
+        $header = $request->header('If-None-Match');
+        if (!is_string($header) || $header === '') {
+            return false;
+        }
+
+        return $header === '*' || str_contains($header, trim($etag, '"'));
+    }
+
     /**
      * One section as the app renders it.
      *
@@ -114,7 +195,7 @@ class ThemeSectionController extends Controller
             'cards' => $bannerBacked
                 ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks))
                 : null,
-            'source' => $this->sourceFor($section['type'], $section['settings'] ?? [], $blocks),
+            'source' => $this->sources->for($section['type'], $section['settings'] ?? [], $blocks),
         ];
     }
 
@@ -137,99 +218,6 @@ class ThemeSectionController extends Controller
         }
 
         return $settings;
-    }
-
-    /**
-     * Where the app fetches this section's DATA, named per instance.
-     *
-     * The payload carries a section's look — settings, blocks, cards — but a product slider's
-     * products or a category grid's counts live behind the catalogue APIs, and which one depends on
-     * the settings the merchant chose. Spelling that mapping out here is what makes the whole app
-     * home page drivable from the builder: the app renders the section list in order and follows
-     * each section's `source`, instead of hardcoding which rail calls which endpoint.
-     *
-     * `kind` is one of:
-     *   inline — everything needed is already in this payload (banners, text, FAQs, stats).
-     *   api    — fetch `endpoint` with `params`; every endpoint named here exists in v1 and is
-     *            documented in the Developer Portal.
-     *   none   — this section has no public API to feed it yet; `note` says what is missing, so an
-     *            absent rail in the app reads as a known gap and not a mystery.
-     *
-     * @param  array<string, mixed>  $settings
-     * @param  array<int, array<string, mixed>>  $blocks
-     * @return array<string, mixed>
-     */
-    private function sourceFor(string $type, array $settings, array $blocks): array
-    {
-        return match ($type) {
-            'product_slider' => $this->productSource($settings),
-            'product_tabs' => [
-                'kind' => 'api',
-                // One source per tab, in tab order — the app fetches as the shopper switches.
-                'tabs' => array_map(
-                    fn (array $block) => $this->productSource($block['settings'] ?? []),
-                    array_values(array_filter($blocks, fn (array $block) => $block['type'] === 'tab')),
-                ),
-            ],
-            'category_grid', 'category_showcase' => ['kind' => 'api', 'endpoint' => '/api/v1/categories', 'params' => []],
-            'brand_slider', 'brand_showcase' => ['kind' => 'api', 'endpoint' => '/api/v1/brands', 'params' => []],
-            'flash_deal' => ['kind' => 'api', 'endpoint' => '/api/v1/flash-deals', 'params' => [],
-                'note' => 'Then /api/v1/flash-deals/products/{deal_id} for the products.'],
-            'deal_of_the_day' => ['kind' => 'api', 'endpoint' => '/api/v1/dealsoftheday/deal-of-the-day', 'params' => []],
-            'featured_deal' => ['kind' => 'api', 'endpoint' => '/api/v1/deals/featured', 'params' => []],
-            'clearance_sale' => ['kind' => 'api', 'endpoint' => '/api/v1/products/clearance-sale', 'params' => []],
-            'vendor_slider', 'vendor_showcase' => ['kind' => 'api', 'endpoint' => '/api/v1/seller/list/all', 'params' => []],
-            'coupon_strip' => ['kind' => 'api', 'endpoint' => '/api/v1/coupon/list', 'params' => [],
-                'note' => 'Requires an authenticated customer; render the strip from `cards` for guests.'],
-            'recently_viewed' => ['kind' => 'none',
-                'note' => 'Backed by the web visitor cookie; no app equivalent yet. Hide this section in the app.'],
-            'blog_posts' => ['kind' => 'none',
-                'note' => 'The Blog module exposes no public API. Hide this section in the app.'],
-            // Everything else renders entirely from this payload.
-            default => ['kind' => 'inline'],
-        };
-    }
-
-    /**
-     * The catalogue endpoint behind one product source, exactly as the storefront resolves it.
-     *
-     * Every endpoint named here was checked against routes/rest_api/v1/api.php — a source hint that
-     * points at a route that does not exist is worse than none.
-     *
-     * @param  array<string, mixed>  $settings
-     * @return array<string, mixed>
-     */
-    private function productSource(array $settings): array
-    {
-        $source = is_string($settings['source'] ?? null) ? $settings['source'] : 'featured';
-        $limit = (int) ($settings['limit'] ?? 10);
-
-        return match ($source) {
-            'best_selling' => ['kind' => 'api', 'endpoint' => '/api/v1/products/best-sellings', 'params' => ['limit' => $limit, 'offset' => 1]],
-            'new_arrival' => ['kind' => 'api', 'endpoint' => '/api/v1/products/new-arrival', 'params' => ['limit' => $limit, 'offset' => 1]],
-            'top_rated' => ['kind' => 'api', 'endpoint' => '/api/v1/products/top-rated', 'params' => ['limit' => $limit, 'offset' => 1]],
-            // The picked category or brand lives in `source_id` — the picker follows the source
-            // dropdown, so one key serves both. (An earlier map read `category_id`, a key the
-            // schema never stores, and pointed every category rail at /products/0.)
-            'category' => ['kind' => 'api', 'endpoint' => '/api/v1/categories/products/' . (int) ($settings['source_id'] ?? 0), 'params' => ['limit' => $limit, 'offset' => 1]],
-            'brand' => ['kind' => 'api', 'endpoint' => '/api/v1/brands/products/' . (int) ($settings['source_id'] ?? 0), 'params' => ['limit' => $limit, 'offset' => 1]],
-            'manual' => ['kind' => 'api', 'endpoint' => '/api/v1/products/by-ids',
-                'params' => ['ids' => implode(',', $this->pickedIds($settings['product_ids'] ?? null))]],
-            default => ['kind' => 'api', 'endpoint' => '/api/v1/products/featured', 'params' => ['limit' => $limit, 'offset' => 1]],
-        };
-    }
-
-    /**
-     * The merchant's hand-picked ids, in their order — the same normalization the storefront's
-     * resolver applies, so the app and the web can never disagree about what "these products" means.
-     *
-     * @return array<int, int>
-     */
-    private function pickedIds(string|array|null $picked): array
-    {
-        $ids = is_array($picked) ? $picked : explode(',', (string) $picked);
-
-        return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
     }
 
     /**
