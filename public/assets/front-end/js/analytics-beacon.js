@@ -36,12 +36,13 @@
     // The server allow-list, mirrored here so a typo never becomes a silent no-op that only shows
     // up as a missing report weeks later.
     //
-    // One entry, on purpose. Anything the server already records — a product view, a wishlist add,
-    // a checkout start, the cart page, a compare add — is deliberately absent: sending it from here
-    // as well would count it twice, and deduplication would not catch it because the two sides
+    // Two entries, on purpose. Anything the server already records — a product view, a wishlist
+    // add, a checkout start, the cart page, a compare add — is deliberately absent: sending it from
+    // here as well would count it twice, and deduplication would not catch it because the two sides
     // disagree about the path. What is left is the filter's pushState navigation, which returns
-    // JSON and is correctly not a pageview to the server.
-    var ALLOWED = ['product_list_viewed'];
+    // JSON and is correctly not a pageview to the server, and a banner click: the server sees the
+    // page the banner led to, and nothing that says a banner led there.
+    var ALLOWED = ['product_list_viewed', 'banner_clicked'];
 
     function push(name, payload) {
         try {
@@ -60,6 +61,14 @@
 
             // A cap, so a runaway loop on a page cannot turn into a flood of requests.
             if (queue.length >= 20) {
+                flush();
+                return;
+            }
+
+            // A banner click is a navigation: the batch timer would still be waiting when the page
+            // goes away. pagehide catches most of it, but not a click that opens a new tab, so this
+            // one leaves immediately.
+            if (name === 'banner_clicked') {
                 flush();
                 return;
             }

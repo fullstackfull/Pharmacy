@@ -15,7 +15,7 @@
     <div class="banner-grid" dir="{{ session('direction') }}">
         @foreach ($tileBanners as $banner)
             <a class="banner-grid__item {{ $banner['layout'] == 'half' ? 'banner-grid__item--half' : '' }}"
-               href="{{ $banner['url'] ?: ($fallbackUrl ?? 'javascript:') }}">
+               href="{{ $banner['url'] ?: ($fallbackUrl ?? 'javascript:') }}" data-analytics="banner_clicked" data-analytics-type="banner" data-analytics-id="{{ $banner['id'] }}">
                 <img loading="lazy"
                      src="{{ getStorageImages(path: $banner->photo_full_url, type: 'banner') }}"
                      alt="{{ $banner['title'] ?: translate('banner') }}">
@@ -26,7 +26,7 @@
             <div class="banner-grid__item banner-grid__slider">
                 <div class="owl-carousel owl-theme banner-grid-slider" data-slide-items="1">
                     @foreach ($sliderBanners as $banner)
-                        <a class="banner-grid__slide" href="{{ $banner['url'] ?: ($fallbackUrl ?? 'javascript:') }}">
+                        <a class="banner-grid__slide" href="{{ $banner['url'] ?: ($fallbackUrl ?? 'javascript:') }}" data-analytics="banner_clicked" data-analytics-type="banner" data-analytics-id="{{ $banner['id'] }}">
                             <img loading="lazy"
                                  src="{{ getStorageImages(path: $banner->photo_full_url, type: 'banner') }}"
                                  alt="{{ $banner['title'] ?: translate('banner') }}">

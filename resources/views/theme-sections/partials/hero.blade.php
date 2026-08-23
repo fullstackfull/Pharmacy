@@ -41,6 +41,14 @@
                             @endif
                         </div>
                     @endif
+
+                    {{-- The slide itself, not only its button. Counted against the banner row when
+                         the slide came from one; a card typed into the builder has no such row. --}}
+                    @include('theme-sections.partials._card-link', [
+                        'link' => $slide['link'] ?? null,
+                        'label' => $slide['title'] ?? null,
+                        'bannerId' => $slide['banner_id'] ?? null,
+                    ])
                 </div>
             @endforeach
         </div>

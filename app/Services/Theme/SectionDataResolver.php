@@ -379,6 +379,9 @@ class SectionDataResolver
         });
 
         return $rows->map(fn (Banner $banner) => [
+            // Which banner this card came from, so a click on it is counted against the row the
+            // merchant edits rather than against "a card in a section somewhere".
+            'banner_id'   => (int) $banner->id,
             // photo_full_url is the storage descriptor array, not a url. The section
             // partials echo `image` straight into src, so resolve it here — echoing the
             // array fatals the whole home page the moment a theme with a banner section
@@ -477,6 +480,10 @@ class SectionDataResolver
             }
 
             $cards[] = [
+                // The Banner Setup row behind this block, where it has one. Carried through so a
+                // click on it is counted against that row rather than being anonymous; a block
+                // whose content was typed into the builder has no row and stays null.
+                'banner_id'    => $linkedId > 0 ? $linkedId : null,
                 'image'        => $settings['image'] ?? null,
                 'image_mobile' => $settings['image_mobile'] ?? null,
                 'eyebrow'      => $settings['eyebrow'] ?? null,

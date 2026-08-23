@@ -228,7 +228,7 @@
             <div class="container rtl">
                 <div class="promotional-banner-slider owl-carousel owl-theme">
                     @foreach($bannerTypeFooterBanner as $banner)
-                        <a href="{{ $banner['url'] }}" class="d-block" target="_blank">
+                        <a href="{{ $banner['url'] }}" class="d-block" target="_blank" data-analytics="banner_clicked" data-analytics-type="banner" data-analytics-id="{{ $banner['id'] }}">
                             <img loading="lazy" class="footer_banner_img __inline-63"  alt="" src="{{ getStorageImages(path:$banner->photo_full_url, type: 'banner') }}">
                         </a>
                     @endforeach
@@ -239,7 +239,7 @@
                 <div class="row">
                     @foreach($bannerTypeFooterBanner as $banner)
                         <div class="col-md-6">
-                            <a href="{{ $banner['url'] }}" class="d-block" target="_blank">
+                            <a href="{{ $banner['url'] }}" class="d-block" target="_blank" data-analytics="banner_clicked" data-analytics-type="banner" data-analytics-id="{{ $banner['id'] }}">
                                 <img loading="lazy" class="footer_banner_img __inline-63"  alt="" src="{{ getStorageImages(path:$banner->photo_full_url, type: 'banner') }}">
                             </a>
                         </div>

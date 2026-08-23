@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Models\Banner;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
 use App\Services\Analytics\AnalyticsPermissionService;
 use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Reporting\AnalyticsReporting;
 use App\Services\Analytics\Reporting\Window;
+use App\Services\BannerService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -256,6 +258,7 @@ class AnalyticsController extends BaseController
                 'products' => $this->withNames($this->reporting->breakdown($window, 'product', 40), 'products'),
                 'categories' => $this->withNames($this->reporting->breakdown($window, 'category', 30), 'categories'),
                 'brands' => $this->withNames($this->reporting->breakdown($window, 'brand', 20), 'brands'),
+                'banners' => $this->withBannerNames($this->reporting->breakdown($window, 'banner', 30)),
             ],
             'search' => [
                 'terms' => $this->reporting->breakdown($window, 'search_term', 50),
@@ -344,6 +347,49 @@ class AnalyticsController extends BaseController
             // totals the rest of the screen is computed from.
             $breakdown['rows'][$index]['name'] = $names[(int) $row['key']] ?? null;
             $breakdown['rows'][$index]['deleted'] = !isset($names[(int) $row['key']]);
+        }
+
+        return $breakdown;
+    }
+
+    /**
+     * Banners, named the way the merchant recognises them.
+     *
+     * Not withNames(): the banner form has no title field, so almost every banner's `title` is
+     * null and a table of blank labels would be useless. What identifies a banner to the person
+     * who placed it is where it sits — "Main Banner", "Home Promo Banner" — so that is the label,
+     * with the title added when there happens to be one.
+     *
+     * @param  array<string, mixed>  $breakdown
+     * @return array<string, mixed>
+     */
+    private function withBannerNames(array $breakdown): array
+    {
+        if (($breakdown['rows'] ?? []) === []) {
+            return $breakdown;
+        }
+
+        $ids = array_filter(array_map(static fn (array $row) => (int) $row['key'], $breakdown['rows']));
+
+        if ($ids === []) {
+            return $breakdown;
+        }
+
+        try {
+            $banners = Banner::whereIn('id', $ids)->get(['id', 'title', 'banner_type'])->keyBy('id');
+        } catch (\Throwable) {
+            return $breakdown;
+        }
+
+        foreach ($breakdown['rows'] as $index => $row) {
+            $banner = $banners[(int) $row['key']] ?? null;
+
+            $breakdown['rows'][$index]['name'] = $banner === null
+                ? null
+                : trim(($banner->title ? $banner->title . ' — ' : '')
+                    . (app(BannerService::class)->getPlacementTag($banner->banner_type)
+                        ?? (string) $banner->banner_type));
+            $breakdown['rows'][$index]['deleted'] = $banner === null;
         }
 
         return $breakdown;
