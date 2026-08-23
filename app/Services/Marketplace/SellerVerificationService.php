@@ -4,8 +4,10 @@ namespace App\Services\Marketplace;
 
 use App\Models\SellerVerificationDocument;
 use App\Services\AuditLogger;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Resolves a seller's KYC standing and payout eligibility (Phase 3, Stage A).
@@ -24,6 +26,10 @@ class SellerVerificationService
 {
     /** The required set an install ships with when the admin has configured none. */
     public const DEFAULT_REQUIRED_DOCUMENTS = ['identity', 'business_license'];
+
+    /** The document extensions a seller may upload. Server-controlled — the client extension is
+     *  mapped onto this whitelist, never trusted, so an upload can't smuggle an executable one. */
+    public const ALLOWED_FILE_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
 
     public const STATUS_NOT_REQUIRED = 'not_required';
     public const STATUS_UNVERIFIED = 'unverified';
@@ -146,6 +152,21 @@ class SellerVerificationService
     public function isKycRequiredForPayout(): bool
     {
         return (bool) $this->setting('require_kyc_for_payout');
+    }
+
+    /**
+     * Store an uploaded KYC document on the PRIVATE 'local' disk under a high-entropy name and
+     * return the bare filename to persist. Shared by the web and API controllers so both surfaces
+     * store documents identically; serving always goes through an ownership-checked route.
+     */
+    public function storeDocumentFile(UploadedFile $file): string
+    {
+        $clientExtension = strtolower($file->getClientOriginalExtension());
+        $extension = in_array($clientExtension, self::ALLOWED_FILE_EXTENSIONS, true) ? $clientExtension : 'pdf';
+        $fileName = date('Y-m-d') . '-' . bin2hex(random_bytes(16)) . '.' . $extension;
+        Storage::disk('local')->put('seller/kyc/' . $fileName, file_get_contents($file));
+
+        return $fileName;
     }
 
     /**
