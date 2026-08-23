@@ -6551,4 +6551,13 @@ return [
 	'payout_requested' => 'Payout requested',
 	'payout_request_cancelled' => 'Payout request cancelled',
 	'this_payout_can_no_longer_be_cancelled' => 'This payout can no longer be cancelled',
+	'product_Stock_Report_List' => 'Product Stock Report List',
+	'stock_Sort_By' => 'Stock Sort By',
+	'low_to_high' => 'Low to high',
+	'current_Stock	' => 'Current Stock	',
+	'product_Report_List' => 'Product Report List',
+	'please_make_sure_you_don`t_have_any_ongoing_order' => 'Please make sure you don`t have any ongoing order',
+	'access_denied!' => 'Access denied!',
+	'review_not_found' => 'Review not found',
+	'product_not_found' => 'Product not found',
 ];

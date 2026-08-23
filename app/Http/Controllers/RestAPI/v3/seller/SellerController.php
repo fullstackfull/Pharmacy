@@ -188,9 +188,18 @@ class SellerController extends Controller
 
     public function shop_product_reviews_status(Request $request):JsonResponse
     {
-        $reviews = Review::find($request->id);
-        $reviews->status = $request->status;
-        $reviews->save();
+        // A review that has since been deleted used to fatal here rather than answer, so the app
+        // received a 500 HTML page in place of a JSON error it could show.
+        $review = Review::find($request['id']);
+        if (!$review) {
+            return response()->json(['errors' => [
+                ['code' => 'review', 'message' => translate('review_not_found')],
+            ]], 404);
+        }
+
+        $review->status = $request['status'];
+        $review->save();
+
         return response()->json(['message' => translate('status updated successfully!!')], 200);
     }
 
@@ -668,7 +677,9 @@ class SellerController extends Controller
 
     public function getEarningStatics(Request $request): JsonResponse
     {
-        $dateType = $request['type'];
+        // Coerced: getDateTypeData is typed `string`, so a `?type[]=` array would be an uncatchable
+        // TypeError rather than a value it can fall back from.
+        $dateType = is_string($request['type']) ? $request['type'] : '';
         $dateTypeArray = $this->dashboardService->getDateTypeData(dateType: $dateType);
         $from = $dateTypeArray['from'];
         $to = $dateTypeArray['to'];
