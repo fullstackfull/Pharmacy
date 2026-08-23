@@ -67,7 +67,7 @@ class ThemeBannerLink
      * lists it and edits there render on the storefront. Never throws — a sync problem must not
      * break the builder's autosave.
      */
-    public function syncBlock(ThemeBlock $block): void
+    public function syncBlock(ThemeBlock $block, ?array $previousSettings = null): void
     {
         try {
             if (!in_array($block->type, SectionRegistry::BANNER_BACKED_BLOCK_TYPES, true)) {
@@ -75,7 +75,12 @@ class ThemeBannerLink
             }
 
             $settings = $block->settings ?? [];
-            if (!empty($settings['banner_id']) || empty($settings['image'])) {
+
+            if (!empty($settings['banner_id'])) {
+                $this->pushBlockEdits($settings, $previousSettings);
+                return;
+            }
+            if (empty($settings['image'])) {
                 return;
             }
 
@@ -111,6 +116,66 @@ class ThemeBannerLink
     }
 
     /**
+     * Carry a builder edit into the linked Banner Setup row — the other half of "edit in either place".
+     *
+     * The banner wins at render (cardOverrides), so before this, editing a LINKED tile in the
+     * builder changed nothing on the storefront and said nothing about why. Now the edit lands in
+     * the row both screens read. Two rules keep that safe:
+     *
+     *  - Only rows the builder itself minted (banner_type = Theme Banner). A dashboard banner the
+     *    merchant deliberately linked into a tile keeps Banner Setup as its source of truth — the
+     *    theme must not be able to rewrite the Main Banner.
+     *
+     *  - Only fields that CHANGED IN THIS SAVE. The builder form holds the block's own copy, which
+     *    goes stale the moment somebody edits the banner in Banner Setup; pushing every field on
+     *    every save would silently undo that edit with the stale copy. Diffing against the
+     *    previous settings makes the contract "last editor wins, per field" — which is what
+     *    editing in either place has to mean.
+     *
+     * @param  array<string, mixed>  $settings
+     * @param  array<string, mixed>|null  $previous  the block's settings before this save; null
+     *                                               means the caller cannot say what changed, so
+     *                                               nothing is pushed
+     */
+    private function pushBlockEdits(array $settings, ?array $previous): void
+    {
+        if ($previous === null) {
+            return;
+        }
+
+        $banner = Banner::find((int) $settings['banner_id']);
+        if (!$banner || $banner->banner_type !== self::THEME_BANNER_TYPE) {
+            return;
+        }
+
+        $map = ['link' => 'url', 'title' => 'title', 'subtitle' => 'sub_title', 'button_text' => 'button_text'];
+        foreach ($map as $settingKey => $column) {
+            $value = $settings[$settingKey] ?? null;
+            if ($value !== ($previous[$settingKey] ?? null)) {
+                $banner->{$column} = $value !== '' ? $value : null;
+            }
+        }
+
+        // A replaced image travels too, through the same copy the mint path uses, so Banner Setup
+        // never shows yesterday's picture for today's tile.
+        $image = $settings['image'] ?? null;
+        if (is_string($image) && $image !== '' && $image !== ($previous['image'] ?? null)) {
+            $sourcePath = $this->publicDiskPathFromUrl($image);
+            if ($sourcePath !== null && Storage::disk('public')->exists($sourcePath)) {
+                $extension = pathinfo($sourcePath, PATHINFO_EXTENSION) ?: 'webp';
+                $fileName = now()->format('Y-m-d-His') . '-' . Str::random(8) . '.' . $extension;
+                if (Storage::disk('public')->copy($sourcePath, 'banner/' . $fileName)) {
+                    $banner->photo = $fileName;
+                }
+            }
+        }
+
+        if ($banner->isDirty()) {
+            $banner->save();
+        }
+    }
+
+    /**
      * Live card data for linked banners, keyed by banner id.
      * `published` travels along so the renderer can hide a card whose banner was unpublished.
      *
@@ -139,6 +204,11 @@ class ThemeBannerLink
                     'subtitle'     => $banner->sub_title,
                     'button_text'  => $banner->button_text,
                     'background'   => $banner->background_color,
+                    // What the banner POINTS AT, structurally — the Banner Setup form's own
+                    // resource picker. This is what lets an API tile say "I open product 41"
+                    // instead of handing the app a URL to reverse-engineer.
+                    'resource_type' => $banner->resource_type,
+                    'resource_id'   => $banner->resource_id ? (int) $banner->resource_id : null,
                 ])->all();
         } catch (\Throwable $exception) {
             report($exception);

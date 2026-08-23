@@ -236,6 +236,83 @@ class ThemeBannerLinkTest extends TestCase
         $this->assertArrayNotHasKey('banner_id', array_filter($block->fresh()->settings ?? []));
     }
 
+    public function test_a_builder_edit_reaches_the_linked_theme_banner_row(): void
+    {
+        // The other half of "edit in either place": the banner wins at render, so a builder edit
+        // that never reached the banner row was a builder edit that silently changed nothing.
+        $banner = $this->makeBanner(['banner_type' => ThemeBannerLink::THEME_BANNER_TYPE, 'title' => 'Old', 'url' => '/old']);
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'draft']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic']);
+        $block = ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+            'settings' => ['banner_id' => $banner->id, 'title' => 'Old', 'link' => '/old'],
+        ]);
+
+        app(ThemeBannerLink::class)->syncBlock($block, previousSettings: ['banner_id' => $banner->id, 'title' => 'Old', 'link' => '/old']);
+        $this->assertSame('Old', $banner->fresh()->title, 'nothing changed, so nothing is written');
+
+        $settings = $block->settings;
+        $settings['title'] = 'New title';
+        $block->settings = $settings;
+        $block->save();
+        app(ThemeBannerLink::class)->syncBlock($block, previousSettings: ['banner_id' => $banner->id, 'title' => 'Old', 'link' => '/old']);
+
+        $this->assertSame('New title', $banner->fresh()->title);
+        $this->assertSame('/old', $banner->fresh()->url, 'a field this save did not touch is not pushed');
+    }
+
+    public function test_a_banner_setup_edit_survives_an_unrelated_builder_save(): void
+    {
+        // The rule is last-editor-wins PER FIELD. The builder form holds a stale copy of every
+        // field; pushing all of them on every save would quietly undo Banner Setup edits with it.
+        $banner = $this->makeBanner(['banner_type' => ThemeBannerLink::THEME_BANNER_TYPE, 'title' => 'From setup', 'url' => '/from-setup']);
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'draft']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic']);
+        $block = ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+            'settings' => ['banner_id' => $banner->id, 'title' => 'Stale copy', 'link' => '/stale'],
+        ]);
+
+        // Merchant edits the URL in Banner Setup, then saves the block touching only the title.
+        $banner->update(['url' => '/edited-in-setup']);
+
+        $settings = $block->settings;
+        $settings['title'] = 'Touched in builder';
+        $block->settings = $settings;
+        $block->save();
+        app(ThemeBannerLink::class)->syncBlock($block, previousSettings: ['banner_id' => $banner->id, 'title' => 'Stale copy', 'link' => '/stale']);
+
+        $this->assertSame('Touched in builder', $banner->fresh()->title);
+        $this->assertSame('/edited-in-setup', $banner->fresh()->url, 'the Banner Setup edit must survive');
+    }
+
+    public function test_a_dashboard_banner_linked_into_a_tile_is_never_rewritten_by_the_builder(): void
+    {
+        // Only rows the builder itself minted are its to edit. A Main Banner the merchant linked
+        // deliberately keeps Banner Setup as its source of truth.
+        $banner = $this->makeBanner(['banner_type' => 'Main Banner', 'title' => 'Dashboard truth']);
+
+        $theme = Theme::create(['name' => 'Default', 'slug' => 'default', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => 'draft']);
+        $section = ThemeSection::create(['theme_version_id' => $version->id, 'page' => 'home', 'type' => 'banner_mosaic']);
+        $block = ThemeBlock::create([
+            'theme_section_id' => $section->id, 'type' => 'mosaic_tile',
+            'settings' => ['banner_id' => $banner->id, 'title' => 'A'],
+        ]);
+
+        $settings = $block->settings;
+        $settings['title'] = 'B';
+        $block->settings = $settings;
+        $block->save();
+        app(ThemeBannerLink::class)->syncBlock($block, previousSettings: ['banner_id' => $banner->id, 'title' => 'A']);
+
+        $this->assertSame('Dashboard truth', $banner->fresh()->title);
+    }
+
     public function test_usage_reports_linked_blocks_and_store_banner_sections(): void
     {
         $banner = $this->makeBanner();
