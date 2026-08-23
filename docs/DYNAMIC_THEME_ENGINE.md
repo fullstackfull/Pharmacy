@@ -349,7 +349,8 @@ version** when a renderer needs a primitive older builds lack.
 
 **Backend added**: `app/Services/Theme/{ViewerContext,SectionVisibility,ActionResolver,
 ComponentCapabilityRegistry,ThemeDelivery,ThemeSourceMap,ThemeCompatibilityReport}.php`, the two
-migrations above, `tests/Feature/{ThemeDeliveryTest,ThemeHomeApiTest,ThemeDeliveryRulesBuilderTest}.php`.
+migrations above, `app/Services/Theme/ThemeSyncBeacon.php`,
+`tests/Feature/{ThemeDeliveryTest,ThemeHomeApiTest,ThemeDeliveryRulesBuilderTest,ThemeSyncBeaconTest}.php`.
 
 **Flutter modified**: `lib/di_container.dart`, `lib/main.dart`,
 `lib/features/dashboard/screens/dashboard_screen.dart`, `lib/utill/app_constants.dart`
@@ -381,9 +382,13 @@ fetch removed).
 
 * Web renderer is still one blade `@switch` (pre-existing); it renders all 39 types and was left
   as-is per "extend, don't rewrite". Registry-izing the blades is a possible later refactor.
-* No push-based invalidation yet: sync is cold-start / resume / pull-to-refresh. A
-  `theme_version_changed` FCM data message could be added later; the version endpoint already
-  makes polling nearly free.
+* ~~No push-based invalidation~~ — built: publishing announces itself through `ThemeSyncBeacon`,
+  a data-only, silent, background-priority FCM message to the `theme_updates_user_app` topic
+  (subscribed at app startup, before login, next to the maintenance topic). The ping carries only
+  `{type, revision}` — a woken client runs the same version-check-then-fetch it runs on resume, so
+  a lost, delayed or duplicated beacon can never produce a wrong page, and the system keeps
+  working with push disabled entirely. Sent after the publish transaction commits, and a send
+  failure can never fail a publish.
 * Sections typed outside the app's 24 renderable types render on web only (declared in
   `APP_EXCLUSIONS` with reasons; visible in `compatibility.withheld`).
 * ~~Builder UI for scheduling/platform/audience~~ — built: the inspector's **Visibility** tab
