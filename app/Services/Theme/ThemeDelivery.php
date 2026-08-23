@@ -255,6 +255,22 @@ class ThemeDelivery
             SectionRegistry::BANNER_BACKED_BLOCK_TYPES,
         ) !== [];
 
+        // store_banner has no child blocks: on the web its banners are resolved LIVE from
+        // Promotion -> Banners at render time. Without this, the app received the section with no
+        // cards at all and hid it — which is how the merchant's MAIN BANNER could be on the web
+        // and absent from every phone. Resolved through the same resolver the web uses, so the
+        // two can never disagree about which banners show or in what order.
+        $storeCards = null;
+        if ($row->type === 'store_banner') {
+            $storeCards = array_map(
+                fn (array $card) => $this->actions->annotate($this->absolutize($card)),
+                $this->resolver->dashboardBanners(
+                    (string) ($settings['banner_type'] ?? 'Main Banner'),
+                    max(1, (int) ($settings['limit'] ?? 6)),
+                ),
+            );
+        }
+
         return [
             // The uuid is the identity a client keeps across publishes; the id is what the
             // builder's preview maps a click back to. Both travel, because they answer different
@@ -264,7 +280,7 @@ class ThemeDelivery
             'type'     => $row->type,
             'settings' => $this->shape($settings, $viewer),
             'blocks'   => $blocks,
-            'cards'    => $bannerBacked
+            'cards'    => $storeCards ?? ($bannerBacked
                 ? array_map(
                     fn (array $card) => $this->actions->annotate($this->absolutize($card)),
                     $this->resolver->blockCards($row->blocks->where('is_visible', true)->map(fn ($b) => [
@@ -272,7 +288,7 @@ class ThemeDelivery
                         'settings' => $b->settings ?? [],
                     ])->values()->all()),
                 )
-                : null,
+                : null),
             'source'   => app(ThemeSourceMap::class)->for($row->type, $settings, $blocks),
         ];
     }
