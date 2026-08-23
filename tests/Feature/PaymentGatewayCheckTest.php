@@ -139,6 +139,33 @@ class PaymentGatewayCheckTest extends TestCase
         }
     }
 
+    public function test_a_switched_on_gateway_in_test_mode_is_said_out_loud(): void
+    {
+        // Configured correctly and pointed at the wrong world. The checkout looks identical to the
+        // shopper, and no money moves — which is the one failure a merchant discovers from the bank statement.
+        $this->gateway('paymera', 'test', 1,
+            live: $this->credentials('live'),
+            test: $this->credentials('test', '99990001', 'egate_user', 'egate_token'));
+
+        [$code, $output] = $this->check('paymera');
+
+        $this->assertSame(0, $code, 'a shop being set up is legitimately in test mode — a warning, not a failure');
+        $this->assertStringContainsString('TEST mode', $output);
+        $this->assertStringContainsString('no money moves', $output);
+    }
+
+    public function test_a_live_gateway_is_not_warned_about(): void
+    {
+        $this->gateway('paymera', 'live', 1,
+            live: $this->credentials('live', '99990001', 'egate_user', 'egate_token'),
+            test: $this->credentials('test'));
+
+        [$code, $output] = $this->check('paymera');
+
+        $this->assertSame(0, $code);
+        $this->assertStringNotContainsString('TEST mode', $output);
+    }
+
     public function test_a_gateway_that_was_never_saved_says_where_to_save_it(): void
     {
         [$code, $output] = $this->check('nosuchgateway');
