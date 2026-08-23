@@ -6543,4 +6543,8 @@ return [
 	'in_builder' => 'In builder',
 	'display_mode' => 'Display mode',
 	'image_rotate_interval_ms' => 'Image rotate interval ms',
+	'swipe' => 'Swipe',
+	'split' => 'Split',
+	'carousel' => 'Carousel',
+	'strip' => 'Strip',
 ];

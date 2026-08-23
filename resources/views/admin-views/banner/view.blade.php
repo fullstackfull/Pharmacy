@@ -263,6 +263,11 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                         <strong class="text-capitalize">{{ $group['label'] }}</strong>
                                         <span class="badge badge-soft-secondary">{{ translate($group['page']) }}</span>
+                                        @if (!empty($group['display']) || !empty($group['layout']))
+                                            <span class="badge badge-soft-primary">
+                                                {{ translate($group['display'] ?: $group['layout']) }}
+                                            </span>
+                                        @endif
                                         <span class="badge {{ $group['status'] === 'published' ? 'badge-soft-success' : 'badge-soft-warning' }}">
                                             {{ translate($group['status']) }}
                                         </span>
@@ -275,9 +280,28 @@
                                                class="text-decoration-none border rounded p-1 d-flex flex-column gap-1"
                                                style="width:110px"
                                                title="{{ $card['title'] ?? '' }}">
-                                                <img src="{{ $card['image'] ?: dynamicAsset(path: 'public/assets/back-end/img/400x400/img2.jpg') }}"
-                                                     alt="" style="width:100%;height:64px;object-fit:cover;border-radius:6px"
-                                                     class="{{ empty($card['published']) && $editable ? 'opacity-50' : '' }}">
+                                                @php $frames = $card['frames'] ?? array_filter([$card['image'] ?? null]); @endphp
+                                                <span class="position-relative d-block">
+                                                    <img src="{{ $card['image'] ?: dynamicAsset(path: 'public/assets/back-end/img/400x400/img2.jpg') }}"
+                                                         alt="" style="width:100%;height:64px;object-fit:cover;border-radius:6px"
+                                                         class="{{ empty($card['published']) && $editable ? 'opacity-50' : '' }}">
+                                                    {{-- A tile carrying several pictures looked identical to one carrying a
+                                                         single picture; the count says so, and the strip below shows them. --}}
+                                                    @if (count($frames) > 1)
+                                                        <span class="badge badge-soft-dark position-absolute"
+                                                              style="top:4px;inset-inline-end:4px">
+                                                            <i class="fi fi-rr-copy"></i> {{ count($frames) }}
+                                                        </span>
+                                                    @endif
+                                                </span>
+                                                @if (count($frames) > 1)
+                                                    <span class="d-flex gap-1">
+                                                        @foreach ($frames as $frame)
+                                                            <img src="{{ $frame }}" alt=""
+                                                                 style="width:{{ floor(100 / count($frames)) }}%;height:18px;object-fit:cover;border-radius:3px">
+                                                        @endforeach
+                                                    </span>
+                                                @endif
                                                 <span class="d-flex flex-wrap gap-1">
                                                     @if (!empty($card['span']))
                                                         <span class="badge badge-soft-info">{{ translate($card['span'] . '_tile') }}</span>

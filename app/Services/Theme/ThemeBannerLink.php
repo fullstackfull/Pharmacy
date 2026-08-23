@@ -282,11 +282,12 @@ class ThemeBannerLink
                 if ($section->type === 'store_banner') {
                     $bannerType = (string) ($settings['banner_type'] ?? '');
                     foreach ($bannerType === '' ? [] : $resolver->dashboardBanners($bannerType, (int) ($settings['limit'] ?? 6)) as $card) {
-                        $cards[] = $card + ['banner_id' => null, 'block_id' => null, 'linked' => false];
+                        $cards[] = $card + ['frames' => array_filter([$card['image'] ?? null]), 'banner_id' => null, 'block_id' => null, 'linked' => false];
                     }
                 } elseif ($section->type === 'banner_strip') {
                     $cards[] = [
                         'image' => $settings['image'] ?? null, 'title' => $settings['title'] ?? null,
+                        'frames' => array_filter([$settings['image'] ?? null]),
                         'span' => 'wide', 'banner_id' => null, 'block_id' => null, 'linked' => false,
                     ];
                 } else {
@@ -300,8 +301,18 @@ class ThemeBannerLink
                         $bannerId = (int) ($blockSettings['banner_id'] ?? 0);
                         $linked = $overrides[$bannerId] ?? null;
 
+                        // Every frame of the tile, lead first — a tile carrying three pictures
+                        // looked identical here to one carrying a single picture, which is exactly
+                        // the "I can't see there is more than one image" the merchant reported.
+                        $frames = array_values(array_filter([
+                            $linked['image'] ?? ($blockSettings['image'] ?? null),
+                            $blockSettings['image_2'] ?? null,
+                            $blockSettings['image_3'] ?? null,
+                        ], fn ($frame) => is_string($frame) && $frame !== ''));
+
                         $cards[] = [
-                            'image'     => $linked['image'] ?? ($blockSettings['image'] ?? null),
+                            'image'     => $frames[0] ?? null,
+                            'frames'    => $frames,
                             'title'     => ($linked['title'] ?? null) ?: ($blockSettings['title'] ?? null),
                             'span'      => $blockSettings['span'] ?? null,
                             'banner_id' => $bannerId > 0 ? $bannerId : null,
@@ -323,6 +334,7 @@ class ThemeBannerLink
                     'type'       => $section->type,
                     'label'      => translate($registry->types()[$section->type]['label'] ?? $section->type),
                     'layout'     => $settings['layout'] ?? null,
+                    'display'    => $settings['display'] ?? null,
                     'columns'    => max(1, (int) ($settings['columns'] ?? 2)),
                     'cards'      => $cards,
                 ];
