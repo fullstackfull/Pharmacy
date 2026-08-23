@@ -167,6 +167,41 @@ class ThemeSectionApiTest extends TestCase
         $this->assertNotEmpty($byType['blog_posts']['source']['note']);
     }
 
+    public function test_a_hand_picked_rail_and_a_brand_rail_both_name_a_real_endpoint(): void
+    {
+        // These two were shipped as kind "none" — the brand endpoint existed all along (the route
+        // is nested inside the brands prefix, which the survey grepped past), and by-ids exists
+        // now. A source hint must carry the merchant's exact picks, order included.
+        $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);
+
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'product_slider',
+            'sort_order' => 1, 'is_visible' => true,
+            'settings' => ['source' => 'manual', 'product_ids' => [7, 3, 9]],
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'product_slider',
+            'sort_order' => 2, 'is_visible' => true,
+            'settings' => ['source' => 'brand', 'source_id' => 4, 'limit' => 8],
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'product_slider',
+            'sort_order' => 3, 'is_visible' => true,
+            'settings' => ['source' => 'category', 'source_id' => 11, 'limit' => 8],
+        ]);
+
+        $sources = array_column($this->getJson('/api/v1/theme/sections?page=home')->json('sections'), 'source');
+
+        $this->assertSame('/api/v1/products/by-ids', $sources[0]['endpoint']);
+        $this->assertSame('7,3,9', $sources[0]['params']['ids'], 'the picked order IS the contract');
+
+        $this->assertSame('/api/v1/brands/products/4', $sources[1]['endpoint']);
+
+        // The picker stores the chosen category in source_id; an earlier map read category_id — a
+        // key the schema never stores — and pointed every category rail at /products/0.
+        $this->assertSame('/api/v1/categories/products/11', $sources[2]['endpoint']);
+    }
+
     public function test_responsive_settings_arrive_resolved_for_the_phone(): void
     {
         $version = ThemeVersion::create(['theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED]);

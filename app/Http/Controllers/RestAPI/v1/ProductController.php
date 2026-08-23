@@ -8,6 +8,8 @@ use App\Contracts\Repositories\PublishingHouseRepositoryInterface;
 use App\Contracts\Repositories\RestockProductCustomerRepositoryInterface;
 use App\Contracts\Repositories\RestockProductRepositoryInterface;
 use App\Http\Controllers\Controller;
+use App\Services\DeveloperPortal\ApiDoc;
+use App\Services\Theme\SectionRegistry;
 use App\Http\Requests\API\v1\DeliveryManReviewSubmitRequest;
 use App\Models\Author;
 use App\Models\Category;
@@ -897,6 +899,57 @@ class ProductController extends Controller
             })->pluck('id')->toArray();
         $publishingHouseList = ProductManager::getPublishingHouseList(productIds: $productIds);
         return response()->json($publishingHouseList->values());
+    }
+
+    #[ApiDoc(
+        summary: 'Exactly these products, in exactly this order',
+        description: 'The endpoint behind a theme section whose product source is "manual": the '
+            . 'merchant hand-picked the products and their order in the builder, and this returns '
+            . 'them as picked — active ones only, capped at 24. `ids` accepts both a comma string '
+            . '(ids=7,3,9) and a repeated array (ids[]=7&ids[]=3). An id that is unknown, inactive '
+            . 'or duplicated is simply absent from the result — the order of the survivors is still '
+            . 'the picked order, never the database\'s.',
+        audience: ApiDoc::CUSTOMER_APP,
+        visibility: ApiDoc::PARTNER_VISIBLE,
+        stability: ApiDoc::STABLE,
+        since: 'v1',
+    )]
+    public function getProductsByIds(Request $request): JsonResponse
+    {
+        // Both spellings a client reasonably sends, and neither may 500: a comma string from a
+        // settings blob, or a repeated ids[] from anything that builds query strings natively.
+        $raw = $request->query('ids');
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', is_array($raw) ? $raw : explode(',', is_string($raw) ? $raw : '')),
+            fn ($id) => $id > 0,
+        )));
+        $ids = array_slice($ids, 0, SectionRegistry::MAX_PICKED_RESOURCES);
+
+        if ($ids === []) {
+            return response()->json(['total_size' => 0, 'products' => []], 200);
+        }
+
+        $user = Helpers::getCustomerInformation($request);
+
+        // The same contract as the storefront's own pickedProducts(): whereIn returns database
+        // order, and a hand-picked rail rendered in database order is not the rail the merchant
+        // arranged — so the picked order is restored after the fetch.
+        $products = Product::active()
+            ->with(['brand:id,name,slug', 'clearanceSale' => function ($query) {
+                return $query->active();
+            }])
+            ->withCount(['reviews', 'wishList' => function ($query) use ($user) {
+                $query->where('customer_id', $user != 'offline' ? $user->id : '0');
+            }])
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn ($product) => array_search($product->id, $ids, true))
+            ->values();
+
+        return response()->json([
+            'total_size' => $products->count(),
+            'products' => Helpers::product_data_formatting($products, true),
+        ], 200);
     }
 
     public function getClearanceSale(Request $request): JsonResponse
