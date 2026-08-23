@@ -157,6 +157,13 @@ class SectionRegistry
                     // scaling with the container like one picture, instead of collapsing to two
                     // columns on phones and stretching on wide monitors.
                     'layout_lock' => ['type' => 'boolean', 'label' => 'lock_layout_on_all_screen_sizes', 'default' => false],
+                    // grid = the asymmetric wall above. swipe = ONE horizontally swipeable row —
+                    // small squares side by side that scroll, in the merchant's words. Squares
+                    // over a rectangle strip = a swipe section stacked above a grid/strip one.
+                    'display'     => ['type' => 'select', 'label' => 'display_mode', 'default' => 'grid',
+                                      'options' => ['grid', 'swipe']],
+                    // How long each frame of a multi-image tile holds before crossfading.
+                    'rotate_ms'   => ['type' => 'number', 'label' => 'image_rotate_interval_ms', 'default' => 4000],
                 ],
             ],
             'banner_strip' => [
@@ -641,8 +648,15 @@ class SectionRegistry
                 'schema' => [
                     'banner_id'   => ['type' => 'banner', 'label' => 'linked_dashboard_banner', 'default' => null],
                     'image'       => ['type' => 'image',  'label' => 'image', 'default' => ''],
-                    'span'        => ['type' => 'select', 'label' => 'tile_size', 'default' => 'small',
-                                      'options' => ['small', 'wide', 'tall', 'large']],
+                    // The tile's shape. In the grid: small/square 1x1, wide 2x1, tall 1x2,
+                    // large 2x2, strip a full-width rectangle row. In swipe display the shape
+                    // sets the card's width against the row height instead.
+                    'span'        => ['type' => 'select', 'label' => 'tile_shape', 'default' => 'small',
+                                      'options' => ['small', 'square', 'wide', 'tall', 'large', 'strip']],
+                    // Extra frames for the SAME tile: it crossfades through them in place, so one
+                    // slot can carry a campaign's three visuals without three tiles.
+                    'image_2'     => ['type' => 'image',  'label' => 'second_image_optional', 'default' => ''],
+                    'image_3'     => ['type' => 'image',  'label' => 'third_image_optional', 'default' => ''],
                     'eyebrow'     => ['type' => 'text',   'label' => 'eyebrow', 'default' => ''],
                     'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'link'        => ['type' => 'link',   'label' => 'link', 'default' => ''],

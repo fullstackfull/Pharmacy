@@ -32,7 +32,7 @@ class ThemeSectionController extends Controller
     private const PAGES = ['home', 'header', 'footer'];
 
     /** Settings keys whose value is an image path a phone must be able to fetch. */
-    private const IMAGE_KEYS = ['image', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image'];
 
     public function __construct(
         private readonly StorefrontThemeRenderer $renderer,
@@ -51,7 +51,11 @@ class ThemeSectionController extends Controller
             . 'unpublish in Banner Setup changes this response without any theme change. Manage the '
             . 'images in Admin → Promotion → Banner Setup (builder uploads register themselves there '
             . 'as "Theme Banner" rows). All image URLs are absolute, and responsive settings arrive '
-            . 'resolved for the mobile breakpoint. Every card carries a structured `target` — what tapping it opens: '
+            . 'resolved for the mobile breakpoint. A banner_mosaic renders per `settings.display`: '
+            . '"grid" (asymmetric wall; tile shapes small/square 1x1, wide 2x1, tall 1x2, large 2x2, '
+            . 'strip full-width) or "swipe" (one horizontally swipeable row; the shape sets card '
+            . 'width against settings.height). A card whose `images` holds more than one frame '
+            . 'crossfades through them every settings.rotate_ms. Every card carries a structured `target` — what tapping it opens: '
             . '{kind: product|category|brand|shop, id, slug, name} resolved from the linked banner\'s '
             . 'own resource picker or from the link URL; {kind: url} for a link that matches no '
             . 'catalogue shape (feed it to the deep-link resolve API); {kind: none} for a tile that '
@@ -253,6 +257,14 @@ class ThemeSectionController extends Controller
             if (is_string($value) && str_starts_with($value, '/')) {
                 $settings[$key] = url($value);
             }
+        }
+
+        // A multi-frame tile's whole frame list, same rule as its lead image.
+        if (isset($settings['images']) && is_array($settings['images'])) {
+            $settings['images'] = array_map(
+                fn ($frame) => is_string($frame) && str_starts_with($frame, '/') ? url($frame) : $frame,
+                $settings['images'],
+            );
         }
 
         return $settings;

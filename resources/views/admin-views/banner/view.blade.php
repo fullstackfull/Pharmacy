@@ -239,6 +239,69 @@
             </div>
         </div>
 
+        {{-- The theme's banners, ORGANIZED: one card per section, its images side by side with
+             their shape, link state and a direct edit for each — the mosaic and "its four
+             pictures" as one visible family instead of anonymous rows in the table below. --}}
+        @if (!empty($themeGroups))
+            <div class="row mb-3" id="theme-banner-groups">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h5 class="mb-0 text-capitalize">
+                                <i class="fi fi-rr-brush"></i>
+                                {{ translate('theme_banners_grouped_by_section') }}
+                            </h5>
+                            @if (Route::has('admin.theme.builder.index'))
+                                <a href="{{ route('admin.theme.builder.index') }}" class="k-btn k-btn--secondary k-btn--sm">
+                                    {{ translate('open_theme_builder') }}
+                                </a>
+                            @endif
+                        </div>
+                        <div class="card-body d-flex flex-column gap-3">
+                            @foreach ($themeGroups as $group)
+                                <div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                        <strong class="text-capitalize">{{ $group['label'] }}</strong>
+                                        <span class="badge badge-soft-secondary">{{ translate($group['page']) }}</span>
+                                        <span class="badge {{ $group['status'] === 'published' ? 'badge-soft-success' : 'badge-soft-warning' }}">
+                                            {{ translate($group['status']) }}
+                                        </span>
+                                        <span class="text-muted small">{{ count($group['cards']) }} {{ translate('images') }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach ($group['cards'] as $card)
+                                            @php $editable = !empty($card['banner_id']); @endphp
+                                            <a href="{{ $editable ? route('admin.banner.update', ['id' => $card['banner_id']]) : (Route::has('admin.theme.builder.index') ? route('admin.theme.builder.index', ['page' => $group['page']]) : '#') }}"
+                                               class="text-decoration-none border rounded p-1 d-flex flex-column gap-1"
+                                               style="width:110px"
+                                               title="{{ $card['title'] ?? '' }}">
+                                                <img src="{{ $card['image'] ?: dynamicAsset(path: 'public/assets/back-end/img/400x400/img2.jpg') }}"
+                                                     alt="" style="width:100%;height:64px;object-fit:cover;border-radius:6px"
+                                                     class="{{ empty($card['published']) && $editable ? 'opacity-50' : '' }}">
+                                                <span class="d-flex flex-wrap gap-1">
+                                                    @if (!empty($card['span']))
+                                                        <span class="badge badge-soft-info">{{ translate($card['span'] . '_tile') }}</span>
+                                                    @endif
+                                                    @if ($editable)
+                                                        <span class="badge badge-soft-success">{{ translate('edit') }}</span>
+                                                    @else
+                                                        <span class="badge badge-soft-secondary">{{ translate('in_builder') }}</span>
+                                                    @endif
+                                                    @if ($editable && empty($card['published']))
+                                                        <span class="badge badge-soft-danger">{{ translate('unpublished') }}</span>
+                                                    @endif
+                                                </span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="row" id="banner-table">
             <div class="col-md-12">
                 <x-k.data-view :title="translate('banner_table')" :count="$banners->total()"

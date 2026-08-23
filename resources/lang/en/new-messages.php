@@ -6536,4 +6536,11 @@ return [
 	'show_a_qr_code' => 'Show a qr code',
 	'tiles_that_lead_to_a_price_filtered_listing' => 'Tiles that lead to a price filtered listing',
 	'price_band' => 'Price band',
+	'square_tile' => 'Square tile',
+	'theme_banners_grouped_by_section' => 'Theme banners grouped by section',
+	'open_theme_builder' => 'Open theme builder',
+	'images' => 'Images',
+	'in_builder' => 'In builder',
+	'display_mode' => 'Display mode',
+	'image_rotate_interval_ms' => 'Image rotate interval ms',
 ];

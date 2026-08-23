@@ -486,6 +486,14 @@ class SectionDataResolver
                 'background'   => $settings['background'] ?? null,
                 'overlay'      => $settings['overlay'] ?? null,
                 'icon'         => $settings['icon'] ?? null,
+                // Every frame of the tile, lead image first. One entry means a still tile; more
+                // mean it crossfades through them in place. The linked banner's image, when there
+                // is one, replaces only the LEAD frame — the extra frames are the block's own.
+                'images'       => array_values(array_filter([
+                    $settings['image'] ?? null,
+                    $settings['image_2'] ?? null,
+                    $settings['image_3'] ?? null,
+                ], fn ($frame) => is_string($frame) && $frame !== '')),
                 'banner_id'    => $linkedId > 0 ? $linkedId : null,
                 // The Banner Setup form's own resource picker, carried raw; resolveTargets() below
                 // turns it (or, failing it, the link URL) into the card's structured target.
