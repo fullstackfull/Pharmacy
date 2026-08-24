@@ -25,6 +25,10 @@ class ThemeOptionCoverageTest extends TestCase
 
         $sources = array_merge(
             glob(resource_path('views/theme-sections/*.blade.php')),
+            // The storefront renderer is a directory now: one partial per section type, plus the
+            // shared pieces they include. A scan that still read only home.blade.php would pass by
+            // finding nothing to check.
+            glob(resource_path('views/theme-sections/types/*.blade.php')),
             glob(resource_path('views/theme-sections/partials/*.blade.php')),
             glob(app_path('Services/Theme/*.php')),
         );
@@ -76,18 +80,15 @@ class ThemeOptionCoverageTest extends TestCase
         }
     }
 
-    public function test_every_home_section_type_has_a_renderer_case(): void
+    public function test_every_home_section_type_has_a_renderer(): void
     {
-        $home = file_get_contents(resource_path('views/theme-sections/home.blade.php'));
-
         foreach ((new SectionRegistry())->types() as $type => $definition) {
             if (!in_array('home', $definition['pages'], true)) {
                 continue;
             }
-            $this->assertStringContainsString(
-                "@case('" . $type . "')",
-                $home,
-                "Section {$type} can be added to the home page but the renderer has no case for it.",
+            $this->assertFileExists(
+                resource_path('views/theme-sections/types/' . $type . '.blade.php'),
+                "Section {$type} can be added to the home page but the renderer has no partial for it.",
             );
         }
     }

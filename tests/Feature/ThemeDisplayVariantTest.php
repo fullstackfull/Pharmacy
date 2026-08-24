@@ -71,38 +71,34 @@ class ThemeDisplayVariantTest extends TestCase
     }
 
     /**
-     * The markup that draws one section: its own @case block, plus any partial that block includes.
+     * The markup that draws one section: its own partial, plus anything that partial includes.
+     *
+     * This used to cut the section's `@case` body out of the one file that held all of them. The
+     * renderer is a directory now, so the section's markup IS a file — and the two types that
+     * share a body reach it through the partial that holds it.
      */
     private function rendererFor(string $type): string
     {
-        $sources = array_merge(
-            glob(resource_path('views/theme-sections/*.blade.php')),
-            glob(resource_path('views/theme-sections/partials/*.blade.php')),
-        );
+        $markup = $this->partial("types/{$type}");
 
-        $markup = '';
-
-        foreach ($sources as $file) {
-            $contents = (string) file_get_contents($file);
-
-            // header.blade.php and footer.blade.php render one section each without a @switch.
-            if (!str_contains($contents, "@case('")) {
-                $markup .= $contents;
-
-                continue;
-            }
-
-            if (preg_match("/@case\('" . preg_quote($type, '/') . "'\)(.*?)@break/s", $contents, $matches) === 1) {
-                $markup .= $matches[1];
-            }
+        if (preg_match("/@include\('theme-sections\.types\.([a-z_]+)'\)/", $markup, $shared) === 1) {
+            $markup .= $this->partial('types/' . $shared[1]);
         }
 
+        // header and footer each render one section without a partial of its own.
+        $markup .= $this->partial('header') . $this->partial('footer');
+
         foreach (['hero', 'banner-grid', 'banner-mosaic', 'banner-split', 'banner-strip', 'product-card', 'usp-icon', 'vendor-card'] as $partial) {
-            if (str_contains($markup, "partials.{$partial}") || str_contains($markup, "partials." . str_replace('-', '', $partial))) {
-                $markup .= (string) @file_get_contents(resource_path("views/theme-sections/partials/{$partial}.blade.php"));
+            if (str_contains($markup, "partials.{$partial}") || str_contains($markup, 'partials.' . str_replace('-', '', $partial))) {
+                $markup .= $this->partial("partials/{$partial}");
             }
         }
 
         return $markup;
+    }
+
+    private function partial(string $name): string
+    {
+        return (string) @file_get_contents(resource_path("views/theme-sections/{$name}.blade.php"));
     }
 }

@@ -243,7 +243,7 @@ Brand Banner.
 | أجرب تعديلاً دون لمس الموقع | Duplicate النسخة المنشورة ← عدّل المسودة ← عاين ← انشر |
 | أرجع عن نشر خاطئ | Versions ← Restore للنسخة السابقة ← Publish |
 | أعدّل ستايل بطاقة المنتج عالمياً | `resources/css/kohl/_storefront-refresh.scss` ثم `npm run production` |
-| أضيف نوع قسم جديد للمطورين | `SectionRegistry.php` + جزئية Blade في `resources/views/theme-sections/` |
+| أضيف نوع قسم جديد للمطورين | `SectionRegistry.php` + ملف `resources/views/theme-sections/types/{type}.blade.php` |
 
 ---
 
@@ -266,6 +266,18 @@ Brand Banner.
 - **Sections catalogue.** `app/Services/Theme/SectionRegistry.php` is the contract between the
   Builder UI and the storefront renderer (`StorefrontThemeRenderer`); add a type there plus its
   Blade partial and the Builder picks it up automatically.
+- **One partial per section type.** `theme-sections/home.blade.php` resolves each section by name
+  (`@includeIf('theme-sections.types.' . $type)`) — it holds the page shell, the shared CSS and
+  the per-section data resolution; `theme-sections/types/{type}.blade.php` holds one type's markup
+  and reads what the shell put in scope (`$s` settings, `$blocks` cards, `$__data`, and whatever
+  that type's data variable is called). Two types that draw one body — `featured_deal` and
+  `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
+  the two invariants: every renderable type has a partial, and every partial compiles.
+- **What a section shows vs. where it leads.** `ContentSource` reads a section's source out of its
+  settings once (`source`, `source_id`, `product_ids`, `limit`); `ThemeSourceMap::endpointFor()`
+  turns it into the app's endpoint, `SectionDataResolver::productsFrom()` into the web's query, and
+  `SectionDestination` into the "view all" destination — a URL for the web and the same URL as a
+  typed action for the app.
 - **Header & footer.** `theme-sections/header.blade.php` renders published header sections
   (announcement bar) above the built-in header; `theme-sections/footer.blade.php` REPLACES the
   built-in footer when footer sections are published (copyright bar always appended), falling back
