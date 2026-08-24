@@ -22,6 +22,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerAutomationController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerFinanceControlController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
@@ -334,6 +335,21 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index');
                     Route::get('briefing', 'briefing');
                     Route::put('issues/{id}/status', 'updateStatus')->whereNumber('id');
+                });
+            });
+
+            // The marketplace's own arithmetic, from the seller's side: does what I sold add up to
+            // what I was paid, what would this sale cost me, and who changed this price. The first
+            // two are money and gated on finance.view; the price history is catalogue history and
+            // readable by anyone who may see the products it is about.
+            Route::group(['prefix' => 'finance'], function () {
+                Route::controller(SellerFinanceControlController::class)->group(function () {
+                    Route::middleware('seller_can:finance.view')->group(function () {
+                        Route::get('reconciliation', 'reconciliation');
+                        Route::get('fee-simulator', 'feeSimulator');
+                    });
+
+                    Route::get('price-changes', 'priceChanges');
                 });
             });
 

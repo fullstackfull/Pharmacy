@@ -6690,4 +6690,5 @@ return [
 	'automation_reason_permission' => 'Your role does not allow undoing this',
 	'automation_reason_subject_gone' => 'That product no longer exists in your shop',
 	'automation_undo' => 'Undone by the seller',
+	'simulator_needs_a_price_or_a_product' => 'Enter a price, or pick a product',
 ];
