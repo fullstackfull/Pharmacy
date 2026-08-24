@@ -75,6 +75,9 @@ class ThemeBuilderController extends BaseController
             // What the customer app will and will not show of this version — surfaced while the
             // merchant can still act on it, not discovered on a shopper's phone (spec §54–55).
             'compatibility' => $version ? app(\App\Services\Theme\ThemeCompatibilityReport::class)->for($version) : null,
+            // And what would stop it going live at all: a section added and never finished shows
+            // here, beside the panel that fixes it, instead of on the storefront.
+            'publishCheck'  => $version ? app(\App\Services\Theme\PublishValidator::class)->inspect($version) : null,
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,

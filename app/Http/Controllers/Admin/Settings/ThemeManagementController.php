@@ -6,6 +6,7 @@ use App\Contracts\Repositories\ThemeRepositoryInterface;
 use App\Http\Controllers\BaseController;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
+use App\Services\Theme\PublishValidator;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ThemePermissionService;
 use App\Services\Theme\ThemePortabilityService;
@@ -55,13 +56,18 @@ class ThemeManagementController extends BaseController
         // App coverage per theme's latest draft, for the publish confirmation: "publish and the
         // app shows 9 of 11 sections" is a decision, the same sentence after publishing is a bug
         // report (spec §55). Only drafts are counted — that is the version a publish would ship.
+        // And what would STOP that publish: a section the merchant added and never finished
+        // configuring renders nothing, and the only place that used to show was the live site.
         $compatibility = [];
+        $readiness = [];
         if (Schema::hasColumn('theme_sections', 'uuid')) {
             $report = app(\App\Services\Theme\ThemeCompatibilityReport::class);
+            $validator = app(PublishValidator::class);
             foreach ($themes as $theme) {
                 $draft = $theme->versions->where('status', 'draft')->sortByDesc('id')->first();
                 if ($draft) {
                     $compatibility[$theme->id] = $report->for($draft);
+                    $readiness[$theme->id] = $validator->inspect($draft);
                 }
             }
         }
@@ -69,6 +75,7 @@ class ThemeManagementController extends BaseController
         return view('admin-views.theme.index', [
             'themes'       => $themes,
             'compatibility' => $compatibility,
+            'readiness'    => $readiness,
             'search'       => $request?->get('searchValue'),
             'presets'      => $this->portability->presets(),
             'assetsReady'  => Schema::hasTable('theme_assets'),
@@ -183,10 +190,24 @@ class ThemeManagementController extends BaseController
             return $this->backToIndex();
         }
 
-        $this->themeManager->publish($version);
+        // The last check before a draft becomes the shop. A section the merchant never finished
+        // configuring does not render, and until now the only place that showed was the live site.
+        $findings = app(PublishValidator::class)->inspect($version);
+
+        if ($findings['blocking'] !== []) {
+            ToastMagic::error(
+                count($findings['blocking']) . ' ' . translate('sections_are_not_ready_to_publish') . '!',
+            );
+
+            return $this->backToIndex()->with('theme_publish_findings', $findings);
+        }
+
+        $this->themeManager->publish($version, $request['change_note'] ?? null);
         ToastMagic::success(translate('theme_version_published_successfully'));
 
-        return $this->backToIndex();
+        return $findings['warnings'] === []
+            ? $this->backToIndex()
+            : $this->backToIndex()->with('theme_publish_findings', $findings);
     }
 
     /** Duplicate a version into a fresh draft (revision / edit-a-copy workflow). */

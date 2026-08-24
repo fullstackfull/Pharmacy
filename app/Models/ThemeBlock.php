@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Theme\PublishValidator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,18 @@ class ThemeBlock extends Model
         'sort_order' => 'integer',
         'settings'   => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        // A block carries the content its section is judged on — a hero with no slides, a tab with
+        // no label — so editing one invalidates the same cached verdict a section edit does.
+        $forget = static function (self $block) {
+            PublishValidator::forget($block->section?->theme_version_id);
+        };
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
 
     public function section(): BelongsTo
     {

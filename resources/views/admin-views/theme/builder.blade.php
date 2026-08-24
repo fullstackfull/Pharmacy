@@ -79,6 +79,12 @@
         .tb-compat { display: flex; gap: .75rem; align-items: flex-start; margin: 0 1rem .75rem; padding: .65rem .85rem;
             background: #1d2732; border: 1px solid #31445c; border-radius: .5rem; font-size: .8rem; color: #c9d5e3; }
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
+        .tb-compat--stop { border-color: #6b2a2a; background: #2a1616; }
+        .tb-compat--stop i { color: #ff8f8f; }
+        .tb-compat__where { color: #7d8ea1; }
+        .tb-jump { background: none; border: 0; padding: 0; color: #ffd28a; font: inherit;
+                   text-decoration: underline; cursor: pointer; }
+        .tb-jump:hover { color: #fff; }
         .tb-compat strong { color: #fff; display: block; }
         .tb-compat ul { margin: .25rem 0 0; padding-inline-start: 1.1rem; color: #93a3b5; }
         .tb-empty { color: #7d8794; font-size: .8rem; text-align: center; padding: 1.5rem .5rem; }
@@ -393,6 +399,31 @@
                                 <button type="submit" class="k-btn k-btn--primary">{{ translate('publish_this_version') }}</button>
                             </form>
                         @endif
+                    </div>
+                </div>
+            @endif
+
+            {{-- What would stop this version going live. Publishing is refused while any of these
+                 stands, so it is said here — next to the sections it names — rather than as a
+                 rejection on the way out. --}}
+            @if (!empty($publishCheck['blocking']))
+                <div class="tb-compat tb-compat--stop">
+                    <i class="fi fi-rr-triangle-warning"></i>
+                    <div>
+                        <strong>{{ translate('this_version_cannot_be_published_yet') }}</strong>
+                        <ul>
+                            @foreach ($publishCheck['blocking'] as $finding)
+                                <li>
+                                    @if ($finding['section_id'] && $finding['page'] === $page)
+                                        <button type="button" class="tb-jump" data-tb-jump="{{ $finding['section_id'] }}">{{ translate($finding['label']) }}</button>
+                                    @else
+                                        {{ translate($finding['label']) }}
+                                        @if ($finding['page'] !== $page)<span class="tb-compat__where">({{ translate($finding['page']) }})</span>@endif
+                                    @endif
+                                    — {{ translate($finding['reason_key']) }}. {{ translate($finding['fix_key']) }}.
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
             @endif
@@ -1484,6 +1515,17 @@
                     markSelectedInFrame(scrollPreview);
                 });
             }
+
+            // A finding that names a section opens it. Reading "choose a category" and then
+            // hunting for which of nineteen rows it meant is most of the work the check saves.
+            document.querySelectorAll('[data-tb-jump]').forEach(function (jump) {
+                jump.addEventListener('click', function () {
+                    var item = structure.querySelector('.tb-item[data-id="' + jump.dataset.tbJump + '"]');
+                    if (!item) return;
+                    item.scrollIntoView({block: 'nearest'});
+                    selectSection(item);
+                });
+            });
 
             structure.addEventListener('click', function (event) {
                 var toggle = event.target.closest('[data-action="toggle"]');

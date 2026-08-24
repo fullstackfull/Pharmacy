@@ -17,7 +17,7 @@ class ThemeVersion extends Model
     public const STATUS_ARCHIVED  = 'archived';
 
     protected $fillable = [
-        'theme_id', 'label', 'status', 'settings', 'based_on_version_id', 'published_at',
+        'theme_id', 'label', 'change_note', 'status', 'settings', 'based_on_version_id', 'published_at',
         'revision', 'checksum',
     ];
 
