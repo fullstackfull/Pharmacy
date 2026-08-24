@@ -5,9 +5,7 @@ namespace App\Services\Marketplace\Bulk;
 use App\Jobs\RunSellerBulkJob;
 use App\Models\Product;
 use App\Models\ProductPriceChange;
-use App\Models\Seller;
 use App\Models\SellerBulkJob;
-use App\Models\SellerStaff;
 use App\Services\AuditLogger;
 use App\Services\Marketplace\PriceChangeRecorder;
 use App\Services\Marketplace\SellerPermissionService;
@@ -272,35 +270,16 @@ class SellerBulkJobService
     }
 
     /**
-     * Rebuild who asked, at the moment the work actually runs.
+     * Who this job runs as, resolved now rather than when it was queued.
      *
-     * The principal is not serialised into the queue payload: permissions are read per request
-     * everywhere else, and a job that carried a snapshot of them would be the one place a revoked
-     * permission still applied.
+     * A shop suspended or an employee deactivated between queueing and running must stop the work,
+     * which is why this is read fresh from the same place a request would read it.
      */
     private function principalFor(SellerBulkJob $job): ?SellerPrincipal
     {
-        $seller = Seller::where('id', $job->seller_id)->where('status', 'approved')->first();
-
-        if (!$seller) {
-            return null;
-        }
-
-        if ($job->created_by_staff_id === null) {
-            return SellerPrincipal::owner($seller);
-        }
-
-        $staff = SellerStaff::where('id', $job->created_by_staff_id)
-            ->where('seller_id', $seller->id)
-            ->where('status', 'active')
-            ->first();
-
-        if (!$staff) {
-            return null;
-        }
-
-        $permissions = app(SellerPermissionService::class)->permissionsOf($staff);
-
-        return SellerPrincipal::staff($seller, $staff, $permissions);
+        return app(SellerPermissionService::class)->principalForSeller(
+            sellerId: $job->seller_id,
+            staffId: $job->created_by_staff_id,
+        );
     }
 }

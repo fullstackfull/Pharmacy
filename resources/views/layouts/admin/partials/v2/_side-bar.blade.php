@@ -706,6 +706,12 @@
                                 <span class="v2-nav-child-label">{{ translate('seller_verification') }}</span>
                             </a>
                         @endif
+                        @if (Route::has('admin.marketplace.brand-registry.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/brand-registry*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.brand-registry.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('brand_registry') }}</span>
+                            </a>
+                        @endif
                         @if (Route::has('admin.marketplace.seller-scorecard.index'))
                             <a class="v2-nav-child {{ Request::is('admin/marketplace/seller-scorecard*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.seller-scorecard.index') }}">
                                 <span class="v2-nav-child-dot" data-tone="primary"></span>

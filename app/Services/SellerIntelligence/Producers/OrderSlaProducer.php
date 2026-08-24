@@ -4,7 +4,9 @@ namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\Order;
 use App\Services\SellerIntelligence\InsightDraft;
+use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\InsightProducer;
+use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use App\Services\Marketplace\SlaService;
 use Illuminate\Support\Facades\Schema;
 
@@ -87,6 +89,17 @@ class OrderSlaProducer implements InsightProducer
                 ],
                 // A late order stops being news once it is very late; the breach ledger owns it then.
                 expiresAt: $deadline->copy()->addDays(7),
+                category: SellerInsight::CATEGORY_ORDERS,
+                dueAt: $deadline,
+                signals: new ImpactSignals(
+                    // What the order is worth. An order approaching its deadline is money the seller
+                    // still has, and a marketplace standing they still have.
+                    revenueAtRisk: (float) $order->order_amount,
+                    affectedCount: 1,
+                    hoursUntilDue: round($hoursLeft, 2),
+                    severityFloor: $isLate ? SellerInsight::SEVERITY_HIGH : null,
+                ),
+                metadata: ['deadline' => $deadline->toIso8601String(), 'window_hours' => $windowHours],
             );
         }
     }

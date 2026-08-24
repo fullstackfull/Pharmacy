@@ -616,6 +616,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // Brand registry: who may sell under a brand, on what evidence, and the switch that turns
+        // the answer from a report into a refusal. Every decision on this page is a person's.
+        Route::group(['prefix' => 'brand-registry', 'as' => 'brand-registry.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\BrandRegistryController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('document/{id}', 'document')->whereNumber('id')->name('document');
+                Route::post('approve', 'approve')->name('approve');
+                Route::post('reject', 'reject')->name('reject');
+                Route::post('revoke', 'revoke')->name('revoke');
+                Route::post('enforcement', 'updateEnforcement')->name('enforcement');
+            });
+        });
+
         // Seller performance scorecard: quality metrics and a derived health tier per seller.
         Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
             Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerScorecardController::class)->group(function () {

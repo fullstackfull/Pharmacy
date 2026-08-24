@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\Seller;
+use App\Models\SellerApiKey;
 use App\Models\SellerStaff;
 
 /**
@@ -26,6 +27,7 @@ final class SellerPrincipal
         public readonly Seller $seller,
         public readonly ?SellerStaff $staff,
         public readonly array $permissions,
+        public readonly ?SellerApiKey $apiKey = null,
     ) {
     }
 
@@ -33,6 +35,21 @@ final class SellerPrincipal
     public static function owner(Seller $seller): self
     {
         return new self($seller, null, []);
+    }
+
+    /**
+     * A key the seller issued to something that is not a person.
+     *
+     * Held to its scopes rather than to the owner's authority, which is the whole reason a key is
+     * worth having: an integration that only reads orders should cost the seller their order list
+     * if it leaks, not their payouts. So this is deliberately *not* an owner — every `isOwner()`
+     * check that grants everything has to keep refusing it.
+     *
+     * @param  array<int, string>  $scopes
+     */
+    public static function integration(Seller $seller, SellerApiKey $apiKey, array $scopes): self
+    {
+        return new self($seller, null, array_values(array_unique($scopes)), $apiKey);
     }
 
     /**
@@ -53,7 +70,12 @@ final class SellerPrincipal
 
     public function isOwner(): bool
     {
-        return $this->staff === null;
+        return $this->staff === null && $this->apiKey === null;
+    }
+
+    public function apiKeyId(): ?int
+    {
+        return $this->apiKey?->id;
     }
 
     public function staffId(): ?int
@@ -76,6 +98,10 @@ final class SellerPrincipal
     /** For an audit line: who did this, in whose shop. */
     public function actorLabel(): string
     {
+        if ($this->apiKey !== null) {
+            return "{$this->apiKey->name} [{$this->apiKey->prefix}]";
+        }
+
         return $this->isOwner()
             ? trim("{$this->seller->f_name} {$this->seller->l_name}")
             : "{$this->staff->name} ({$this->seller->f_name})";
