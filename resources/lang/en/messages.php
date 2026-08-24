@@ -6728,4 +6728,6 @@ return [
 	"notify_returns_risk" => "Returns need an answer",
 	"notify_shipping_exception" => "Shipments have stopped moving",
 	"notify_finance_integrity" => "Earnings are missing",
+	"issue_updated" => "Issue updated",
+	"issue_not_found" => "Issue not found",
 ];

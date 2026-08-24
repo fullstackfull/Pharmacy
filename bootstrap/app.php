@@ -160,6 +160,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // a scheduled publish is only as trustworthy as the run that fires it.
         $schedule->command('theme:publish-due')->everyFiveMinutes()->withoutOverlapping();
 
+        // Promote issues nobody has answered. Every four hours rather than hourly: escalation asks
+        // how long something has stood, and that answer changes slowly. Running it as often as
+        // detection would spend a sweep to learn nothing almost every time.
+        $schedule->command('seller:escalate-issues')->everyFourHours()->withoutOverlapping();
+
         // Bulk price and stock changes are queued, which makes them depend on a worker running. A
         // deployment without one would leave every bulk job at `queued` for ever while the app shows
         // the seller a change that is never going to happen — the exact failure the receipt exists to

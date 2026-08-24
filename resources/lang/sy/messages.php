@@ -9526,4 +9526,6 @@ return [
 	"notify_returns_risk" => "مرتجعات تنتظر ردّاً",
 	"notify_shipping_exception" => "شحنات توقّفت عن الحركة",
 	"notify_finance_integrity" => "أرباح مفقودة",
+	"issue_updated" => "تم تحديث المشكلة",
+	"issue_not_found" => "المشكلة غير موجودة",
 ];

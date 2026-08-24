@@ -20,6 +20,7 @@ use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
@@ -322,6 +323,16 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::controller(SellerAnalyticsController::class)->group(function () {
                     Route::get('/', 'index');
                     Route::get('activities', 'activities');
+                });
+            });
+
+            // What is wrong, arranged by when it needs doing. Distinct from the Action Center's
+            // flat list and from Home's report on how the business is going.
+            Route::group(['prefix' => 'control-tower'], function () {
+                Route::controller(SellerControlTowerController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('briefing', 'briefing');
+                    Route::put('issues/{id}/status', 'updateStatus')->whereNumber('id');
                 });
             });
 
