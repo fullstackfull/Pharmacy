@@ -13,6 +13,7 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\InHouseTrait;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
+use App\Services\VendorSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -26,6 +27,7 @@ class SellerController extends Controller
 
     public function __construct(
         private Seller $seller,
+        private readonly VendorSummaryService $vendorSummary,
     )
     {
     }
@@ -170,7 +172,9 @@ class SellerController extends Controller
             'total_size' => $sellers->total(),
             'limit' => (int)$request['limit'],
             'offset' => (int)$request['offset'],
-            'sellers' => $sellers->values()
+            // A shopper's view of each vendor: never the seller's contact,
+            // banking or tax documents, which whole-model responses leaked.
+            'sellers' => $this->vendorSummary->summarizeMany($sellers->values()),
         ];
 
     }
