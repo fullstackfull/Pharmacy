@@ -273,6 +273,12 @@ Brand Banner.
   that type's data variable is called). Two types that draw one body — `featured_deal` and
   `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
   the two invariants: every renderable type has a partial, and every partial compiles.
+- **Links are chosen, not typed.** `app/Services/Theme/LinkComposer.php` is the inverse of
+  `ActionResolver`: the builder's destination control offers product / category / brand / vendor /
+  flash deal / list page / search / cart / wishlist / external address, and the server composes the
+  storefront URL the field stores — so nothing downstream changes and the app still gets a typed
+  action. `describe()` reads a stored URL back into that choice so the control opens on what is
+  already set. `LinkComposerTest` holds the round trip for every kind.
 - **Publishing gate.** `app/Services/Theme/PublishValidator.php` answers "what is wrong with this
   version" before it becomes the shop, in two severities: *blocking* (a choice the merchant left
   unset — publishing waits) and *warning* (the configuration is right and the world is not —

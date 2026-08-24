@@ -49,7 +49,7 @@ class ActionResolver
      * The key is the first path segment; the value is the collection name both clients resolve —
      * the app already has a screen per collection, so this is the whole mapping it needs.
      */
-    private const COLLECTIONS = [
+    public const COLLECTIONS = [
         'featured-products'        => 'featured',
         'latest-products'          => 'latest',
         'best-selling-products'    => 'best_selling',

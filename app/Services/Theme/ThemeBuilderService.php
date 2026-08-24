@@ -528,6 +528,10 @@ class ThemeBuilderService
                 // Whether the customer app can draw this type at all — the per-section half of
                 // the compatibility card, shown where the merchant is actually arranging sections.
                 'app_safe'   => app(\App\Services\Theme\ComponentCapabilityRegistry::class)->isAppSafe($s->type),
+                // The channels the merchant limited this section to, if any — the other half of
+                // "will the app get this": one is what the app CAN draw, this is what it is ALLOWED
+                // to draw. Empty means every channel.
+                'channels'   => (array) ($s->channels ?? []),
                 'accepts'    => $this->registry->blockTypesFor($s->type),
                 // Whether this section will actually appear, decided by the same object the
                 // storefront skips on. A section that will render nothing used to look exactly

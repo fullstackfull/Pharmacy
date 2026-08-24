@@ -79,6 +79,20 @@
         .tb-compat { display: flex; gap: .75rem; align-items: flex-start; margin: 0 1rem .75rem; padding: .65rem .85rem;
             background: #1d2732; border: 1px solid #31445c; border-radius: .5rem; font-size: .8rem; color: #c9d5e3; }
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
+        /* A section the chosen channel will not receive: still listed, still editable, visibly
+           not part of what that client gets. */
+        .tb-item.is-off-channel { opacity: .42; }
+        .tb-item.is-off-channel .tb-item__label { text-decoration: line-through; }
+        .tb-publish { position: absolute; inset-inline-end: 1rem; top: 3.5rem; z-index: 40; width: 17rem;
+                      display: flex; flex-direction: column; gap: .6rem; padding: 1rem;
+                      border-radius: .75rem; background: #16202b; border: 1px solid #2b3a4a;
+                      box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+        .tb-publish strong { color: #fff; font-size: .85rem; }
+        .tb-publish form { display: flex; flex-direction: column; gap: .4rem; }
+        .tb-publish__stop { margin: 0; font-size: .75rem; color: #ff8f8f; }
+        .tb-publish__warn { margin: 0; font-size: .75rem; color: #ffd28a; }
+        .tb-link { display: flex; flex-direction: column; gap: .4rem; }
+        .tb-link .tb-picker { gap: .35rem; }
         .tb-onphone { position: absolute; inset-inline-end: 1rem; top: 3.5rem; z-index: 40; width: 15rem;
                       display: flex; flex-direction: column; align-items: center; gap: .5rem;
                       padding: 1rem; border-radius: .75rem; background: #16202b; border: 1px solid #2b3a4a;
@@ -329,6 +343,7 @@
              data-url-resources="{{ route('admin.theme.builder.resources') }}"
              data-url-preview-link="{{ route('admin.theme.builder.preview.link') }}"
              data-url-resource-labels="{{ route('admin.theme.builder.resource-labels') }}"
+             data-url-link-compose="{{ route('admin.theme.builder.link.compose') }}"
              data-url-block-schema="{{ route('admin.theme.builder.block-schema') }}"
              data-url-block-add="{{ route('admin.theme.builder.block.add') }}"
              data-url-block-update="{{ route('admin.theme.builder.block.update') }}"
@@ -367,6 +382,13 @@
 
                 <div class="tb-bar__group">
                     <span id="tb-status" class="tb-status" aria-live="polite"></span>
+                    {{-- Which client's eyes to look through. The device buttons change the frame's
+                         width; this changes what the page actually consists of, which is a
+                         different question and the one a merchant asks before publishing. --}}
+                    <div class="tb-seg" role="group" aria-label="{{ translate('channel') }}">
+                        <button type="button" class="is-active" data-channel="web" title="{{ translate('website') }}"><i class="fi fi-rr-globe"></i></button>
+                        <button type="button" data-channel="customer_app" title="{{ translate('customer_app') }}"><i class="fi fi-rr-mobile-notch"></i></button>
+                    </div>
                     <div class="tb-seg" role="group" aria-label="{{ translate('device_preview') }}">
                         <button type="button" class="is-active" data-device="desktop" title="{{ translate('desktop') }}"><i class="fi fi-rr-computer"></i></button>
                         <button type="button" data-device="tablet" title="{{ translate('tablet') }}"><i class="fi fi-rr-tablet"></i></button>
@@ -385,9 +407,53 @@
                     @if (session(\App\Services\Theme\StorefrontThemeRenderer::PREVIEW_SESSION_KEY))
                         <a href="{{ route('admin.theme.builder.preview.stop') }}" class="tb-icon-btn">{{ translate('End_preview') }}</a>
                     @endif
-                    <a href="{{ route('admin.theme.index') }}" class="tb-icon-btn tb-icon-btn--primary">{{ translate('publish') }}</a>
+                    @if ($editable)
+                        <button type="button" id="tb-publish" class="tb-icon-btn tb-icon-btn--primary">{{ translate('publish') }}</button>
+                    @else
+                        <a href="{{ route('admin.theme.index') }}" class="tb-icon-btn tb-icon-btn--primary">{{ translate('versions') }}</a>
+                    @endif
                 </div>
             </header>
+
+            {{-- Publishing, where the work happens. It used to be a link out to the version list,
+                 which meant leaving the page to do the one thing the page is for — and finding out
+                 there that a section was unfinished, with the panel that fixes it two clicks away. --}}
+            @if ($editable)
+                <div class="tb-publish" id="tb-publish-panel" hidden>
+                    <button type="button" class="tb-onphone__close" id="tb-publish-close" aria-label="{{ translate('close') }}">&times;</button>
+                    <strong>{{ translate('publish_this_version') }}</strong>
+
+                    @if (!empty($publishCheck['blocking']))
+                        <p class="tb-publish__stop">
+                            {{ count($publishCheck['blocking']) }} {{ translate('sections_are_not_ready_to_publish') }}.
+                            {{ translate('fix_them_above_and_reload') }}
+                        </p>
+                    @else
+                        @if (!empty($publishCheck['warnings']))
+                            <p class="tb-publish__warn">
+                                {{ count($publishCheck['warnings']) }} {{ translate('things_worth_knowing_before_you_publish') }}
+                            </p>
+                        @endif
+
+                        <form method="post" action="{{ route('admin.theme.version.publish') }}">
+                            @csrf
+                            <input type="hidden" name="version_id" value="{{ $version->id }}">
+                            <input type="hidden" name="return_to_builder" value="{{ $page }}">
+                            <input type="text" name="change_note" maxlength="300" class="tb-input"
+                                   placeholder="{{ translate('what_changed_optional') }}">
+                            <button type="submit" class="k-btn k-btn--primary">{{ translate('publish_now') }}</button>
+                        </form>
+
+                        <form method="post" action="{{ route('admin.theme.version.schedule') }}">
+                            @csrf
+                            <input type="hidden" name="version_id" value="{{ $version->id }}">
+                            <input type="hidden" name="return_to_builder" value="{{ $page }}">
+                            <input type="datetime-local" name="publish_at" class="tb-input">
+                            <button type="submit" class="k-btn k-btn--secondary">{{ translate('publish_later') }}</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
 
             {{-- Scanned off the screen with the phone in the merchant's hand. The token inside the
                  link expires on its own, so the panel says when — a link that looks permanent and
@@ -514,6 +580,8 @@
                                  data-id="{{ $section['id'] }}"
                                  data-type="{{ $section['type'] }}"
                                  data-visible="{{ $section['is_visible'] ? 1 : 0 }}"
+                                 data-app-safe="{{ empty($section['app_safe']) ? 0 : 1 }}"
+                                 data-channels="{{ implode(',', $section['channels'] ?? []) }}"
                                  aria-selected="false">
                                 <span class="tb-item__grip"><i class="fi fi-rr-menu-burger"></i></span>
                                 <span class="tb-item__label">{{ translate($section['label']) }}</span>
@@ -692,6 +760,8 @@
                 noBlocks: @json(translate('nothing_here_yet_add_the_first_item')),
                 settings: @json(translate('settings')),
                 previewExpires: @json(translate('this_link_works_for_the_next')),
+                linkSearchTerm: @json(translate('what_to_search_for')),
+                linkAddress: @json(translate('https_example_com_page')),
                 previewMinutes: @json(translate('minutes')),
                 deliverySchedule: @json(translate('schedule')),
                 deliveryStarts: @json(translate('starts_at')),
@@ -984,6 +1054,201 @@
              * The value written to the settings is an id, or a comma-separated list of ids for a
              * multi-picker, where the order is the merchant's own pick order.
              */
+            /**
+             * Search one catalogue and offer what comes back.
+             *
+             * Shared by the resource picker and the destination picker: both ask the same endpoint
+             * the same way, and a second copy of "how do we find a category" is how the two end up
+             * searching differently.
+             */
+            function searchResources(resource, term, results, onPick) {
+                if (!resource) { results.hidden = true; return; }
+
+                fetch(root.dataset.urlResources
+                        + '?resource=' + encodeURIComponent(resource)
+                        + '&q=' + encodeURIComponent(term || ''),
+                      {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                    .then(function (response) { return response.json(); })
+                    .then(function (body) {
+                        results.innerHTML = '';
+                        var options = (body && body.options) || [];
+                        if (!options.length) {
+                            results.innerHTML = '<p class="tb-hint m-0">' + T.noMatches + '</p>';
+                        }
+                        options.forEach(function (option) {
+                            var row = document.createElement('button');
+                            row.type = 'button';
+                            row.textContent = option.label;
+                            row.addEventListener('click', function () { onPick(option); });
+                            results.appendChild(row);
+                        });
+                        results.hidden = false;
+                    })
+                    .catch(function () { results.hidden = true; });
+            }
+
+            /**
+             * Where a link goes, chosen rather than typed.
+             *
+             * The stored value is still the storefront URL every renderer already reads — this only
+             * changes who writes it. A merchant picks "this category" and the server composes the
+             * address; the address bar, the trailing slash and the query parameter nobody can
+             * remember stop being part of the job.
+             */
+            function buildLinkField(field, key, value, links) {
+                var wrapper = document.createElement('div');
+                wrapper.className = 'tb-link';
+
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.dataset.key = key;
+                hidden.value = (value === null || value === undefined) ? '' : String(value);
+
+                var kinds = (links && links.kinds) || [];
+                var current = (links && links.current && links.current[key]) || {kind: 'none', reference: null, label: null};
+                var state = {kind: current.kind, reference: current.reference, label: current.label};
+
+                var kindSelect = document.createElement('select');
+                kindSelect.className = 'tb-input';
+                kindSelect.disabled = !editable;
+                kinds.forEach(function (kind) {
+                    var option = document.createElement('option');
+                    option.value = kind.value;
+                    option.textContent = kind.label;
+                    if (kind.value === state.kind) option.selected = true;
+                    kindSelect.appendChild(option);
+                });
+
+                // The subject picker: one record, searched for by name.
+                var subject = document.createElement('div');
+                subject.className = 'tb-picker';
+                var chosen = document.createElement('div');
+                chosen.className = 'tb-picker__chips';
+                var search = document.createElement('input');
+                search.type = 'search';
+                search.className = 'tb-input';
+                search.placeholder = T.searchToPick;
+                search.disabled = !editable;
+                var results = document.createElement('div');
+                results.className = 'tb-picker__results';
+                results.hidden = true;
+                subject.appendChild(chosen);
+                subject.appendChild(search);
+                subject.appendChild(results);
+
+                var collectionSelect = document.createElement('select');
+                collectionSelect.className = 'tb-input';
+                collectionSelect.disabled = !editable;
+                ((links && links.collections) || []).forEach(function (collection) {
+                    var option = document.createElement('option');
+                    option.value = collection.value;
+                    option.textContent = collection.label;
+                    if (state.kind === 'collection' && collection.value === state.reference) option.selected = true;
+                    collectionSelect.appendChild(option);
+                });
+
+                var freeText = document.createElement('input');
+                freeText.type = 'text';
+                freeText.className = 'tb-input';
+                freeText.disabled = !editable;
+                if (state.kind === 'search' || state.kind === 'url') {
+                    freeText.value = state.reference || '';
+                }
+
+                var preview = document.createElement('p');
+                preview.className = 'tb-hint mb-0';
+
+                function kindOf(value) {
+                    for (var i = 0; i < kinds.length; i++) {
+                        if (kinds[i].value === value) return kinds[i];
+                    }
+                    return null;
+                }
+
+                function paint() {
+                    var kind = kindOf(state.kind);
+                    var wantsSubject = !!(kind && kind.resource);
+
+                    subject.hidden = !wantsSubject;
+                    collectionSelect.hidden = state.kind !== 'collection';
+                    freeText.hidden = state.kind !== 'search' && state.kind !== 'url';
+                    freeText.placeholder = state.kind === 'search' ? T.linkSearchTerm : T.linkAddress;
+
+                    chosen.innerHTML = '';
+                    if (wantsSubject) {
+                        var chip = document.createElement('span');
+                        chip.className = state.reference ? 'tb-picker__chip' : 'tb-hint';
+                        chip.textContent = state.reference ? (state.label || ('#' + state.reference)) : T.nothingPicked;
+                        chosen.appendChild(chip);
+                    }
+
+                    preview.textContent = hidden.value || '';
+                }
+
+                /** Ask the server for the address this choice means, and store that. */
+                function compose() {
+                    post(root.dataset.urlLinkCompose, {kind: state.kind, reference: state.reference})
+                        .then(function (result) {
+                            hidden.value = (result.ok && result.body && result.body.url) || '';
+                            paint();
+                            scheduleAutosave();
+                        });
+                }
+
+                kindSelect.addEventListener('change', function () {
+                    state.kind = kindSelect.value;
+                    // Each kind names its subject differently, so the previous one cannot carry over.
+                    state.reference = state.kind === 'collection' ? collectionSelect.value : null;
+                    state.label = null;
+                    if (state.kind === 'search' || state.kind === 'url') state.reference = freeText.value;
+                    paint();
+                    compose();
+                });
+
+                collectionSelect.addEventListener('change', function () {
+                    state.reference = collectionSelect.value;
+                    compose();
+                });
+
+                var textTimer = null;
+                freeText.addEventListener('input', function () {
+                    state.reference = freeText.value;
+                    clearTimeout(textTimer);
+                    textTimer = setTimeout(compose, 300);
+                });
+
+                var searchTimer = null;
+                function runSearch() {
+                    var kind = kindOf(state.kind);
+                    searchResources(kind && kind.resource, search.value, results, function (option) {
+                        state.reference = option.value;
+                        state.label = option.label;
+                        search.value = '';
+                        results.hidden = true;
+                        paint();
+                        compose();
+                    });
+                }
+                search.addEventListener('focus', runSearch);
+                search.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(runSearch, 220);
+                });
+                search.addEventListener('blur', function () {
+                    setTimeout(function () { results.hidden = true; }, 180);
+                });
+
+                wrapper.appendChild(hidden);
+                wrapper.appendChild(kindSelect);
+                wrapper.appendChild(subject);
+                wrapper.appendChild(collectionSelect);
+                wrapper.appendChild(freeText);
+                wrapper.appendChild(preview);
+                paint();
+
+                return wrapper;
+            }
+
             function buildResourceField(field, key, value, settings) {
                 var wrapper = document.createElement('div');
                 wrapper.className = 'tb-picker';
@@ -1076,29 +1341,7 @@
 
                 var searchTimer = null;
                 function runSearch() {
-                    var resource = resourceName();
-                    if (!resource) { results.hidden = true; return; }
-                    var url = root.dataset.urlResources
-                        + '?resource=' + encodeURIComponent(resource)
-                        + '&q=' + encodeURIComponent(search.value);
-                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                        .then(function (response) { return response.json(); })
-                        .then(function (body) {
-                            results.innerHTML = '';
-                            var options = (body && body.options) || [];
-                            if (!options.length) {
-                                results.innerHTML = '<p class="tb-hint m-0">' + T.noMatches + '</p>';
-                            }
-                            options.forEach(function (option) {
-                                var row = document.createElement('button');
-                                row.type = 'button';
-                                row.textContent = option.label;
-                                row.addEventListener('click', function () { pick(option); });
-                                results.appendChild(row);
-                            });
-                            results.hidden = false;
-                        })
-                        .catch(function () { results.hidden = true; });
+                    searchResources(resourceName(), search.value, results, pick);
                 }
 
                 search.addEventListener('focus', runSearch);
@@ -1176,7 +1419,7 @@
                 return wrapper;
             }
 
-            function renderFields(host, schema, settings, keys) {
+            function renderFields(host, schema, settings, keys, links) {
                 keys.forEach(function (key) {
                     var field = schema[key];
                     if (!field) return;
@@ -1192,6 +1435,8 @@
                         wrapper.appendChild(buildImageField(field, key, settings[key]));
                     } else if (field.type === 'resource') {
                         wrapper.appendChild(buildResourceField(field, key, settings[key], settings));
+                    } else if (field.type === 'link') {
+                        wrapper.appendChild(buildLinkField(field, key, settings[key], links));
                     } else {
                         wrapper.appendChild(buildInput(field, key, settings[key]));
                     }
@@ -1295,7 +1540,7 @@
                     renderDeliveryForm();
                 } else {
                     var keys = state.tab === 'style' ? state.styleKeys : state.contentKeys;
-                    renderFields(inspector, state.schema, state.settings, keys);
+                    renderFields(inspector, state.schema, state.settings, keys, state.links);
 
                     if (state.tab === 'content' && state.accepts.length) {
                         renderBlockList();
@@ -1421,7 +1666,8 @@
                 });
                 inspector.appendChild(back);
 
-                renderFields(inspector, state.blockSchema || {}, state.blockSettings || {}, Object.keys(state.blockSchema || {}));
+                renderFields(inspector, state.blockSchema || {}, state.blockSettings || {},
+                             Object.keys(state.blockSchema || {}), state.blockLinks);
 
                 if (editable) {
                     var actions = document.createElement('div');
@@ -1508,6 +1754,7 @@
                     state.blockType = data.type;
                     state.blockSchema = data.schema || {};
                     state.blockSettings = data.settings || {};
+                    state.blockLinks = data.links || null;
                     renderInspector();
                 });
             }
@@ -1540,10 +1787,67 @@
                     state.blocks = data.blocks || [];
                     state.dataNote = data.dataNote || null;
                     state.delivery = data.delivery || null;
+                    // What each link field currently points at, read back by the server so the
+                    // control opens showing the choice that produced the stored URL.
+                    state.links = data.links || null;
                     renderInspector();
                     markSelectedInFrame(scrollPreview);
                 });
             }
+
+            // ---------- channel ------------------------------------------------------------
+            // Not a second preview, a filter on the one that exists: the iframe cannot render the
+            // app, but the list of what the app receives is knowable and is most of the answer.
+            (function () {
+                var buttons = document.querySelectorAll('.tb-seg button[data-channel]');
+                if (!buttons.length) return;
+
+                function apply(channel) {
+                    structure.querySelectorAll('.tb-item').forEach(function (item) {
+                        var limited = (item.dataset.channels || '').split(',').filter(Boolean);
+                        var allowed = !limited.length || limited.indexOf(channel) !== -1;
+                        var drawable = channel !== 'customer_app' || item.dataset.appSafe === '1';
+
+                        item.classList.toggle('is-off-channel', !(allowed && drawable));
+                    });
+                }
+
+                buttons.forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        buttons.forEach(function (other) { other.classList.remove('is-active'); });
+                        button.classList.add('is-active');
+                        apply(button.dataset.channel);
+
+                        // Looking through the app's eyes at a desktop-width frame is a mixed
+                        // message; the phone frame is what that channel actually is.
+                        if (button.dataset.channel === 'customer_app' && stage) {
+                            var phone = document.querySelector('.tb-seg button[data-device="mobile"]');
+                            if (phone) phone.click();
+                        }
+                    });
+                });
+            })();
+
+            // ---------- publish -----------------------------------------------------------
+            (function () {
+                var openBtn = document.getElementById('tb-publish');
+                var panel = document.getElementById('tb-publish-panel');
+                if (!openBtn || !panel) return;
+
+                document.getElementById('tb-publish-close').addEventListener('click', function () {
+                    panel.hidden = true;
+                });
+
+                openBtn.addEventListener('click', function () {
+                    // Whatever is being edited goes to the server before the dialog offers to
+                    // publish it: publishing a version that still holds an unsaved edit is exactly
+                    // the surprise this dialog exists to remove.
+                    flushAutosave();
+                    var phone = document.getElementById('tb-onphone-panel');
+                    if (phone) phone.hidden = true;
+                    panel.hidden = !panel.hidden;
+                });
+            })();
 
             // ---------- see it on a real phone ------------------------------------------------
             // Minted on demand rather than on page load: the token expires, and one issued when
@@ -1563,6 +1867,9 @@
 
                 openBtn.addEventListener('click', function () {
                     if (!panel.hidden) { panel.hidden = true; return; }
+
+                    var publish = document.getElementById('tb-publish-panel');
+                    if (publish) publish.hidden = true;
 
                     qr.innerHTML = '';
                     urlBox.value = '';

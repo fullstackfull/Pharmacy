@@ -10,6 +10,7 @@ use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Http\RedirectResponse;
+use App\Services\Theme\LinkComposer;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeAssetService;
@@ -223,6 +224,7 @@ class ThemeBuilderController extends BaseController
             'delivery'     => isset($section) && $section
                 ? $this->builder->deliverySummary($section)
                 : null,
+            'links'        => $this->linkContext($this->registry->schemaFor($type), $settings),
         ]);
     }
 
@@ -429,6 +431,10 @@ class ThemeBuilderController extends BaseController
             'settings' => $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
             'type'     => $block->type,
             'label'    => $this->registry->blockLabel($block->type, $block->settings ?? []),
+            'links'    => $this->linkContext(
+                $this->registry->blockSchemaFor($block->type),
+                $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
+            ),
         ]);
     }
 
@@ -592,6 +598,74 @@ class ThemeBuilderController extends BaseController
         $this->assets->delete($asset);
 
         return $this->ok();
+    }
+
+    /**
+     * Turn a chosen destination into the URL the field stores.
+     *
+     * Composed on the server rather than in the browser so there is one definition of what "the
+     * category page" means — the same one {@see ActionResolver} reads back. A second copy in
+     * JavaScript would drift the first time a route changed, and the symptom would be a link that
+     * works on the web and opens the wrong screen on a phone.
+     */
+    public function composeLink(Request $request): JsonResponse
+    {
+        $url = app(LinkComposer::class)->compose(
+            (string) ($request['kind'] ?? 'none'),
+            $request['reference'] ?? null,
+        );
+
+        return $this->ok(['url' => $url ?? '']);
+    }
+
+    /**
+     * Everything the destination control needs, for whichever fields on this form are links.
+     *
+     * The kinds and collections are constant and small enough to travel with the form rather than
+     * cost a second request. `current` is the important half: a link already stored has to come
+     * back as the choice that produced it — a control that reset to "nothing" every time a merchant
+     * opened a section would quietly wipe working links on the next save.
+     *
+     * @param  array<string, array<string, mixed>>  $schema
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    private function linkContext(array $schema, array $settings): array
+    {
+        $fields = array_keys(array_filter($schema, static fn (array $field) => ($field['type'] ?? null) === 'link'));
+
+        if ($fields === []) {
+            return [];
+        }
+
+        $composer = app(LinkComposer::class);
+
+        return [
+            'kinds' => [
+                ['value' => 'none',       'label' => translate('no_link')],
+                ['value' => 'product',    'label' => translate('product'),    'resource' => 'product'],
+                ['value' => 'category',   'label' => translate('category'),   'resource' => 'category'],
+                ['value' => 'brand',      'label' => translate('brand'),      'resource' => 'brand'],
+                ['value' => 'vendor',     'label' => translate('vendor'),     'resource' => 'shop'],
+                ['value' => 'campaign',   'label' => translate('flash_deal'), 'resource' => 'flash_deal'],
+                ['value' => 'collection', 'label' => translate('a_list_page')],
+                ['value' => 'search',     'label' => translate('search_results')],
+                ['value' => 'cart',       'label' => translate('cart')],
+                ['value' => 'wishlist',   'label' => translate('wishlist')],
+                ['value' => 'url',        'label' => translate('another_address')],
+            ],
+            'collections' => array_map(
+                static fn (string $name) => ['value' => $name, 'label' => translate($name)],
+                array_keys(LinkComposer::COLLECTIONS),
+            ),
+            'current' => array_combine(
+                $fields,
+                array_map(
+                    static fn (string $field) => $composer->describe($settings[$field] ?? null),
+                    $fields,
+                ),
+            ),
+        ];
     }
 
     private function resolveThemeFor(Request $request): ?Theme
