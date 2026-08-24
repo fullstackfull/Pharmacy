@@ -154,12 +154,22 @@ class AdminPanelWiringTest extends TestCase
         $router = app('router');
         $naked = [];
 
+        // Every hint the map can emit: each product source kind, and each section type with a
+        // source of its own (categories, brands, vendors, deals, coupons — the live server guards
+        // categories and brands exactly as it guards the product lists).
+        $hints = [];
         foreach (ContentSource::KINDS as $kind) {
-            $hint = $map->products([
+            $hints[$kind] = $map->products([
                 'source' => $kind, 'source_id' => 1, 'collection_id' => 1,
                 'product_ids' => '1,2', 'limit' => 8,
             ]);
+        }
+        foreach (['category_grid', 'brand_slider', 'vendor_slider', 'flash_deal', 'deal_of_the_day',
+                  'featured_deal', 'clearance_sale', 'coupon_strip', 'interest_tiles'] as $type) {
+            $hints['type:' . $type] = $map->for($type, ['limit' => 8], []);
+        }
 
+        foreach ($hints as $kind => $hint) {
             if (($hint['kind'] ?? null) !== 'api') {
                 continue;
             }

@@ -84,14 +84,14 @@ class ThemeDelivery
 
                 // Every live campaign on every page: a campaign on a custom page must move this
                 // checksum too, or apps holding that page never learn it changed.
-                $stamp = $this->campaignStamp(null);
+                $checksum = $this->syncStamp($version);
 
                 return [
                     'revision' => (int) ($version->revision ?: 1),
                     // A live campaign folds into the checksum: the app's "did anything change"
                     // question must answer YES when an overlay opened or closed, and the stored
                     // revision knows nothing about overlays.
-                    'checksum' => $stamp === null ? $version->checksum : $version->checksum . '-' . $stamp,
+                    'checksum' => $checksum,
                     'schema_version' => ComponentCapabilityRegistry::SCHEMA_VERSION,
                     'engine_version' => ComponentCapabilityRegistry::CURRENT_ENGINE_VERSION,
                     'published_at' => $version->published_at?->toIso8601String(),
@@ -185,6 +185,9 @@ class ThemeDelivery
 
         $highest = (int) ThemeVersion::query()
             ->where('theme_id', $version->theme_id)
+            // Locked: two concurrent publishes reading the same max would mint the same revision,
+            // and the app's sync protocol depends on revisions never repeating.
+            ->lockForUpdate()
             ->max('revision');
 
         $version->revision = $highest + 1;
@@ -306,6 +309,11 @@ class ThemeDelivery
         $payload = [
             'page'           => $page,
             'revision'       => (int) ($version->revision ?: 1),
+            // The SAME value /theme/version serves as its checksum. The per-client checksum below
+            // is an ETag over delivered bytes and can never equal the version endpoint's stored
+            // hash — comparing the two made every resume look like a change. This is the sync
+            // validator; the checksum stays the cache validator.
+            'content_stamp'  => $this->syncStamp($version),
             'schema_version' => ComponentCapabilityRegistry::SCHEMA_VERSION,
             'engine_version' => ComponentCapabilityRegistry::CURRENT_ENGINE_VERSION,
             'published_at'   => $version->published_at?->toIso8601String(),
@@ -378,6 +386,22 @@ class ThemeDelivery
             );
         }
 
+        // banner_strip carries no child blocks — its one banner lives in the section settings.
+        // The app's banner renderer draws CARDS, so the settings become the card here; without
+        // this the section arrived with cards: null and the app hid it while the web showed it.
+        $stripCards = null;
+        if ($row->type === 'banner_strip' && trim((string) ($settings['image'] ?? '')) !== '') {
+            $stripCards = [$this->actions->annotate($this->absolutize(array_filter([
+                'type'        => 'banner',
+                'image'       => $settings['image'],
+                'eyebrow'     => $settings['eyebrow'] ?? null,
+                'title'       => $settings['title'] ?? null,
+                'subtitle'    => $settings['subtitle'] ?? null,
+                'link'        => $settings['link'] ?? null,
+                'button_text' => $settings['button_text'] ?? null,
+            ], static fn ($value) => $value !== null && $value !== '')))];
+        }
+
         return [
             // The uuid is the identity a client keeps across publishes; the id is what the
             // builder's preview maps a click back to. Both travel, because they answer different
@@ -395,7 +419,7 @@ class ThemeDelivery
             'component_version' => $this->registry->types()[$row->type]['version'] ?? 1,
             'settings' => $this->shape($settings, $viewer),
             'blocks'   => $blocks,
-            'cards'    => $storeCards ?? ($bannerBacked
+            'cards'    => $storeCards ?? $stripCards ?? ($bannerBacked
                 ? array_map(
                     fn (array $card) => $this->actions->annotate($this->absolutize($card)),
                     $this->resolver->blockCards($row->blocks->where('is_visible', true)->map(fn ($b) => [
@@ -568,6 +592,23 @@ class ThemeDelivery
         return $stamp === null ? '' : '_c' . $stamp;
     }
 
+    /**
+     * The one sync validator both endpoints speak: the stored structural checksum, with every
+     * live campaign folded in. /theme/version serves it as `checksum`; /theme/home echoes it as
+     * `content_stamp` — the pair being equal is what lets the app's cheap "did anything change"
+     * check actually answer NO.
+     */
+    private function syncStamp(ThemeVersion $version): ?string
+    {
+        $stamp = $this->campaignStamp(null);
+
+        if ($version->checksum === null) {
+            return $stamp;
+        }
+
+        return $stamp === null ? $version->checksum : $version->checksum . '-' . $stamp;
+    }
+
     private function campaignStamp(?string $page = 'home'): ?string
     {
         try {
@@ -583,7 +624,9 @@ class ThemeDelivery
         sort($components);
 
         return substr(hash('sha256', implode('|', [
-            $this->revision()['revision'],
+            // Checksum, not the bare number: revision 5 of theme A and revision 5 of theme B are
+            // different pages, and an activation must never serve the old theme from cache.
+            (string) $this->revision()['checksum'] . '#' . $this->revision()['revision'],
             $viewer->platform,
             $viewer->device,
             $viewer->audience(),
@@ -596,6 +639,7 @@ class ThemeDelivery
             // would warm the cache for everybody's.
             (string) $viewer->locale,
             $viewer->uiEngineVersion,
+            $viewer->uiSchemaVersion,
             implode(',', $components),
         ])), 0, 24);
     }

@@ -1563,7 +1563,10 @@
                 });
 
                 applyDependencies(host);
-                host.addEventListener('change', function () { applyDependencies(host); });
+                if (!host.dataset.dependencyBound) {
+                    host.dataset.dependencyBound = '1';
+                    host.addEventListener('change', function () { applyDependencies(host); });
+                }
             }
 
             /** Show a dependent field only while its driver holds one of the values it needs. */
@@ -1583,10 +1586,27 @@
                 inspector.querySelectorAll('[data-key]').forEach(function (element) {
                     if (element.dataset.unset === '1') return;
                     var value = element.type === 'checkbox' ? element.checked : element.value;
-                    if (element.dataset.optional === '1' && value === '') return;
+                    // A cleared override is a DELETION and must travel as one: skipping it made
+                    // the merge below resurrect the old value forever.
+                    if (element.dataset.optional === '1' && value === '') value = null;
                     out[element.dataset.key] = value;
                 });
                 return out;
+            }
+
+            /** The FULL settings bag: what this tab shows, over what the section already holds.
+
+                collectSettings() can only see the ACTIVE tab's inputs. Sending it alone made a
+                save from the Design tab reset every Content field to its default — the exact
+                "settings merged/duplicated" a merchant experiences as lost work. state.settings
+                is the complete truth the server sent; the visible tab's edits lay over it. */
+            function fullSettings() {
+                var merged = Object.assign({}, state.settings, collectSettings());
+                Object.keys(merged).forEach(function (key) {
+                    if (merged[key] === null) delete merged[key];
+                });
+                state.settings = merged;
+                return merged;
             }
 
             // ---------- inspector ----------------------------------------------------------
@@ -2144,6 +2164,7 @@
 
             function scheduleAutosave() {
                 if (!editable || (!state.sectionId && !state.blockId)) return;
+                editSequence++;
                 state.dirty = true;
                 clearTimeout(autosaveTimer);
                 setStatus(T.unsaved, 'saving');
@@ -2151,19 +2172,22 @@
             }
 
             function flushAutosave() {
-                if (autosaveTimer) {
-                    clearTimeout(autosaveTimer);
-                    autosaveTimer = null;
-                    runAutosave();
-                }
+                clearTimeout(autosaveTimer);
+                autosaveTimer = null;
+                // Runs whenever anything is unsaved — after a FAILED save there is no timer, and
+                // the old timer-only check let navigation walk away from a dirty section.
+                if (state.dirty) runAutosave();
             }
+
+            var editSequence = 0;
 
             function runAutosave() {
                 if (!editable || !state.dirty) return;
 
+                var savedAt = editSequence;
                 var payload = state.blockId
                     ? {url: root.dataset.urlBlockUpdate, body: {block_id: state.blockId, settings: collectSettings()}}
-                    : {url: root.dataset.urlUpdate, body: {section_id: state.sectionId, settings: collectSettings()}};
+                    : {url: root.dataset.urlUpdate, body: {section_id: state.sectionId, settings: fullSettings()}};
 
                 setStatus(T.saving, 'saving');
                 post(payload.url, payload.body).then(function (result) {
@@ -2171,9 +2195,11 @@
                         setStatus(T.failed, 'error');   // keep `dirty` so the unload warning still fires
                         return;
                     }
-                    state.dirty = false;
+                    // An edit made while this request was in flight is NOT saved yet — clearing
+                    // dirty for it would silently drop the merchant's latest keystrokes.
+                    if (editSequence === savedAt) state.dirty = false;
                     if (result.body.blocks) state.blocks = result.body.blocks;
-                    setStatus(T.saved, 'saved');
+                    setStatus(editSequence === savedAt ? T.saved : T.unsaved, editSequence === savedAt ? 'saved' : 'saving');
                     refreshPreview();
                 }).catch(function () { setStatus(T.failed, 'error'); });
             }

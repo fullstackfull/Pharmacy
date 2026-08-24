@@ -1115,11 +1115,11 @@ class SectionRegistry
         'layout' => [
             'style', 'layout', 'display', 'columns', 'gap', 'ratio', 'height', 'arrows',
             'pagination', 'autoplay', 'interval', 'view_all', 'sub_categories', 'banner', 'logo',
-            'overlay', 'add_to_cart', 'rotate', 'rotate_ms', 'animate', 'ken_burns', 'parallax',
+            'overlay', 'add_to_cart', 'rotate_ms', 'animate', 'ken_burns', 'parallax',
             'layout_lock', 'text_color', 'cover', 'countdown', 'dismissible', 'qr',
         ],
         // Where it leads.
-        'action' => ['link', 'button_text', 'cta_text', 'url'],
+        'action' => ['link', 'button_text'],
     ];
 
     /**
@@ -1235,7 +1235,8 @@ class SectionRegistry
         $map = [];
 
         foreach ($schema as $key => $field) {
-            if (!in_array($field['type'] ?? '', ['text', 'textarea'], true)) {
+            // Same rule keepLocaleOverrides applies at save time: plain fields carry no language.
+            if (!in_array($field['type'] ?? '', ['text', 'textarea'], true) || !empty($field['plain'])) {
                 continue;
             }
             foreach (LocalisedSettings::activeLocales() as $code) {
@@ -1275,6 +1276,11 @@ class SectionRegistry
             // scheme is not a web one — javascript:, data:, vbscript: — is the classic stored-XSS
             // shape, and nothing legitimate a merchant pastes ever carries one.
             'link', 'image' => $this->safeUrl($value),
+            // A color lands in inline CSS on the storefront; anything that is not a plausible
+            // CSS color literal is dropped rather than echoed into a style attribute.
+            'color' => is_scalar($value)
+                && preg_match('/^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s\/]{1,40}\)|[a-z-]{1,30}|(linear|radial)-gradient\([^;{}<>]{1,200}\))$/i', trim((string) $value))
+                ? trim((string) $value) : ($field['default'] ?? null),
             'text'     => is_scalar($value) ? mb_substr((string) $value, 0, 1000) : ($field['default'] ?? null),
             'textarea' => is_scalar($value) ? mb_substr((string) $value, 0, 20000) : ($field['default'] ?? null),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),

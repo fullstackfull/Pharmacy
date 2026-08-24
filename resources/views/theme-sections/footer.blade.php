@@ -59,7 +59,7 @@
         @php
             $type = $__section['type'] ?? null;
             $s = $__section['settings'] ?? [];
-            $blocks = collect($__section['blocks'] ?? [])->map(fn ($b) => ['type' => $b['type'], 's' => $b['settings'] ?? []]);
+            $blocks = collect($__section['blocks'] ?? [])->map(fn ($b) => ['type' => $b['type'] ?? '', 's' => $b['settings'] ?? []]);
             $sectionKey = 'tbf-' . ($__section['id'] ?? $loop->index);
             $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
             $cols = max(1, min(6, (int) ($s['columns'] ?? 4)));

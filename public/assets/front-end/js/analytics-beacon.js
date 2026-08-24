@@ -87,9 +87,16 @@
             if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
             // Vitals alone are worth a request: a visitor who reads one page and leaves queues no
             // event at all, and that visit is exactly the one whose speed decided they left.
-            if (!queue.length && Object.keys(vitals).length === 0) return;
+            var unsent = Object.keys(vitals).some(function (name) { return vitals[name] !== sentVitals[name]; });
+            if (!queue.length && !unsent) return;
 
-            var readings = Object.keys(vitals).map(function (name) {
+            // A metric repeats across flushes only when it actually moved: CLS and INP keep
+            // refining after the first flush, and re-sending an unchanged cumulative value was
+            // counting the same jank twice in whatever window it landed in.
+            var readings = Object.keys(vitals).filter(function (name) {
+                return vitals[name] !== sentVitals[name];
+            }).map(function (name) {
+                sentVitals[name] = vitals[name];
                 return {name: name, value: vitals[name]};
             });
             var body = JSON.stringify({
@@ -123,13 +130,19 @@
     // this keeps working if that file is rewritten, and so any other pushState navigation added
     // later is counted without anybody remembering to.
     try {
+        // Only meaningful where a product list exists: the patch fires for EVERY pushState on
+        // EVERY page, and a gallery arrow or a tab that uses history was being counted as a
+        // catalogue view shop-wide.
+        var isListPage = function () {
+            return !!document.querySelector('[data-product-list], .product-listing, #ajax-products');
+        };
         var pushState = history.pushState;
         history.pushState = function () {
             var result = pushState.apply(this, arguments);
-            push('product_list_viewed');
+            if (isListPage()) push('product_list_viewed');
             return result;
         };
-        window.addEventListener('popstate', function () { push('product_list_viewed'); });
+        window.addEventListener('popstate', function () { if (isListPage()) push('product_list_viewed'); });
     } catch (error) {
         // An environment that will not let history be patched simply loses these events.
     }
@@ -212,6 +225,7 @@
     // They ride out on the same request as the events (one trip, not two) but are a separate key,
     // because they are measurements of the shop rather than things a visitor did.
     var vitals = {};
+    var sentVitals = {};
 
     function vital(name, value) {
         try {

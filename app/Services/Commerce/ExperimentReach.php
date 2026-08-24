@@ -40,6 +40,11 @@ class ExperimentReach
                     ->select('properties->experiment as tag')
                     ->selectRaw('count(distinct visitor_id) as visitors')
                     ->where('name', 'section_viewed')
+                    // The same noise gate every analytics screen applies: a crawler or a staff
+                    // member is not an exposed shopper, and counting them here would make this
+                    // the one number in the panel that disagrees with all the others.
+                    ->where('is_bot', false)
+                    ->where('is_internal', false)
                     ->where('occurred_at', '>=', now()->subDays(self::RANGE_DAYS))
                     ->whereNotNull('properties->experiment')
                     ->groupBy('tag')

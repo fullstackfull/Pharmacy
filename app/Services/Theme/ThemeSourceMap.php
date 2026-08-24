@@ -60,13 +60,12 @@ class ThemeSourceMap
             ),
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
-            'flash_deal' => $this->api('/api/v1/flash-deals', [], 'Then /api/v1/flash-deals/products/{deal_id} for the products.'),
+            'flash_deal' => $this->flashDealProductsHint($settings),
             'deal_of_the_day' => $this->api('/api/v1/dealsoftheday/deal-of-the-day'),
             'featured_deal' => $this->api('/api/v1/deals/featured'),
             'clearance_sale' => $this->api('/api/v1/products/clearance-sale'),
 
-            'coupon_strip' => $this->api('/api/v1/coupon/list', [],
-                'Requires an authenticated customer; render the strip from `cards` for guests.'),
+            'coupon_strip' => $this->couponHint(),
 
             'recently_viewed' => ['kind' => 'none',
                 'note' => 'Backed by the web visitor cookie; no app equivalent yet. Hide this section in the app.'],
@@ -137,6 +136,57 @@ class ThemeSourceMap
     public function pickedIds(string|array|null $picked): array
     {
         return ContentSource::pickedIds($picked);
+    }
+
+    /**
+     * The live flash deal's PRODUCTS endpoint, deal id resolved now.
+     *
+     * The hint used to point at /flash-deals — the deal's METADATA — with a prose note about a
+     * second call no client ever made: the app fed the deal object to the product parser and
+     * drew one garbage card. A hint must be callable as given, so the server does the id lookup
+     * it alone can do; with no live deal the section is honestly 'none' and the app hides it.
+     *
+     * @return array<string, mixed>
+     */
+    private function flashDealProductsHint(array $settings): array
+    {
+        try {
+            $dealId = (int) ($settings['deal_id'] ?? 0)
+                ?: (int) \App\Models\FlashDeal::query()
+                    ->where(['deal_type' => 'flash_deal', 'status' => 1])
+                    ->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())
+                    ->value('id');
+        } catch (\Throwable) {
+            $dealId = 0;
+        }
+
+        if ($dealId < 1) {
+            return ['kind' => 'none', 'note' => 'No live flash deal. Hide this section.'];
+        }
+
+        return $this->api('/api/v1/flash-deals/products/' . $dealId, ['limit' => 24, 'offset' => 1]);
+    }
+
+    /**
+     * Coupons are a signed-in feature: the route is auth:api, so a guest fetch can only 401.
+     * Saying 'none' to a guest is the truthful hint — the app hides the strip instead of
+     * logging an error for every guest who scrolls past it.
+     *
+     * @return array<string, mixed>
+     */
+    private function couponHint(): array
+    {
+        $signedIn = false;
+        try {
+            $signedIn = auth('api')->check() || auth('customer')->check();
+        } catch (\Throwable) {
+        }
+
+        if (!$signedIn) {
+            return ['kind' => 'none', 'note' => 'Coupons require a signed-in customer. Hide for guests.'];
+        }
+
+        return $this->api('/api/v1/coupon/list', [], 'Send the customer token.');
     }
 
     /**

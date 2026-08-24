@@ -202,14 +202,19 @@ class ThemeSectionController extends Controller
 
         $etag = $payload['checksum'] !== null ? '"' . $payload['checksum'] . '"' : null;
 
+        // The payload varies by everything the fingerprint varies by; any shared HTTP cache in
+        // front of this endpoint must key on the same headers or one build's page becomes
+        // another's.
+        $vary = 'X-UI-Components, X-UI-Engine, X-UI-Schema, X-UI-Channel, X-Platform, lang, Authorization';
+
         // A client that already holds this exact page is told so and sent nothing. This is the
         // difference between a resume costing a header and costing the whole home page, on every
         // resume of every installed app.
         if ($etag !== null && $this->matchesEtag($request, $etag)) {
-            return response()->json(null, 304)->setEtag($payload['checksum']);
+            return response()->json(null, 304)->setEtag($payload['checksum'])->header('Vary', $vary);
         }
 
-        $response = response()->json($payload);
+        $response = response()->json($payload)->header('Vary', $vary);
 
         return $etag !== null ? $response->setEtag($payload['checksum']) : $response;
     }
@@ -275,11 +280,43 @@ class ThemeSectionController extends Controller
                 'type' => $block['type'],
                 'settings' => $this->absolutize($this->forPhone($block['settings'] ?? [])),
             ], $blocks),
-            'cards' => $bannerBacked
-                ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks, withTargets: true))
-                : null,
+            'cards' => $this->cardsFor($section, $blocks, $bannerBacked),
             'source' => $this->sources->for($section['type'], $section['settings'] ?? [], $blocks),
         ];
+    }
+
+    /**
+     * The same cards /theme/home serves: block-backed sections resolve their blocks; store_banner
+     * resolves its Banner Setup rows LIVE (its promise in the API doc, previously kept only by
+     * the home endpoint); banner_strip's single banner is its own settings.
+     *
+     * @param  array<string, mixed>  $section
+     * @param  array<int, array<string, mixed>>  $blocks
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function cardsFor(array $section, array $blocks, bool $bannerBacked): ?array
+    {
+        $settings = $section['settings'] ?? [];
+
+        if (($section['type'] ?? null) === 'store_banner') {
+            return array_map(fn (array $card) => $this->absolutize($card), $this->resolver->dashboardBanners(
+                (string) ($settings['banner_type'] ?? 'Main Banner'),
+                max(1, (int) ($settings['limit'] ?? 6)),
+            ));
+        }
+
+        if (($section['type'] ?? null) === 'banner_strip' && trim((string) ($settings['image'] ?? '')) !== '') {
+            return [$this->absolutize(array_filter([
+                'type' => 'banner', 'image' => $settings['image'],
+                'eyebrow' => $settings['eyebrow'] ?? null, 'title' => $settings['title'] ?? null,
+                'subtitle' => $settings['subtitle'] ?? null, 'link' => $settings['link'] ?? null,
+                'button_text' => $settings['button_text'] ?? null,
+            ], static fn ($value) => $value !== null && $value !== ''))];
+        }
+
+        return $bannerBacked
+            ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks, withTargets: true))
+            : null;
     }
 
     /**

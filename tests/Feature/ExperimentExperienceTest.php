@@ -214,6 +214,7 @@ class ExperimentExperienceTest extends TestCase
         Schema::dropIfExists('analytics_events');
         Schema::create('analytics_events', function (\Illuminate\Database\Schema\Blueprint $table) {
             $table->id(); $table->string('name', 48); $table->string('visitor_id', 64);
+            $table->boolean('is_bot')->default(false); $table->boolean('is_internal')->default(false);
             $table->json('properties')->nullable(); $table->timestamp('occurred_at');
         });
 
@@ -230,6 +231,10 @@ class ExperimentExperienceTest extends TestCase
         $seed('v3', 'hero-copy:control');
         $seed('v4', null);                                       // an ordinary impression
         $seed('v5', 'hero-copy:b', now()->subDays(40));           // outside the window
+        \Illuminate\Support\Facades\DB::table('analytics_events')->insert([
+            'name' => 'section_viewed', 'visitor_id' => 'bot-1', 'is_bot' => true,
+            'properties' => json_encode(['experiment' => 'hero-copy:b']), 'occurred_at' => now(),
+        ]);
 
         Cache::flush();
         $this->assertSame(

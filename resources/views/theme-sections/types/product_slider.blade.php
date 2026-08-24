@@ -3,7 +3,10 @@
      the builder's "display style". --}}
 
 @php
-    $products = $__resolver->products($s);
+    // The shell already resolved this list for the readiness gate; resolving again here would
+    // double every slider's catalogue query. The fallback covers any caller that renders this
+    // partial outside the shell.
+    $products = collect($sliderProducts ?? $__resolver->products($s)->all());
     // Five presentations of one row of products, because the right one
     // depends on what is being sold: a rail for browsing, a grid for
     // comparing, a peeking carousel that says "there is more", a spotlight

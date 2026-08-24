@@ -524,7 +524,6 @@ class SectionDataResolver
                     $settings['image_2'] ?? null,
                     $settings['image_3'] ?? null,
                 ], fn ($frame) => is_string($frame) && $frame !== '')),
-                'banner_id'    => $linkedId > 0 ? $linkedId : null,
                 // The Banner Setup form's own resource picker, carried raw; resolveTargets() below
                 // turns it (or, failing it, the link URL) into the card's structured target.
                 '_resource'    => $linked !== null

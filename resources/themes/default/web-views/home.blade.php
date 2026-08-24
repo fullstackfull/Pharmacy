@@ -312,11 +312,14 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var modalEl = document.getElementById('order_successfully');
-                var orderModal = new bootstrap.Modal(modalEl, {
-                    backdrop: 'static',
-                    keyboard: false
-                });
-                orderModal.show();
+                // Bootstrap 4 API: this storefront loads BS4 + jQuery, and `new bootstrap.Modal`
+                // is a BS5 global that does not exist here — the call threw and the order-success
+                // modal never appeared for anyone.
+                if (window.jQuery && jQuery.fn.modal) {
+                    jQuery(modalEl).modal({backdrop: 'static', keyboard: false, show: true});
+                } else if (window.bootstrap && bootstrap.Modal) {
+                    new bootstrap.Modal(modalEl, {backdrop: 'static', keyboard: false}).show();
+                }
 
 
                 document.querySelectorAll('.copy-order-id').forEach(function(copyBtn) {
