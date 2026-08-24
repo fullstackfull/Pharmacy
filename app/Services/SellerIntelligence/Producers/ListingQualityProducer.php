@@ -6,7 +6,9 @@ use App\Models\Product;
 use App\Models\ProductModerationEvent;
 use App\Services\Marketplace\ProductModerationService;
 use App\Services\SellerIntelligence\InsightDraft;
+use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\InsightProducer;
+use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -85,6 +87,15 @@ class ListingQualityProducer implements InsightProducer
                         'reason_codes' => $rejection['reason_codes'] ?? [],
                         'note' => $rejection['note'] ?? null,
                     ],
+                    category: SellerInsight::CATEGORY_CATALOG,
+                    signals: new ImpactSignals(
+                        affectedCount: 1,
+                        // Not a matter of degree. A refused listing earns nothing, for a shop with
+                        // one product and for a shop with ten thousand, and the arithmetic would
+                        // rank it near the bottom for the second one.
+                        severityFloor: SellerInsight::SEVERITY_CRITICAL,
+                    ),
+                    metadata: ['reason_codes' => $rejection['reason_codes'] ?? [], 'note' => $rejection['note'] ?? null],
                 );
 
                 continue;
@@ -107,6 +118,15 @@ class ListingQualityProducer implements InsightProducer
                 metric: $score,
                 actionKey: 'open_product',
                 actionParams: ['product_id' => $product->id, 'missing' => $missing, 'score' => $score],
+                category: SellerInsight::CATEGORY_CATALOG,
+                signals: new ImpactSignals(
+                    affectedCount: 1,
+                    // No revenue figure and no deadline: an incomplete listing costs sales that
+                    // cannot be counted because they never happened. Reported as one signal rather
+                    // than dressed up as several, and `confidence()` says so.
+                    severityFloor: $score < 40 ? SellerInsight::SEVERITY_MEDIUM : null,
+                ),
+                metadata: ['score' => $score, 'missing' => $missing],
             );
         }
     }

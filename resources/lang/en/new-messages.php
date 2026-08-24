@@ -6655,4 +6655,6 @@ return [
 	'search_sections' => 'Search sections',
 	'website_only' => 'Website only',
 	'you_do_not_have_permission_to_manage_global_styles' => 'You do not have permission to manage global styles',
+	'notify_order_stuck' => 'Notify order stuck',
+	'notify_finance_integrity' => 'Notify finance integrity',
 ];

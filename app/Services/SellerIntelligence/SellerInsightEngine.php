@@ -194,16 +194,23 @@ class SellerInsightEngine
 
         $scored = $this->scored($draft, $existing, $history['detection_count']);
 
-        $attributes = $draft->attributes()
-            + $history
-            + $scored
-            + [
+        // array_merge, not `+`. The union operator keeps the LEFT operand for a duplicate key, so
+        // writing `$draft->attributes() + $scored` silently discarded the engine's computed severity
+        // and its score breakdown in favour of the detector's own declared severity — which is the
+        // whole thing the severity engine exists to replace. It went unnoticed because the two
+        // happened to agree on the first cases tried.
+        $attributes = array_merge(
+            $draft->attributes(),
+            $history,
+            $scored,
+            [
                 // Reopened: the problem is back, whatever it was closed as.
                 'resolved_at' => null,
                 'resolution_type' => null,
                 'resolution_message' => null,
                 'status' => $this->statusFor($existing),
-            ];
+            ],
+        );
 
         SellerInsight::updateOrCreate(['fingerprint' => $draft->fingerprint()], $attributes);
     }
@@ -235,7 +242,11 @@ class SellerInsightEngine
             hoursUntilDue: $draft->signals->hoursUntilDue,
             openForHours: $draft->signals->openForHours ?? $existing?->openForHours(),
             detectionCount: $detectionCount,
-            severityFloor: $draft->signals->severityFloor ?? $draft->severity,
+            // Only what the detector explicitly declared as a floor. Treating its `severity` field
+            // as one would let the engine raise a finding but never lower it — and lowering is the
+            // whole point: a stockout on something that sells twice a year must be able to come out
+            // below a stockout on the best seller, whatever the detector guessed.
+            severityFloor: $draft->signals->severityFloor,
         );
 
         $score = $this->severity->score($signals);

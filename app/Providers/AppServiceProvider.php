@@ -22,7 +22,15 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
 use App\Services\AuditLogger;
+use App\Services\SellerIntelligence\Producers\CatalogIntegrityProducer;
+use App\Services\SellerIntelligence\Producers\FinanceIntegrityProducer;
 use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
+use App\Services\SellerIntelligence\Producers\OrderStateProducer;
+use App\Services\SellerIntelligence\Producers\OrderStuckProducer;
+use App\Services\SellerIntelligence\Producers\PricingRiskProducer;
+use App\Services\SellerIntelligence\Producers\ReturnsRiskProducer;
+use App\Services\SellerIntelligence\Producers\ShippingExceptionProducer;
+use App\Services\SellerIntelligence\Producers\StaleInventoryProducer;
 use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
 use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
 use App\Services\SellerIntelligence\SellerInsightEngine;
@@ -77,9 +85,20 @@ class AppServiceProvider extends ServiceProvider
         // order the Action Center falls back on is explicit and a new producer is a deliberate act.
         $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine(
             producers: [
-                $app->make(InventoryRiskProducer::class),
+                // Ordered by how much a seller can lose by not knowing. Finance first: uncredited
+                // money is the only finding here that is unambiguously theirs and unambiguously
+                // wrong. Then the deadlines, then the catalogue, then the slow-burning ones.
+                $app->make(FinanceIntegrityProducer::class),
                 $app->make(OrderSlaProducer::class),
+                $app->make(OrderStuckProducer::class),
+                $app->make(OrderStateProducer::class),
+                $app->make(ReturnsRiskProducer::class),
+                $app->make(ShippingExceptionProducer::class),
+                $app->make(InventoryRiskProducer::class),
+                $app->make(PricingRiskProducer::class),
                 $app->make(ListingQualityProducer::class),
+                $app->make(CatalogIntegrityProducer::class),
+                $app->make(StaleInventoryProducer::class),
             ],
             // Severity is measured against the seller's own business rather than declared, so both
             // of these are load-bearing: without them a detector's own guess stands, which is the
