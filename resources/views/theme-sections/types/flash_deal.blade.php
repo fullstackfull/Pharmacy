@@ -5,7 +5,7 @@
 
 @php
     $dealProducts = ($deal && ($s['products'] ?? true))
-        ? $__data->flashDealProducts($deal['id'], (int) ($s['limit'] ?? 10))
+        ? $__resolver->flashDealProducts($deal['id'], (int) ($s['limit'] ?? 10))
         : collect();
     $cardCart = (bool) ($s['add_to_cart'] ?? true);
     $dealRailId = 'ml-deal-' . ($__section['id'] ?? $loop->index);

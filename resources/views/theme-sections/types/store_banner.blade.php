@@ -2,7 +2,7 @@
      the merchant picked. This is what makes a dashboard banner show up in the theme. --}}
 
 @php
-    $cards = $__data->dashboardBanners((string) ($s['banner_type'] ?? 'Main Banner'), (int) ($s['limit'] ?? 6));
+    $cards = $__resolver->dashboardBanners((string) ($s['banner_type'] ?? 'Main Banner'), (int) ($s['limit'] ?? 6));
     $layout = (string) ($s['layout'] ?? 'carousel');
 @endphp
 @if (count($cards))

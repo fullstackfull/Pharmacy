@@ -4,7 +4,7 @@
      chips fit twenty of them above the fold. --}}
 
 @php
-    $cats = $__data->categories(limit: (int) ($s['limit'] ?? 12), picked: $s['category_ids'] ?? null);
+    $cats = $__resolver->categories(limit: (int) ($s['limit'] ?? 12), picked: $s['category_ids'] ?? null);
     $catStyle = $s['style'] ?? 'circles';
 @endphp
 @if ($cats->isNotEmpty())
