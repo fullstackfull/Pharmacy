@@ -6666,4 +6666,5 @@ return [
 	'theme_files' => 'Theme files',
 	'export_the_current_experience' => 'Export the current experience',
 	'download_the_annotated_example_file' => 'Download the annotated example file',
+	'choose_a_collection' => 'Choose a collection',
 ];

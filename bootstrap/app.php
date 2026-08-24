@@ -201,6 +201,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('analytics:rollup')->hourlyAt(12)->withoutOverlapping();
         $schedule->command('analytics:rollup --days=2 --prune')->dailyAt('02:15')->withoutOverlapping();
 
+        // Rebuild the per-product engagement summary dynamic collections rank by. After the
+        // rollup on purpose: views_30d and carted_30d read analytics_daily, so running first
+        // would rank against yesterday twice.
+        $schedule->command('commerce:metrics-refresh')->hourlyAt(22)->withoutOverlapping();
+
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
         $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();

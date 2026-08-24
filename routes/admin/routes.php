@@ -81,6 +81,7 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Commerce\CollectionController;
 use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
@@ -1406,6 +1407,21 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
      * the screens that already do the job (the composer, publishing, versions, global styles)
      * rather than growing a second copy of them.
      */
+    /*
+     * Commerce Experience (Phase 3) — configuration that changes what sections MAY show.
+     * Same module gate as the builder that consumes it; writes are further guarded by
+     * ThemePermissionService inside each controller.
+     */
+    Route::group(['prefix' => 'commerce', 'as' => 'commerce.', 'middleware' => ['module:themes_and_addons']], function () {
+        Route::controller(CollectionController::class)->group(function () {
+            Route::get('collections', 'index')->name('collections.index');
+            Route::post('collections/store', 'store')->name('collections.store');
+            Route::post('collections/update', 'update')->name('collections.update');
+            Route::post('collections/delete', 'delete')->name('collections.delete');
+            Route::get('collections/preview', 'preview')->name('collections.preview');
+        });
+    });
+
     Route::group(['prefix' => 'app-builder', 'as' => 'app-builder.', 'middleware' => ['module:themes_and_addons']], function () {
         Route::controller(AppBuilderController::class)->group(function () {
             Route::get('', 'index')->name('index');

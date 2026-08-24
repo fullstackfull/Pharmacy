@@ -952,6 +952,32 @@ class ProductController extends Controller
         ], 200);
     }
 
+    /**
+     * A dynamic collection's products (Phase 3.1) — the endpoint the theme payload's source hint
+     * names for a section sourced from a collection.
+     *
+     * Answers in the same dialect as every product list here, because that is the whole
+     * compatibility strategy: an installed build fetches whatever endpoint the hint names and
+     * parses the shape it already knows. A missing, disabled or broken collection is an EMPTY
+     * list, never an error — the app hides an empty section, which is the truthful render.
+     */
+    public function getThemeCollectionProducts(Request $request): JsonResponse
+    {
+        $products = app(\App\Services\Commerce\CollectionResolver::class)->resolve(
+            (int) $request['id'],
+            (int) ($request['limit'] ?? 10) ?: 10,
+        );
+
+        return response()->json([
+            'total_size' => $products->count(),
+            'limit' => (int) ($request['limit'] ?? 10),
+            'offset' => (int) ($request['offset'] ?? 1),
+            'products' => $products->isNotEmpty()
+                ? Helpers::product_data_formatting($products, true)
+                : [],
+        ], 200);
+    }
+
     public function getClearanceSale(Request $request): JsonResponse
     {
         $productIds = StockClearanceProduct::active()->whereHas('setup', function ($query) {

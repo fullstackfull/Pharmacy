@@ -1010,6 +1010,12 @@
                             <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="app-builder" aria-label="Pin"></button></div>
                         </a>
                     @endif
+                    @if (Route::has('admin.commerce.collections.index'))
+                        <a class="v2-nav-item {{ Request::is('admin/commerce*') ? 'v2-is-active' : '' }}" data-item="commerce-experience" href="{{ route('admin.commerce.collections.index') }}">
+                            <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Commerce_Experience') }}</span></span>
+                            <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="commerce-experience" aria-label="Pin"></button></div>
+                        </a>
+                    @endif
                     <a class="v2-nav-item {{ (Request::is('admin/theme') || Request::is('admin/theme/*')) ? 'v2-is-active' : '' }}" data-item="theme-management" href="{{ route('admin.theme.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Theme_Management') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="theme-management" aria-label="Pin"></button></div>

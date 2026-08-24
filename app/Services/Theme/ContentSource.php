@@ -27,6 +27,10 @@ final class ContentSource
     /** The catalogue orderings a product section can ask for. */
     public const KINDS = [
         'featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual',
+        // A merchant-defined dynamic collection (Phase 3.1). Named by id like the scoped kinds;
+        // resolving it is CollectionResolver's job, and a missing or disabled collection resolves
+        // to nothing so the section's fallback speaks instead.
+        'collection',
     ];
 
     public const DEFAULT_KIND = 'featured';
@@ -70,7 +74,11 @@ final class ContentSource
 
         return new self(
             kind: $kind,
-            id: self::identifier($settings['source_id'] ?? null),
+            // A collection is named in its own key so switching source back and forth in the
+            // builder cannot make a category id masquerade as a collection id.
+            id: $kind === 'collection'
+                ? self::identifier($settings['collection_id'] ?? null)
+                : self::identifier($settings['source_id'] ?? null),
             ids: self::pickedIds($settings['product_ids'] ?? null),
             limit: self::boundedLimit($settings['limit'] ?? $defaultLimit),
         );
@@ -112,10 +120,11 @@ final class ContentSource
         );
     }
 
-    /** Whether this source points at a taxonomy the merchant still has to choose. */
+    /** Whether this source points at a subject the merchant still has to choose. */
     public function needsSubject(): bool
     {
-        return in_array($this->kind, self::SCOPED, true) && $this->id === null;
+        return (in_array($this->kind, self::SCOPED, true) || $this->kind === 'collection')
+            && $this->id === null;
     }
 
     /** Whether this source names records rather than an ordering. */

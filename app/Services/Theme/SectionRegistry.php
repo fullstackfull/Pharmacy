@@ -300,7 +300,7 @@ class SectionRegistry
                     'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle'    => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'featured',
-                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
+                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual', 'collection']],
                     // Which category / brand, picked by name. The picker follows the source above:
                     // choose "category" and it lists categories, "brand" and it lists brands.
                     'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
@@ -309,6 +309,10 @@ class SectionRegistry
                     'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
                                       'resource' => 'product', 'multiple' => true,
                                       'depends_on' => ['source' => ['manual']]],
+                    // Source "collection" means: whatever this dynamic collection currently ranks.
+                    'collection_id' => ['type' => 'resource', 'label' => 'choose_a_collection', 'default' => null,
+                                      'resource' => 'product_collection',
+                                      'depends_on' => ['source' => ['collection']]],
                     'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
                                       'options' => ['rail', 'grid', 'carousel', 'spotlight', 'list']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
@@ -945,12 +949,15 @@ class SectionRegistry
                 'schema' => [
                     'label'       => ['type' => 'text',   'label' => 'tab_label', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'new_arrival',
-                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
+                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual', 'collection']],
                     'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
                                       'resource_from' => 'source', 'depends_on' => ['source' => ['category', 'brand']]],
                     'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
                                       'resource' => 'product', 'multiple' => true,
                                       'depends_on' => ['source' => ['manual']]],
+                    'collection_id' => ['type' => 'resource', 'label' => 'choose_a_collection', 'default' => null,
+                                      'resource' => 'product_collection',
+                                      'depends_on' => ['source' => ['collection']]],
                 ],
             ],
             'price_band' => [
@@ -1100,9 +1107,9 @@ class SectionRegistry
     public const FIELD_GROUPS = [
         // What the section shows, as opposed to how it shows it.
         'source' => [
-            'source', 'source_id', 'product_ids', 'category_id', 'category_ids', 'brand_id',
-            'shop_id', 'shop_ids', 'deal_id', 'banner_type', 'limit', 'days', 'min_rating',
-            'discount', 'cutoff',
+            'source', 'source_id', 'product_ids', 'collection_id', 'category_id', 'category_ids',
+            'brand_id', 'shop_id', 'shop_ids', 'deal_id', 'banner_type', 'limit', 'days',
+            'min_rating', 'discount', 'cutoff',
         ],
         // The arrangement, and the geometry of it.
         'layout' => [

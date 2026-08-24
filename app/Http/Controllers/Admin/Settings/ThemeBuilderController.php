@@ -395,6 +395,19 @@ class ThemeBuilderController extends BaseController
                     'value' => $deal->id,
                     'label' => $deal->title . ' · ' . ($deal->status ? translate('active') : translate('inactive')),
                 ]),
+            // Dynamic collections a section can be sourced from (Phase 3.1). Live ones only:
+            // offering a disabled collection would compose a section that renders nothing.
+            'product_collection' => !app(\App\Services\Commerce\CollectionResolver::class)->ready()
+                ? collect()
+                : \App\Models\ProductCollection::query()->live()
+                    ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                    ->orderBy('name')
+                    ->take($limit)->get(['id', 'name', 'sort_by'])
+                    ->map(fn ($row) => [
+                        'value' => $row->id,
+                        'label' => $row->name . ' · ' . translate($row->sort_by),
+                    ]),
+
             // Pages the merchant composed. Valued by slug rather than id: the slug is what both
             // clients ask for, and what survives an export and an import. Scoped to the channel
             // being composed, so an app-only page — the kind the App Builder creates — is offered
