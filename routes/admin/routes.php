@@ -637,6 +637,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::group(['prefix' => 'seller-operations', 'as' => 'seller-operations.'], function () {
             Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerOperationsController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
+                Route::get('issues', 'issues')->name('issues');
                 Route::get('automation', 'automation')->name('automation');
                 Route::get('integrations', 'integrations')->name('integrations');
                 Route::get('team', 'team')->name('team');

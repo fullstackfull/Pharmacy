@@ -40,13 +40,40 @@ class SellerOperationsController extends BaseController
 
     public function index(Request|null $request = null, ?string $type = null): View
     {
+        $summary = $this->overview->summary();
+        // Read once and used twice: the table and the name lookup are the same rows.
+        $issues = $this->overview->issuesBySeller();
+
         return view('admin-views.marketplace.seller-operations.index', [
-            'summary' => $this->overview->summary(),
-            'issuesBySeller' => $this->overview->issuesBySeller(),
+            'summary' => $summary,
+            'attention' => $this->overview->attentionItems($summary),
+            'issuesBySeller' => $issues,
             'deliveryHealth' => $this->overview->deliveryHealth(),
-            'sellers' => $this->overview->sellersFor(
-                collect($this->overview->issuesBySeller())->pluck('seller_id'),
-            ),
+            'sellers' => $this->overview->sellersFor(collect($issues)->pluck('seller_id')),
+        ]);
+    }
+
+    /**
+     * The issues themselves, which is where an operator ends up after the overview.
+     *
+     * Read-only on purpose: an issue is resolved when the condition that produced
+     * it stops being true, which the detector decides by ceasing to report it.
+     * A button here that marked one resolved would let the marketplace declare a
+     * seller's problem over while it was still happening.
+     */
+    public function issues(Request $request): View
+    {
+        $issues = $this->overview->issues(
+            sellerId: $this->sellerFilter($request),
+            severity: $request->input('severity'),
+            category: $request->input('category'),
+        );
+
+        return view('admin-views.marketplace.seller-operations.issues', [
+            'summary' => $this->overview->summary(),
+            'issues' => $issues,
+            'categories' => $this->overview->issueCategories(),
+            'sellers' => $this->overview->sellersFor(collect($issues?->items() ?? [])->pluck('seller_id')),
         ]);
     }
 
@@ -59,6 +86,7 @@ class SellerOperationsController extends BaseController
         $activity = $this->overview->automationActivity(sellerId: $this->sellerFilter($request), perPage: 15);
 
         return view('admin-views.marketplace.seller-operations.automation', [
+            'summary' => $this->overview->summary(),
             'rules' => $rules,
             'activity' => $activity,
             'sellers' => $this->overview->sellersFor(collect($rules?->items() ?? [])->pluck('seller_id')
@@ -72,6 +100,7 @@ class SellerOperationsController extends BaseController
         $webhooks = $this->overview->webhooks(sellerId: $this->sellerFilter($request));
 
         return view('admin-views.marketplace.seller-operations.integrations', [
+            'summary' => $this->overview->summary(),
             'keys' => $keys,
             'webhooks' => $webhooks,
             'health' => $this->overview->deliveryHealth(),
@@ -85,6 +114,7 @@ class SellerOperationsController extends BaseController
         $staff = $this->overview->staff(sellerId: $this->sellerFilter($request));
 
         return view('admin-views.marketplace.seller-operations.team', [
+            'summary' => $this->overview->summary(),
             'staff' => $staff,
             'sellers' => $this->overview->sellersFor(collect($staff?->items() ?? [])->pluck('seller_id')),
         ]);
@@ -95,6 +125,7 @@ class SellerOperationsController extends BaseController
         $jobs = $this->overview->bulkJobs(sellerId: $this->sellerFilter($request));
 
         return view('admin-views.marketplace.seller-operations.bulk-jobs', [
+            'summary' => $this->overview->summary(),
             'jobs' => $jobs,
             'sellers' => $this->overview->sellersFor(collect($jobs?->items() ?? [])->pluck('seller_id')),
         ]);

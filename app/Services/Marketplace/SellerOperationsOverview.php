@@ -76,6 +76,48 @@ class SellerOperationsOverview
     }
 
     /**
+     * The concrete things that need somebody, as a list rather than a colour.
+     *
+     * A red-tinted card saying "3" tells an operator that something is wrong and
+     * not what. Each entry here names the thing, counts it, and links to the page
+     * that can act on it — which is the only form of "needs attention" worth
+     * putting at the top of a screen.
+     *
+     * Empty when nothing does, and the screen then shows nothing rather than a
+     * row of reassuring zeroes.
+     *
+     * @return array<int, array{label: string, count: int, href: string|null, tone: string}>
+     */
+    public function attentionItems(array $summary): array
+    {
+        $items = [];
+
+        $map = [
+            'issues' => ['label' => 'seller_issues_marked_critical', 'tone' => 'danger', 'route' => 'issues'],
+            'automation' => ['label' => 'automation_rules_stopped_by_the_platform', 'tone' => 'danger', 'route' => 'automation'],
+            'webhooks' => ['label' => 'endpoints_switched_off_after_repeated_failure', 'tone' => 'danger', 'route' => 'integrations'],
+            'bulk_jobs' => ['label' => 'bulk_operations_still_running', 'tone' => 'info', 'route' => 'bulk-jobs'],
+            'keys' => ['label' => 'api_keys_never_used', 'tone' => 'warning', 'route' => 'integrations'],
+            'staff' => ['label' => 'staff_with_no_role', 'tone' => 'warning', 'route' => 'team'],
+        ];
+
+        foreach ($map as $key => $meta) {
+            $count = ($summary[$key]['installed'] ?? false) ? ($summary[$key]['attention'] ?? 0) : 0;
+
+            if ($count > 0) {
+                $items[] = [
+                    'label' => $meta['label'],
+                    'count' => $count,
+                    'tone' => $meta['tone'],
+                    'href' => $meta['route'] ? route('admin.marketplace.seller-operations.' . $meta['route']) : null,
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
      * Rules across every seller, worst state first.
      *
      * Suspended before failing before running: an operator opening this page is looking for the
@@ -191,6 +233,57 @@ class SellerOperationsOverview
         }
 
         return $state;
+    }
+
+    /**
+     * The issues themselves, worst first.
+     *
+     * The overview ranks shops; this is the layer under it. An operator who sees
+     * that one shop has a critical finding needs to be able to read what it is —
+     * without that, the count is a dead end and they have to ask the seller.
+     *
+     * Live issues only by default. A resolved issue is history, and a queue that
+     * mixes the two stops being a queue.
+     */
+    public function issues(?int $sellerId = null, ?string $severity = null, ?string $category = null, int $perPage = 25)
+    {
+        if (!Schema::hasTable('seller_insights')) {
+            return null;
+        }
+
+        return SellerInsight::query()
+            ->whereIn('status', SellerInsight::LIVE_STATUSES)
+            ->when($sellerId, fn ($query) => $query->where('seller_id', $sellerId))
+            ->when($severity, fn ($query) => $query->where('severity', $severity))
+            ->when($category, fn ($query) => $query->where('category', $category))
+            ->worstFirst()
+            ->orderByDesc('impact_score')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * Which categories actually have live issues right now, with their counts.
+     *
+     * Read from the rows rather than from the list of categories the code knows
+     * about: a filter offering eight categories of which six can never match is a
+     * filter that wastes the operator's time.
+     *
+     * @return array<string, int>
+     */
+    public function issueCategories(): array
+    {
+        if (!Schema::hasTable('seller_insights')) {
+            return [];
+        }
+
+        return SellerInsight::query()
+            ->whereIn('status', SellerInsight::LIVE_STATUSES)
+            ->whereNotNull('category')
+            ->groupBy('category')
+            ->selectRaw('category, COUNT(*) as total')
+            ->pluck('total', 'category')
+            ->all();
     }
 
     public function keys(?int $sellerId = null, int $perPage = 25)

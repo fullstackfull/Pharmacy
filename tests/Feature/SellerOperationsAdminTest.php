@@ -10,6 +10,7 @@ use App\Services\Marketplace\SellerOperationsOverview;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\BuildsIssueSchema;
 use Tests\TestCase;
 
 /**
@@ -26,6 +27,8 @@ use Tests\TestCase;
  */
 class SellerOperationsAdminTest extends TestCase
 {
+    use BuildsIssueSchema;
+
     private const SELLER = 1;
 
     protected function setUp(): void
@@ -333,6 +336,50 @@ class SellerOperationsAdminTest extends TestCase
         // The second signal must not overwrite the first — they are counted separately.
         $this->assertSame(1, $state['suspended_rules']);
         $this->assertSame(1, $state['failing_webhooks']);
+    }
+
+    public function test_the_issues_page_renders_and_offers_only_categories_that_have_something_in_them(): void
+    {
+        $this->createIssueTable();
+
+        \App\Models\SellerInsight::create([
+            'seller_id' => self::SELLER, 'type' => 'ORDER_SLA', 'category' => 'orders',
+            'severity' => 'critical', 'status' => 'detected', 'title' => 'insight_order_late',
+            'impact_score' => 87, 'affected_count' => 3, 'fingerprint' => 'a',
+        ]);
+
+        $categories = $this->overview()->issueCategories();
+
+        // Read from the rows, not from the list of categories the code knows about: a filter
+        // offering eight of which six can never match wastes the reader's time.
+        $this->assertSame(['orders' => 1], $categories);
+
+        $html = $this->renderBody('admin-views.marketplace.seller-operations.issues', [
+            'summary' => $this->overview()->summary(),
+            'issues' => $this->overview()->issues(),
+            'categories' => $categories,
+            'sellers' => $this->overview()->sellersFor([self::SELLER]),
+        ]);
+
+        $this->assertStringContainsString('87 / 100', $html);
+        $this->assertStringContainsString('Owner One', $html);
+    }
+
+    public function test_the_issues_page_shows_only_live_issues(): void
+    {
+        $this->createIssueTable();
+
+        \App\Models\SellerInsight::create([
+            'seller_id' => self::SELLER, 'type' => 'ORDER_SLA', 'category' => 'orders',
+            'severity' => 'high', 'status' => 'detected', 'title' => 'live_one', 'fingerprint' => 'a',
+        ]);
+        \App\Models\SellerInsight::create([
+            'seller_id' => self::SELLER, 'type' => 'ORDER_SLA', 'category' => 'orders',
+            'severity' => 'high', 'status' => 'resolved', 'title' => 'closed_one', 'fingerprint' => 'b',
+        ]);
+
+        // A resolved issue is history, and a queue that mixes the two stops being a queue.
+        $this->assertSame(1, $this->overview()->issues()->total());
     }
 
     /**
