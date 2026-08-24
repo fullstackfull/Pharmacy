@@ -54,7 +54,8 @@ class DynamicCollectionsTest extends TestCase
         Schema::create('product_collections', function (Blueprint $table) {
             $table->id(); $table->string('name', 120); $table->string('slug', 60)->unique();
             $table->boolean('status')->default(true); $table->json('rules')->nullable();
-            $table->string('sort_by', 40)->default('sales_30d'); $table->timestamps();
+            $table->string('sort_by', 40)->default('sales_30d');
+            $table->json('merchandising')->nullable(); $table->timestamps();
         });
         Schema::create('product_metrics', function (Blueprint $table) {
             $table->id(); $table->unsignedBigInteger('product_id')->unique();
@@ -275,5 +276,159 @@ class DynamicCollectionsTest extends TestCase
         Artisan::call('commerce:metrics-refresh');
 
         $this->assertNull(ProductMetric::query()->where('product_id', 424242)->first());
+    }
+
+    // ---- merchandising (Phase 3.2) ----------------------------------------------------------
+
+    public function test_a_pin_holds_its_position_whatever_the_ranking_says(): void
+    {
+        $everyday = $this->product(['name' => 'Everyday']);
+        $hero = $this->product(['name' => 'Hero']);
+        ProductMetric::create(['product_id' => $everyday->id, 'sales_30d' => 100]);
+        ProductMetric::create(['product_id' => $hero->id, 'sales_30d' => 1]);
+
+        $collection = $this->collection();
+        $collection->update(['merchandising' => [
+            'pins' => [['id' => $hero->id, 'position' => 1]],
+        ]]);
+
+        $names = app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all();
+
+        $this->assertSame(['Hero', 'Everyday'], $names, '#1 is pinned, #2 is automatic (§26)');
+    }
+
+    public function test_an_unavailable_pin_is_skipped_never_resurrected(): void
+    {
+        $dead = $this->product(['name' => 'Dead', 'status' => 0]);
+        $this->product(['name' => 'Alive']);
+
+        $collection = $this->collection();
+        $collection->update(['merchandising' => [
+            'pins' => [['id' => $dead->id, 'position' => 1]],
+        ]]);
+
+        $this->assertSame(
+            ['Alive'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+            'a pin is a manual addition, never an override of "cannot be sold" (§28)',
+        );
+    }
+
+    public function test_exclusions_remove_from_the_dynamic_result(): void
+    {
+        $kept = $this->product(['name' => 'Kept']);
+        $banned = $this->product(['name' => 'Banned']);
+
+        $collection = $this->collection();
+        $collection->update(['merchandising' => ['excluded' => [$banned->id]]]);
+
+        $this->assertSame(
+            ['Kept'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+        );
+        $this->assertNotNull($kept);
+    }
+
+    public function test_a_boost_reranks_and_never_adds(): void
+    {
+        $plain = $this->product(['name' => 'Plain']);
+        $boosted = $this->product(['name' => 'Boosted', 'category_id' => 42]);
+        $this->product(['name' => 'Ineligible boosted', 'category_id' => 42, 'status' => 0]);
+        ProductMetric::create(['product_id' => $plain->id, 'sales_30d' => 50]);
+        ProductMetric::create(['product_id' => $boosted->id, 'sales_30d' => 5]);
+
+        $collection = $this->collection();
+        $collection->update(['merchandising' => [
+            'boosts' => [['kind' => 'category', 'id' => 42, 'weight' => 30]],
+        ]]);
+
+        $this->assertSame(
+            ['Boosted', 'Plain'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+            'the boost moved an eligible product up and did not resurrect the disabled one (§28)',
+        );
+    }
+
+    public function test_below_minimum_the_fallback_source_speaks_instead(): void
+    {
+        $this->product(['name' => 'Only match', 'unit_price' => 5]);
+        $this->product(['name' => 'Featured fallback', 'featured' => 1, 'unit_price' => 500]);
+
+        $collection = $this->collection([
+            ['field' => 'price', 'operator' => 'less_than', 'value' => 10],
+        ]);
+        $collection->update(['merchandising' => [
+            'min_items' => 3,
+            'fallback'  => ['kind' => 'source', 'source' => 'featured'],
+        ]]);
+
+        $this->assertSame(
+            ['Featured fallback'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+            'one match is below the minimum of three, so the configured fallback shows (§30)',
+        );
+    }
+
+    public function test_replacement_tops_up_from_the_fallback_without_displacing_anything(): void
+    {
+        $match = $this->product(['name' => 'Match', 'unit_price' => 5]);
+        $this->product(['name' => 'Filler', 'featured' => 1, 'unit_price' => 500]);
+        ProductMetric::create(['product_id' => $match->id, 'sales_30d' => 9]);
+
+        $collection = $this->collection([
+            ['field' => 'price', 'operator' => 'less_than', 'value' => 10],
+        ]);
+        $collection->update(['merchandising' => [
+            'replace'  => true,
+            'fallback' => ['kind' => 'source', 'source' => 'featured'],
+        ]]);
+
+        $this->assertSame(
+            ['Match', 'Filler'],
+            app(CollectionResolver::class)->resolve($collection, 4)->pluck('name')->all(),
+            'the match keeps its place; the fallback only fills the empty tail (§29)',
+        );
+    }
+
+    public function test_a_fallback_chain_stops_at_one_hop_at_run_time(): void
+    {
+        // Two collections whose rows were edited into a ring AFTER the save-time check. The
+        // resolver must not loop: a fallback's own fallback never runs.
+        $first = $this->collection([['field' => 'price', 'operator' => 'less_than', 'value' => -1]]);
+        $second = $this->collection([['field' => 'price', 'operator' => 'less_than', 'value' => -1]]);
+        $first->forceFill(['merchandising' => [
+            'min_items' => 1, 'fallback' => ['kind' => 'collection', 'id' => $second->id],
+        ]])->save();
+        $second->forceFill(['merchandising' => [
+            'min_items' => 1, 'fallback' => ['kind' => 'collection', 'id' => $first->id],
+        ]])->save();
+
+        $this->assertCount(0, app(CollectionResolver::class)->resolve($first->id, 10));
+    }
+
+    public function test_the_save_time_cycle_check_refuses_a_ring(): void
+    {
+        $rules = app(\App\Services\Commerce\MerchandisingRules::class);
+        $first = $this->collection();
+        $second = $this->collection();
+        $second->update(['merchandising' => [
+            'min_items' => 1, 'fallback' => ['kind' => 'collection', 'id' => $first->id],
+        ]]);
+
+        $checked = $rules->validate(
+            ['fallback' => ['kind' => 'collection', 'id' => $second->id], 'min_items' => 1],
+            $first->id,
+        );
+
+        $this->assertContains('fallback:cycle_detected', $checked['errors']);
+    }
+
+    public function test_pinning_and_excluding_the_same_product_is_refused(): void
+    {
+        $checked = app(\App\Services\Commerce\MerchandisingRules::class)->validate([
+            'pins' => [['id' => 5, 'position' => 1]], 'excluded' => [5],
+        ]);
+
+        $this->assertNotEmpty($checked['errors']);
     }
 }

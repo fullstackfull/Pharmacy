@@ -8,6 +8,7 @@ use App\Models\ProductMetric;
 use App\Services\AuditLogger;
 use App\Services\Commerce\CollectionResolver;
 use App\Services\Commerce\CollectionRuleRegistry;
+use App\Services\Commerce\MerchandisingRules;
 use App\Services\Theme\ThemePermissionService;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
@@ -27,6 +28,7 @@ class CollectionController extends BaseController
 {
     public function __construct(
         private readonly CollectionRuleRegistry $rules,
+        private readonly MerchandisingRules $merchandising,
         private readonly CollectionResolver $resolver,
         private readonly ThemePermissionService $permissions,
         private readonly AuditLogger $audit,
@@ -45,6 +47,8 @@ class CollectionController extends BaseController
                 : collect(),
             'fields'      => CollectionRuleRegistry::FIELDS,
             'sorts'       => CollectionRuleRegistry::SORTS,
+            'boostKinds'  => MerchandisingRules::BOOST_KINDS,
+            'fallbackSources' => MerchandisingRules::FALLBACK_SOURCES,
             'editable'    => $this->permissions->canEdit(),
             'metricsAge'  => $ready ? ProductMetric::query()->max('computed_at') : null,
         ]);
@@ -72,12 +76,22 @@ class CollectionController extends BaseController
             return back();
         }
 
+        $merch = $this->merchandising->validate(
+            json_decode((string) $request->input('merchandising', 'null'), true),
+        );
+
+        if ($merch['errors'] !== []) {
+            ToastMagic::error(translate('this_merchandising_cannot_be_saved') . ': ' . implode(', ', $merch['errors']));
+            return back();
+        }
+
         $collection = ProductCollection::create([
-            'name'    => trim($request->input('name')),
-            'slug'    => $slug,
-            'status'  => true,
-            'rules'   => $checked['rules'],
-            'sort_by' => $this->rules->isSort($request->input('sort_by')) ? $request->input('sort_by') : 'sales_30d',
+            'name'          => trim($request->input('name')),
+            'slug'          => $slug,
+            'status'        => true,
+            'rules'         => $checked['rules'],
+            'sort_by'       => $this->rules->isSort($request->input('sort_by')) ? $request->input('sort_by') : 'sales_30d',
+            'merchandising' => $merch['config'],
         ]);
 
         $this->audit->record(
@@ -128,6 +142,20 @@ class CollectionController extends BaseController
             $collection->rules = $checked['rules'];
         }
 
+        if ($request->has('merchandising')) {
+            $merch = $this->merchandising->validate(
+                json_decode((string) $request->input('merchandising', 'null'), true),
+                $collection->id,
+            );
+
+            if ($merch['errors'] !== []) {
+                ToastMagic::error(translate('this_merchandising_cannot_be_saved') . ': ' . implode(', ', $merch['errors']));
+                return back();
+            }
+
+            $collection->merchandising = $merch['config'];
+        }
+
         $collection->save();
 
         $this->audit->record(
@@ -135,7 +163,8 @@ class CollectionController extends BaseController
             subject: $collection,
             before: $before,
             after: ['name' => $collection->name, 'status' => $collection->status,
-                    'rules' => $collection->rules, 'sort_by' => $collection->sort_by],
+                    'rules' => $collection->rules, 'sort_by' => $collection->sort_by,
+                    'merchandising' => $collection->merchandising],
         );
 
         ToastMagic::success(translate('collection_updated_successfully'));

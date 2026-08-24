@@ -24,8 +24,17 @@ use Illuminate\Support\Facades\Schema;
  */
 class CollectionResolver
 {
-    public function __construct(private readonly CollectionRuleRegistry $registry)
-    {
+    /**
+     * How many rule-matching candidates to rank beyond the asked-for limit, so boosts have
+     * something to promote and exclusions something to close over. Bounded: merchandising can
+     * reorder the head of the list, never make the query unbounded.
+     */
+    private const POOL_FACTOR = 3;
+
+    public function __construct(
+        private readonly CollectionRuleRegistry $registry,
+        private readonly MerchandisingRules $merchandising,
+    ) {
     }
 
     public function enabled(): bool
@@ -48,9 +57,11 @@ class CollectionResolver
     }
 
     /**
+     * @param  bool  $isFallback  set when THIS resolution is already somebody's fallback, so a
+     *                            chain stops at one hop whatever the stored config says
      * @return Collection<int, Product> empty on any failure — never an exception, never null
      */
-    public function resolve(ProductCollection|int|null $collection, int $limit = 10): Collection
+    public function resolve(ProductCollection|int|null $collection, int $limit = 10, bool $isFallback = false): Collection
     {
         $collection = $collection instanceof ProductCollection
             ? ($collection->status ? $collection : null)
@@ -63,22 +74,33 @@ class CollectionResolver
         $limit = max(1, min((int) $limit, ContentSource::MAX_LIMIT));
 
         try {
-            $query = Product::active()->with('brand:id,name,slug');
-            $query = $this->joinMetrics($query);
+            $config = $this->merchandising->configFor($collection);
 
-            foreach ($collection->ruleRows() as $rule) {
-                $query = $this->applyRule($query, $rule);
-                if ($query === null) {
-                    // A stored rule the registry no longer recognises means the collection no
-                    // longer says what the merchant wrote. Serving a broader list than they asked
-                    // for is the one wrong answer — serve nothing and let the fallback speak.
-                    return collect();
-                }
+            $candidates = $this->candidates($collection, $config, $limit);
+            if ($candidates === null) {
+                // A stored rule the registry no longer recognises means the collection no longer
+                // says what the merchant wrote. Serving a broader list than they asked for is the
+                // one wrong answer — serve nothing and let the fallback speak.
+                return collect();
             }
 
-            return $this->applySort($query, $collection->sort_by)
-                ->take($limit)
-                ->get();
+            $ranked = $this->applyBoosts($candidates, $config['boosts']);
+            $woven = $this->weavePins($ranked, $config, $limit);
+
+            // Automatic replacement (§29): exclusions and unavailable products left the list
+            // short of what the section asked for; the configured fallback tops it up. Pinned
+            // items are never displaced — this only fills empty tail slots.
+            if ($config['replace'] && $woven->count() < $limit && !$isFallback) {
+                $woven = $this->backfill($woven, $config, $limit);
+            }
+
+            // Too thin to show (§30): the fallback decides — hide, a catalogue source, or one
+            // other collection. Never a chain: a fallback's own fallback does not run.
+            if ($woven->count() < $config['min_items'] && !$isFallback) {
+                return $this->fallbackContent($config, $limit);
+            }
+
+            return $woven->take($limit)->values();
         } catch (\Throwable) {
             return collect();
         }
@@ -95,6 +117,173 @@ class CollectionResolver
     }
 
     // ---------------------------------------------------------------------------------------
+
+    /**
+     * The rule-matching, exclusion-respecting, ranked candidate pool — or null when a stored
+     * rule cannot be compiled.
+     *
+     * @return Collection<int, Product>|null
+     */
+    private function candidates(ProductCollection $collection, array $config, int $limit): ?Collection
+    {
+        $query = Product::active()->with('brand:id,name,slug');
+        $query = $this->joinMetrics($query);
+
+        foreach ($collection->ruleRows() as $rule) {
+            $query = $this->applyRule($query, $rule);
+            if ($query === null) {
+                return null;
+            }
+        }
+
+        if ($config['excluded'] !== []) {
+            $query->whereNotIn('products.id', $config['excluded']);
+        }
+
+        return $this->applySort($query, $collection->sort_by)
+            ->take(min($limit * self::POOL_FACTOR, 72))
+            ->get();
+    }
+
+    /**
+     * Boosts re-rank and do nothing else (§28): every candidate already passed Product::active()
+     * and the rules, so a boost can promote it, never resurrect it. Deterministic: score, then
+     * the ranking the sort already gave — never a coin flip (§36).
+     *
+     * @param  Collection<int, Product>  $candidates
+     * @return Collection<int, Product>
+     */
+    private function applyBoosts(Collection $candidates, array $boosts): Collection
+    {
+        if ($boosts === []) {
+            return $candidates;
+        }
+
+        $scored = $candidates->values()->map(function (Product $product, int $index) use ($boosts) {
+            $score = 0.0;
+            foreach ($boosts as $boost) {
+                $score += match ($boost['kind']) {
+                    'product'  => (int) $product->id === (int) $boost['id'] ? (float) $boost['weight'] : 0.0,
+                    'brand'    => (int) $product->brand_id === (int) $boost['id'] ? (float) $boost['weight'] : 0.0,
+                    'category' => (int) $product->category_id === (int) $boost['id'] ? (float) $boost['weight'] : 0.0,
+                    'featured' => (int) $product->featured === 1 ? (float) $boost['weight'] : 0.0,
+                    default    => 0.0,
+                };
+            }
+
+            return ['product' => $product, 'score' => $score, 'index' => $index];
+        });
+
+        return $scored
+            ->sort(fn (array $a, array $b) => $b['score'] <=> $a['score'] ?: $a['index'] <=> $b['index'])
+            ->map(fn (array $row) => $row['product'])
+            ->values();
+    }
+
+    /**
+     * Fix pins into their positions and fill the rest from the ranking (§26).
+     *
+     * A pin that is no longer purchasable is skipped, not resurrected — the list closes up and,
+     * with replacement on, the tail is refilled. Position collisions take the next free slot, so
+     * two pins at #1 are #1 and #2, in the order the admin listed them.
+     *
+     * @param  Collection<int, Product>  $ranked
+     * @return Collection<int, Product>
+     */
+    private function weavePins(Collection $ranked, array $config, int $limit): Collection
+    {
+        if ($config['pins'] === []) {
+            return $ranked->take($limit)->values();
+        }
+
+        $pinIds = array_column($config['pins'], 'id');
+
+        // Fetched through the same eligibility gate as everything else: a pin is a manual
+        // addition, never an override of "this product cannot be sold".
+        $pinned = Product::active()->with('brand:id,name,slug')
+            ->whereIn('products.id', $pinIds)
+            ->get()
+            ->keyBy('id');
+
+        $slots = [];
+        foreach ($config['pins'] as $pin) {
+            $product = $pinned->get($pin['id']);
+            if ($product === null) {
+                continue;
+            }
+            // Clamped into the visible list: a pin at #10 on a rail of four is a pin the
+            // admin expects to SEE, so it takes the last slot rather than silently vanishing.
+            $position = min(max(1, (int) $pin['position']), $limit);
+            while (isset($slots[$position]) && $position <= ContentSource::MAX_LIMIT) {
+                $position++;
+            }
+            $slots[$position] = $product;
+        }
+
+        $rest = $ranked->reject(fn (Product $product) => in_array((int) $product->id, $pinIds, true))->values();
+
+        $result = [];
+        $restIndex = 0;
+        $total = min($limit, count($slots) + $rest->count());
+
+        for ($position = 1; count($result) < $total && $position <= ContentSource::MAX_LIMIT; $position++) {
+            if (isset($slots[$position])) {
+                $result[] = $slots[$position];
+            } elseif ($restIndex < $rest->count()) {
+                $result[] = $rest[$restIndex++];
+            }
+        }
+
+        return collect($result);
+    }
+
+    /**
+     * Top a short list up from the configured fallback, never displacing what is there (§29).
+     *
+     * @param  Collection<int, Product>  $current
+     * @return Collection<int, Product>
+     */
+    private function backfill(Collection $current, array $config, int $limit): Collection
+    {
+        $extra = $this->fallbackContent($config, $limit);
+
+        if ($extra->isEmpty()) {
+            return $current;
+        }
+
+        $have = $current->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $fill = $extra
+            ->reject(fn (Product $product) => in_array((int) $product->id, $have, true)
+                || in_array((int) $product->id, $config['excluded'], true))
+            ->take($limit - $current->count());
+
+        return $current->concat($fill)->values();
+    }
+
+    /**
+     * What the fallback names: nothing, a catalogue source, or ONE other collection — resolved
+     * with its own merchandising but with its own fallback disabled, so a chain is one hop long
+     * at run time however the rows were edited since the save-time cycle check (§30).
+     *
+     * @return Collection<int, Product>
+     */
+    private function fallbackContent(array $config, int $limit): Collection
+    {
+        $fallback = $config['fallback'];
+
+        if ($fallback['kind'] === 'source' && $fallback['source'] !== null) {
+            return app(\App\Services\Theme\SectionDataResolver::class)->productsFrom(
+                ContentSource::fromSettings(['source' => $fallback['source'], 'limit' => $limit]),
+            );
+        }
+
+        if ($fallback['kind'] === 'collection' && $fallback['id'] !== null) {
+            return $this->resolve($fallback['id'], $limit, isFallback: true);
+        }
+
+        return collect();
+    }
 
     private function joinMetrics(Builder $query): Builder
     {

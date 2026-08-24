@@ -306,6 +306,38 @@ class AdminThemeViewsRenderTest extends TestCase
         $this->assertStringContainsString('admin/theme/import', $html, 'importing uses the existing action');
     }
 
+    public function test_the_collections_screen_renders_with_a_merchandised_collection(): void
+    {
+        Schema::dropIfExists('product_collections');
+        Schema::create('product_collections', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('slug', 60)->unique();
+            $table->boolean('status')->default(true); $table->json('rules')->nullable();
+            $table->string('sort_by', 40)->default('sales_30d');
+            $table->json('merchandising')->nullable(); $table->timestamps();
+        });
+        $collection = \App\Models\ProductCollection::create([
+            'name' => 'Winter picks', 'slug' => 'winter-picks', 'status' => true,
+            'rules' => [['field' => 'price', 'operator' => 'less_than', 'value' => 50]],
+            'sort_by' => 'sales_30d',
+            'merchandising' => ['pins' => [['id' => 3, 'position' => 1]], 'min_items' => 4,
+                                'fallback' => ['kind' => 'source', 'source' => 'featured']],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.collections', [
+            'ready' => true, 'enabled' => true,
+            'collections' => collect([$collection]),
+            'fields' => \App\Services\Commerce\CollectionRuleRegistry::FIELDS,
+            'sorts' => \App\Services\Commerce\CollectionRuleRegistry::SORTS,
+            'boostKinds' => \App\Services\Commerce\MerchandisingRules::BOOST_KINDS,
+            'fallbackSources' => \App\Services\Commerce\MerchandisingRules::FALLBACK_SOURCES,
+            'editable' => true, 'metricsAge' => now()->toDateTimeString(),
+        ]);
+
+        $this->assertStringContainsString('Winter picks', $html);
+        $this->assertStringContainsString('cx-edit', $html, 'a collection can be edited in place');
+        $this->assertStringContainsString('admin/commerce/collections/store', $html);
+    }
+
     private function renderBody(string $view, array $data): string
     {
         $source = File::get(resource_path('views/' . str_replace('.', '/', $view) . '.blade.php'));

@@ -15,11 +15,12 @@ use Illuminate\Support\Str;
  */
 class ProductCollection extends Model
 {
-    protected $fillable = ['name', 'slug', 'status', 'rules', 'sort_by'];
+    protected $fillable = ['name', 'slug', 'status', 'rules', 'sort_by', 'merchandising'];
 
     protected $casts = [
-        'status' => 'boolean',
-        'rules'  => 'array',
+        'status'        => 'boolean',
+        'rules'         => 'array',
+        'merchandising' => 'array',
     ];
 
     public function scopeLive($query)
