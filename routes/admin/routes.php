@@ -1439,6 +1439,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('resources', 'resources')->name('resources');
                 Route::get('resource-labels', 'resourceLabels')->name('resource-labels');
             Route::post('preview/start', 'startPreview')->name('preview.start');
+            Route::post('preview/link', 'previewLink')->name('preview.link');
             Route::get('preview/stop', 'stopPreview')->name('preview.stop');
                 Route::post('section/add', 'addSection')->name('section.add');
                 Route::post('section/update', 'updateSection')->name('section.update');

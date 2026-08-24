@@ -14,6 +14,7 @@ use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeAssetService;
 use App\Services\Theme\ThemePermissionService;
+use App\Services\Theme\ThemePreviewToken;
 use App\Services\Theme\ThemeBuilderService;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Contracts\View\View;
@@ -747,6 +748,39 @@ class ThemeBuilderController extends BaseController
         ToastMagic::success(translate('previewing_draft_on_the_storefront') . ' #' . $version->id);
 
         return redirect('/');
+    }
+
+    /**
+     * A link that shows this draft on any device, without an admin session.
+     *
+     * The builder's phone frame is a browser drawing an approximation; whether the artwork crops
+     * right, whether the Arabic wraps, whether the rail is reachable with a thumb are questions
+     * only a real phone answers. The link carries a signed, expiring token rather than a version
+     * id, so it can be scanned off the screen and cannot be edited into somebody else's draft.
+     */
+    public function previewLink(Request $request): JsonResponse
+    {
+        $version = ThemeVersion::find($request['version_id']);
+
+        if (!$version) {
+            return response()->json(['status' => 'error', 'message' => translate('theme_version_not_found')], 404);
+        }
+
+        $minutes = (int) ($request['minutes'] ?? ThemePreviewToken::DEFAULT_MINUTES);
+        $tokens = app(ThemePreviewToken::class);
+
+        $url = url('/') . '?' . http_build_query([
+            StorefrontThemeRenderer::PREVIEW_TOKEN_KEY => $tokens->mint($version, $minutes),
+        ]);
+
+        return response()->json([
+            'status'     => 'success',
+            'url'        => $url,
+            'expires_in' => $tokens->expiresIn($minutes),
+            // Rendered server-side with the shop's own dependency-free encoder — the same one the
+            // campaign posters use — so the builder needs no script to draw it.
+            'qr'         => app(\App\Services\Analytics\Support\QrCode::class)->svg($url, 200),
+        ]);
     }
 
     public function stopPreview(): RedirectResponse

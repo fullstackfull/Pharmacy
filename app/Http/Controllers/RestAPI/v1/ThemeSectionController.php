@@ -8,6 +8,7 @@ use App\Services\Theme\SectionDataResolver;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeDelivery;
+use App\Services\Theme\ThemePreviewToken;
 use App\Services\Theme\ThemeSourceMap;
 use App\Services\Theme\ViewerContext;
 use Illuminate\Http\JsonResponse;
@@ -42,6 +43,7 @@ class ThemeSectionController extends Controller
         private readonly SectionDataResolver $resolver,
         private readonly ThemeSourceMap $sources,
         private readonly ThemeDelivery $delivery,
+        private readonly ThemePreviewToken $previews,
     ) {
     }
 
@@ -117,7 +119,12 @@ class ThemeSectionController extends Controller
             . 'Sections carry `source` (where to fetch their data), `cards` (banner-backed blocks '
             . 'resolved live from Banner Setup) and typed `action` objects beside every link, so a '
             . 'tap opens a native screen instead of a browser. '
-            . '`revision: 0` means no theme is published — render the built-in home page.',
+            . '`revision: 0` means no theme is published — render the built-in home page. '
+            . 'Send `preview` (a signed token minted in the admin builder) to render an unpublished '
+            . 'draft instead: the response carries `preview: true`, is never cached and never '
+            . 'ETagged, and the token expires on its own. An absent, expired or tampered token is '
+            . 'ignored and the published page is served, so a stale preview link degrades into the '
+            . 'ordinary home page rather than an error.',
         audience: ApiDoc::CUSTOMER_APP,
         visibility: ApiDoc::PARTNER_VISIBLE,
         stability: ApiDoc::STABLE,
@@ -129,6 +136,18 @@ class ThemeSectionController extends Controller
         $page = is_string($page) && in_array($page, self::PAGES, true) ? $page : 'home';
 
         $viewer = ViewerContext::fromRequest($request);
+
+        // A merchant checking a draft on a real phone before it is anyone else's home page. The
+        // preview path shares no cache and no validator with the published one: a draft changes on
+        // every save, and a 304 against a shopper's checksum would hand them the draft.
+        $previewing = $this->previews->version($request->query('preview'));
+
+        if ($previewing !== null) {
+            return response()
+                ->json($this->delivery->previewPayload($previewing, $page, $viewer))
+                ->header('Cache-Control', 'no-store, private');
+        }
+
         $payload = $this->delivery->payload($page, $viewer);
 
         $etag = $payload['checksum'] !== null ? '"' . $payload['checksum'] . '"' : null;

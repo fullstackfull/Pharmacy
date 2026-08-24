@@ -67,6 +67,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\Localization::class,
             \App\Http\Middleware\DetectMobile::class,
             \App\Http\Middleware\ApplySeoRedirects::class,
+            // A previewed draft is a real storefront response with an unpublished page in it. This
+            // keeps that page out of search results and shared caches for as long as the token
+            // that summoned it is alive.
+            \App\Http\Middleware\NoIndexThemePreview::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
             // Operational monitoring. Separate from RecordHttpTelemetry on purpose: that one keeps
             // a row per request for visits and sources, this one only ever increments counters in

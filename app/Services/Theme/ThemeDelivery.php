@@ -123,6 +123,26 @@ class ThemeDelivery
         }
     }
 
+    /**
+     * One unpublished version, delivered as if it were live.
+     *
+     * Not cached, and deliberately not sharing a code path with anything that is: a draft changes
+     * on every save, and a preview that could be served from a cache — or could poison one a real
+     * shopper reads — is worse than no preview. `preview` travels in the payload so the client can
+     * say so on screen; a build that ignores the key simply renders the draft, which is what was
+     * asked for.
+     *
+     * @return array<string, mixed>
+     */
+    public function previewPayload(ThemeVersion $version, string $page, ViewerContext $viewer): array
+    {
+        try {
+            return ['preview' => true] + $this->build($page, $viewer, $version);
+        } catch (\Throwable) {
+            return ['preview' => true] + $this->emptyPayload($page);
+        }
+    }
+
     /** Drop every cached delivery — called on publish, alongside the storefront's own flush. */
     public function flush(): void
     {
@@ -166,9 +186,9 @@ class ThemeDelivery
     /**
      * @return array<string, mixed>
      */
-    private function build(string $page, ViewerContext $viewer): array
+    private function build(string $page, ViewerContext $viewer, ?ThemeVersion $version = null): array
     {
-        $version = $this->publishedVersion();
+        $version ??= $this->publishedVersion();
         if ($version === null) {
             return $this->emptyPayload($page);
         }

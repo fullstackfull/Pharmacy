@@ -273,6 +273,22 @@ Brand Banner.
   that type's data variable is called). Two types that draw one body — `featured_deal` and
   `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
   the two invariants: every renderable type has a partial, and every partial compiles.
+- **Publishing gate.** `app/Services/Theme/PublishValidator.php` answers "what is wrong with this
+  version" before it becomes the shop, in two severities: *blocking* (a choice the merchant left
+  unset — publishing waits) and *warning* (the configuration is right and the world is not —
+  publishing proceeds with a sentence). Surfaced in the builder beside the sections it names and on
+  `/admin/theme` beside the publish button it disables. Cached per version, dropped on any section
+  or block write.
+- **Change note and scheduled publish.** A version carries `change_note` (written at publish, shown
+  wherever a version is chosen) and `publish_at`. `theme:publish-due` runs every five minutes and
+  publishes what is due — re-running the gate first, because hours pass between setting a time and
+  reaching it. A version that no longer passes has its schedule cleared and the reason audited
+  rather than retrying silently. The control is only offered while the server cron is alive.
+- **Preview on a real device.** `ThemePreviewToken` signs `{version}.{expiry}` with the app key.
+  `?theme_preview=TOKEN` on the storefront and `?preview=TOKEN` on `/api/v1/theme/home` both render
+  that unpublished version — never cached, never ETagged, and marked `noindex` by
+  `NoIndexThemePreview`. The builder mints one on demand and draws a QR with the shop's own
+  dependency-free encoder (`App\Services\Analytics\Support\QrCode`).
 - **What a section shows vs. where it leads.** `ContentSource` reads a section's source out of its
   settings once (`source`, `source_id`, `product_ids`, `limit`); `ThemeSourceMap::endpointFor()`
   turns it into the app's endpoint, `SectionDataResolver::productsFrom()` into the web's query, and
