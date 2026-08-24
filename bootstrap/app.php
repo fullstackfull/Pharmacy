@@ -144,6 +144,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // this, so breaches went stale between manual clicks.
         $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
 
+        // Recompute what each seller should be looking at. Hourly rather than daily because the
+        // things it raises — stock about to run out, an order approaching its deadline — stop being
+        // useful the moment they are stale.
+        $schedule->command('seller:refresh-insights')->hourly()->withoutOverlapping();
+
         // Reconcile the storefront search index against the catalogue in case a bulk import bypassed the
         // model observer that keeps it fresh in realtime.
         $schedule->command('search:reindex-products')->weekly()->sundays()->at('04:00')->withoutOverlapping();

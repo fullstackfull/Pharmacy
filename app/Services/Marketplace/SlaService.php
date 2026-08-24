@@ -44,6 +44,15 @@ class SlaService
             'return_rate' => (float) ($this->setting('sla_max_return_rate') ?? 0.10),
             'refund_rate' => (float) ($this->setting('sla_max_refund_rate') ?? 0.15),
             'avg_rating' => (float) ($this->setting('sla_min_rating') ?? 3.5),
+            // How long a seller has to get an order moving, in hours.
+            //
+            // Deliberately without a default, unlike the rates above. A rate default is a
+            // measurement convention; a processing deadline is a promise the marketplace makes to
+            // customers and holds sellers to. Until an operator sets one, there is no policy to
+            // count down against, and nothing should pretend otherwise.
+            'processing_hours' => $this->setting('sla_processing_hours') === null
+                ? null
+                : max(1, (int) $this->setting('sla_processing_hours')),
         ];
     }
 

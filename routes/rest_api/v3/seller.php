@@ -21,6 +21,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
@@ -315,6 +316,15 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::controller(SellerAnalyticsController::class)->group(function () {
                     Route::get('/', 'index');
                     Route::get('activities', 'activities');
+                });
+            });
+
+            // Everything waiting for the seller, from the one insight store — so Home, this list
+            // and notifications cannot disagree about what needs attention.
+            Route::group(['prefix' => 'action-center'], function () {
+                Route::controller(SellerActionCenterController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::post('{id}/dismiss', 'dismiss')->whereNumber('id');
                 });
             });
 
