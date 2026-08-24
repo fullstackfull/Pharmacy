@@ -6581,4 +6581,12 @@ return [
 	'Info_updated_successfully!' => 'Info updated successfully!',
 	'this_cannot_be_dismissed' => 'This cannot be dismissed',
 	'dismissed' => 'Dismissed',
+	'hours_to_process_an_order' => 'Hours to process an order',
+	'the_processing_window_is_what_the_seller_center_counts_down_against' => 'The processing window is what the Seller Center counts down against',
+	'insight_order_late' => 'Order is past its processing deadline',
+	'insight_order_due_soon' => 'Order is close to its processing deadline',
+	'insight_out_of_stock' => 'Out of stock and still selling',
+	'insight_running_out' => 'Running out of stock',
+	'insight_product_rejected' => 'Listing was rejected',
+	'insight_listing_incomplete' => 'Listing is missing information',
 ];

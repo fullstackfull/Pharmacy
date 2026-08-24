@@ -93,14 +93,15 @@ class OrderSlaProducer implements InsightProducer
     }
 
     /**
-     * The processing window the marketplace holds sellers to, or null when nobody has set one.
+     * The processing window the marketplace holds sellers to.
      *
-     * Read from the SLA policy so there is one number, not one here and another in the scorecard.
-     * When it is unset this producer stays silent: a countdown against a deadline the marketplace
-     * never declared would be a promise invented on the seller's screen.
+     * Read from the SLA policy, so the countdown a seller sees and the deadline the marketplace
+     * judges them by are the same number — changed in one place, on the SLA policy page.
      */
     private function windowHours(): ?int
     {
-        return $this->sla->thresholds()['processing_hours'] ?? null;
+        $hours = $this->sla->thresholds()['processing_hours'] ?? null;
+
+        return $hours !== null && $hours > 0 ? (int) $hours : null;
     }
 }

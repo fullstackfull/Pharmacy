@@ -279,13 +279,12 @@ Only after D and E: an assistant with nothing true to say is worse than none.
 | Date | Phase | What landed |
 |---|---|---|
 | 2026-08-24 | — | Audit complete; this plan written. |
-| 2026-08-24 | A.1 | `seller_insights` + `SellerInsightEngine` + producer contract. Three producers: inventory risk (ranked by units actually sold, not by how low the number is), order SLA, listing quality (score from the record, rejection reason read from `product_moderation_events` — which the app had never shown). Hourly `seller:refresh-insights`. Action Center API with dismissal. 13 tests. |
+| 2026-08-24 | A.1 | 24-hour processing policy, editable on the SLA policy page; the seller's countdown reads it. `seller_insights` + `SellerInsightEngine` + producer contract. Three producers: inventory risk (ranked by units actually sold, not by how low the number is), order SLA, listing quality (score from the record, rejection reason read from `product_moderation_events` — which the app had never shown). Hourly `seller:refresh-insights`. Action Center API with dismissal. 13 tests. |
 
-### Open decisions this phase surfaced
+### Decisions this phase settled
 
-- **There is no ship-by policy.** `SlaService` measures rates (cancellation, return, refund, rating);
-  nothing in settings defines how long a seller has to get an order moving. `thresholds()` now
-  carries `processing_hours`, deliberately **without a default**, and the SLA producer stays silent
-  until an operator sets `sla_processing_hours`. A countdown against a deadline the marketplace never
-  declared would be a promise invented on the seller's screen. **This needs an operator decision, not
-  a code change.**
+- **The ship-by policy is 24 hours.** `SlaService` measured rates only; nothing defined how long a
+  seller has to get an order moving, so the countdown had nothing true to count against. The
+  marketplace owner set it at 24 hours, and it is now a line on the SLA policy page alongside the
+  rate ceilings — one number, changed in one place, read by both the seller's countdown and the
+  deadline the marketplace judges them by. Two clocks would be worse than none.
