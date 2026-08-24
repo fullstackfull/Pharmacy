@@ -80,6 +80,9 @@ class ThemeBuilderController extends BaseController
             // And what would stop it going live at all: a section added and never finished shows
             // here, beside the panel that fixes it, instead of on the storefront.
             'publishCheck'  => $version ? app(\App\Services\Theme\PublishValidator::class)->inspect($version) : null,
+            // How many shoppers actually reached each section over the last month. The builder
+            // answers what was arranged; this is the only thing that answers whether it worked.
+            'reach'         => $version ? app(\App\Services\Theme\SectionReach::class)->visitors() : [],
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => ['home', 'header', 'footer'],
             'editable'      => $version ? $this->builder->isEditable($version) : false,

@@ -42,7 +42,7 @@
     // disagree about the path. What is left is the filter's pushState navigation, which returns
     // JSON and is correctly not a pageview to the server, and a banner click: the server sees the
     // page the banner led to, and nothing that says a banner led there.
-    var ALLOWED = ['product_list_viewed', 'banner_clicked'];
+    var ALLOWED = ['product_list_viewed', 'banner_clicked', 'section_viewed'];
 
     function push(name, payload) {
         try {
@@ -149,6 +149,51 @@
             // A click is never blocked by its own measurement.
         }
     }, true);
+
+    // ---- Sections that came into view ------------------------------------------------------
+    //
+    // A composed home page is an arrangement, and the merchant's only real question about an
+    // arrangement is how far down it anyone got. The server sees the page; it has no idea whether
+    // the third rail was ever on screen. Nothing else can answer that, so this does.
+    //
+    // Counted once per element per page: an observer fires again every time a section re-enters,
+    // and a shopper scrolling up and back down has not seen it twice. IntersectionObserver is in
+    // every browser this shop supports; where it is missing the sections simply go uncounted,
+    // which the report shows as no data rather than as nobody having scrolled.
+    try {
+        if (window.IntersectionObserver) {
+            var seen = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (!entry.isIntersecting) return;
+
+                    var element = entry.target;
+                    seen.unobserve(element);
+
+                    push(element.getAttribute('data-analytics-view'), {
+                        entityType: element.getAttribute('data-analytics-type'),
+                        entityId: element.getAttribute('data-analytics-id')
+                    });
+
+                    // No dedupe_key on purpose. An explicit key is hashed without the visitor, so
+                    // it is unique across the whole shop — right for an order, and for an
+                    // impression it would record the first shopper who ever saw this section and
+                    // silently reject everyone after them. The unobserve above is what makes this
+                    // once per page; the server's own few-second window catches the rest.
+                });
+            }, {
+                // A quarter of the section on screen is "seen"; a single pixel at the bottom edge
+                // of a viewport is not, and counting it would make every arrangement look equally
+                // well read.
+                threshold: 0.25
+            });
+
+            document.querySelectorAll('[data-analytics-view]').forEach(function (element) {
+                seen.observe(element);
+            });
+        }
+    } catch (error) {
+        // A page is never broken by its own measurement.
+    }
 
     // ---- Core Web Vitals -------------------------------------------------------------------
     //

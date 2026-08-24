@@ -59,6 +59,15 @@ final class AnalyticsEvent
 
     // Merchandising: what the merchant placed, and whether anyone took it.
     public const BANNER_CLICKED = 'banner_clicked';
+    /**
+     * A composed section actually reaching a shopper's screen.
+     *
+     * The builder answers "what did I arrange"; nothing answered "did anyone get that far". A
+     * section below the fold that no one scrolls to looks identical, in every report there was, to
+     * one at the top that everybody sees — and the difference is the whole reason to reorder a
+     * page. Counted once per section per page view, on both clients.
+     */
+    public const SECTION_VIEWED = 'section_viewed';
 
     // Seller (marketplace suite). Recorded in the services, so the vendor panel
     // and the seller app produce the same rows.
@@ -99,6 +108,7 @@ final class AnalyticsEvent
         self::REVIEW_SUBMITTED => 'account',
         self::CAMPAIGN_CLICKED => 'campaign',
         self::BANNER_CLICKED => 'merchandising',
+        self::SECTION_VIEWED => 'merchandising',
         self::PAYOUT_REQUESTED => 'seller',
         self::KYC_SUBMITTED => 'seller',
     ];
@@ -136,6 +146,9 @@ final class AnalyticsEvent
         // witness, so both clients report it — the web from its beacon, the app from its own
         // ingest — and neither can double-count the other because neither is the server.
         self::BANNER_CLICKED,
+        // Only the client that drew the section knows whether it came into view. The server sees
+        // the page and has no idea how far down it anyone scrolled.
+        self::SECTION_VIEWED,
     ];
 
     public function __construct(

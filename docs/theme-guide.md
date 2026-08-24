@@ -273,6 +273,25 @@ Brand Banner.
   that type's data variable is called). Two types that draw one body — `featured_deal` and
   `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
   the two invariants: every renderable type has a partial, and every partial compiles.
+- **Did the arrangement work?** `section_viewed` is reported by whichever client drew the page —
+  the web from an IntersectionObserver at a quarter visible, the app from one scroll listener that
+  measures each section's box when the scroll settles — because how far down a page anyone scrolled
+  is the one thing the server cannot see. It rolls up under the `theme_section` dimension, appears
+  in Analytics → Catalogue, and `SectionReach` puts the 30-day visitor count on each row of the
+  builder's structure panel. No number at all until something has been measured: a section nobody
+  has counted and a section nobody reaches are different facts.
+  Impressions carry no explicit `dedupe_key` — an explicit key is hashed without the visitor (so one
+  order stays one sale across a guest and their signed-in self), which for an impression would
+  record the first shopper ever and reject the rest.
+- **Display styles reach both clients.** Every section type's `style` / `layout` option is mapped
+  per type in the app — `productLayoutFor`, `contentLayoutFor`, `taxonomyLayoutFor`,
+  `bannerLayoutFor`, `utilityLayoutFor` — because the types speak different vocabularies for the
+  same shelf (a flash deal has strips and banners, a category grid has circles and chips). Reading
+  them through one loose switch is how a style the builder offers ends up drawing the default:
+  `interest_tiles` branched on a word the builder never emits, and the brand slider's three styles
+  all drew one rail. `test/section_variant_coverage_test.dart` asserts every style a type offers
+  maps to a layout of its own; its lists mirror `SectionRegistry`'s options, and are the app's
+  statement of what it believes the server offers.
 - **Links are chosen, not typed.** `app/Services/Theme/LinkComposer.php` is the inverse of
   `ActionResolver`: the builder's destination control offers product / category / brand / vendor /
   flash deal / list page / search / cart / wishlist / external address, and the server composes the

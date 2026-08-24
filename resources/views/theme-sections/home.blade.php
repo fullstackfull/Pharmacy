@@ -937,8 +937,15 @@
         ]))
 
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
+        {{-- The section reports itself when it comes into view. Whether anyone scrolled this far
+             is the one thing the server cannot know and the one thing that decides an order. --}}
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
-                 data-tb-section="{{ $__section['id'] ?? '' }}">
+                 data-tb-section="{{ $__section['id'] ?? '' }}"
+                 @if (!empty($__section['id']))
+                     data-analytics-view="section_viewed"
+                     data-analytics-type="theme_section"
+                     data-analytics-id="{{ $__section['id'] }}"
+                 @endif>
             <div class="{{ $full ? 'container-fluid px-0' : 'container' }}">
                 {{-- One partial per section type, resolved by name.
 
