@@ -1761,7 +1761,14 @@ class ProductController extends Controller
 
     public function updateProductQuantity(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
+        // Scoped to the caller's own shop. Looked up by id alone, this accepted any product id in
+        // the marketplace: a seller could set a rival's stock to zero and take their listings out of
+        // the search results. Ownership is proved by the WHERE clause, never by the id in the body.
+        $product = $this->productRepo->getFirstWhere(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
         if ($product) {
             $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [
                 'current_stock' => $request['current_stock'],
@@ -2131,7 +2138,13 @@ class ProductController extends Controller
 
     public function updateRestockQuantity(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
+        // Same scoping as updateProductQuantity, and for the same reason: the restock screen is a
+        // second door onto the same write.
+        $product = $this->productRepo->getFirstWhere(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
 
         if ($product && $request['current_stock'] >= 0) {
             $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [

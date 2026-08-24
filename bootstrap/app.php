@@ -119,6 +119,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'maintenance_mode' => MaintenanceModeMiddleware::class,
             'delivery_man_auth' => DeliveryManAuth::class,
             'seller_api_auth' => SellerApiAuthMiddleware::class,
+            // Enforced on the route, never by hiding a menu item.
+            'seller_can' => \App\Http\Middleware\EnsureSellerPermission::class,
             'deliverysyria_auth' => \App\Http\Middleware\DeliverySyriaWebhookAuthMiddleware::class,
             'guestCheck' => GuestMiddleware::class,
             'apiGuestCheck' => APIGuestMiddleware::class,

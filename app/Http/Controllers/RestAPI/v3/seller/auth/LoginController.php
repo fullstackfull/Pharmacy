@@ -12,10 +12,41 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\SellerStaff;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
+    /**
+     * Issue an API token to a staff member, or null when these are not valid staff credentials.
+     *
+     * Refuses an inactive member, and one whose employer is not approved: a staff account is only
+     * ever a way into someone else's shop, so it cannot outlive that shop's standing.
+     */
+    private function staffToken(string $email, string $password): ?string
+    {
+        if (!Schema::hasTable('seller_staff')) {
+            return null;
+        }
+
+        $staff = SellerStaff::where(['email' => $email, 'status' => SellerStaff::STATUS_ACTIVE])->first();
+
+        if (!$staff || !$staff->password || !Hash::check($password, $staff->password)) {
+            return null;
+        }
+
+        if (!Seller::approved()->whereKey($staff->seller_id)->exists()) {
+            return null;
+        }
+
+        $token = Str::random(50);
+        $staff->forceFill(['auth_token' => $token, 'last_login_at' => now()])->save();
+
+        return $token;
+    }
+
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -33,6 +64,18 @@ class LoginController extends Controller
         ];
 
         $seller = Seller::where(['email' => $request['email']])->first();
+
+        // A staff member signs in with their own credentials and gets a token of their own. Before
+        // this, `seller_staff` credentials worked only on the web panel, so a warehouse or finance
+        // employee had no way into the app but to be handed the owner's token — which carries owner
+        // rights. Tried after the seller lookup, so an owner's own address is never shadowed.
+        if (!$seller) {
+            $staffToken = $this->staffToken(email: $request['email'], password: $request['password']);
+
+            if ($staffToken !== null) {
+                return response()->json(['token' => $staffToken], 200);
+            }
+        }
 
         if ($seller && isset($seller?->shop) && empty($seller?->shop?->setup_guide_app)) {
             Shop::where(['seller_id' => $seller['id']])->update([

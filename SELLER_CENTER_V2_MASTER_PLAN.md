@@ -153,8 +153,8 @@ Legend: **E** existing · **EI** existing, needs improvement · **P** partial ·
 
 | Capability | State | Evidence | Priority |
 |---|---|---|---|
-| Staff accounts | P | `seller_staff` table, `SellerPermissionService`, **0 roles in the DB** | P1 |
-| RBAC enforcement | **P, and web-only** | `SellerStaffAccessMiddleware` gates on `session('seller_staff_id')` — the API has no session, so **staff have no API identity and cannot use the app at all** | **P0** |
+| Staff accounts | P | table + service + API identity; **still no seller-facing UI to create roles or staff**, and 0 roles exist in production | P1 |
+| RBAC enforcement | **E (API)** | `SellerPrincipal` + `SellerApiAuthMiddleware` + `seller_can:` middleware. Staff hold their own token; permissions read per request, so a revocation lands on the next call. Web panel still uses the session middleware — unchanged, and a candidate to converge later | — |
 | Audit log | E | `AuditLogger` + `audit_logs`, wired across Marketplace (Phase 1 fix) | — |
 | **Seller API keys** | **M** | no table, no concept | P1 |
 | **Webhooks** | **M** | no table, no concept | P1 |
@@ -279,6 +279,8 @@ Only after D and E: an assistant with nothing true to say is worse than none.
 | Date | Phase | What landed |
 |---|---|---|
 | 2026-08-24 | — | Audit complete; this plan written. |
+| 2026-08-24 | A.3 | Bulk price and bulk stock, each with a receipt. `seller_bulk_jobs` records what was asked for before any of it runs, and the job updates it as it goes; `partial` is a first-class outcome, so a run that changed 380 of 400 says which 20 it did not and why, downloadable as a CSV. Ownership is proved by the WHERE clause, never by the ids in the request, and an id belonging to another seller is refused as not found. Stock goes through the ledger rather than the column, so it cannot be driven negative and every movement is explained; a variant product is refused rather than guessed at. Fixed two unscoped stock writes on the way past (`updateProductQuantity`, `updateRestockQuantity`) that let any seller set any product's stock in the marketplace. 19 tests. |
+| 2026-08-24 | A.2 | Token-carried RBAC. `SellerPrincipal` separates the shop from the person; `SellerApiAuthMiddleware` resolves either an owner or a staff token into one; `seller_can:` gates routes. Staff can now log into the API at all — before this the only way in was the owner's token. Payout read and payout request split into two permissions. 14 tests. |
 | 2026-08-24 | A.1 | 24-hour processing policy, editable on the SLA policy page; the seller's countdown reads it. `seller_insights` + `SellerInsightEngine` + producer contract. Three producers: inventory risk (ranked by units actually sold, not by how low the number is), order SLA, listing quality (score from the record, rejection reason read from `product_moderation_events` — which the app had never shown). Hourly `seller:refresh-insights`. Action Center API with dismissal. 13 tests. |
 
 ### Decisions this phase settled

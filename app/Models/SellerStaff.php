@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A seller's staff member, assigned a role (Phase 3, Stage A).
  *
- * A sign-in account: the member authenticates with these (hashed) credentials via the staff login,
- * which signs them in as their parent seller, and SellerStaffAccessMiddleware scopes what they may do
- * to their role's permissions.
+ * A sign-in account: the member authenticates with these (hashed) credentials. On the web panel the
+ * staff login signs them in as their parent seller and SellerStaffAccessMiddleware scopes what they
+ * may do; on the API they hold an `auth_token` of their own, and SellerApiAuthMiddleware resolves it
+ * into a principal that names both the shop and the person.
  */
 class SellerStaff extends Model
 {
@@ -19,9 +20,11 @@ class SellerStaff extends Model
 
     protected $table = 'seller_staff';
 
-    protected $fillable = ['seller_id', 'seller_role_id', 'name', 'email', 'password', 'status', 'last_login_at'];
+    protected $fillable = ['seller_id', 'seller_role_id', 'name', 'email', 'password', 'auth_token', 'status', 'last_login_at'];
 
-    protected $hidden = ['password'];
+    // Both are credentials. The token is a live API session, so it must never be serialised into a
+    // response the way the seller model's own token once was.
+    protected $hidden = ['password', 'auth_token'];
 
     protected $casts = [
         'seller_id' => 'integer',

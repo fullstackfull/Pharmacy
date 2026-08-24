@@ -18,6 +18,7 @@ use App\Http\Controllers\RestAPI\v3\seller\POSController;
 use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
@@ -342,11 +343,27 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 });
             });
 
+            // The only place a seller's money leaves the platform, so reading and moving are two
+            // different permissions: a finance clerk can be given the books without being given the
+            // ability to withdraw from them.
             Route::group(['prefix' => 'payouts'], function () {
                 Route::controller(SellerPayoutController::class)->group(function () {
+                    Route::get('/', 'index')->middleware('seller_can:finance.view');
+                    Route::post('/', 'store')->middleware('seller_can:payouts.request');
+                    Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // Bulk changes are gated by what they change, not by the fact that they are bulk: a
+            // warehouse clerk who may set stock one product at a time may set it for four hundred,
+            // and still may not touch a price.
+            Route::group(['prefix' => 'bulk-jobs'], function () {
+                Route::controller(SellerBulkJobController::class)->group(function () {
                     Route::get('/', 'index');
-                    Route::post('/', 'store');
-                    Route::post('{id}/cancel', 'cancel')->whereNumber('id');
+                    Route::get('{id}', 'show')->whereNumber('id');
+                    Route::get('{id}/failures', 'downloadFailures')->whereNumber('id');
+                    Route::post('price', 'storePriceUpdate')->middleware('seller_can:products.manage');
+                    Route::post('stock', 'storeStockUpdate')->middleware('seller_can:inventory.manage');
                 });
             });
         });
