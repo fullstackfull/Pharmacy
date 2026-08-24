@@ -137,6 +137,62 @@ class SellerOperationsOverview
             ->all();
     }
 
+    /**
+     * Which shops are operationally broken right now, by shop id.
+     *
+     * Sits beside the storefront analytics deliberately: a shop whose traffic is falling and whose
+     * automation has been suspended for a week is one story, not two, and an operator reading the
+     * vendor breakdown has no way to know the second half unless it is on the same screen.
+     *
+     * Only shops with something wrong appear. A shop with nothing wrong is not a row of zeroes.
+     *
+     * @return array<int, array{issues: int, critical: int, suspended_rules: int, failing_webhooks: int}>
+     */
+    public function attentionBySeller(): array
+    {
+        $state = [];
+
+        foreach ($this->issuesBySeller(limit: 200) as $row) {
+            $state[(int) $row->seller_id] = [
+                'issues' => (int) $row->total,
+                'critical' => (int) $row->critical,
+                'suspended_rules' => 0,
+                'failing_webhooks' => 0,
+            ];
+        }
+
+        $blank = ['issues' => 0, 'critical' => 0, 'suspended_rules' => 0, 'failing_webhooks' => 0];
+
+        if (Schema::hasTable('seller_automation_rules')) {
+            $suspended = SellerAutomationRule::where('status', SellerAutomationRule::STATUS_SUSPENDED)
+                ->groupBy('seller_id')
+                ->selectRaw('seller_id, COUNT(*) as total')
+                ->pluck('total', 'seller_id');
+
+            foreach ($suspended as $sellerId => $total) {
+                $state[(int) $sellerId] = ($state[(int) $sellerId] ?? $blank);
+                $state[(int) $sellerId]['suspended_rules'] = (int) $total;
+            }
+        }
+
+        if (Schema::hasTable('seller_webhooks')) {
+            $failing = SellerWebhook::where(function ($query) {
+                $query->where('status', SellerWebhook::STATUS_DISABLED)
+                    ->orWhere('consecutive_failures', '>', 0);
+            })
+                ->groupBy('seller_id')
+                ->selectRaw('seller_id, COUNT(*) as total')
+                ->pluck('total', 'seller_id');
+
+            foreach ($failing as $sellerId => $total) {
+                $state[(int) $sellerId] = ($state[(int) $sellerId] ?? $blank);
+                $state[(int) $sellerId]['failing_webhooks'] = (int) $total;
+            }
+        }
+
+        return $state;
+    }
+
     public function keys(?int $sellerId = null, int $perPage = 25)
     {
         if (!Schema::hasTable('seller_api_keys')) {

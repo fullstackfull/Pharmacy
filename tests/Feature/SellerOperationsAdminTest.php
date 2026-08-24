@@ -292,6 +292,49 @@ class SellerOperationsAdminTest extends TestCase
         }
     }
 
+    public function test_only_shops_with_something_wrong_appear_beside_the_traffic(): void
+    {
+        $this->installAutomation();
+
+        SellerAutomationRule::create([
+            'seller_id' => self::SELLER, 'name' => 'Broken', 'trigger' => 'out_of_stock',
+            'action' => 'hide_listing', 'status' => SellerAutomationRule::STATUS_SUSPENDED,
+        ]);
+        SellerAutomationRule::create([
+            'seller_id' => 2, 'name' => 'Fine', 'trigger' => 'out_of_stock',
+            'action' => 'hide_listing', 'status' => SellerAutomationRule::STATUS_ACTIVE,
+        ]);
+
+        $attention = $this->overview()->attentionBySeller();
+
+        // A shop with nothing wrong is not a row of zeroes: a table of them would bury the one
+        // that needs somebody.
+        $this->assertArrayHasKey(self::SELLER, $attention);
+        $this->assertArrayNotHasKey(2, $attention);
+        $this->assertSame(1, $attention[self::SELLER]['suspended_rules']);
+    }
+
+    public function test_a_shop_can_be_flagged_by_more_than_one_thing_at_once(): void
+    {
+        $this->installAutomation();
+        $this->installIntegrations();
+
+        SellerAutomationRule::create([
+            'seller_id' => self::SELLER, 'name' => 'Broken', 'trigger' => 'out_of_stock',
+            'action' => 'hide_listing', 'status' => SellerAutomationRule::STATUS_SUSPENDED,
+        ]);
+        SellerWebhook::create([
+            'seller_id' => self::SELLER, 'name' => 'Dead', 'url' => 'https://gone.example.com/h',
+            'events' => ['order.placed'], 'secret' => 'x', 'status' => SellerWebhook::STATUS_DISABLED,
+        ]);
+
+        $state = $this->overview()->attentionBySeller()[self::SELLER];
+
+        // The second signal must not overwrite the first — they are counted separately.
+        $this->assertSame(1, $state['suspended_rules']);
+        $this->assertSame(1, $state['failing_webhooks']);
+    }
+
     /**
      * Render a view's body without the admin layout.
      *

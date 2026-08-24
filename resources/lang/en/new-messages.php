@@ -6782,4 +6782,9 @@ return [
 	'no_role' => 'No role',
 	'automation_suspended_by_marketplace' => 'Stopped by the marketplace',
 	'webhook_disabled_by_marketplace' => 'Switched off by the marketplace',
+	'shops_needing_attention' => 'Shops needing attention',
+	'operational_state_beside_the_traffic' => 'Operational state beside the traffic',
+	'open_issues' => 'Open issues',
+	'stopped_rules' => 'Stopped rules',
+	'failing_endpoints' => 'Failing endpoints',
 ];
