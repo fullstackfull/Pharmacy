@@ -55,6 +55,60 @@ class SlaService
     }
 
     /**
+     * Statuses that still need something from the seller before the order can ship.
+     *
+     * The processing clock runs only while one of these holds. Once the order is out for delivery
+     * it is the courier's, and once it is delivered or cancelled there is nothing left to be late
+     * for.
+     */
+    public const AWAITING_SELLER_STATUSES = ['pending', 'confirmed', 'processing'];
+
+    public function awaitsSeller(?string $orderStatus): bool
+    {
+        return in_array($orderStatus, self::AWAITING_SELLER_STATUSES, true);
+    }
+
+    /**
+     * How long a seller has to get an order moving, or null when the policy is switched off.
+     */
+    public function processingWindowHours(): ?int
+    {
+        $hours = $this->thresholds()['processing_hours'] ?? null;
+
+        return $hours !== null && $hours > 0 ? (int) $hours : null;
+    }
+
+    /**
+     * When an order placed at this moment is due.
+     *
+     * Lives here rather than in whichever screen needs it, because the seller's countdown and the
+     * deadline the marketplace judges them by must be the same number. Two clocks is worse than
+     * none: a countdown that is kinder than the policy teaches sellers to trust it and then
+     * penalises them for doing so.
+     */
+    public function processingDeadline(?\DateTimeInterface $placedAt): ?\Illuminate\Support\Carbon
+    {
+        $windowHours = $this->processingWindowHours();
+
+        if ($placedAt === null || $windowHours === null) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::instance($placedAt)->copy()->addHours($windowHours);
+    }
+
+    /**
+     * Hours left before the deadline — negative once it has passed, so one number says both how
+     * long is left and how late it is.
+     */
+    public function hoursUntilDeadline(?\DateTimeInterface $placedAt): ?float
+    {
+        $deadline = $this->processingDeadline($placedAt);
+
+        return $deadline === null ? null : round(now()->diffInMinutes($deadline, false) / 60, 2);
+    }
+
+    /**
      * Which policy lines a metrics array breaches — pure, no side effects.
      *
      * @return array<int, array{metric: string, threshold: float, actual: float}>

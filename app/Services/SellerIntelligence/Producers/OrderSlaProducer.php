@@ -23,9 +23,6 @@ class OrderSlaProducer implements InsightProducer
 {
     public const TYPE = 'ORDER_SLA';
 
-    /** Statuses that still need something from the seller before the order can ship. */
-    private const AWAITING_SELLER = ['pending', 'confirmed', 'processing'];
-
     /** Inside this fraction of the window remaining, it is worth interrupting the seller. */
     private const URGENT_FRACTION = 0.25;
 
@@ -44,25 +41,27 @@ class OrderSlaProducer implements InsightProducer
             return [];
         }
 
-        $windowHours = $this->windowHours();
+        $windowHours = $this->sla->processingWindowHours();
         if ($windowHours === null) {
             return [];
         }
 
         $orders = Order::query()
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
-            ->whereIn('order_status', self::AWAITING_SELLER)
+            ->whereIn('order_status', SlaService::AWAITING_SELLER_STATUSES)
             ->orderBy('created_at')
             ->limit(200)
             ->get(['id', 'order_status', 'order_amount', 'created_at']);
 
         foreach ($orders as $order) {
-            $deadline = $order->created_at?->copy()->addHours($windowHours);
+            // The deadline comes from the SLA policy, not from a copy of the arithmetic kept here.
+            // The order screen shows the same countdown by asking the same question.
+            $deadline = $this->sla->processingDeadline($order->created_at);
             if ($deadline === null) {
                 continue;
             }
 
-            $hoursLeft = now()->diffInMinutes($deadline, false) / 60;
+            $hoursLeft = $this->sla->hoursUntilDeadline($order->created_at);
             $isLate = $hoursLeft <= 0;
 
             // Still comfortably inside the window: nothing to say yet.
@@ -90,18 +89,5 @@ class OrderSlaProducer implements InsightProducer
                 expiresAt: $deadline->copy()->addDays(7),
             );
         }
-    }
-
-    /**
-     * The processing window the marketplace holds sellers to.
-     *
-     * Read from the SLA policy, so the countdown a seller sees and the deadline the marketplace
-     * judges them by are the same number — changed in one place, on the SLA policy page.
-     */
-    private function windowHours(): ?int
-    {
-        $hours = $this->sla->thresholds()['processing_hours'] ?? null;
-
-        return $hours !== null && $hours > 0 ? (int) $hours : null;
     }
 }

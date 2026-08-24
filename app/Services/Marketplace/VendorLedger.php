@@ -88,7 +88,7 @@ class VendorLedger
                 'balance_after' => $balanceAfter,
                 'status' => $status,
                 'available_at' => $availableAt,
-                'currency' => $currency ?? $this->currentCurrency(),
+                'currency' => $currency ?? $this->baseCurrency(),
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,
@@ -217,7 +217,14 @@ class VendorLedger
         return $query->update(['status' => VendorLedgerEntry::STATUS_AVAILABLE, 'updated_at' => now()]);
     }
 
-    private function currentCurrency(): ?string
+    /**
+     * The store's base currency, which is the one ledger amounts are in.
+     *
+     * Public because anything reporting a ledger figure has to label it with the same code the
+     * entry was stamped with; a second reading of the setting elsewhere is how the label and the
+     * amount drift apart.
+     */
+    public function baseCurrency(): ?string
     {
         try {
             // The store's base/default currency, NOT the viewer's display currency. Ledger amounts are

@@ -160,6 +160,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // a scheduled publish is only as trustworthy as the run that fires it.
         $schedule->command('theme:publish-due')->everyFiveMinutes()->withoutOverlapping();
 
+        // Bulk price and stock changes are queued, which makes them depend on a worker running. A
+        // deployment without one would leave every bulk job at `queued` for ever while the app shows
+        // the seller a change that is never going to happen — the exact failure the receipt exists to
+        // prevent. Where a worker does exist this sweep finds nothing.
+        $schedule->command('seller:run-stuck-bulk-jobs')->everyMinute()->withoutOverlapping();
+
         // Reconcile the storefront search index against the catalogue in case a bulk import bypassed the
         // model observer that keeps it fresh in realtime.
         $schedule->command('search:reindex-products')->weekly()->sundays()->at('04:00')->withoutOverlapping();
