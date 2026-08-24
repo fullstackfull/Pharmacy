@@ -1102,6 +1102,7 @@
 
                 fetch(root.dataset.urlResources
                         + '?resource=' + encodeURIComponent(resource)
+                        + '&channel=' + encodeURIComponent(root.dataset.channel || '')
                         + '&q=' + encodeURIComponent(term || ''),
                       {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                     .then(function (response) { return response.json(); })

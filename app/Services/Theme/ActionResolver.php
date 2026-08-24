@@ -33,11 +33,14 @@ class ActionResolver
     public const CART       = 'cart';
     public const WISHLIST   = 'wishlist';
     public const COLLECTION = 'collection';
+    /** A page the merchant composed in the App Builder, named by its slug. */
+    public const PAGE       = 'page';
     public const URL        = 'url';
 
     public const TYPES = [
         self::NONE, self::PRODUCT, self::CATEGORY, self::BRAND, self::VENDOR,
-        self::CAMPAIGN, self::SEARCH, self::CART, self::WISHLIST, self::COLLECTION, self::URL,
+        self::CAMPAIGN, self::SEARCH, self::CART, self::WISHLIST, self::COLLECTION, self::PAGE,
+        self::URL,
     ];
 
     /** @var array<string, array{id: ?int, slug: ?string, label: ?string}>  subjects already looked up */
@@ -106,6 +109,11 @@ class ActionResolver
 
             $head === 'searched-products'
                 => ['type' => self::SEARCH, 'query' => (string) ($query['name'] ?? $query['search'] ?? ''), 'url' => $link],
+
+            // A composed page. The prefix is what keeps it out of the product and category
+            // namespaces, so a page called "aspirin" can never shadow the product.
+            $head === 'p' && $tail !== null
+                => ['type' => self::PAGE, 'slug' => rawurldecode($tail), 'url' => $link],
 
             $head === 'shop-cart' => ['type' => self::CART, 'url' => $link],
             $head === 'wishlists' => ['type' => self::WISHLIST, 'url' => $link],

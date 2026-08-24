@@ -8,7 +8,11 @@
      system scoped to .ml-sections, so it upgrades these sections without touching the legacy
      storefront blades. --}}
 @php
-    $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('home');
+    // Which composed page this is. Defaults to home, because that is what every existing caller
+    // renders; a custom page passes its own slug and gets the same shell, the same partials and the
+    // same data resolution — one renderer, however many pages a merchant makes.
+    $__pageSlug = $__pageSlug ?? 'home';
+    $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor($__pageSlug);
     $__resolver = app(\App\Services\Theme\SectionDataResolver::class);
     $__ready = app(\App\Services\Theme\SectionReadiness::class);
     $__where = app(\App\Services\Theme\SectionDestination::class);

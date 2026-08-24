@@ -238,4 +238,29 @@ class AppBuilderPagesTest extends TestCase
             'a page turned off is a page the app cannot ask for',
         );
     }
+
+    public function test_the_link_picker_offers_a_channels_own_destinations(): void
+    {
+        // The App Builder's whole point is pages made for the app — so the picker must offer an
+        // app-only page while composing the app, and hide it while composing the web, where the
+        // address it writes would 404. The built-in pages are never destinations: home has its own
+        // address and the header and footer are fragments.
+        $pages = app(ExperiencePageService::class);
+        $pages->create($this->theme, 'Offers', channel: Channel::CUSTOMER_APP);
+        $pages->create($this->theme, 'About us');
+        $paused = $pages->create($this->theme, 'Paused');
+        $pages->update($paused, enabled: false);
+
+        $offered = fn (string $channel) => array_column(
+            app(\App\Http\Controllers\Admin\Settings\ThemeBuilderController::class)
+                ->resources(\Illuminate\Http\Request::create('/', 'GET', [
+                    'resource' => 'experience_page', 'channel' => $channel,
+                ]))
+                ->getData(true)['options'],
+            'value',
+        );
+
+        $this->assertEqualsCanonicalizing(['offers', 'about-us'], $offered(Channel::CUSTOMER_APP));
+        $this->assertEqualsCanonicalizing(['about-us'], $offered(Channel::WEB));
+    }
 }

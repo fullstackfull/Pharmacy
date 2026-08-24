@@ -392,6 +392,22 @@ class ThemeBuilderController extends BaseController
                     'value' => $deal->id,
                     'label' => $deal->title . ' · ' . ($deal->status ? translate('active') : translate('inactive')),
                 ]),
+            // Pages the merchant composed. Valued by slug rather than id: the slug is what both
+            // clients ask for, and what survives an export and an import. Scoped to the channel
+            // being composed, so an app-only page — the kind the App Builder creates — is offered
+            // where the app will read it and hidden where the web would 404 on it.
+            'experience_page' => collect($this->pages->forChannel(
+                (int) (\App\Models\Theme::query()->where('is_active', true)->value('id') ?? 0),
+                Channel::normalize($request->get('channel')) ?? Channel::WEB,
+            ))
+                ->filter(fn (array $page) => $page['enabled']
+                    // Only pages a shopper can be sent to. Home has its own address, and the
+                    // header and footer are fragments of other pages, not destinations.
+                    && $page['kind'] === \App\Models\ExperiencePage::KIND_CUSTOM
+                    && ($term === '' || str_contains(strtolower($page['title'] . ' ' . $page['slug']), strtolower($term))))
+                ->map(fn (array $page) => ['value' => $page['slug'], 'label' => $page['title'] . ' · /p/' . $page['slug']])
+                ->values(),
+
             default => collect(),
         };
 
@@ -677,6 +693,7 @@ class ThemeBuilderController extends BaseController
                 ['value' => 'vendor',     'label' => translate('vendor'),     'resource' => 'shop'],
                 ['value' => 'campaign',   'label' => translate('flash_deal'), 'resource' => 'flash_deal'],
                 ['value' => 'collection', 'label' => translate('a_list_page')],
+                ['value' => 'page',       'label' => translate('a_page_you_composed'), 'resource' => 'experience_page'],
                 ['value' => 'search',     'label' => translate('search_results')],
                 ['value' => 'cart',       'label' => translate('cart')],
                 ['value' => 'wishlist',   'label' => translate('wishlist')],
