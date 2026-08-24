@@ -22,10 +22,29 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
 use App\Services\AuditLogger;
+use App\Services\SellerIntelligence\Producers\BrandComplianceProducer;
+use App\Services\SellerIntelligence\Producers\CatalogIntegrityProducer;
+use App\Services\SellerIntelligence\Producers\FinanceIntegrityProducer;
 use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
+use App\Services\SellerIntelligence\Producers\OrderStateProducer;
+use App\Services\SellerIntelligence\Producers\OrderStuckProducer;
+use App\Services\SellerIntelligence\Producers\PricingRiskProducer;
+use App\Services\SellerIntelligence\Producers\ReturnsRiskProducer;
+use App\Services\SellerIntelligence\Producers\ShippingExceptionProducer;
+use App\Services\SellerIntelligence\Producers\StaleInventoryProducer;
 use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
 use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
+use App\Services\SellerAutomation\Actions\HideListingAction;
+use App\Services\SellerAutomation\Actions\PublishListingAction;
+use App\Services\SellerAutomation\Actions\SetDiscountAction;
+use App\Services\SellerAutomation\AutomationRegistry;
+use App\Services\SellerAutomation\Triggers\LowStockTrigger;
+use App\Services\SellerAutomation\Triggers\OutOfStockTrigger;
+use App\Services\SellerAutomation\Triggers\RestockedTrigger;
+use App\Services\SellerAutomation\Triggers\StaleStockTrigger;
 use App\Services\SellerIntelligence\SellerInsightEngine;
+use App\Services\SellerIntelligence\Severity\SellerBaselineProvider;
+use App\Services\SellerIntelligence\Severity\SeverityEngine;
 use App\Traits\UpdateClass;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
@@ -73,11 +92,51 @@ class AppServiceProvider extends ServiceProvider
 
         // One engine, one ordered set of producers. Registered here rather than discovered, so the
         // order the Action Center falls back on is explicit and a new producer is a deliberate act.
-        $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine([
-            $app->make(InventoryRiskProducer::class),
-            $app->make(OrderSlaProducer::class),
-            $app->make(ListingQualityProducer::class),
-        ]));
+        $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine(
+            producers: [
+                // Ordered by how much a seller can lose by not knowing. Finance first: uncredited
+                // money is the only finding here that is unambiguously theirs and unambiguously
+                // wrong. Then the deadlines, then the catalogue, then the slow-burning ones.
+                $app->make(FinanceIntegrityProducer::class),
+                $app->make(OrderSlaProducer::class),
+                $app->make(OrderStuckProducer::class),
+                $app->make(OrderStateProducer::class),
+                $app->make(ReturnsRiskProducer::class),
+                $app->make(ShippingExceptionProducer::class),
+                $app->make(InventoryRiskProducer::class),
+                $app->make(PricingRiskProducer::class),
+                $app->make(ListingQualityProducer::class),
+                $app->make(CatalogIntegrityProducer::class),
+                $app->make(BrandComplianceProducer::class),
+                $app->make(StaleInventoryProducer::class),
+            ],
+            // Severity is measured against the seller's own business rather than declared, so both
+            // of these are load-bearing: without them a detector's own guess stands, which is the
+            // pre-Phase-3 behaviour and the reason a rare product's stockout ranked with a best
+            // seller's.
+            severity: $app->make(SeverityEngine::class),
+            baselines: $app->make(SellerBaselineProvider::class),
+        ));
+
+        // What a seller may build a rule out of. Registered rather than discovered for the same
+        // reason as the producers: adding a way for the marketplace to change a shop unattended
+        // should be a deliberate line in a file somebody reviews, not a class appearing in a folder.
+        $this->app->singleton(AutomationRegistry::class, fn ($app) => new AutomationRegistry(
+            triggers: [
+                $app->make(OutOfStockTrigger::class),
+                $app->make(LowStockTrigger::class),
+                $app->make(RestockedTrigger::class),
+                $app->make(StaleStockTrigger::class),
+            ],
+            actions: [
+                $app->make(HideListingAction::class),
+                $app->make(PublishListingAction::class),
+                $app->make(SetDiscountAction::class),
+            ],
+        ));
+
+        // One measurement of each seller's size per sweep, shared by every detector.
+        $this->app->singleton(SellerBaselineProvider::class);
 
         $loader = AliasLoader::getInstance();
         $loader->alias('Helper', \App\Utils\Helpers::class);

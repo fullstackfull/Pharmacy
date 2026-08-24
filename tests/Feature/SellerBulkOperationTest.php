@@ -451,4 +451,43 @@ class SellerBulkOperationTest extends TestCase
             'product_ids' => [1], 'mode' => 'set', 'value' => 1,
         ])->assertStatus(401);
     }
+
+    public function test_a_job_the_queue_never_picked_up_is_run_by_the_scheduler(): void
+    {
+        $product = $this->product(['unit_price' => 100]);
+        $job = SellerBulkJob::create([
+            'seller_id' => 1,
+            'type' => 'price_update',
+            'status' => SellerBulkJob::STATUS_QUEUED,
+            'total' => 1,
+            'input' => ['product_ids' => [$product->id], 'settings' => ['mode' => 'set', 'value' => 42]],
+        ]);
+        // Aged deliberately: `created_at` is not fillable, so it has to be set after the fact.
+        $job->forceFill(['created_at' => now()->subMinutes(10)])->save();
+
+        // Without this sweep, a deployment with no queue worker would leave the seller looking at a
+        // change that was never going to happen — the exact failure the receipt exists to prevent.
+        $this->artisan('seller:run-stuck-bulk-jobs')->assertSuccessful();
+
+        $this->assertSame(SellerBulkJob::STATUS_COMPLETED, $job->fresh()->status);
+        $this->assertEqualsWithDelta(42.0, (float) $product->fresh()->unit_price, 0.01);
+    }
+
+    public function test_a_job_still_within_its_grace_period_is_left_to_the_worker(): void
+    {
+        $product = $this->product(['unit_price' => 100]);
+        $job = SellerBulkJob::create([
+            'seller_id' => 1,
+            'type' => 'price_update',
+            'status' => SellerBulkJob::STATUS_QUEUED,
+            'total' => 1,
+            'input' => ['product_ids' => [$product->id], 'settings' => ['mode' => 'set', 'value' => 42]],
+        ]);
+
+        // Running it here as well as on the queue would apply an `increase` twice.
+        $this->artisan('seller:run-stuck-bulk-jobs')->assertSuccessful();
+
+        $this->assertSame(SellerBulkJob::STATUS_QUEUED, $job->fresh()->status);
+        $this->assertEqualsWithDelta(100.0, (float) $product->fresh()->unit_price, 0.01);
+    }
 }

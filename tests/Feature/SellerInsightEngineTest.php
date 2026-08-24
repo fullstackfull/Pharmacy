@@ -8,6 +8,9 @@ use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\SellerInsightEngine;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Services\SellerIntelligence\Severity\ImpactSignals;
+use App\Services\SellerIntelligence\Severity\SeverityEngine;
+use Tests\Support\BuildsIssueSchema;
 use Tests\TestCase;
 
 /**
@@ -28,30 +31,14 @@ use Tests\TestCase;
  */
 class SellerInsightEngineTest extends TestCase
 {
+    use BuildsIssueSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Schema::dropIfExists('seller_insights');
-        Schema::create('seller_insights', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('seller_id');
-            $table->string('type', 60);
-            $table->string('severity', 20)->default('medium');
-            $table->string('title', 191);
-            $table->text('body')->nullable();
-            $table->string('entity_type', 60)->nullable();
-            $table->string('entity_id', 60)->nullable();
-            $table->decimal('metric', 24, 4)->nullable();
-            $table->decimal('impact', 24, 4)->nullable();
-            $table->string('action_key', 60)->nullable();
-            $table->json('action_params')->nullable();
-            $table->string('fingerprint', 191)->unique();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamp('dismissed_at')->nullable();
-            $table->timestamp('resolved_at')->nullable();
-            $table->timestamps();
-        });
+        $this->createIssueTable();
     }
 
     /** A producer that says exactly what the test tells it to. */
@@ -270,5 +257,102 @@ class SellerInsightEngineTest extends TestCase
         $this->assertSame(0, $counts['high']);
         $this->assertSame(1, $counts['low']);
         $this->assertSame(3, $counts['total']);
+    }
+
+    public function test_a_measured_severity_overrides_the_one_the_detector_declared(): void
+    {
+        // A detector that supplies signals is no longer the authority on how bad its own finding is.
+        // It says "high"; the engine measures a tenth of a shop's catalogue affected and nothing
+        // else, which is medium, and the engine wins.
+        $engine = new SellerInsightEngine(
+            producers: [$this->producer('STOCK', [
+                new InsightDraft(
+                    sellerId: 1,
+                    type: 'STOCK',
+                    severity: SellerInsight::SEVERITY_HIGH,
+                    title: 'running_out',
+                    entityType: 'product',
+                    entityId: 7,
+                    category: SellerInsight::CATEGORY_INVENTORY,
+                    signals: new ImpactSignals(affectedCount: 1, sellerTotalCount: 10),
+                ),
+            ])],
+            severity: new SeverityEngine(),
+        );
+
+        $engine->refresh(1);
+
+        $insight = SellerInsight::first();
+        $this->assertSame(SellerInsight::SEVERITY_MEDIUM, $insight->severity);
+        $this->assertSame(25, $insight->impact_score);
+        // And it shows its working, because "why is this medium" has to have an answer.
+        $this->assertEquals(25, $insight->metadata['score_breakdown']['volume']);
+    }
+
+    public function test_a_detector_that_measures_nothing_keeps_the_severity_it_declared(): void
+    {
+        $engine = new SellerInsightEngine(
+            producers: [$this->producer('STOCK', [
+                new InsightDraft(
+                    sellerId: 1, type: 'STOCK', severity: SellerInsight::SEVERITY_CRITICAL,
+                    title: 'rejected', entityType: 'product', entityId: 7,
+                ),
+            ])],
+            severity: new SeverityEngine(),
+        );
+
+        $engine->refresh(1);
+
+        // No signals means the finding is not a matter of degree, not that it is unimportant.
+        $this->assertSame(SellerInsight::SEVERITY_CRITICAL, SellerInsight::first()->severity);
+    }
+
+    public function test_an_issue_seen_again_keeps_its_history_and_the_sellers_own_status(): void
+    {
+        $draft = new InsightDraft(
+            sellerId: 1, type: 'STOCK', severity: SellerInsight::SEVERITY_HIGH,
+            title: 'running_out', entityType: 'product', entityId: 7,
+        );
+        $engine = new SellerInsightEngine(producers: [$this->producer('STOCK', [$draft])]);
+
+        $engine->refresh(1);
+        $first = SellerInsight::first();
+        $first->forceFill([
+            'status' => SellerInsight::STATUS_IN_PROGRESS,
+            'first_detected_at' => now()->subDays(3),
+        ])->save();
+
+        $engine->refresh(1);
+        $again = SellerInsight::first();
+
+        // Someone working on a problem should not find it back at the beginning because a sweep ran.
+        $this->assertSame(SellerInsight::STATUS_IN_PROGRESS, $again->status);
+        // And "how long has this been true" — what escalation runs on — has to survive the upsert.
+        $this->assertSame(3, (int) $again->first_detected_at->diffInDays(now()));
+        $this->assertSame(2, $again->detection_count);
+    }
+
+    public function test_a_closed_issue_that_comes_back_is_open_again(): void
+    {
+        $draft = new InsightDraft(
+            sellerId: 1, type: 'STOCK', severity: SellerInsight::SEVERITY_HIGH,
+            title: 'running_out', entityType: 'product', entityId: 7,
+        );
+        $engine = new SellerInsightEngine(producers: [$this->producer('STOCK', [$draft])]);
+
+        $engine->refresh(1);
+        SellerInsight::first()->forceFill([
+            'status' => SellerInsight::STATUS_RESOLVED,
+            'resolved_at' => now()->subHour(),
+            'resolution_type' => SellerInsight::RESOLUTION_AUTO,
+        ])->save();
+
+        $engine->refresh(1);
+
+        // The problem is real again regardless of what anybody decided about it last time.
+        $insight = SellerInsight::first();
+        $this->assertSame(SellerInsight::STATUS_OPEN, $insight->status);
+        $this->assertNull($insight->resolved_at);
+        $this->assertNull($insight->resolution_type);
     }
 }

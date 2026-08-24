@@ -18,12 +18,21 @@ use App\Http\Controllers\RestAPI\v3\seller\POSController;
 use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerAutomationController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerBrandClaimController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerFinanceControlController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerIntegrationController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerReturnController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerSecurityController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerStatementController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
@@ -139,6 +148,8 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::post('list', 'list');
                 // Ahead of the catch-all `/{id}`, which would otherwise swallow it.
                 Route::get('{id}/invoice', 'invoice')->whereNumber('id');
+                // Declared before the catch-all `{id}` below, which would otherwise swallow it.
+                Route::get('{id}/breakdown', 'breakdown')->whereNumber('id');
                 Route::get('/{id}', 'details');
                 Route::put('order-detail-status/{id}', 'order_detail_status');
                 Route::put('assign-delivery-man', 'assign_delivery_man');
@@ -320,6 +331,118 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 });
             });
 
+            // What is wrong, arranged by when it needs doing. Distinct from the Action Center's
+            // flat list and from Home's report on how the business is going.
+            Route::group(['prefix' => 'control-tower'], function () {
+                Route::controller(SellerControlTowerController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('briefing', 'briefing');
+                    Route::put('issues/{id}/status', 'updateStatus')->whereNumber('id');
+                });
+            });
+
+            // Who may sell under a brand. Reading where the shop stands is open to anyone who may
+            // see the catalogue; making a claim and attaching evidence to it is a change to how the
+            // shop is allowed to trade, so it needs the permission that manages products.
+            Route::group(['prefix' => 'brand-claims'], function () {
+                Route::controller(SellerBrandClaimController::class)->group(function () {
+                    Route::get('exposure', 'exposure');
+                    Route::get('/', 'index');
+                    Route::get('{id}/documents/{documentId}', 'document')->whereNumber('id')->whereNumber('documentId');
+
+                    Route::middleware('seller_can:products.manage')->group(function () {
+                        Route::post('/', 'store');
+                        Route::post('{id}/documents', 'attach')->whereNumber('id');
+                        Route::delete('{id}/documents/{documentId}', 'detach')->whereNumber('id')->whereNumber('documentId');
+                        Route::post('{id}/submit', 'submit')->whereNumber('id');
+                        Route::post('{id}/withdraw', 'withdraw')->whereNumber('id');
+                    });
+                });
+            });
+
+            // The marketplace's own arithmetic, from the seller's side: does what I sold add up to
+            // what I was paid, what would this sale cost me, and who changed this price. The first
+            // two are money and gated on finance.view; the price history is catalogue history and
+            // readable by anyone who may see the products it is about.
+            Route::group(['prefix' => 'finance'], function () {
+                Route::controller(SellerFinanceControlController::class)->group(function () {
+                    Route::middleware('seller_can:finance.view')->group(function () {
+                        Route::get('reconciliation', 'reconciliation');
+                        Route::get('fee-simulator', 'feeSimulator');
+                    });
+
+                    Route::get('price-changes', 'priceChanges');
+                });
+            });
+
+            // Keys and webhooks. Writing is gated on shop_settings.manage and, inside the
+            // controller, on the caller being a person rather than a key: a leaked key must not be
+            // able to mint another one or delete the endpoint that would have raised the alarm.
+            Route::group(['prefix' => 'integrations'], function () {
+                Route::controller(SellerIntegrationController::class)->group(function () {
+                    Route::get('keys', 'keys');
+                    Route::get('events', 'events');
+                    Route::get('webhooks', 'webhooks');
+                    Route::get('deliveries', 'deliveries');
+
+                    Route::middleware('seller_can:shop_settings.manage')->group(function () {
+                        Route::post('keys', 'storeKey');
+                        Route::delete('keys/{id}', 'revokeKey')->whereNumber('id');
+                        Route::post('webhooks', 'storeWebhook');
+                        Route::put('webhooks/{id}', 'updateWebhook')->whereNumber('id');
+                        Route::put('webhooks/{id}/status', 'setWebhookStatus')->whereNumber('id');
+                        Route::delete('webhooks/{id}', 'destroyWebhook')->whereNumber('id');
+                        Route::post('webhooks/{id}/test', 'testWebhook')->whereNumber('id');
+                    });
+                });
+            });
+
+            // Who works in the shop, what they may do, and what has been done. Reading the team
+            // is open to anyone who may see the shop; changing it needs staff.manage, which is the
+            // permission that can grant every other permission and so is the one that matters most.
+            Route::group(['prefix' => 'security'], function () {
+                Route::controller(SellerSecurityController::class)->group(function () {
+                    Route::get('permissions', 'permissions');
+                    Route::get('roles', 'roles');
+                    Route::get('staff', 'staff');
+                    Route::get('access', 'access');
+                    Route::get('audit', 'audit');
+
+                    Route::middleware('seller_can:staff.manage')->group(function () {
+                        Route::post('roles', 'storeRole');
+                        Route::put('roles/{id}', 'updateRole')->whereNumber('id');
+                        Route::delete('roles/{id}', 'destroyRole')->whereNumber('id');
+                        Route::post('staff', 'storeStaff');
+                        Route::put('staff/{id}', 'updateStaff')->whereNumber('id');
+                        Route::post('staff/{id}/sign-out', 'signOutStaff')->whereNumber('id');
+                        Route::delete('staff/{id}', 'destroyStaff')->whereNumber('id');
+                    });
+                });
+            });
+
+            // Rules the seller writes for their own shop, and the complete record of what those
+            // rules did to it. Reading is open to anyone who may see the shop; writing a rule and
+            // undoing what one did are gated on the permission the rule's own action requires,
+            // which is checked again inside the service rather than only here.
+            Route::group(['prefix' => 'automation'], function () {
+                Route::controller(SellerAutomationController::class)->group(function () {
+                    Route::get('catalogue', 'catalogue');
+                    Route::get('activity', 'activity');
+                    Route::get('rules', 'index');
+                    Route::get('rules/{id}', 'show')->whereNumber('id');
+                    Route::get('rules/{id}/preview', 'preview')->whereNumber('id');
+
+                    Route::middleware('seller_can:products.manage')->group(function () {
+                        Route::post('rules', 'store');
+                        Route::put('rules/{id}', 'update')->whereNumber('id');
+                        Route::put('rules/{id}/status', 'setStatus')->whereNumber('id');
+                        Route::delete('rules/{id}', 'destroy')->whereNumber('id');
+                        Route::post('rules/{id}/run', 'runNow')->whereNumber('id');
+                        Route::post('activity/{id}/revert', 'revert')->whereNumber('id');
+                    });
+                });
+            });
+
             // Everything waiting for the seller, from the one insight store — so Home, this list
             // and notifications cannot disagree about what needs attention.
             Route::group(['prefix' => 'action-center'], function () {
@@ -351,6 +474,41 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index')->middleware('seller_can:finance.view');
                     Route::post('/', 'store')->middleware('seller_can:payouts.request');
                     Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // The account, line by line. Reading the books is a separate permission from moving
+            // money out of them, and this is squarely the first.
+            Route::group(['prefix' => 'statement', 'middleware' => 'seller_can:finance.view'], function () {
+                Route::controller(SellerStatementController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('export', 'export');
+                });
+            });
+
+            // The goods coming back. Reading is open to anyone who can open the app; deciding what
+            // happens to a return is the same permission as working an order.
+            Route::group(['prefix' => 'returns'], function () {
+                Route::controller(SellerReturnController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('{id}', 'show')->whereNumber('id');
+                    Route::post('{id}/in-transit', 'markInTransit')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/receive', 'receive')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/reject', 'reject')->whereNumber('id')->middleware('seller_can:orders.manage');
+                });
+            });
+
+            // The stock ledger the marketplace has kept since Phase 3, which no seller has ever been
+            // able to see. Reading is open to anyone who can open the app; changing a balance needs
+            // the same permission as changing it one product at a time.
+            Route::group(['prefix' => 'inventory'], function () {
+                Route::controller(SellerInventoryController::class)->group(function () {
+                    Route::get('overview', 'overview');
+                    Route::get('movements', 'movements');
+                    Route::get('warehouses', 'warehouses');
+                    Route::get('batches', 'batches');
+                    Route::post('products/{id}/adjust', 'adjust')
+                        ->whereNumber('id')->middleware('seller_can:inventory.manage');
                 });
             });
 

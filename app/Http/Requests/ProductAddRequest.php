@@ -8,8 +8,12 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Validator;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
 
+use App\Http\Requests\Concerns\ChecksBrandEntitlement;
+
 class ProductAddRequest extends Request
 {
+    use ChecksBrandEntitlement;
+
     use CalculatorTrait, ResponseHandler;
     use VatTaxManagement;
 
@@ -79,6 +83,8 @@ class ProductAddRequest extends Request
     {
         return [
             function (Validator $validator) {
+                $this->validateBrandEntitlement($validator);
+
 
                 $disallowedExtensions = getDisallowedExtensionsListArray();
 

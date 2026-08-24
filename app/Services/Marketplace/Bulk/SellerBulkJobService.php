@@ -4,10 +4,10 @@ namespace App\Services\Marketplace\Bulk;
 
 use App\Jobs\RunSellerBulkJob;
 use App\Models\Product;
-use App\Models\Seller;
+use App\Models\ProductPriceChange;
 use App\Models\SellerBulkJob;
-use App\Models\SellerStaff;
 use App\Services\AuditLogger;
+use App\Services\Marketplace\PriceChangeRecorder;
 use App\Services\Marketplace\SellerPermissionService;
 use App\Services\Marketplace\SellerPrincipal;
 use Illuminate\Support\Facades\Validator;
@@ -154,6 +154,26 @@ class SellerBulkJobService
         $succeeded = 0;
         $processed = 0;
 
+        // Everything this job changes is attributed to the job, not to whoever happens to be signed
+        // in when the worker runs — which, on a queue, is nobody.
+        return PriceChangeRecorder::attributeTo(
+            ProductPriceChange::SOURCE_BULK_JOB,
+            'Bulk job #' . $job->id . ' (' . $job->type . ')',
+            fn () => $this->apply($job, $operation, $principal),
+        );
+    }
+
+    /**
+     * The loop itself, separated so the attribution above wraps every write inside it.
+     */
+    private function apply(SellerBulkJob $job, BulkOperation $operation, SellerPrincipal $principal): SellerBulkJob
+    {
+        $requestedIds = array_map('intval', $job->input['product_ids'] ?? []);
+        $settings = $job->input['settings'] ?? [];
+        $failures = [];
+        $succeeded = 0;
+        $processed = 0;
+
         foreach (array_chunk($requestedIds, self::CHUNK) as $chunk) {
             // Scoped on the seller's own id, never on the ids the caller sent. This is the line that
             // makes a forged product id useless.
@@ -250,35 +270,16 @@ class SellerBulkJobService
     }
 
     /**
-     * Rebuild who asked, at the moment the work actually runs.
+     * Who this job runs as, resolved now rather than when it was queued.
      *
-     * The principal is not serialised into the queue payload: permissions are read per request
-     * everywhere else, and a job that carried a snapshot of them would be the one place a revoked
-     * permission still applied.
+     * A shop suspended or an employee deactivated between queueing and running must stop the work,
+     * which is why this is read fresh from the same place a request would read it.
      */
     private function principalFor(SellerBulkJob $job): ?SellerPrincipal
     {
-        $seller = Seller::where('id', $job->seller_id)->where('status', 'approved')->first();
-
-        if (!$seller) {
-            return null;
-        }
-
-        if ($job->created_by_staff_id === null) {
-            return SellerPrincipal::owner($seller);
-        }
-
-        $staff = SellerStaff::where('id', $job->created_by_staff_id)
-            ->where('seller_id', $seller->id)
-            ->where('status', 'active')
-            ->first();
-
-        if (!$staff) {
-            return null;
-        }
-
-        $permissions = app(SellerPermissionService::class)->permissionsOf($staff);
-
-        return SellerPrincipal::staff($seller, $staff, $permissions);
+        return app(SellerPermissionService::class)->principalForSeller(
+            sellerId: $job->seller_id,
+            staffId: $job->created_by_staff_id,
+        );
     }
 }

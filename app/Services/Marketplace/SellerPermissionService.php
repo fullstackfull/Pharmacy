@@ -119,6 +119,44 @@ class SellerPermissionService
     }
 
     /**
+     * Rebuild a principal from what a stored record remembers about who created it.
+     *
+     * Deferred work — a queued bulk job, a rule the scheduler picks up hours later — has no request
+     * and no token, only a shop id and possibly a staff id. It still has to run as somebody, and it
+     * still has to stop running if that somebody has since lost the right to act: a suspended shop,
+     * a deactivated employee, a revoked role. Resolving it fresh at run time is what makes that
+     * true, rather than trusting a decision made when the work was queued.
+     */
+    public function principalForSeller(int|string $sellerId, int|string|null $staffId = null): ?SellerPrincipal
+    {
+        $seller = Seller::approved()->find($sellerId);
+
+        if (!$seller) {
+            return null;
+        }
+
+        if ($staffId === null) {
+            return SellerPrincipal::owner($seller);
+        }
+
+        if (!Schema::hasTable('seller_staff')) {
+            return null;
+        }
+
+        $staff = SellerStaff::with('role')
+            ->where('id', $staffId)
+            ->where('seller_id', $seller->id)
+            ->where('status', SellerStaff::STATUS_ACTIVE)
+            ->first();
+
+        if (!$staff) {
+            return null;
+        }
+
+        return SellerPrincipal::staff($seller, $staff, $this->permissionsOf($staff));
+    }
+
+    /**
      * What a staff member's role grants them right now.
      *
      * Read at request time rather than stored on the token, so revoking a permission takes effect on

@@ -3,9 +3,11 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\Product;
-use App\Models\Seller;
+use App\Services\Marketplace\InventoryService;
 use App\Services\SellerIntelligence\InsightDraft;
+use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\InsightProducer;
+use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -37,7 +39,7 @@ class InventoryRiskProducer implements InsightProducer
             return [];
         }
 
-        $stockLimit = $this->stockLimitFor($sellerId);
+        $stockLimit = app(InventoryService::class)->stockLimitFor($sellerId);
         $sales = $this->recentSales($sellerId);
 
         $products = Product::query()
@@ -61,20 +63,38 @@ class InventoryRiskProducer implements InsightProducer
                 continue;
             }
 
+            // A month at the current rate, which is what a stockout actually costs.
+            $revenueAtRisk = round($sold * (float) $product->unit_price, 2);
+
             yield new InsightDraft(
                 sellerId: $sellerId,
                 type: self::TYPE,
+                // The declared severity is now a floor rather than the answer: the engine ranks this
+                // against the seller's own turnover, which is what makes a best-seller's stockout a
+                // different event from a rare item's.
                 severity: $this->severityFor($stock, $sold),
                 title: $stock <= 0 ? 'insight_out_of_stock' : 'insight_running_out',
                 body: $product->name,
                 entityType: 'product',
                 entityId: $product->id,
                 metric: $stock,
-                // What a month at the current rate would have been worth, so the list can be read
-                // as "fix this one first".
-                impact: round($sold * (float) $product->unit_price, 2),
+                impact: $revenueAtRisk,
                 actionKey: 'open_product',
                 actionParams: ['product_id' => $product->id, 'days_of_supply' => $daysLeft === null ? null : round($daysLeft, 1)],
+                category: SellerInsight::CATEGORY_INVENTORY,
+                // Days of supply is a deadline: a product with two days left has two days.
+                dueAt: $daysLeft === null ? null : now()->addHours(max(0, (int) round($daysLeft * 24))),
+                signals: new ImpactSignals(
+                    revenueAtRisk: $revenueAtRisk,
+                    affectedCount: 1,
+                    hoursUntilDue: $daysLeft === null ? null : round($daysLeft * 24, 2),
+                    severityFloor: $stock <= 0 ? SellerInsight::SEVERITY_HIGH : null,
+                ),
+                metadata: [
+                    'units_sold_30d' => $sold,
+                    'stock' => $stock,
+                    'days_of_supply' => $daysLeft === null ? null : round($daysLeft, 1),
+                ],
             );
         }
     }
@@ -93,14 +113,6 @@ class InventoryRiskProducer implements InsightProducer
             ->selectRaw('order_details.product_id as product_id, SUM(order_details.qty) as units')
             ->pluck('units', 'product_id')
             ->all();
-    }
-
-    /** The seller's own threshold, or the platform default when they have not set one. */
-    private function stockLimitFor(int|string $sellerId): int
-    {
-        $limit = (int) Seller::where('id', $sellerId)->value('stock_limit');
-
-        return $limit > 0 ? $limit : (int) getWebConfig(name: 'stock_limit');
     }
 
     private function severityFor(int $stock, float $sold): string

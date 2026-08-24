@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Services\Marketplace\ReturnLogisticsService;
 
 class RefundController extends Controller
 {
@@ -142,6 +143,15 @@ class RefundController extends Controller
             $query->where('seller_is', 'seller')->where('seller_id', $seller['id']);
         })->find($request->refund_request_id);
 
+        // Answered rather than fataled. A refund id belonging to another seller — or to nothing at
+        // all — used to reach the next line and die on a null, so a cross-tenant probe got a 500 HTML
+        // page instead of a not-found.
+        if (!$refund) {
+            return response()->json(['errors' => [
+                ['code' => 'refund', 'message' => translate('refund_request_not_found')],
+            ]], 404);
+        }
+
         $user = User::find($refund->customer_id);
 
         $loyalty_point_status = getWebConfig(name: 'loyalty_point_status');
@@ -188,11 +198,61 @@ class RefundController extends Controller
             $refund_status->save();
 
             $order = Order::find($refund->order_id);
+
+            // Approving a refund on a physical product means goods are coming back. Nothing recorded
+            // that before, so nothing ever restocked them: the seller gave back the money and quietly
+            // lost the units too. Opening the return here is what closes that loop — and it is
+            // idempotent on the refund, so approving twice does not create a second one.
+            if ($request->refund_status === 'approved') {
+                $this->openReturnFor(refund: $refund, orderDetails: $orderDetails, sellerId: $seller['id']);
+            }
+
             event(new RefundEvent(status: $request['refund_status'], order: $order, refund: $refund, orderDetails: $orderDetails));
             return response()->json(['message' => 'refund status updated successfully!'], 200);
         } else {
             return response()->json(['message' => 'refunded status can not be changed!!'], 403);
         }
 
+    }
+
+    /**
+     * Open the return an approved refund implies.
+     *
+     * Only for a physical product: a digital item has nothing to send back, and an RMA for one would
+     * be a return that can never be received. Never allowed to fail the refund it follows — the
+     * customer's money moving matters more than the paperwork about the goods.
+     */
+    private function openReturnFor(RefundRequest $refund, ?OrderDetail $orderDetails, int|string $sellerId): void
+    {
+        if (!$orderDetails) {
+            return;
+        }
+
+        $product = json_decode($orderDetails->product_details ?? '', true);
+
+        if (($product['product_type'] ?? 'physical') !== 'physical') {
+            return;
+        }
+
+        try {
+            app(ReturnLogisticsService::class)->authorizeForRefund(
+                refundRequestId: $refund->id,
+                data: [
+                    'order_id' => $refund->order_id,
+                    'order_details_id' => $refund->order_details_id,
+                    'product_id' => $refund->product_id ?? $orderDetails->product_id,
+                    'seller_id' => $sellerId,
+                    'qty' => max(1, (int) $orderDetails->qty),
+                    'reason' => $refund->refund_reason,
+                    // Whether the goods can be sold again is a decision for whoever opens the box,
+                    // not for the moment the refund was approved.
+                    'restock' => true,
+                ],
+                by: $sellerId,
+                byType: 'seller',
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 }

@@ -620,6 +620,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // Brand registry: who may sell under a brand, on what evidence, and the switch that turns
+        // the answer from a report into a refusal. Every decision on this page is a person's.
+        Route::group(['prefix' => 'brand-registry', 'as' => 'brand-registry.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\BrandRegistryController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('document/{id}', 'document')->whereNumber('id')->name('document');
+                Route::post('approve', 'approve')->name('approve');
+                Route::post('reject', 'reject')->name('reject');
+                Route::post('revoke', 'revoke')->name('revoke');
+                Route::post('enforcement', 'updateEnforcement')->name('enforcement');
+            });
+        });
+
         // Seller performance scorecard: quality metrics and a derived health tier per seller.
         Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
             Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerScorecardController::class)->group(function () {
@@ -762,20 +775,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
-        // B2B / wholesale customer groups + pricing (Stage E): a non-breaking price resolver — a
-        // customer in no group keeps the base price.
-        Route::group(['prefix' => 'customer-groups', 'as' => 'customer-groups.'], function () {
-            Route::controller(\App\Http\Controllers\Admin\Marketplace\CustomerGroupController::class)->group(function () {
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
-                Route::put('{id}', 'update')->whereNumber('id')->name('update');
-                Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
-                Route::post('{id}/members/add', 'addMember')->whereNumber('id')->name('members.add');
-                Route::post('{id}/members/remove', 'removeMember')->whereNumber('id')->name('members.remove');
-                Route::post('{id}/prices/set', 'setPrice')->whereNumber('id')->name('prices.set');
-                Route::delete('{id}/prices/{priceId}', 'removePrice')->whereNumber('id')->whereNumber('priceId')->name('prices.remove');
-            });
-        });
     });
 
     Route::group(['prefix' => 'report', 'as' => 'report.', 'middleware' => ['module:reports']], function () {

@@ -2,6 +2,8 @@
 
 namespace App\Services\Marketplace;
 
+use App\Models\Seller;
+
 use App\Models\StockMovement;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
@@ -117,8 +119,28 @@ class InventoryService
         }
     }
 
-    /** Recent movements, optionally narrowed to one product or one type. */
-    public function recent(?int $productId = null, ?string $type = null, int $perPage = 25)
+    /**
+     * Recent movements, optionally narrowed to one product, one type, or one seller.
+     *
+     * `sellerId` is not optional decoration: without it this is an admin view of every seller's
+     * stock history, and the seller-facing endpoint that reads it would hand one shop the movement
+     * log of another.
+     */
+    /**
+     * How low is low, for this seller.
+     *
+     * Their own threshold when they have set one, the platform's otherwise. Read from here by both
+     * the low-stock detector and the webhook that fires when a product crosses it, so a seller
+     * cannot be told two different things about the same shelf.
+     */
+    public function stockLimitFor(int|string $sellerId): int
+    {
+        $limit = (int) Seller::where('id', $sellerId)->value('stock_limit');
+
+        return $limit > 0 ? $limit : (int) getWebConfig(name: 'stock_limit');
+    }
+
+    public function recent(?int $productId = null, ?string $type = null, int $perPage = 25, int|string|null $sellerId = null)
     {
         $query = StockMovement::query()->orderByDesc('id');
         if ($productId) {
@@ -126,6 +148,9 @@ class InventoryService
         }
         if ($type) {
             $query->where('type', $type);
+        }
+        if ($sellerId !== null) {
+            $query->where('seller_id', $sellerId);
         }
 
         return $query->paginate($perPage)->withQueryString();

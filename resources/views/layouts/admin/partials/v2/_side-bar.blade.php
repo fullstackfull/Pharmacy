@@ -706,6 +706,12 @@
                                 <span class="v2-nav-child-label">{{ translate('seller_verification') }}</span>
                             </a>
                         @endif
+                        @if (Route::has('admin.marketplace.brand-registry.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/brand-registry*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.brand-registry.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('brand_registry') }}</span>
+                            </a>
+                        @endif
                         @if (Route::has('admin.marketplace.seller-scorecard.index'))
                             <a class="v2-nav-child {{ Request::is('admin/marketplace/seller-scorecard*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.seller-scorecard.index') }}">
                                 <span class="v2-nav-child-dot" data-tone="primary"></span>
@@ -796,12 +802,6 @@
                     </div>
                 @endif
 
-                @if (Route::has('admin.marketplace.customer-groups.index'))
-                    <a class="v2-nav-item {{ Request::is('admin/marketplace/customer-groups*') ? 'v2-is-active' : '' }}" data-item="customer-groups-b2b" href="{{ route('admin.marketplace.customer-groups.index') }}">
-                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('customer_groups') }} (B2B)</span></span>
-                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="customer-groups-b2b" aria-label="Pin"></button></div>
-                    </a>
-                @endif
                 @if (Route::has('admin.marketplace.audit-log'))
                     <a class="v2-nav-item {{ Request::is('admin/marketplace/audit-log*') ? 'v2-is-active' : '' }}" data-item="marketplace-audit-log" href="{{ route('admin.marketplace.audit-log') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('audit_log') }}</span></span>

@@ -31,6 +31,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Ramsey\Uuid\Uuid;
+use App\Services\Marketplace\SellerOrderBreakdownService;
+use App\Services\Marketplace\SellerOrderTimelineService;
 
 
 class OrderController extends Controller
@@ -141,6 +143,49 @@ class OrderController extends Controller
         }
 
         return response()->json($invoices->bytes($order, $request->seller->id), 200);
+    }
+
+    #[ApiDoc(
+        summary: 'What one order is worth, and how it got here',
+        description: 'Two things the seller app has never been able to show. The money side: what the '
+            . 'lines sold for, the commission that was actually charged with the rule that charged it, '
+            . 'who bears shipping, what the seller receives, and when a pending earning becomes '
+            . 'withdrawable. The history side: every recorded event on the order, oldest first, with '
+            . 'who caused it — plus the processing deadline while the order still waits on the seller. '
+            . 'Where an earning has not been recorded yet the answer says so rather than estimating a '
+            . 'figure a seller would read as what they will be paid. An order that is not this '
+            . "seller's answers 404.",
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
+    public function breakdown(
+        Request $request,
+        $id,
+        SellerOrderBreakdownService $breakdowns,
+        SellerOrderTimelineService $timelines,
+    ): JsonResponse {
+        $sellerId = $request->seller->id;
+        $breakdown = $breakdowns->breakdownFor(orderId: $id, sellerId: $sellerId);
+
+        if ($breakdown === null) {
+            // Either no such order, or one belonging to another seller. Both are the same answer
+            // from here.
+            return response()->json(['errors' => [
+                ['code' => 'order', 'message' => translate('order_not_found')],
+            ]], 404);
+        }
+
+        $timeline = $timelines->timelineFor(orderId: $id, sellerId: $sellerId) ?? ['events' => [], 'sla' => null];
+
+        return response()->json([
+            'order_id' => (int) $id,
+            'fees' => $breakdown,
+            'timeline' => $timeline['events'],
+            'sla' => $timeline['sla'],
+        ], 200);
     }
 
     public function details(Request $request, $id): JsonResponse

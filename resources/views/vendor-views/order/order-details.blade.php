@@ -601,6 +601,11 @@
                 </div>
             </div>
             <div class="col-xl-4 d-flex flex-column gap-3">
+                {{-- What the order is worth to this seller, and how it got here.
+                     Read from the same services the seller app reads, so the panel
+                     and the app cannot disagree about a margin or a deadline. --}}
+                @include('vendor-views.order.partials._seller-earning')
+
                 <div class="card card-body">
                     <h4 class="fw-bold d-flex align-items-center gap-2 mb-3">
                         {{ translate('Payment') }}

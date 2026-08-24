@@ -4,7 +4,9 @@ namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\Order;
 use App\Services\SellerIntelligence\InsightDraft;
+use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\InsightProducer;
+use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use App\Services\Marketplace\SlaService;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,9 +24,6 @@ use Illuminate\Support\Facades\Schema;
 class OrderSlaProducer implements InsightProducer
 {
     public const TYPE = 'ORDER_SLA';
-
-    /** Statuses that still need something from the seller before the order can ship. */
-    private const AWAITING_SELLER = ['pending', 'confirmed', 'processing'];
 
     /** Inside this fraction of the window remaining, it is worth interrupting the seller. */
     private const URGENT_FRACTION = 0.25;
@@ -44,25 +43,27 @@ class OrderSlaProducer implements InsightProducer
             return [];
         }
 
-        $windowHours = $this->windowHours();
+        $windowHours = $this->sla->processingWindowHours();
         if ($windowHours === null) {
             return [];
         }
 
         $orders = Order::query()
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
-            ->whereIn('order_status', self::AWAITING_SELLER)
+            ->whereIn('order_status', SlaService::AWAITING_SELLER_STATUSES)
             ->orderBy('created_at')
             ->limit(200)
             ->get(['id', 'order_status', 'order_amount', 'created_at']);
 
         foreach ($orders as $order) {
-            $deadline = $order->created_at?->copy()->addHours($windowHours);
+            // The deadline comes from the SLA policy, not from a copy of the arithmetic kept here.
+            // The order screen shows the same countdown by asking the same question.
+            $deadline = $this->sla->processingDeadline($order->created_at);
             if ($deadline === null) {
                 continue;
             }
 
-            $hoursLeft = now()->diffInMinutes($deadline, false) / 60;
+            $hoursLeft = $this->sla->hoursUntilDeadline($order->created_at);
             $isLate = $hoursLeft <= 0;
 
             // Still comfortably inside the window: nothing to say yet.
@@ -88,20 +89,18 @@ class OrderSlaProducer implements InsightProducer
                 ],
                 // A late order stops being news once it is very late; the breach ledger owns it then.
                 expiresAt: $deadline->copy()->addDays(7),
+                category: SellerInsight::CATEGORY_ORDERS,
+                dueAt: $deadline,
+                signals: new ImpactSignals(
+                    // What the order is worth. An order approaching its deadline is money the seller
+                    // still has, and a marketplace standing they still have.
+                    revenueAtRisk: (float) $order->order_amount,
+                    affectedCount: 1,
+                    hoursUntilDue: round($hoursLeft, 2),
+                    severityFloor: $isLate ? SellerInsight::SEVERITY_HIGH : null,
+                ),
+                metadata: ['deadline' => $deadline->toIso8601String(), 'window_hours' => $windowHours],
             );
         }
-    }
-
-    /**
-     * The processing window the marketplace holds sellers to.
-     *
-     * Read from the SLA policy, so the countdown a seller sees and the deadline the marketplace
-     * judges them by are the same number — changed in one place, on the SLA policy page.
-     */
-    private function windowHours(): ?int
-    {
-        $hours = $this->sla->thresholds()['processing_hours'] ?? null;
-
-        return $hours !== null && $hours > 0 ? (int) $hours : null;
     }
 }
