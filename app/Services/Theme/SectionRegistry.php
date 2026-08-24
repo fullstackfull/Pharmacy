@@ -1083,6 +1083,62 @@ class SectionRegistry
         return $this->types()[$type]['schema'] ?? [];
     }
 
+    /**
+     * Which drawer of the inspector each setting belongs in.
+     *
+     * The inspector showed one long list per section: a product rail put its title, its data
+     * source, its column count, its card style and its "view all" link in one column of twenty
+     * fields, and finding the one you wanted meant reading all of them.
+     *
+     * Grouped by key rather than per type on purpose. Every type calls its source `source`, its
+     * arrangement `style` or `layout`, its destination `link` — that shared vocabulary is what the
+     * whole registry is built on, and a group written into each of thirty-nine definitions would
+     * be thirty-nine chances to disagree with it. A key in none of these lists is content, which
+     * is the right default: content is what a merchant types.
+     */
+    public const FIELD_GROUPS = [
+        // What the section shows, as opposed to how it shows it.
+        'source' => [
+            'source', 'source_id', 'product_ids', 'category_id', 'category_ids', 'brand_id',
+            'shop_id', 'shop_ids', 'deal_id', 'banner_type', 'limit', 'days', 'min_rating',
+            'discount', 'cutoff',
+        ],
+        // The arrangement, and the geometry of it.
+        'layout' => [
+            'style', 'layout', 'display', 'columns', 'gap', 'ratio', 'height', 'arrows',
+            'pagination', 'autoplay', 'interval', 'view_all', 'sub_categories', 'banner', 'logo',
+            'overlay', 'add_to_cart', 'rotate', 'rotate_ms', 'animate', 'ken_burns', 'parallax',
+            'layout_lock', 'text_color', 'cover', 'countdown', 'dismissible', 'qr',
+        ],
+        // Where it leads.
+        'action' => ['link', 'button_text', 'cta_text', 'url'],
+    ];
+
+    /**
+     * The section's own settings, split into the drawers the inspector opens.
+     *
+     * @return array<string, array<int, string>>  group => keys, in schema order, empty groups dropped
+     */
+    public function fieldGroupsFor(string $type): array
+    {
+        $groups = ['content' => [], 'source' => [], 'layout' => [], 'action' => []];
+
+        foreach (array_keys($this->ownSchemaFor($type)) as $key) {
+            $group = 'content';
+
+            foreach (self::FIELD_GROUPS as $candidate => $keys) {
+                if (in_array($key, $keys, true)) {
+                    $group = $candidate;
+                    break;
+                }
+            }
+
+            $groups[$group][] = $key;
+        }
+
+        return array_filter($groups, static fn (array $keys) => $keys !== []);
+    }
+
     /** Full schema for a type: its own fields plus the common ones. */
     public function schemaFor(string $type): array
     {

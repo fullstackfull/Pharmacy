@@ -274,6 +274,9 @@ class AnalyticsRollup extends Command
             // the link; without this the only honest answer to "is that banner working?" was that
             // nobody had ever counted.
             'banner' => [AnalyticsEvent::BANNER_CLICKED],
+            // Which composed sections shoppers actually reach. Rolled up per section so the
+            // builder can put a number on the row it belongs to.
+            'theme_section' => [AnalyticsEvent::SECTION_VIEWED],
             'gateway' => [AnalyticsEvent::PAYMENT_SUCCEEDED, AnalyticsEvent::PAYMENT_FAILED],
         ];
 

@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\Settings\ThemeSettingsController;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
-use App\Services\Theme\SectionRegistry;
-use App\Services\Theme\StorefrontThemeRenderer;
 use App\Services\Theme\ThemeManager;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -59,10 +57,16 @@ class ThemeSettingsTest extends TestCase
             $t->json('settings')->nullable(); $t->timestamps();
         });
 
-        $this->controller = new ThemeSettingsController(
-            new ThemeManager(),
-            new StorefrontThemeRenderer(new SectionRegistry())
-        );
+        $this->controller = app(ThemeSettingsController::class);
+
+        // Who may repaint the storefront is its own test; this one is about what gets saved when
+        // they do. Standing in for a role that holds the capability keeps the two separate.
+        $this->app->bind(\App\Services\Theme\ThemePermissionService::class, fn () => new class extends \App\Services\Theme\ThemePermissionService {
+            public function can(string $capability): bool
+            {
+                return true;
+            }
+        });
         $this->theme = Theme::create(['name' => 'T', 'slug' => 't', 'is_active' => true]);
     }
 

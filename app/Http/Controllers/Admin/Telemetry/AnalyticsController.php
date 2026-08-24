@@ -259,6 +259,7 @@ class AnalyticsController extends BaseController
                 'categories' => $this->withNames($this->reporting->breakdown($window, 'category', 30), 'categories'),
                 'brands' => $this->withNames($this->reporting->breakdown($window, 'brand', 20), 'brands'),
                 'banners' => $this->withBannerNames($this->reporting->breakdown($window, 'banner', 30)),
+                'sections' => $this->withSectionNames($this->reporting->breakdown($window, 'theme_section', 30)),
             ],
             'search' => [
                 'terms' => $this->reporting->breakdown($window, 'search_term', 50),
@@ -363,6 +364,46 @@ class AnalyticsController extends BaseController
      * @param  array<string, mixed>  $breakdown
      * @return array<string, mixed>
      */
+    /**
+     * Composed sections, named by what they are rather than by a row id.
+     *
+     * A merchant reading "#4014: 812 views" has to go and look it up. The type and the page it
+     * sits on are what they arranged, so that is what the report says.
+     *
+     * @param  array<string, mixed>  $breakdown
+     * @return array<string, mixed>
+     */
+    private function withSectionNames(array $breakdown): array
+    {
+        if (($breakdown['rows'] ?? []) === []) {
+            return $breakdown;
+        }
+
+        $ids = array_filter(array_map(static fn (array $row) => (int) $row['key'], $breakdown['rows']));
+
+        if ($ids === []) {
+            return $breakdown;
+        }
+
+        try {
+            $sections = \App\Models\ThemeSection::whereIn('id', $ids)->get(['id', 'type', 'page'])->keyBy('id');
+            $labels = app(\App\Services\Theme\SectionRegistry::class)->types();
+        } catch (\Throwable) {
+            return $breakdown;
+        }
+
+        foreach ($breakdown['rows'] as $index => $row) {
+            $section = $sections[(int) $row['key']] ?? null;
+
+            $breakdown['rows'][$index]['name'] = $section === null
+                ? null
+                : translate($labels[$section->type]['label'] ?? $section->type)
+                    . ' — ' . translate($section->page);
+        }
+
+        return $breakdown;
+    }
+
     private function withBannerNames(array $breakdown): array
     {
         if (($breakdown['rows'] ?? []) === []) {

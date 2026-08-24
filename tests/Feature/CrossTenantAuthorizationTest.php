@@ -26,6 +26,15 @@ class CrossTenantAuthorizationTest extends TestCase
     {
         parent::setUp();
 
+        // The api guard is Passport's, and resolving it loads a signing key. A checkout of this
+        // repository has none — they are generated per environment and never committed — so these
+        // two tests failed everywhere except a machine that happened to have run the installer.
+        // Generated here, once, only when absent: what is under test is who a request belongs to,
+        // and a missing key says nothing about that.
+        if (!file_exists(storage_path('oauth-private.key'))) {
+            \Illuminate\Support\Facades\Artisan::call('passport:keys', ['--no-interaction' => true]);
+        }
+
         foreach (['users', 'orders', 'reviews', 'business_settings', 'order_expected_delivery_histories'] as $t) {
             Schema::dropIfExists($t);
         }

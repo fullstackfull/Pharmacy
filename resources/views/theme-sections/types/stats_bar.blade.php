@@ -2,7 +2,7 @@
      custom one, and they count up once when the bar scrolls into view. --}}
 
 @php
-    $stats = $__data->storeStats();
+    $stats = $__resolver->storeStats();
     $statBlocks = $rawBlocks;
     $statsDark = ($s['style'] ?? 'boxed') === 'dark';
     $countUp = (bool) ($s['animate'] ?? true);

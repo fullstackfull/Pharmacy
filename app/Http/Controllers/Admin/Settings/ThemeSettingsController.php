@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Settings;
 use App\Http\Controllers\BaseController;
 use App\Models\ThemeAsset;
 use App\Models\ThemeVersion;
+use App\Services\Theme\ThemePermissionService;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\StorefrontThemeRenderer;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
@@ -52,6 +53,13 @@ class ThemeSettingsController extends BaseController
     {
         if (config('app.mode') == 'demo') {
             ToastMagic::error(translate('you_can_not_update_this_on_demo_mode'));
+            return back();
+        }
+
+        // The colours and type of every page at once — separable from arranging one section, so a
+        // shop can let staff compose without letting them repaint the storefront.
+        if (!app(ThemePermissionService::class)->canManageStyles()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_manage_global_styles') . '!');
             return back();
         }
 
