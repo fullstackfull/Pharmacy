@@ -144,6 +144,45 @@ class AdminPanelWiringTest extends TestCase
             'the payload would send installed apps to endpoints that do not exist');
     }
 
+    public function test_every_guarded_hint_carries_the_credential_its_route_demands(): void
+    {
+        // The catalogue routes sit behind apiGuestCheck, which 401s a caller that is neither a
+        // customer nor a named guest. A hint is a promise the client can call it AS GIVEN — one
+        // that omits the guest credential left every product rail in the app empty, with nothing
+        // but 401 lines in a device log to say why.
+        $map = app(ThemeSourceMap::class);
+        $router = app('router');
+        $naked = [];
+
+        foreach (ContentSource::KINDS as $kind) {
+            $hint = $map->products([
+                'source' => $kind, 'source_id' => 1, 'collection_id' => 1,
+                'product_ids' => '1,2', 'limit' => 8,
+            ]);
+
+            if (($hint['kind'] ?? null) !== 'api') {
+                continue;
+            }
+
+            try {
+                $route = $router->getRoutes()->match(
+                    \Illuminate\Http\Request::create($hint['endpoint'], 'GET'),
+                );
+            } catch (\Throwable) {
+                continue; // the endpoint-exists test above owns that failure
+            }
+
+            $guarded = in_array('apiGuestCheck', $route->gatherMiddleware(), true);
+
+            if ($guarded && (int) ($hint['params']['guest_id'] ?? 0) < 1) {
+                $naked[$kind] = $hint['endpoint'];
+            }
+        }
+
+        $this->assertSame([], $naked,
+            'these hints point at guest-guarded routes without carrying guest_id — the app gets 401 and an empty rail');
+    }
+
     public function test_the_measurement_pipeline_has_both_of_its_ends(): void
     {
         // The web beacon's collect endpoint, and the theme payload endpoints the app syncs on.

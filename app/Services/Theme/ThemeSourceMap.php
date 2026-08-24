@@ -145,6 +145,13 @@ class ThemeSourceMap
      */
     private function api(string $endpoint, array $params = [], ?string $note = null): array
     {
+        // A hint must be callable AS GIVEN. The catalogue routes sit behind apiGuestCheck, which
+        // answers 401 unless the caller is a validated customer or names a guest — and a section
+        // fetch made with only limit/offset was refused, leaving every product rail empty in the
+        // app. guest_id=1 is the platform's own guest convention (the stock app hard-codes it in
+        // every catalogue URI); a signed-in shopper's token still wins in the middleware.
+        $params += ['guest_id' => 1];
+
         $source = ['kind' => 'api', 'endpoint' => $endpoint, 'params' => $params];
 
         if ($note !== null) {
