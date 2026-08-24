@@ -180,6 +180,11 @@
                                             @endif
                                             @if($latestDraft)
                                                 <span class="badge badge-soft-warning">{{ translate('draft') }} #{{ $latestDraft->id }}</span>
+                                                @if($latestDraft->isScheduled())
+                                                    <span class="badge badge-soft-info" dir="auto">
+                                                        {{ translate('publishes') }} {{ $latestDraft->publish_at->toDayDateTimeString() }}
+                                                    </span>
+                                                @endif
                                                 @php $report = $compatibility[$theme->id] ?? null; @endphp
                                                 @if($report && $report['sections'] > 0)
                                                     <span class="badge {{ empty($report['withheld']) ? 'badge-soft-success' : 'badge-soft-danger' }}"
@@ -229,6 +234,31 @@
                                                                    placeholder="{{ translate('what_changed_optional') }}">
                                                             <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>
                                                         </form>
+
+                                                        {{-- Or at a chosen hour, with nobody at a keyboard for it. The same
+                                                             check runs again when it fires: hours pass, and a section that
+                                                             was fine when the time was set can be broken by the time it
+                                                             arrives. --}}
+                                                        @if($latestDraft->isScheduled())
+                                                            <form action="{{ route('admin.theme.version.schedule') }}" method="post">
+                                                                @csrf
+                                                                <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
+                                                                <input type="hidden" name="cancel" value="1">
+                                                                <button type="submit" class="btn btn-sm btn-outline-secondary">{{ translate('cancel_scheduled_publish') }}</button>
+                                                            </form>
+                                                        @elseif($schedulerOk)
+                                                            <form action="{{ route('admin.theme.version.schedule') }}" method="post"
+                                                                  class="d-flex flex-column gap-1">
+                                                                @csrf
+                                                                <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
+                                                                <input type="datetime-local" name="publish_at" class="form-control form-control-sm">
+                                                                <button type="submit" class="btn btn-sm btn-outline-info">{{ translate('publish_later') }}</button>
+                                                            </form>
+                                                        @else
+                                                            <small class="text-muted d-block" style="max-width:12rem">
+                                                                {{ translate('scheduled_publishing_needs_the_server_cron_to_be_running') }}
+                                                            </small>
+                                                        @endif
                                                     @endif
                                                 @endif
                                                 @php $exportable = $published ?? $latestDraft; @endphp

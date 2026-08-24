@@ -7,6 +7,7 @@ use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use App\Services\Theme\PublishValidator;
 use App\Services\Theme\ThemeManager;
+use Illuminate\Support\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -47,7 +48,7 @@ class PublishGateTest extends TestCase
             $table->string('change_note', 300)->nullable();
             $table->string('status', 20)->default('draft'); $table->json('settings')->nullable();
             $table->unsignedBigInteger('based_on_version_id')->nullable();
-            $table->timestamp('published_at')->nullable();
+            $table->timestamp('published_at')->nullable(); $table->timestamp('publish_at')->nullable();
             $table->unsignedInteger('revision')->default(0); $table->string('checksum', 64)->nullable();
             $table->timestamps();
         });
@@ -216,6 +217,76 @@ class PublishGateTest extends TestCase
 
         $this->assertSame(ThemeVersion::STATUS_PUBLISHED, $published->status);
         $this->assertNull($published->change_note);
+    }
+
+    public function test_a_scheduled_version_publishes_when_its_moment_arrives(): void
+    {
+        $this->section('spacer', ['height' => 24]);
+        $this->draft->forceFill([
+            'publish_at' => Carbon::now()->subMinute(),
+            'change_note' => 'Ramadan layout',
+        ])->save();
+
+        $this->artisan('theme:publish-due')->assertSuccessful();
+
+        $this->draft->refresh();
+        $this->assertSame(ThemeVersion::STATUS_PUBLISHED, $this->draft->status);
+        $this->assertNull($this->draft->publish_at, 'the schedule is spent, not left to fire again');
+        $this->assertSame('Ramadan layout', $this->draft->change_note,
+            'the note written when it was scheduled is the note it publishes with');
+    }
+
+    public function test_a_moment_that_has_not_come_is_left_alone(): void
+    {
+        $this->section('spacer', ['height' => 24]);
+        $this->draft->forceFill(['publish_at' => Carbon::now()->addHour()])->save();
+
+        $this->artisan('theme:publish-due')->assertSuccessful();
+
+        $this->assertSame(ThemeVersion::STATUS_DRAFT, $this->draft->refresh()->status);
+    }
+
+    public function test_a_version_that_broke_while_it_waited_does_not_go_live(): void
+    {
+        // The whole risk of scheduling: hours pass between setting the time and reaching it, and
+        // nobody is watching when it fires. A section emptied in the meantime would otherwise ship
+        // at midnight to an audience the merchant cannot warn.
+        $this->section('category_showcase', []);
+        $this->draft->forceFill(['publish_at' => Carbon::now()->subMinute()])->save();
+
+        $this->artisan('theme:publish-due')->assertSuccessful();
+
+        $this->draft->refresh();
+        $this->assertSame(ThemeVersion::STATUS_DRAFT, $this->draft->status);
+        $this->assertNull($this->draft->publish_at,
+            'and it does not retry every five minutes forever with nobody reading the failure');
+    }
+
+    public function test_a_dry_run_changes_nothing(): void
+    {
+        $this->section('spacer', ['height' => 24]);
+        $this->draft->forceFill(['publish_at' => Carbon::now()->subMinute()])->save();
+
+        $this->artisan('theme:publish-due --dry-run')->assertSuccessful();
+
+        $this->draft->refresh();
+        $this->assertSame(ThemeVersion::STATUS_DRAFT, $this->draft->status);
+        $this->assertNotNull($this->draft->publish_at);
+    }
+
+    public function test_an_already_published_version_is_never_picked_up_again(): void
+    {
+        // Publishing archives the previous version. A published row with a stale schedule that
+        // fired a second time would archive whatever replaced it.
+        $this->section('spacer', ['height' => 24]);
+        $this->draft->forceFill([
+            'status' => ThemeVersion::STATUS_PUBLISHED,
+            'publish_at' => Carbon::now()->subDay(),
+        ])->save();
+
+        $this->artisan('theme:publish-due')->assertSuccessful();
+
+        $this->assertNotNull($this->draft->refresh()->publish_at, 'untouched, because it was never due');
     }
 
     private function section(string $type, array $settings): ThemeSection

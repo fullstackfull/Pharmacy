@@ -144,6 +144,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // this, so breaches went stale between manual clicks.
         $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
 
+        // Publish the theme versions a merchant scheduled. Five minutes is the resolution the
+        // builder promises, and matches the heartbeat that tells the dashboard the cron is alive —
+        // a scheduled publish is only as trustworthy as the run that fires it.
+        $schedule->command('theme:publish-due')->everyFiveMinutes()->withoutOverlapping();
+
         // Reconcile the storefront search index against the catalogue in case a bulk import bypassed the
         // model observer that keeps it fresh in realtime.
         $schedule->command('search:reindex-products')->weekly()->sundays()->at('04:00')->withoutOverlapping();

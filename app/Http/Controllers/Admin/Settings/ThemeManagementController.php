@@ -76,6 +76,10 @@ class ThemeManagementController extends BaseController
             'themes'       => $themes,
             'compatibility' => $compatibility,
             'readiness'    => $readiness,
+            // A scheduled publish is only as good as the cron that fires it. Offering the control
+            // while the scheduler is down would promise a merchant a midnight launch that never
+            // happens — the same heartbeat the dashboard's health panel reads.
+            'schedulerOk'  => $this->schedulerIsRunning(),
             'search'       => $request?->get('searchValue'),
             'presets'      => $this->portability->presets(),
             'assetsReady'  => Schema::hasTable('theme_assets'),
@@ -208,6 +212,105 @@ class ThemeManagementController extends BaseController
         return $findings['warnings'] === []
             ? $this->backToIndex()
             : $this->backToIndex()->with('theme_publish_findings', $findings);
+    }
+
+    /**
+     * Set (or clear) the moment a draft becomes the shop.
+     *
+     * Held to the same check as publishing now, because a schedule a merchant sets is a publish
+     * they will not be watching: telling them at midnight is telling nobody.
+     */
+    public function scheduleVersion(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+
+        if (!$this->permissions->canPublish()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_publish_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $version = ThemeVersion::find($request['version_id']);
+        if (!$version || !Schema::hasColumn($version->getTable(), 'publish_at')) {
+            ToastMagic::error(translate('theme_version_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        if ($request->boolean('cancel')) {
+            $version->forceFill(['publish_at' => null])->save();
+            ToastMagic::success(translate('scheduled_publish_cancelled'));
+
+            return $this->backToIndex();
+        }
+
+        $moment = $this->parseMoment($request['publish_at'] ?? null);
+        if ($moment === null) {
+            ToastMagic::error(translate('choose_a_date_and_time_in_the_future') . '!');
+            return $this->backToIndex();
+        }
+
+        $findings = app(PublishValidator::class)->inspect($version);
+        if ($findings['blocking'] !== []) {
+            ToastMagic::error(
+                count($findings['blocking']) . ' ' . translate('sections_are_not_ready_to_publish') . '!',
+            );
+
+            return $this->backToIndex()->with('theme_publish_findings', $findings);
+        }
+
+        $note = is_string($request['change_note'] ?? null) ? trim($request['change_note']) : '';
+        $version->forceFill([
+            'publish_at' => $moment,
+            // Written now so the note travels with the version the command later publishes: at
+            // fire time there is nobody to ask what this publish was for.
+            'change_note' => $note !== '' ? mb_substr($note, 0, 300) : $version->change_note,
+        ])->save();
+
+        ToastMagic::success(translate('this_version_will_publish_on') . ' ' . $moment->toDayDateTimeString());
+
+        return $this->backToIndex();
+    }
+
+    /**
+     * Whether the server cron that fires scheduled work has run recently.
+     *
+     * Ten minutes, matching the system health panel: the schedule pings every five, so one missed
+     * beat is noise and two is a stopped cron.
+     */
+    private function schedulerIsRunning(): bool
+    {
+        if (!Schema::hasTable('business_settings')) {
+            return false;
+        }
+
+        $heartbeat = \App\Models\BusinessSetting::where('type', 'scheduler_last_run_at')->value('value');
+
+        if (!$heartbeat) {
+            return false;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($heartbeat)->greaterThan(now()->subMinutes(10));
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /** A future moment from the form, or null when it is unparseable or already past. */
+    private function parseMoment(mixed $input): ?\Illuminate\Support\Carbon
+    {
+        if (!is_string($input) || trim($input) === '') {
+            return null;
+        }
+
+        try {
+            $moment = \Illuminate\Support\Carbon::parse($input);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $moment->isFuture() ? $moment : null;
     }
 
     /** Duplicate a version into a fresh draft (revision / edit-a-copy workflow). */

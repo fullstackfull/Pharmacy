@@ -18,12 +18,13 @@ class ThemeVersion extends Model
 
     protected $fillable = [
         'theme_id', 'label', 'change_note', 'status', 'settings', 'based_on_version_id', 'published_at',
-        'revision', 'checksum',
+        'publish_at', 'revision', 'checksum',
     ];
 
     protected $casts = [
         'settings'     => 'array',
         'published_at' => 'datetime',
+        'publish_at'   => 'datetime',
         'revision'     => 'integer',
     ];
 
@@ -47,8 +48,27 @@ class ThemeVersion extends Model
         return $query->where('status', self::STATUS_PUBLISHED);
     }
 
+    /**
+     * Drafts whose scheduled moment has arrived.
+     *
+     * Scoped to drafts on purpose: publishing archives the previous version, so a version that has
+     * already gone live must never be picked up again by a schedule nobody cleared.
+     */
+    public function scopeDueToPublish(Builder $query): Builder
+    {
+        return $query->draft()
+            ->whereNotNull('publish_at')
+            ->where('publish_at', '<=', now());
+    }
+
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED;
+    }
+
+    /** Whether this version is waiting for a moment that has not come yet. */
+    public function isScheduled(): bool
+    {
+        return $this->status === self::STATUS_DRAFT && $this->publish_at !== null;
     }
 }
