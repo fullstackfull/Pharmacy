@@ -4,6 +4,9 @@
 @php
     $vendorStyle = $s['style'] ?? 'cards';
     $showStats = (bool) ($s['stats'] ?? true);
+    // `storefront` and `logos` are strips a shopper swipes through, so they ride the same
+    // rail track as `rail`; `cards` and `compact` lay out as a grid.
+    $vendorRail = in_array($vendorStyle, ['rail', 'storefront', 'logos'], true);
 @endphp
 <div class="ml-sec-head ml-reveal">
     <div>
@@ -15,10 +18,10 @@
     @endif
 </div>
 
-<div class="{{ $vendorStyle === 'rail' ? 'ml-rail ml-vendor-rail' : 'ml-grid' }} ml-reveal">
+<div class="{{ $vendorRail ? 'ml-rail ml-vendor-rail' : 'ml-grid' }} ml-vendors--{{ $vendorStyle }} ml-reveal">
     @foreach ($vendors as $shop)
         @include('theme-sections.partials.vendor-card', [
-            'shop' => $shop, 'compact' => $vendorStyle === 'compact', 'stats' => $showStats,
+            'shop' => $shop, 'variant' => $vendorStyle, 'stats' => $showStats,
         ])
     @endforeach
 </div>

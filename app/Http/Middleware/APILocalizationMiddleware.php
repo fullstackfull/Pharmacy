@@ -6,6 +6,8 @@ use App\Utils\Helpers;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class APILocalizationMiddleware
 {
@@ -41,6 +43,13 @@ class APILocalizationMiddleware
      */
     private function resolveAgainstStoreLanguages(string $requested): string
     {
+        // Choosing a locale is a courtesy, never a precondition for serving the request: before
+        // the settings table exists — a fresh install, a migration in flight — the requested code
+        // stands on its own. Same cached probe AppServiceProvider uses, so this costs nothing.
+        if (!Cache::remember('_schema_has_business_settings', 21600, fn () => Schema::hasTable('business_settings'))) {
+            return $requested;
+        }
+
         $languages = getWebConfig(name: 'language');
         if (!is_array($languages) || $languages === []) {
             return $requested;

@@ -456,6 +456,28 @@
     .ml-vendor.is-compact .ml-vendor__body{ padding:0; }
     .ml-vendor-rail .ml-vendor{ min-width:260px; width:260px; flex:0 0 auto; scroll-snap-align:start; }
 
+    /* storefront: the shop presented as its own front — cover, badge and a way in */
+    .ml-vendor.is-storefront{ justify-content:space-between; }
+    .ml-vendor.is-storefront .ml-vendor__cover{ aspect-ratio:16/6; }
+    .ml-vendor.is-storefront .ml-vendor__body{ align-items:flex-start; padding:10px 14px 12px; }
+    .ml-vendor.is-storefront .ml-vendor__logo{ width:46px; height:46px; margin-top:-28px; }
+    .ml-vendor__badge{ display:inline-flex; align-items:center; gap:4px; font-size:.66rem;
+        font-weight:700; color:var(--ml-primary); }
+    .ml-vendor__visit{ display:block; margin:0 14px 14px; padding:9px 0; border-radius:12px;
+        background:var(--ml-grad); color:#fff; font-size:.78rem; font-weight:700; text-align:center;
+        transition:filter .3s var(--ml-ease); }
+    .ml-vendor.is-storefront:hover .ml-vendor__visit{ filter:brightness(1.08); }
+    .ml-vendor-rail .ml-vendor.is-storefront{ min-width:248px; width:248px; }
+
+    /* logos: a bare discovery strip — the mark and the name, nothing to weigh */
+    .ml-vendor.is-logos{ align-items:center; border:0; background:none; padding:4px 0; }
+    .ml-vendor.is-logos:hover{ transform:translateY(-3px); box-shadow:none; }
+    .ml-vendor.is-logos .ml-vendor__body{ flex-direction:column; gap:.5rem; padding:0; }
+    .ml-vendor.is-logos .ml-vendor__logo{ width:72px; height:72px; border-width:3px; }
+    .ml-vendor.is-logos .ml-vendor__id{ align-items:center; }
+    .ml-vendor.is-logos .ml-vendor__id b{ font-size:.76rem; max-width:96px; text-align:center; }
+    .ml-vendor-rail .ml-vendor.is-logos{ min-width:96px; width:96px; }
+
     /* one featured shop */
     .ml-shop{ position:relative; margin-bottom:1.3rem; border-radius:22px; overflow:hidden;
         background:var(--ml-paper); border:1px solid #eeeaf5; box-shadow:var(--ml-shadow); }

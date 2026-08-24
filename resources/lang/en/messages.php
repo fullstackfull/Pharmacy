@@ -4261,6 +4261,7 @@ return [
     "View_URL" => "View URL",
     "Update_successfully" => "Update successfully",
     "closed_now" => "Closed now",
+    "official_store" => "Official store",
     "send_mail" => "Send mail",
     "send_test_mail" => "Send test mail",
     "you_cannot_add_product_to_cart_from_this_shop_for_now" => "You cannot add product to cart from this shop for now",
