@@ -6591,4 +6591,8 @@ return [
 	'insight_listing_incomplete' => 'Listing is missing information',
 	'your_role_does_not_allow_this' => 'Your role does not allow this',
 	'payouts_unavailable' => 'Payouts unavailable',
+	'Your_earning' => 'Your earning',
+	'Items_total' => 'Items total',
+	'The_marketplace_has_not_recorded_the_earning_for_this_order_yet' => 'The marketplace has not recorded the earning for this order yet',
+	'Order_timeline' => 'Order timeline',
 ];
