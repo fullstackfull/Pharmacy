@@ -31,6 +31,7 @@ class SectionVisibility
     public const REASON_PLATFORM   = 'platform';
     public const REASON_DEVICE     = 'device';
     public const REASON_AUDIENCE   = 'audience';
+    public const REASON_CHANNEL    = 'channel';
 
     /**
      * @param  array<string, mixed>  $section  a section row as the renderer holds it
@@ -121,6 +122,14 @@ class SectionVisibility
      */
     private function targetingReason(array $section, ViewerContext $viewer): ?string
     {
+        // Channel first, because it is the coarsest question: a section built for the seller app
+        // is not for this viewer at all, whatever their platform or device says. Both apps are
+        // `platform: app`, which is exactly why platform cannot answer this.
+        $channels = Channel::tokens($this->tokens($section['channels'] ?? null));
+        if (!Channel::permits($channels, $viewer->channel())) {
+            return self::REASON_CHANNEL;
+        }
+
         $places = $this->tokens($section['platforms'] ?? null);
         if ($places !== []
             && !in_array($viewer->platform, $places, true)

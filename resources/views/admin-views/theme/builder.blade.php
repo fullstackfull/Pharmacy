@@ -132,6 +132,11 @@
             margin: 1rem 0 .5rem; padding-top: .75rem; border-top: 1px solid #212832; }
         .tb-hint { font-size: .72rem; color: #7d8794; line-height: 1.5; }
         /* resource picker: what a section actually shows */
+        .tb-cards__group { margin: .9rem 0 .35rem; }
+        .tb-cards__group-title { margin: 0; font-size: .68rem; letter-spacing: .09em; text-transform: uppercase;
+            color: #8b97a6; font-weight: 600; }
+        .tb-chip--variant { background: #1d2b34; color: #8fd8c4; }
+        .tb-chip--web { background: #3a2a1b; color: #e0a86a; }
         .tb-picker { position: relative; display: flex; flex-direction: column; gap: .35rem; }
         .tb-picker__chips { display: flex; flex-wrap: wrap; gap: .25rem; }
         .tb-picker__chip { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem;
@@ -548,26 +553,35 @@
                     <div class="tb-dialog__body">
                         {{-- Every card shows the shape the section takes on the page and the options it
                              brings, so a merchant knows what they are adding before they add it. --}}
+                        {{-- Grouped by family, because a flat list of 39 is a list nobody reads.
+                             The groups come from the registry, so a new type lands in its family
+                             without this markup changing. --}}
+                        @foreach ($sectionCatalogue as $categoryKey => $group)
+                            <div class="tb-cards__group">
+                                <h6 class="tb-cards__group-title">{{ translate($group['label']) }}</h6>
+                            </div>
                         <div class="tb-cards">
-                            @foreach ($sectionTypes as $key => $definition)
-                                <button type="button" class="tb-card" data-type="{{ $key }}">
+                            @foreach ($group['types'] as $key => $definition)
+                                <button type="button" class="tb-card" data-type="{{ $key }}" data-category="{{ $categoryKey }}">
                                     <span class="tb-thumb" data-shape="{{ $definition['preview'] ?? 'block' }}" aria-hidden="true"></span>
                                     <strong>{{ translate($definition['label']) }}</strong>
                                     <span>{{ translate($definition['hint'] ?? $definition['label']) }}</span>
                                     <span class="tb-chips">
+                                        @if (!in_array('customer_app', $definition['channels'] ?? [], true))
+                                            {{-- Said before it is added, not discovered after publishing. --}}
+                                            <span class="tb-chip tb-chip--web">{{ translate('web_only') }}</span>
+                                        @endif
+                                        @foreach ($definition['variants'] ?? [] as $variant)
+                                            <span class="tb-chip tb-chip--variant">{{ translate($variant) }}</span>
+                                        @endforeach
                                         @foreach ($definition['blocks'] ?? [] as $blockType)
                                             <span class="tb-chip tb-chip--block">+ {{ translate($blockLabels[$blockType] ?? $blockType) }}</span>
                                         @endforeach
-                                        @foreach (array_slice($definition['schema'], 0, 5, true) as $optionKey => $option)
-                                            <span class="tb-chip">{{ translate($option['label'] ?? $optionKey) }}</span>
-                                        @endforeach
-                                        @if (count($definition['schema']) > 5)
-                                            <span class="tb-chip">+{{ count($definition['schema']) - 5 }}</span>
-                                        @endif
                                     </span>
                                 </button>
                             @endforeach
                         </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -627,6 +641,11 @@
                 deliveryPlatformsHint: @json(translate('shows_in_every_place_you_tick_nothing_ticked_means_everywhere')),
                 deliveryAudience: @json(translate('who_sees_it')),
                 deliveryAudienceHint: @json(translate('nothing_ticked_means_everyone')),
+                deliveryChannels: @json(translate('which_app')),
+                deliveryChannelsHint: @json(translate('nothing_ticked_means_every_surface_use_this_only_to_keep_a_section_out_of_one_app')),
+                channelWeb: @json(translate('web_storefront')),
+                channelCustomerApp: @json(translate('customer_app')),
+                channelVendorApp: @json(translate('vendor_app')),
                 platformWeb: @json(translate('website')),
                 platformApp: @json(translate('mobile_app')),
                 platformDesktop: @json(translate('desktop')),
@@ -1560,10 +1579,17 @@
                     [['guest', T.audienceGuest], ['customer', T.audienceCustomer]]
                         .forEach(function (pair) { wrap.appendChild(check('audience', pair[0], pair[1], d.audience || [])); });
                 });
+
+                // Which surface, as opposed to which platform: both apps are "app", so only this
+                // can keep a section out of one of them.
+                group(T.deliveryChannels, T.deliveryChannelsHint, function (wrap) {
+                    [['web', T.channelWeb], ['customer_app', T.channelCustomerApp], ['vendor_app', T.channelVendorApp]]
+                        .forEach(function (pair) { wrap.appendChild(check('channels', pair[0], pair[1], d.channels || [])); });
+                });
             }
 
             function collectDeliveryRules() {
-                var rules = {section_id: state.sectionId, platforms: [], audience: []};
+                var rules = {section_id: state.sectionId, platforms: [], audience: [], channels: []};
                 inspector.querySelectorAll('[data-delivery-key]').forEach(function (input) {
                     rules[input.dataset.deliveryKey] = input.value || null;
                 });

@@ -61,11 +61,204 @@ class SectionRegistry
         ];
     }
 
+
     /**
-     * Section type definitions: page it belongs to, label, and its own settings schema.
+     * The families a merchant browses the library by.
+     *
+     * Order matters: this is the order the picker shows, and it runs from what a page opens with
+     * to what it closes with.
+     */
+    public const CATEGORIES = [
+        'hero'       => 'hero_and_promotional',
+        'products'   => 'products',
+        'categories' => 'categories',
+        'brands'     => 'brands',
+        'vendors'    => 'vendors',
+        'content'    => 'content',
+        'discovery'  => 'discovery',
+        'commerce'   => 'commerce',
+        'layout'     => 'layout',
+    ];
+
+    /**
+     * Which family each type belongs to.
+     *
+     * A map rather than a key on all 39 definitions: this is the one piece of metadata that is
+     * about presentation in the BUILDER rather than about the section, and keeping it here means a
+     * recategorisation is one edit instead of thirty-nine.
+     */
+    private const TYPE_CATEGORIES = [
+        'hero_banner' => 'hero', 'promotional_banner' => 'hero', 'split_banner' => 'hero',
+        'banner_mosaic' => 'hero', 'banner_strip' => 'hero', 'store_banner' => 'hero',
+        'announcement_bar' => 'hero',
+
+        'product_slider' => 'products', 'flash_deal' => 'products', 'deal_of_the_day' => 'products',
+        'featured_deal' => 'products', 'clearance_sale' => 'products', 'bundle' => 'products',
+        'product_tabs' => 'products', 'category_showcase' => 'products', 'brand_showcase' => 'products',
+        'recently_viewed' => 'products',
+
+        'category_grid' => 'categories', 'interest_tiles' => 'categories',
+
+        'brand_slider' => 'brands',
+
+        'vendor_slider' => 'vendors', 'vendor_showcase' => 'vendors',
+
+        'usp_strip' => 'content', 'stats_bar' => 'content', 'testimonials' => 'content',
+        'faq' => 'content', 'stories' => 'content', 'before_after' => 'content',
+        'blog_posts' => 'content', 'branches' => 'content', 'custom_html' => 'content',
+        'app_download' => 'content',
+
+        'trending_searches' => 'discovery', 'price_tiles' => 'discovery',
+
+        'coupon_strip' => 'commerce', 'shipping_cutoff' => 'commerce', 'newsletter' => 'commerce',
+
+        'spacer' => 'layout', 'footer_columns' => 'layout',
+    ];
+
+    /**
+     * The schema field that carries a type's display variant, where it has one.
+     *
+     * Most types call it `style`; the dashboard-banner section calls it `layout` because the word
+     * already meant something else there. Naming it here lets every consumer ask one question —
+     * "what are this type's variants" — without knowing which word a given section chose.
+     */
+    private const VARIANT_KEYS = ['style', 'layout'];
+
+    /**
+     * Legacy type names that resolve to another type plus a variant.
+     *
+     * Empty today, and the mechanism ships before its first use on purpose: collapsing the six
+     * banner types into one type with six variants is a library change, and it must not be the
+     * same change as the compatibility path that lets already-published sections keep their names.
+     * A section stored as an alias keeps rendering, because every reader resolves through here.
+     *
+     * @var array<string, array{type: string, variant: string}>
+     */
+    private const TYPE_ALIASES = [];
+
+    /**
+     * A type name as the engine knows it, plus the variant the alias implies.
+     *
+     * @return array{type: string, variant: ?string}
+     */
+    public function resolveAlias(string $type): array
+    {
+        $alias = self::TYPE_ALIASES[$type] ?? null;
+
+        return $alias === null
+            ? ['type' => $type, 'variant' => null]
+            : ['type' => $alias['type'], 'variant' => $alias['variant']];
+    }
+
+    /** Every alias, for the compatibility tests and the portability importer. */
+    public function aliases(): array
+    {
+        return self::TYPE_ALIASES;
+    }
+
+    /**
+     * The library, grouped the way it is browsed.
+     *
+     * @return array<string, array{label: string, types: array<string, array>}>
+     */
+    public function catalogue(?string $page = null): array
+    {
+        $types = $page === null ? $this->types() : $this->forPage($page);
+        $grouped = [];
+
+        foreach (self::CATEGORIES as $key => $label) {
+            $inCategory = array_filter($types, fn (array $definition) => ($definition['category'] ?? null) === $key);
+
+            if ($inCategory !== []) {
+                $grouped[$key] = ['label' => $label, 'types' => $inCategory];
+            }
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * The display variants a type offers, read from the select that actually drives it.
+     *
+     * Derived rather than declared: a variant list written by hand beside the schema is a list
+     * that will one day disagree with the field the storefront branches on.
+     *
+     * @return array<int, string>
+     */
+    public function variantsFor(string $type): array
+    {
+        $schema = $this->definitions()[$type]['schema'] ?? [];
+
+        foreach (self::VARIANT_KEYS as $key) {
+            if (isset($schema[$key]['options']) && is_array($schema[$key]['options'])) {
+                return array_values($schema[$key]['options']);
+            }
+        }
+
+        return [];
+    }
+
+    /** The settings key a type stores its variant under, or null when it has one look only. */
+    public function variantKeyFor(string $type): ?string
+    {
+        $schema = $this->definitions()[$type]['schema'] ?? [];
+
+        foreach (self::VARIANT_KEYS as $key) {
+            if (isset($schema[$key]['options'])) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Section definitions, each carrying what a builder needs to place it: its family, its
+     * variants, the surfaces that can draw it, and the contract version clients negotiate on.
+     *
      * @return array<string, array>
      */
     public function types(): array
+    {
+        if ($this->decorated !== null) {
+            return $this->decorated;
+        }
+
+        $capabilities = app(ComponentCapabilityRegistry::class);
+        $types = [];
+
+        foreach ($this->definitions() as $key => $definition) {
+            $types[$key] = $definition + [
+                'category'    => self::TYPE_CATEGORIES[$key] ?? 'content',
+                'icon'        => $definition['preview'] ?? 'bar',
+                'description' => $definition['hint'] ?? null,
+                'variant_key' => $this->variantKeyFor($key),
+                'variants'    => $this->variantsFor($key),
+                'channels'    => $capabilities->channelsFor($key),
+                // The contract generation a client negotiates on. One today for every type; a bump
+                // is how a settings change that an older renderer would draw wrongly stops
+                // reaching that renderer.
+                'version'     => $capabilities->requirementFor($key)['version'] ?? 1,
+            ];
+        }
+
+        return $this->decorated = $types;
+    }
+
+    /** Memoised: types() is asked for on every builder render and every delivery assembly. */
+    private ?array $decorated = null;
+
+    /**
+     * Section type definitions: page it belongs to, label, and its own settings schema.
+     *
+     * The catalogue metadata a builder needs to ORGANISE these — which family a type belongs to,
+     * which surfaces can draw it, which layout variants it offers — is not repeated in all 39
+     * entries. It is derived in {@see types()} from the maps below and from each type's own schema,
+     * so a variant list can never disagree with the select that produces it.
+     *
+     * @return array<string, array>
+     */
+    private function definitions(): array
     {
         return [
             'announcement_bar' => [

@@ -278,6 +278,14 @@ class ThemeDelivery
             'uuid'     => $row->uuid,
             'id'       => $row->id,
             'type'     => $row->type,
+            // The layout the merchant chose, lifted out of the settings bag it is stored in.
+            // Clients branch on it, and reading it from one key means they no longer have to know
+            // that most types call it `style` and one calls it `layout`.
+            'variant'  => $this->variantOf($row->type, $settings),
+            // The contract generation this section is delivered under. A client that negotiated a
+            // lower version for this type never receives it — but one that simply ignores the key
+            // behaves exactly as it does today, which is what every installed build does.
+            'component_version' => app(SectionRegistry::class)->types()[$row->type]['version'] ?? 1,
             'settings' => $this->shape($settings, $viewer),
             'blocks'   => $blocks,
             'cards'    => $storeCards ?? ($bannerBacked
@@ -291,6 +299,25 @@ class ThemeDelivery
                 : null),
             'source'   => app(ThemeSourceMap::class)->for($row->type, $settings, $blocks),
         ];
+    }
+
+    /**
+     * The display variant a section is stored with, whichever key its type uses.
+     *
+     * Null for a type with one look — the client then has nothing to branch on, which is correct.
+     */
+    private function variantOf(string $type, array $settings): ?string
+    {
+        $registry = app(SectionRegistry::class);
+        $key = $registry->variantKeyFor($type);
+
+        if ($key === null) {
+            return null;
+        }
+
+        $variant = $settings[$key] ?? null;
+
+        return is_string($variant) && $variant !== '' ? $variant : null;
     }
 
     /**
