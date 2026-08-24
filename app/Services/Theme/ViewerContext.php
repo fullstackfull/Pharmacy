@@ -41,6 +41,7 @@ final class ViewerContext
         public readonly bool $authenticated = false,
         public readonly ?string $locale = null,
         public readonly int $uiEngineVersion = 0,
+        public readonly int $uiSchemaVersion = 0,
         public readonly array $supportedComponents = [],
         // Which surface asked. Null means "work it out from the platform", which is what every
         // client that predates channels does — and what keeps this constructor's old call sites
@@ -80,6 +81,11 @@ final class ViewerContext
         $engineRaw = $request->header('X-UI-Engine') ?? $request->query('ui_engine');
         $engine = is_numeric($engineRaw) ? max(0, (int) $engineRaw) : 0;
 
+        // The schema generation this build parses. Read (and folded into the delivery cache key)
+        // so a future schema bump can shape payloads per generation; today every build says 1.
+        $schemaRaw = $request->header('X-UI-Schema') ?? $request->query('ui_schema');
+        $schema = is_numeric($schemaRaw) ? max(0, (int) $schemaRaw) : 0;
+
         // A client may name its own channel; one that does not is placed by its platform, so every
         // installed app keeps landing on customer_app without sending anything new.
         $channel = Channel::normalize($request->header('X-UI-Channel') ?? $request->query('channel'));
@@ -90,6 +96,7 @@ final class ViewerContext
             authenticated: self::customerIsAuthenticated(),
             locale: app()->getLocale(),
             uiEngineVersion: $engine,
+            uiSchemaVersion: $schema,
             supportedComponents: $components,
             channel: $channel,
             segments: self::resolvedSegments(),

@@ -88,10 +88,14 @@ class ThemeManager
             $theme->is_active = true;
             $theme->save();
 
-            app(StorefrontThemeRenderer::class)->flush();
-
             return $theme->refresh();
         });
+
+        // AFTER the commit, and BOTH caches: flushing inside the transaction let a request racing
+        // the commit re-cache the old theme, and forgetting only the web renderer left every
+        // installed app on the previous theme for a full delivery TTL.
+        app(StorefrontThemeRenderer::class)->flush();
+        app(ThemeDelivery::class)->flush();
 
         // After the commit, like every audit line here: a rolled-back activation never happened,
         // and the trail must not say otherwise.
@@ -133,11 +137,15 @@ class ThemeManager
             app(ThemeDelivery::class)->stampVersion($version);
 
             // Both caches: the storefront's rendered structure and the app's negotiated payloads.
-            app(StorefrontThemeRenderer::class)->flush();
-            app(ThemeDelivery::class)->flush();
+
 
             return $version->refresh();
         });
+
+        // Flushed AFTER the commit, never inside it: a request racing the commit could re-cache
+        // the pre-publish page, and it would then be served for a full TTL.
+        app(StorefrontThemeRenderer::class)->flush();
+        app(ThemeDelivery::class)->flush();
 
         // Announced AFTER the commit, never inside it: a client woken by the beacon must find the
         // new revision, and a rolled-back transaction must announce nothing.

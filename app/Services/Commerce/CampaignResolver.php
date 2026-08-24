@@ -169,7 +169,7 @@ class CampaignResolver
                 'hero'   => $this->placeHero($sections, $made, $typeOf),
                 // Top of the page, but never above the hero: the hero is the page's face, and a
                 // "top" promo belongs directly under it — or first, when there is no hero.
-                'top'    => $typeOf($sections[0] ?? null) === 'hero_banner'
+                'top'    => $sections !== [] && $typeOf($sections[0]) === 'hero_banner'
                     ? [$sections[0], $made, ...array_slice($sections, 1)]
                     : [$made, ...$sections],
                 'middle' => [...array_slice($sections, 0, (int) ceil(count($sections) / 2)),
