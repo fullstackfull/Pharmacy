@@ -79,6 +79,10 @@
         .tb-compat { display: flex; gap: .75rem; align-items: flex-start; margin: 0 1rem .75rem; padding: .65rem .85rem;
             background: #1d2732; border: 1px solid #31445c; border-radius: .5rem; font-size: .8rem; color: #c9d5e3; }
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
+        /* A section the chosen channel will not receive: still listed, still editable, visibly
+           not part of what that client gets. */
+        .tb-item.is-off-channel { opacity: .42; }
+        .tb-item.is-off-channel .tb-item__label { text-decoration: line-through; }
         .tb-publish { position: absolute; inset-inline-end: 1rem; top: 3.5rem; z-index: 40; width: 17rem;
                       display: flex; flex-direction: column; gap: .6rem; padding: 1rem;
                       border-radius: .75rem; background: #16202b; border: 1px solid #2b3a4a;
@@ -378,6 +382,13 @@
 
                 <div class="tb-bar__group">
                     <span id="tb-status" class="tb-status" aria-live="polite"></span>
+                    {{-- Which client's eyes to look through. The device buttons change the frame's
+                         width; this changes what the page actually consists of, which is a
+                         different question and the one a merchant asks before publishing. --}}
+                    <div class="tb-seg" role="group" aria-label="{{ translate('channel') }}">
+                        <button type="button" class="is-active" data-channel="web" title="{{ translate('website') }}"><i class="fi fi-rr-globe"></i></button>
+                        <button type="button" data-channel="customer_app" title="{{ translate('customer_app') }}"><i class="fi fi-rr-mobile-notch"></i></button>
+                    </div>
                     <div class="tb-seg" role="group" aria-label="{{ translate('device_preview') }}">
                         <button type="button" class="is-active" data-device="desktop" title="{{ translate('desktop') }}"><i class="fi fi-rr-computer"></i></button>
                         <button type="button" data-device="tablet" title="{{ translate('tablet') }}"><i class="fi fi-rr-tablet"></i></button>
@@ -569,6 +580,8 @@
                                  data-id="{{ $section['id'] }}"
                                  data-type="{{ $section['type'] }}"
                                  data-visible="{{ $section['is_visible'] ? 1 : 0 }}"
+                                 data-app-safe="{{ empty($section['app_safe']) ? 0 : 1 }}"
+                                 data-channels="{{ implode(',', $section['channels'] ?? []) }}"
                                  aria-selected="false">
                                 <span class="tb-item__grip"><i class="fi fi-rr-menu-burger"></i></span>
                                 <span class="tb-item__label">{{ translate($section['label']) }}</span>
@@ -1781,6 +1794,39 @@
                     markSelectedInFrame(scrollPreview);
                 });
             }
+
+            // ---------- channel ------------------------------------------------------------
+            // Not a second preview, a filter on the one that exists: the iframe cannot render the
+            // app, but the list of what the app receives is knowable and is most of the answer.
+            (function () {
+                var buttons = document.querySelectorAll('.tb-seg button[data-channel]');
+                if (!buttons.length) return;
+
+                function apply(channel) {
+                    structure.querySelectorAll('.tb-item').forEach(function (item) {
+                        var limited = (item.dataset.channels || '').split(',').filter(Boolean);
+                        var allowed = !limited.length || limited.indexOf(channel) !== -1;
+                        var drawable = channel !== 'customer_app' || item.dataset.appSafe === '1';
+
+                        item.classList.toggle('is-off-channel', !(allowed && drawable));
+                    });
+                }
+
+                buttons.forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        buttons.forEach(function (other) { other.classList.remove('is-active'); });
+                        button.classList.add('is-active');
+                        apply(button.dataset.channel);
+
+                        // Looking through the app's eyes at a desktop-width frame is a mixed
+                        // message; the phone frame is what that channel actually is.
+                        if (button.dataset.channel === 'customer_app' && stage) {
+                            var phone = document.querySelector('.tb-seg button[data-device="mobile"]');
+                            if (phone) phone.click();
+                        }
+                    });
+                });
+            })();
 
             // ---------- publish -----------------------------------------------------------
             (function () {

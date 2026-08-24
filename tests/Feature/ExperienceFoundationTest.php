@@ -157,6 +157,32 @@ class ExperienceFoundationTest extends TestCase
         $this->assertNull($section->experience_page_id);
     }
 
+    public function test_the_structure_panel_carries_what_each_channel_will_and_will_not_get(): void
+    {
+        // Two different reasons a section is absent from the app, and the builder has to show both
+        // in the place a merchant arranges sections: one is what the app CAN draw, the other is
+        // what the merchant ALLOWED it to draw.
+        $version = ThemeVersion::create(['theme_id' => $this->theme()->id, 'status' => ThemeVersion::STATUS_DRAFT]);
+
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'blog_posts',
+            'sort_order' => 1, 'is_visible' => true, 'settings' => [],
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'spacer',
+            'sort_order' => 2, 'is_visible' => true, 'settings' => [],
+            'channels' => [Channel::WEB],
+        ]);
+
+        $structure = app(ThemeBuilderService::class)->getPageStructure($version, 'home');
+
+        $this->assertFalse($structure[0]['app_safe'], 'the app has no renderer for a blog rail');
+        $this->assertSame([], $structure[0]['channels'], 'and the merchant limited it to nothing');
+
+        $this->assertTrue($structure[1]['app_safe'], 'a spacer draws anywhere');
+        $this->assertSame([Channel::WEB], $structure[1]['channels'], 'but this one was limited to the web');
+    }
+
     // -- channels ------------------------------------------------------------------------------
 
     public function test_a_section_with_no_channel_rule_shows_on_every_surface(): void
