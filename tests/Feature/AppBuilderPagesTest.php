@@ -190,6 +190,34 @@ class AppBuilderPagesTest extends TestCase
         $this->assertSame('home', $this->getJson('/api/v1/theme/home?page[]=x')->assertOk()->json('page'));
     }
 
+    public function test_every_theme_capability_can_actually_be_granted(): void
+    {
+        // These were enforced from the day they were written and offered by nothing: the role form
+        // had no theme section, so `theme_publish` — the one capability that deliberately does not
+        // come with the module — could be held by nobody but the master admin, and no amount of
+        // clicking could change that.
+        $offered = \App\Services\Theme\ThemePermissionService::all();
+
+        foreach ([
+            \App\Services\Theme\ThemePermissionService::VIEW,
+            \App\Services\Theme\ThemePermissionService::EDIT,
+            \App\Services\Theme\ThemePermissionService::PUBLISH,
+            \App\Services\Theme\ThemePermissionService::RESTORE,
+            \App\Services\Theme\ThemePermissionService::STYLES,
+        ] as $capability) {
+            $this->assertArrayHasKey($capability, $offered, "{$capability} is enforced but cannot be granted");
+        }
+
+        // And the form that grants them actually reads that list, rather than a copy of it.
+        foreach (['create', 'edit'] as $form) {
+            $this->assertStringContainsString(
+                'ThemePermissionService::all()',
+                file_get_contents(resource_path("views/admin-views/custom-role/{$form}.blade.php")),
+                $form,
+            );
+        }
+    }
+
     public function test_a_disabled_page_is_not_reachable_from_the_app(): void
     {
         $pages = app(ExperiencePageService::class);

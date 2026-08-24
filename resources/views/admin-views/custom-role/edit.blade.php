@@ -79,6 +79,30 @@
                         @endforeach
                     </div>
 
+
+                    {{-- The App Builder, split the same way and for the same reason: composing a
+                         page is recoverable, publishing one changes what every customer sees. The
+                         module grant carries everything except publishing, so an existing role
+                         keeps exactly what it had. --}}
+                    <h5 class="mb-2">{{ translate('app_builder') }}</h5>
+                    <div class="row gy-2 mb-4">
+                        @foreach (\App\Services\Theme\ThemePermissionService::all() as $themeKey => $themeLabel)
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="form-group d-flex gap-2">
+                                    <input type="checkbox" name="modules[]" value="{{ $themeKey }}"
+                                           class="form-check-input checkbox--input module-permission"
+                                           id="{{ $themeKey }}-permission"
+                                        {{ in_array($themeKey, (array) json_decode($role['module_access'])) ? 'checked' : '' }}>
+                                    <label class=""
+                                           style="{{ session('direction') === "rtl" ? 'margin-right: 1.25rem;' : '' }};"
+                                           for="{{ $themeKey }}-permission">
+                                        {{ translate($themeLabel) }}
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
                     <h5 class="mb-2">{{ translate('analytics') }}</h5>
                     <div class="row gy-2 mb-4">
                         @foreach (\App\Services\Analytics\AnalyticsPermissionService::all() as $analyticsKey => $analyticsLabel)

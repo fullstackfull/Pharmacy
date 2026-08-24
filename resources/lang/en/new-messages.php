@@ -6647,4 +6647,5 @@ return [
 	'a_new_page_is_composed_here_and_served_by_the_api_the_app_reaches_it_once_a_release_links_to_it' => 'A new page is composed here and served by the api the app reaches it once a release links to it',
 	'search_sections' => 'Search sections',
 	'website_only' => 'Website only',
+	'you_do_not_have_permission_to_manage_global_styles' => 'You do not have permission to manage global styles',
 ];

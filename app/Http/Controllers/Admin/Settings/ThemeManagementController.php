@@ -338,8 +338,10 @@ class ThemeManagementController extends BaseController
         if ($this->blockedOnDemo()) {
             return $this->backToIndex();
         }
-        if (!$this->permissions->canEdit()) {
-            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
+        // Its own capability: restoring replaces the draft somebody may be part-way through
+        // composing, which is a bigger thing than editing one section of it.
+        if (!$this->permissions->canRestore()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_restore_a_version') . '!');
             return $this->backToIndex();
         }
 
