@@ -26,6 +26,8 @@ use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
 use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
 use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
 use App\Services\SellerIntelligence\SellerInsightEngine;
+use App\Services\SellerIntelligence\Severity\SellerBaselineProvider;
+use App\Services\SellerIntelligence\Severity\SeverityEngine;
 use App\Traits\UpdateClass;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
@@ -73,11 +75,22 @@ class AppServiceProvider extends ServiceProvider
 
         // One engine, one ordered set of producers. Registered here rather than discovered, so the
         // order the Action Center falls back on is explicit and a new producer is a deliberate act.
-        $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine([
-            $app->make(InventoryRiskProducer::class),
-            $app->make(OrderSlaProducer::class),
-            $app->make(ListingQualityProducer::class),
-        ]));
+        $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine(
+            producers: [
+                $app->make(InventoryRiskProducer::class),
+                $app->make(OrderSlaProducer::class),
+                $app->make(ListingQualityProducer::class),
+            ],
+            // Severity is measured against the seller's own business rather than declared, so both
+            // of these are load-bearing: without them a detector's own guess stands, which is the
+            // pre-Phase-3 behaviour and the reason a rare product's stockout ranked with a best
+            // seller's.
+            severity: $app->make(SeverityEngine::class),
+            baselines: $app->make(SellerBaselineProvider::class),
+        ));
+
+        // One measurement of each seller's size per sweep, shared by every detector.
+        $this->app->singleton(SellerBaselineProvider::class);
 
         $loader = AliasLoader::getInstance();
         $loader->alias('Helper', \App\Utils\Helpers::class);

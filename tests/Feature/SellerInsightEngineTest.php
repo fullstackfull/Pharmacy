@@ -8,6 +8,7 @@ use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\SellerInsightEngine;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\BuildsIssueSchema;
 use Tests\TestCase;
 
 /**
@@ -28,30 +29,14 @@ use Tests\TestCase;
  */
 class SellerInsightEngineTest extends TestCase
 {
+    use BuildsIssueSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Schema::dropIfExists('seller_insights');
-        Schema::create('seller_insights', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('seller_id');
-            $table->string('type', 60);
-            $table->string('severity', 20)->default('medium');
-            $table->string('title', 191);
-            $table->text('body')->nullable();
-            $table->string('entity_type', 60)->nullable();
-            $table->string('entity_id', 60)->nullable();
-            $table->decimal('metric', 24, 4)->nullable();
-            $table->decimal('impact', 24, 4)->nullable();
-            $table->string('action_key', 60)->nullable();
-            $table->json('action_params')->nullable();
-            $table->string('fingerprint', 191)->unique();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamp('dismissed_at')->nullable();
-            $table->timestamp('resolved_at')->nullable();
-            $table->timestamps();
-        });
+        $this->createIssueTable();
     }
 
     /** A producer that says exactly what the test tells it to. */
