@@ -43,11 +43,25 @@ class StorefrontThemeRenderer
     /**
      * Session key holding the theme version an admin is previewing.
      *
-     * Preview is deliberately session-scoped and admin-gated rather than a query parameter: a
-     * ?preview_version=N URL could be shared or crawled, which would expose an unpublished design
-     * to customers and to search engines.
+     * Preview is session-scoped and admin-gated rather than taking a version id from the URL: a
+     * ?preview_version=N would be guessable, shareable and crawlable, which would expose an
+     * unpublished design to customers and to search engines.
      */
     public const PREVIEW_SESSION_KEY = 'theme_preview_version_id';
+
+    /**
+     * Query parameter carrying a SIGNED preview token.
+     *
+     * This is the one way a preview may travel in a URL, and it answers each of the objections
+     * above rather than ignoring them: the token is an HMAC over a version id and an expiry, so it
+     * cannot be guessed or edited into another version, it stops working on its own, and
+     * {@see \App\Http\Middleware\NoIndexThemePreview} marks any response carrying one noindex.
+     *
+     * It exists because the session cannot leave the browser the admin is signed in to, and the
+     * question a merchant actually has — does this look right on a phone — can only be answered on
+     * the phone.
+     */
+    public const PREVIEW_TOKEN_KEY = 'theme_preview';
 
     public function sectionsFor(string $page): ?array
     {
@@ -275,15 +289,22 @@ class StorefrontThemeRenderer
         ])->all();
     }
 
-    /** The version being previewed, but ONLY for an authenticated admin. */
+    /**
+     * The version being previewed: an admin's own session, or a signed token on the URL.
+     *
+     * Checked in that order because the session is the cheaper answer and the one an admin
+     * browsing their own storefront already has.
+     */
     private function activePreviewVersionId(): ?int
     {
         try {
-            if (!auth('admin')->check()) {
-                return null;
+            if (auth('admin')->check() && session(self::PREVIEW_SESSION_KEY)) {
+                return (int) session(self::PREVIEW_SESSION_KEY);
             }
-            $id = session(self::PREVIEW_SESSION_KEY);
-            return $id ? (int) $id : null;
+
+            $token = request()?->query(self::PREVIEW_TOKEN_KEY);
+
+            return app(ThemePreviewToken::class)->version(is_string($token) ? $token : null)?->id;
         } catch (\Throwable) {
             return null;
         }

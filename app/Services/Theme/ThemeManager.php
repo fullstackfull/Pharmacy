@@ -8,6 +8,7 @@ use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Orchestrates the theme lifecycle (Phase 1.1): resolve effective settings, publish a version
@@ -100,9 +101,9 @@ class ThemeManager
     }
 
     /** Publish a version: previous published version of the same theme is archived. Atomic. */
-    public function publish(ThemeVersion $version): ThemeVersion
+    public function publish(ThemeVersion $version, ?string $changeNote = null): ThemeVersion
     {
-        $published = DB::transaction(function () use ($version) {
+        $published = DB::transaction(function () use ($version, $changeNote) {
             ThemeVersion::query()
                 ->where('theme_id', $version->theme_id)
                 ->where('status', ThemeVersion::STATUS_PUBLISHED)
@@ -111,6 +112,15 @@ class ThemeManager
 
             $version->status = ThemeVersion::STATUS_PUBLISHED;
             $version->published_at = now();
+
+            // What this publish was for, in the merchant's words. Written here rather than on the
+            // draft so the note describes what went live, and only when the column exists — a
+            // deploy is not atomic with its migrations.
+            $note = is_string($changeNote) ? trim($changeNote) : '';
+            if ($note !== '' && Schema::hasColumn($version->getTable(), 'change_note')) {
+                $version->change_note = mb_substr($note, 0, 300);
+            }
+
             $version->save();
 
             // Whatever goes live is registered in Promotion -> Banners (blocks composed before the
@@ -138,7 +148,11 @@ class ThemeManager
         app(AuditLogger::class)->record(
             action: 'theme.published',
             subject: $published,
-            after: ['revision' => $published->revision, 'label' => $published->label],
+            after: array_filter([
+                'revision' => $published->revision,
+                'label' => $published->label,
+                'change_note' => $published->change_note ?? null,
+            ], static fn ($value) => $value !== null),
             context: ['theme_id' => $published->theme_id],
         );
 

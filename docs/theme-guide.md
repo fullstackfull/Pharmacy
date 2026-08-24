@@ -243,7 +243,7 @@ Brand Banner.
 | أجرب تعديلاً دون لمس الموقع | Duplicate النسخة المنشورة ← عدّل المسودة ← عاين ← انشر |
 | أرجع عن نشر خاطئ | Versions ← Restore للنسخة السابقة ← Publish |
 | أعدّل ستايل بطاقة المنتج عالمياً | `resources/css/kohl/_storefront-refresh.scss` ثم `npm run production` |
-| أضيف نوع قسم جديد للمطورين | `SectionRegistry.php` + جزئية Blade في `resources/views/theme-sections/` |
+| أضيف نوع قسم جديد للمطورين | `SectionRegistry.php` + ملف `resources/views/theme-sections/types/{type}.blade.php` |
 
 ---
 
@@ -266,6 +266,34 @@ Brand Banner.
 - **Sections catalogue.** `app/Services/Theme/SectionRegistry.php` is the contract between the
   Builder UI and the storefront renderer (`StorefrontThemeRenderer`); add a type there plus its
   Blade partial and the Builder picks it up automatically.
+- **One partial per section type.** `theme-sections/home.blade.php` resolves each section by name
+  (`@includeIf('theme-sections.types.' . $type)`) — it holds the page shell, the shared CSS and
+  the per-section data resolution; `theme-sections/types/{type}.blade.php` holds one type's markup
+  and reads what the shell put in scope (`$s` settings, `$blocks` cards, `$__data`, and whatever
+  that type's data variable is called). Two types that draw one body — `featured_deal` and
+  `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
+  the two invariants: every renderable type has a partial, and every partial compiles.
+- **Publishing gate.** `app/Services/Theme/PublishValidator.php` answers "what is wrong with this
+  version" before it becomes the shop, in two severities: *blocking* (a choice the merchant left
+  unset — publishing waits) and *warning* (the configuration is right and the world is not —
+  publishing proceeds with a sentence). Surfaced in the builder beside the sections it names and on
+  `/admin/theme` beside the publish button it disables. Cached per version, dropped on any section
+  or block write.
+- **Change note and scheduled publish.** A version carries `change_note` (written at publish, shown
+  wherever a version is chosen) and `publish_at`. `theme:publish-due` runs every five minutes and
+  publishes what is due — re-running the gate first, because hours pass between setting a time and
+  reaching it. A version that no longer passes has its schedule cleared and the reason audited
+  rather than retrying silently. The control is only offered while the server cron is alive.
+- **Preview on a real device.** `ThemePreviewToken` signs `{version}.{expiry}` with the app key.
+  `?theme_preview=TOKEN` on the storefront and `?preview=TOKEN` on `/api/v1/theme/home` both render
+  that unpublished version — never cached, never ETagged, and marked `noindex` by
+  `NoIndexThemePreview`. The builder mints one on demand and draws a QR with the shop's own
+  dependency-free encoder (`App\Services\Analytics\Support\QrCode`).
+- **What a section shows vs. where it leads.** `ContentSource` reads a section's source out of its
+  settings once (`source`, `source_id`, `product_ids`, `limit`); `ThemeSourceMap::endpointFor()`
+  turns it into the app's endpoint, `SectionDataResolver::productsFrom()` into the web's query, and
+  `SectionDestination` into the "view all" destination — a URL for the web and the same URL as a
+  typed action for the app.
 - **Header & footer.** `theme-sections/header.blade.php` renders published header sections
   (announcement bar) above the built-in header; `theme-sections/footer.blade.php` REPLACES the
   built-in footer when footer sections are published (copyright bar always appended), falling back

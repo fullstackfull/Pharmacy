@@ -129,7 +129,7 @@ class SectionReadiness
                 ? $this->ready()
                 : $this->missing(self::NO_CONTENT, 'no_coupon_is_live_right_now'),
 
-            'bundle' => empty($settings['product_ids'])
+            'bundle' => ContentSource::picked($settings['product_ids'] ?? null)->ids === []
                 ? $this->missing(self::NEEDS_CHOICE, 'pick_at_least_two_products_for_the_bundle')
                 : ($this->data->bundle($settings) !== null
                     ? $this->ready()
@@ -143,9 +143,7 @@ class SectionReadiness
                 ? $this->ready()
                 : $this->missing(self::NOT_NOW, 'todays_cut_off_time_has_passed_so_this_appears_again_tomorrow_morning'),
 
-            'product_slider' => $this->data->products($settings)->isNotEmpty()
-                ? $this->ready()
-                : $this->missing(self::NO_CONTENT, 'this_product_source_returns_nothing_at_the_moment'),
+            'product_slider' => $this->sourceVerdict(ContentSource::fromSettings($settings, defaultLimit: 8)),
 
             'category_grid' => $this->data->categories((int) ($settings['limit'] ?? 12), $settings['category_ids'] ?? null)->isNotEmpty()
                 ? $this->ready()
@@ -192,6 +190,33 @@ class SectionReadiness
 
             default => $this->ready(),
         };
+    }
+
+    /**
+     * Why a product rail is empty, told apart from whether it is.
+     *
+     * The three ways a rail comes up empty need three different sentences: a source scoped to a
+     * category nobody chose, a manual source with nothing picked, and a properly configured source
+     * the shop currently has no products for. Only the last is something the merchant waits out;
+     * the first two they fix in the panel they are already looking at.
+     *
+     * @return array{state: string, reason_key: ?string}
+     */
+    private function sourceVerdict(ContentSource $source): array
+    {
+        if ($source->needsSubject()) {
+            return $this->missing(self::NEEDS_CHOICE, $source->kind === 'brand'
+                ? 'choose_a_brand_for_this_section_to_have_something_to_show'
+                : 'choose_a_category_for_this_section_to_have_something_to_show');
+        }
+
+        if ($source->isManual() && $source->ids === []) {
+            return $this->missing(self::NEEDS_CHOICE, 'pick_the_products_this_section_should_show');
+        }
+
+        return $this->data->productsFrom($source)->isNotEmpty()
+            ? $this->ready()
+            : $this->missing(self::NO_CONTENT, 'this_product_source_returns_nothing_at_the_moment');
     }
 
     /**

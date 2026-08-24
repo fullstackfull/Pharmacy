@@ -67,6 +67,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\Localization::class,
             \App\Http\Middleware\DetectMobile::class,
             \App\Http\Middleware\ApplySeoRedirects::class,
+            // A previewed draft is a real storefront response with an unpublished page in it. This
+            // keeps that page out of search results and shared caches for as long as the token
+            // that summoned it is alive.
+            \App\Http\Middleware\NoIndexThemePreview::class,
             \App\Http\Middleware\RecordHttpTelemetry::class,
             // Operational monitoring. Separate from RecordHttpTelemetry on purpose: that one keeps
             // a row per request for visits and sources, this one only ever increments counters in
@@ -143,6 +147,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Evaluate seller SLA thresholds into the breach ledger. Previously only the admin button ran
         // this, so breaches went stale between manual clicks.
         $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
+
+        // Publish the theme versions a merchant scheduled. Five minutes is the resolution the
+        // builder promises, and matches the heartbeat that tells the dashboard the cron is alive —
+        // a scheduled publish is only as trustworthy as the run that fires it.
+        $schedule->command('theme:publish-due')->everyFiveMinutes()->withoutOverlapping();
 
         // Reconcile the storefront search index against the catalogue in case a bulk import bypassed the
         // model observer that keeps it fresh in realtime.

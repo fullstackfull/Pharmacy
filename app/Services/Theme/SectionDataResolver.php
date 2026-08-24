@@ -23,6 +23,9 @@ use Illuminate\Support\Collection;
  */
 class SectionDataResolver
 {
+    /** How many products a bundle draws — shared with the app's hint so both show one set. */
+    public const BUNDLE_LIMIT = 12;
+
     /**
      * One brand with its products — the brand half of category_showcase.
      *
@@ -43,11 +46,9 @@ class SectionDataResolver
             return null;
         }
 
-        $products = $this->products([
-            'source' => 'brand',
-            'source_id' => $brandId,
-            'limit' => (int) ($settings['limit'] ?? 10),
-        ]);
+        $products = $this->productsFrom(
+            ContentSource::scoped('brand', $brandId, $settings['limit'] ?? null),
+        );
 
         return $products->isEmpty() ? null : ['brand' => $brand, 'products' => $products];
     }
@@ -135,7 +136,7 @@ class SectionDataResolver
      */
     public function categories(int $limit, string|array|null $picked = null): Collection
     {
-        $ids = $this->idList($picked);
+        $ids = ContentSource::pickedIds($picked);
 
         if ($ids !== []) {
             return $this->safely(fn () => Category::whereIn('id', array_slice($ids, 0, $this->bounded($limit, 24)))
@@ -153,25 +154,39 @@ class SectionDataResolver
     /** Products for a product slider, per the section's `source` setting. */
     public function products(array $settings): Collection
     {
-        $limit = $this->bounded((int) ($settings['limit'] ?? 8), 24);
-        $source = (string) ($settings['source'] ?? 'featured');
-        $reference = (int) ($settings['source_id'] ?? 0);
+        return $this->productsFrom(ContentSource::fromSettings($settings, defaultLimit: 8));
+    }
 
-        if ($source === 'manual') {
-            return $this->pickedProducts($settings['product_ids'] ?? null, $limit);
+    /**
+     * The products one source resolves to, run against the database.
+     *
+     * The sibling of {@see ThemeSourceMap::endpointFor()}: same source object, same choice, one
+     * answered with a query for the web and the other with an endpoint for the app. Keeping the
+     * two on one input is what stops a rail from showing different products on a phone.
+     *
+     * @return Collection<int, \App\Models\Product>
+     */
+    public function productsFrom(ContentSource $source): Collection
+    {
+        // Bounded once, where the source is read. Clamping again here is how the web and the app
+        // ended up with two different ceilings for the same rail.
+        $limit = $source->limit;
+
+        if ($source->isManual()) {
+            return $this->pickedProducts($source->ids, $limit);
         }
 
-        return $this->safely(function () use ($limit, $source, $reference) {
+        return $this->safely(function () use ($limit, $source) {
             // The card shows the brand under the image; loading it here keeps a rail of ten
             // products at one query instead of eleven.
             $query = Product::active()->with('brand:id,name,slug');
 
-            $query = match ($source) {
+            $query = match ($source->kind) {
                 'best_selling' => $query->withCount('orderDetails')->orderByDesc('order_details_count'),
                 'new_arrival'  => $query->latest('id'),
                 'top_rated'    => $query->withAvg('reviews', 'rating')->orderByDesc('reviews_avg_rating'),
-                'category'     => $this->scopedToCategory($query, $reference)->latest('id'),
-                'brand'        => $query->where('brand_id', $reference)->latest('id'),
+                'category'     => $this->scopedToCategory($query, (int) $source->id)->latest('id'),
+                'brand'        => $query->where('brand_id', (int) $source->id)->latest('id'),
                 default        => $query->where('featured', 1)->latest('id'),
             };
 
@@ -198,7 +213,7 @@ class SectionDataResolver
     /** Exactly these products, in the order the merchant picked them. */
     public function pickedProducts(string|array|null $picked, int $limit): Collection
     {
-        $ids = $this->idList($picked);
+        $ids = ContentSource::pickedIds($picked);
         if ($ids === []) {
             return collect();
         }
@@ -241,14 +256,6 @@ class SectionDataResolver
         return array_values(array_unique(array_merge([$categoryId], $children, $grandChildren)));
     }
 
-    /** Normalize a picker value ("3,9,1" or [3,9,1]) into a list of positive ids. */
-    private function idList(string|array|null $picked): array
-    {
-        $ids = is_array($picked) ? $picked : explode(',', (string) $picked);
-
-        return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
-    }
-
     /**
      * Shops for a vendor section: the ones the merchant hand-picked, in their order, or the
      * highest-rated shops when they picked none.
@@ -262,7 +269,7 @@ class SectionDataResolver
      */
     public function vendors(int $limit, string|array|null $picked = null): Collection
     {
-        $ids = $this->idList($picked);
+        $ids = ContentSource::pickedIds($picked);
 
         return $this->safely(function () use ($limit, $ids) {
             $shops = \App\Models\Shop::query()
@@ -743,11 +750,9 @@ class SectionDataResolver
                 'category'       => $category,
                 'banner'         => $banner,
                 'sub_categories' => $subCategories,
-                'products'       => $this->products([
-                    'source'    => 'category',
-                    'source_id' => $categoryId,
-                    'limit'     => (int) ($settings['limit'] ?? 10),
-                ]),
+                'products'       => $this->productsFrom(
+                    ContentSource::scoped('category', $categoryId, $settings['limit'] ?? null),
+                ),
             ];
         } catch (\Throwable $exception) {
             report($exception);
@@ -878,7 +883,7 @@ class SectionDataResolver
      */
     public function bundle(array $settings): ?array
     {
-        $products = $this->pickedProducts($settings['product_ids'] ?? null, 12);
+        $products = $this->pickedProducts($settings['product_ids'] ?? null, self::BUNDLE_LIMIT);
         if ($products->count() < 2) {
             return null;
         }

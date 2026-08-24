@@ -79,6 +79,23 @@
         .tb-compat { display: flex; gap: .75rem; align-items: flex-start; margin: 0 1rem .75rem; padding: .65rem .85rem;
             background: #1d2732; border: 1px solid #31445c; border-radius: .5rem; font-size: .8rem; color: #c9d5e3; }
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
+        .tb-onphone { position: absolute; inset-inline-end: 1rem; top: 3.5rem; z-index: 40; width: 15rem;
+                      display: flex; flex-direction: column; align-items: center; gap: .5rem;
+                      padding: 1rem; border-radius: .75rem; background: #16202b; border: 1px solid #2b3a4a;
+                      box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+        .tb-onphone strong { color: #fff; font-size: .85rem; text-align: center; }
+        .tb-onphone__qr svg { width: 10rem; height: 10rem; background: #fff; border-radius: .5rem; padding: .35rem; }
+        .tb-onphone__url { width: 100%; font-size: .7rem; background: #0f1720; color: #93a3b5;
+                           border: 1px solid #2b3a4a; border-radius: .4rem; padding: .35rem .5rem; }
+        .tb-onphone__note { font-size: .7rem; color: #7d8ea1; text-align: center; }
+        .tb-onphone__close { position: absolute; inset-inline-start: .5rem; top: .25rem; background: none;
+                             border: 0; color: #7d8ea1; font-size: 1.1rem; line-height: 1; cursor: pointer; }
+        .tb-compat--stop { border-color: #6b2a2a; background: #2a1616; }
+        .tb-compat--stop i { color: #ff8f8f; }
+        .tb-compat__where { color: #7d8ea1; }
+        .tb-jump { background: none; border: 0; padding: 0; color: #ffd28a; font: inherit;
+                   text-decoration: underline; cursor: pointer; }
+        .tb-jump:hover { color: #fff; }
         .tb-compat strong { color: #fff; display: block; }
         .tb-compat ul { margin: .25rem 0 0; padding-inline-start: 1.1rem; color: #93a3b5; }
         .tb-empty { color: #7d8794; font-size: .8rem; text-align: center; padding: 1.5rem .5rem; }
@@ -310,6 +327,7 @@
              data-url-delete="{{ route('admin.theme.builder.section.delete') }}"
              data-url-schema="{{ route('admin.theme.builder.section-schema') }}"
              data-url-resources="{{ route('admin.theme.builder.resources') }}"
+             data-url-preview-link="{{ route('admin.theme.builder.preview.link') }}"
              data-url-resource-labels="{{ route('admin.theme.builder.resource-labels') }}"
              data-url-block-schema="{{ route('admin.theme.builder.block-schema') }}"
              data-url-block-add="{{ route('admin.theme.builder.block.add') }}"
@@ -355,6 +373,10 @@
                         <button type="button" data-device="mobile" title="{{ translate('mobile') }}"><i class="fi fi-rr-mobile-button"></i></button>
                     </div>
                     <button type="button" id="tb-refresh" class="tb-icon-btn" title="{{ translate('refresh_preview') }}"><i class="fi fi-rr-refresh"></i></button>
+                    {{-- The frame beside this is a browser drawing an approximation of a phone. --}}
+                    <button type="button" id="tb-onphone" class="tb-icon-btn" title="{{ translate('open_this_draft_on_your_phone') }}">
+                        <i class="fi fi-rr-qrcode"></i>
+                    </button>
                     @if (!empty($previewUrl))
                         <a href="{{ $previewUrl }}" target="_blank" rel="noopener" class="tb-icon-btn" title="{{ translate('open_in_new_tab') }}">
                             <i class="fi fi-rr-arrow-up-right-from-square"></i>
@@ -366,6 +388,17 @@
                     <a href="{{ route('admin.theme.index') }}" class="tb-icon-btn tb-icon-btn--primary">{{ translate('publish') }}</a>
                 </div>
             </header>
+
+            {{-- Scanned off the screen with the phone in the merchant's hand. The token inside the
+                 link expires on its own, so the panel says when — a link that looks permanent and
+                 quietly stops working is worse than one that tells you it will. --}}
+            <div class="tb-onphone" id="tb-onphone-panel" hidden>
+                <button type="button" class="tb-onphone__close" id="tb-onphone-close" aria-label="{{ translate('close') }}">&times;</button>
+                <strong>{{ translate('open_this_draft_on_your_phone') }}</strong>
+                <div class="tb-onphone__qr" id="tb-onphone-qr"></div>
+                <input type="text" class="tb-onphone__url" id="tb-onphone-url" readonly dir="ltr">
+                <span class="tb-onphone__note" id="tb-onphone-note"></span>
+            </div>
 
             {{-- Go-live checklist: composing sections changes nothing for customers until the theme
                  is active AND a version is published. Both fixes are one click, right here. --}}
@@ -393,6 +426,31 @@
                                 <button type="submit" class="k-btn k-btn--primary">{{ translate('publish_this_version') }}</button>
                             </form>
                         @endif
+                    </div>
+                </div>
+            @endif
+
+            {{-- What would stop this version going live. Publishing is refused while any of these
+                 stands, so it is said here — next to the sections it names — rather than as a
+                 rejection on the way out. --}}
+            @if (!empty($publishCheck['blocking']))
+                <div class="tb-compat tb-compat--stop">
+                    <i class="fi fi-rr-triangle-warning"></i>
+                    <div>
+                        <strong>{{ translate('this_version_cannot_be_published_yet') }}</strong>
+                        <ul>
+                            @foreach ($publishCheck['blocking'] as $finding)
+                                <li>
+                                    @if ($finding['section_id'] && $finding['page'] === $page)
+                                        <button type="button" class="tb-jump" data-tb-jump="{{ $finding['section_id'] }}">{{ translate($finding['label']) }}</button>
+                                    @else
+                                        {{ translate($finding['label']) }}
+                                        @if ($finding['page'] !== $page)<span class="tb-compat__where">({{ translate($finding['page']) }})</span>@endif
+                                    @endif
+                                    — {{ translate($finding['reason_key']) }}. {{ translate($finding['fix_key']) }}.
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
             @endif
@@ -633,6 +691,8 @@
                 backToSection: @json(translate('back_to_section')),
                 noBlocks: @json(translate('nothing_here_yet_add_the_first_item')),
                 settings: @json(translate('settings')),
+                previewExpires: @json(translate('this_link_works_for_the_next')),
+                previewMinutes: @json(translate('minutes')),
                 deliverySchedule: @json(translate('schedule')),
                 deliveryStarts: @json(translate('starts_at')),
                 deliveryEnds: @json(translate('ends_at')),
@@ -1484,6 +1544,56 @@
                     markSelectedInFrame(scrollPreview);
                 });
             }
+
+            // ---------- see it on a real phone ------------------------------------------------
+            // Minted on demand rather than on page load: the token expires, and one issued when
+            // the builder opened would already be stale by the time a merchant asks for it.
+            (function () {
+                var openBtn = document.getElementById('tb-onphone');
+                var panel = document.getElementById('tb-onphone-panel');
+                if (!openBtn || !panel) return;
+
+                var qr = document.getElementById('tb-onphone-qr');
+                var urlBox = document.getElementById('tb-onphone-url');
+                var note = document.getElementById('tb-onphone-note');
+
+                document.getElementById('tb-onphone-close').addEventListener('click', function () {
+                    panel.hidden = true;
+                });
+
+                openBtn.addEventListener('click', function () {
+                    if (!panel.hidden) { panel.hidden = true; return; }
+
+                    qr.innerHTML = '';
+                    urlBox.value = '';
+                    note.textContent = '';
+                    panel.hidden = false;
+
+                    post(root.dataset.urlPreviewLink, {version_id: root.dataset.version})
+                        .then(notify)
+                        .then(function (result) {
+                            if (!result.ok || !result.body || !result.body.url) return;
+
+                            qr.innerHTML = result.body.qr || '';
+                            urlBox.value = result.body.url;
+                            note.textContent = T.previewExpires + ' '
+                                + Math.round(result.body.expires_in / 60) + ' ' + T.previewMinutes;
+                        });
+                });
+
+                urlBox.addEventListener('focus', function () { urlBox.select(); });
+            })();
+
+            // A finding that names a section opens it. Reading "choose a category" and then
+            // hunting for which of nineteen rows it meant is most of the work the check saves.
+            document.querySelectorAll('[data-tb-jump]').forEach(function (jump) {
+                jump.addEventListener('click', function () {
+                    var item = structure.querySelector('.tb-item[data-id="' + jump.dataset.tbJump + '"]');
+                    if (!item) return;
+                    item.scrollIntoView({block: 'nearest'});
+                    selectSection(item);
+                });
+            });
 
             structure.addEventListener('click', function (event) {
                 var toggle = event.target.closest('[data-action="toggle"]');

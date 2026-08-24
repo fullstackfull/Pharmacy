@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Theme\PublishValidator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,6 +43,14 @@ class ThemeSection extends Model
                 $section->uuid = (string) Str::uuid();
             }
         });
+
+        // The pre-publish check is answered per version and cached; a section that changes is
+        // exactly what makes that answer wrong. Fixing a section and still being told it is broken
+        // is worse than not being told at all, so the entry goes rather than ages out.
+        $forget = static fn (self $section) => PublishValidator::forget($section->theme_version_id);
+
+        static::saved($forget);
+        static::deleted($forget);
     }
 
     public function version(): BelongsTo

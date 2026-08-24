@@ -7,9 +7,6 @@ use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use App\Services\Theme\ActionResolver;
 use App\Services\Theme\ComponentCapabilityRegistry;
-use App\Services\Theme\SectionDataResolver;
-use App\Services\Theme\SectionRegistry;
-use App\Services\Theme\SectionVisibility;
 use App\Services\Theme\ThemeDelivery;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ViewerContext;
@@ -84,14 +81,10 @@ class ThemeDeliveryTest extends TestCase
             $table->timestamps();
         });
 
-        $this->delivery = new ThemeDelivery(
-            new SectionRegistry(),
-            app(SectionDataResolver::class),
-            new SectionVisibility(),
-            new ComponentCapabilityRegistry(),
-            new ActionResolver(),
-            new ThemeManager(),
-        );
+        // Resolved rather than hand-assembled: the delivery's collaborators are its own business,
+        // and a test that lists them breaks every time one is added without ever testing anything
+        // about the list.
+        $this->delivery = app(ThemeDelivery::class);
 
         $this->theme = Theme::create(['name' => 'Pharmacy', 'slug' => 'pharmacy', 'is_active' => true]);
     }
