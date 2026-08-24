@@ -263,4 +263,31 @@ class AppBuilderPagesTest extends TestCase
         $this->assertEqualsCanonicalizing(['offers', 'about-us'], $offered(Channel::CUSTOMER_APP));
         $this->assertEqualsCanonicalizing(['about-us'], $offered(Channel::WEB));
     }
+
+    public function test_the_templates_screen_exports_what_is_live_before_what_is_half_done(): void
+    {
+        // "Export the current experience" must mean the storefront customers see whenever one
+        // exists; a draft is only offered when nothing has ever been published.
+        $draft = ThemeVersion::create([
+            'theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_DRAFT, 'revision' => 1,
+        ]);
+
+        $controller = app(\App\Http\Controllers\Admin\Settings\AppBuilderController::class);
+        $request = \Illuminate\Http\Request::create('/', 'GET');
+
+        $this->assertSame(
+            $draft->id,
+            $controller->templates($request)->getData()['exportable']->id,
+            'with no published version the draft is the only exportable thing',
+        );
+
+        $published = ThemeVersion::create([
+            'theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED, 'revision' => 2,
+        ]);
+
+        $this->assertSame(
+            $published->id,
+            $controller->templates($request)->getData()['exportable']->id,
+        );
+    }
 }

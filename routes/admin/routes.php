@@ -1411,6 +1411,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('', 'index')->name('index');
             Route::get('pages', 'pages')->name('pages');
             Route::get('sections', 'sections')->name('sections');
+            Route::get('media', 'media')->name('media');
+            Route::get('templates', 'templates')->name('templates');
             Route::post('pages/store', 'storePage')->name('pages.store');
             Route::post('pages/update', 'updatePage')->name('pages.update');
             Route::post('pages/delete', 'deletePage')->name('pages.delete');
