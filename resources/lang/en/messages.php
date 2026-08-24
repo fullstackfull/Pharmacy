@@ -6689,4 +6689,9 @@ return [
 	"bulk_reason_adjustment_cannot_be_zero" => "Stock change cannot be zero",
 	"bulk_reason_adjustment_would_make_stock_negative" => "Stock would go below zero",
 	"bulk_reason_stock_adjustment_refused" => "Stock change refused",
+	"stock_updated" => "Stock updated",
+	"stock_adjustment_refused" => "Stock change refused",
+	"adjustment_would_make_stock_negative" => "That would take the stock below zero",
+	"adjustment_cannot_be_zero" => "A correction of zero changes nothing",
+	"products_unavailable" => "Products are unavailable right now",
 ];

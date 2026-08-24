@@ -9492,4 +9492,7 @@ return [
 	"bulk_reason_adjustment_cannot_be_zero" => "تغيير المخزون لا يمكن أن يكون صفراً",
 	"bulk_reason_adjustment_would_make_stock_negative" => "المخزون سينخفض تحت الصفر",
 	"bulk_reason_stock_adjustment_refused" => "تم رفض تغيير المخزون",
+	"stock_updated" => "تم تحديث المخزون",
+	"stock_adjustment_refused" => "تم رفض تغيير المخزون",
+	"products_unavailable" => "المنتجات غير متاحة حالياً",
 ];
