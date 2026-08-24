@@ -24,12 +24,14 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerFinanceControlController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerIntegrationController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReturnController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerSecurityController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerStatementController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
@@ -370,6 +372,51 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     });
 
                     Route::get('price-changes', 'priceChanges');
+                });
+            });
+
+            // Keys and webhooks. Writing is gated on shop_settings.manage and, inside the
+            // controller, on the caller being a person rather than a key: a leaked key must not be
+            // able to mint another one or delete the endpoint that would have raised the alarm.
+            Route::group(['prefix' => 'integrations'], function () {
+                Route::controller(SellerIntegrationController::class)->group(function () {
+                    Route::get('keys', 'keys');
+                    Route::get('events', 'events');
+                    Route::get('webhooks', 'webhooks');
+                    Route::get('deliveries', 'deliveries');
+
+                    Route::middleware('seller_can:shop_settings.manage')->group(function () {
+                        Route::post('keys', 'storeKey');
+                        Route::delete('keys/{id}', 'revokeKey')->whereNumber('id');
+                        Route::post('webhooks', 'storeWebhook');
+                        Route::put('webhooks/{id}', 'updateWebhook')->whereNumber('id');
+                        Route::put('webhooks/{id}/status', 'setWebhookStatus')->whereNumber('id');
+                        Route::delete('webhooks/{id}', 'destroyWebhook')->whereNumber('id');
+                        Route::post('webhooks/{id}/test', 'testWebhook')->whereNumber('id');
+                    });
+                });
+            });
+
+            // Who works in the shop, what they may do, and what has been done. Reading the team
+            // is open to anyone who may see the shop; changing it needs staff.manage, which is the
+            // permission that can grant every other permission and so is the one that matters most.
+            Route::group(['prefix' => 'security'], function () {
+                Route::controller(SellerSecurityController::class)->group(function () {
+                    Route::get('permissions', 'permissions');
+                    Route::get('roles', 'roles');
+                    Route::get('staff', 'staff');
+                    Route::get('access', 'access');
+                    Route::get('audit', 'audit');
+
+                    Route::middleware('seller_can:staff.manage')->group(function () {
+                        Route::post('roles', 'storeRole');
+                        Route::put('roles/{id}', 'updateRole')->whereNumber('id');
+                        Route::delete('roles/{id}', 'destroyRole')->whereNumber('id');
+                        Route::post('staff', 'storeStaff');
+                        Route::put('staff/{id}', 'updateStaff')->whereNumber('id');
+                        Route::post('staff/{id}/sign-out', 'signOutStaff')->whereNumber('id');
+                        Route::delete('staff/{id}', 'destroyStaff')->whereNumber('id');
+                    });
                 });
             });
 

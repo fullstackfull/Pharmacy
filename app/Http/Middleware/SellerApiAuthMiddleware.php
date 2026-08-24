@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Marketplace\SellerApiKeyService;
 use App\Services\Marketplace\SellerPermissionService;
 use App\Services\Marketplace\SellerPrincipal;
 use Closure;
@@ -17,8 +18,10 @@ class SellerApiAuthMiddleware
     /** Where the resolved principal lives on the request, for anything downstream that needs it. */
     public const PRINCIPAL = 'seller_principal';
 
-    public function __construct(private readonly SellerPermissionService $permissions)
-    {
+    public function __construct(
+        private readonly SellerPermissionService $permissions,
+        private readonly SellerApiKeyService $apiKeys,
+    ) {
     }
 
     /**
@@ -44,8 +47,14 @@ class SellerApiAuthMiddleware
             // never again, so a vendor rejected or set back to pending after signing in kept full
             // API access — orders, POS, payouts, staff — until someone happened to press suspend.
             // What login refuses to start, this refuses to continue. The same holds for a staff
-            // member whose account or role has since been switched off.
-            $principal = $this->permissions->principalFor($token[1]);
+            // member whose account or role has since been switched off, and for a key issued while
+            // the shop was in good standing.
+            //
+            // A login token is tried first, because that is what almost every request carries. An
+            // issued key is a different kind of caller: held to its own scopes rather than to the
+            // owner's authority, so a key that leaks costs the seller only what it was issued for.
+            $principal = $this->permissions->principalFor($token[1])
+                ?? $this->apiKeys->resolve($token[1]);
 
             if ($principal instanceof SellerPrincipal) {
                 $request['seller'] = $principal->seller;
@@ -53,6 +62,12 @@ class SellerApiAuthMiddleware
                 // caller sent and accepts only scalars and arrays. Attributes are where the
                 // framework itself keeps per-request objects, and a caller cannot forge one.
                 $request->attributes->set(self::PRINCIPAL, $principal);
+
+                if ($principal->apiKey !== null) {
+                    // "Last used" has to come from real traffic, which is what makes it worth
+                    // reading when deciding whether a key is still needed.
+                    $this->apiKeys->touch($principal->apiKey, $request->ip());
+                }
 
                 return $next($request);
             }

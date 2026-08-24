@@ -3,7 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\Product;
-use App\Models\Seller;
+use App\Services\Marketplace\InventoryService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -39,7 +39,7 @@ class InventoryRiskProducer implements InsightProducer
             return [];
         }
 
-        $stockLimit = $this->stockLimitFor($sellerId);
+        $stockLimit = app(InventoryService::class)->stockLimitFor($sellerId);
         $sales = $this->recentSales($sellerId);
 
         $products = Product::query()
@@ -113,14 +113,6 @@ class InventoryRiskProducer implements InsightProducer
             ->selectRaw('order_details.product_id as product_id, SUM(order_details.qty) as units')
             ->pluck('units', 'product_id')
             ->all();
-    }
-
-    /** The seller's own threshold, or the platform default when they have not set one. */
-    private function stockLimitFor(int|string $sellerId): int
-    {
-        $limit = (int) Seller::where('id', $sellerId)->value('stock_limit');
-
-        return $limit > 0 ? $limit : (int) getWebConfig(name: 'stock_limit');
     }
 
     private function severityFor(int $stock, float $sold): string

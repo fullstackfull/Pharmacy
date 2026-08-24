@@ -171,6 +171,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // the pre-run state and could both act on the same listing.
         $schedule->command('seller:run-automation')->everyFifteenMinutes()->withoutOverlapping();
 
+        // Webhook retries. The schedule lives on the delivery row rather than in the queue's own
+        // delayed jobs, so that a seller can read "next attempt in eight minutes" on their screen —
+        // and so nothing is lost to a worker restart. This sweep is what turns the schedule into
+        // work.
+        $schedule->command('seller:retry-webhooks')->everyFiveMinutes()->withoutOverlapping();
+
         // Bulk price and stock changes are queued, which makes them depend on a worker running. A
         // deployment without one would leave every bulk job at `queued` for ever while the app shows
         // the seller a change that is never going to happen — the exact failure the receipt exists to
