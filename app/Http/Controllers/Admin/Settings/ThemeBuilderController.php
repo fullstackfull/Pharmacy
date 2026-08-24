@@ -241,6 +241,9 @@ class ThemeBuilderController extends BaseController
             // The builder splits the form into Content / Design tabs; the registry decides which
             // fields belong where, so a new section type needs no UI change.
             'contentKeys'  => array_keys($this->registry->ownSchemaFor($type)),
+            // The same keys, split into the drawers the inspector opens: what it shows, how it is
+            // arranged, where it leads, and what the merchant types.
+            'fieldGroups'  => $this->registry->fieldGroupsFor($type),
             'styleKeys'    => array_keys($this->registry->commonSchema()),
             'accepts'      => $this->registry->blockTypesFor($type),
             'blockLabels'  => $this->blockLabelMap($type),

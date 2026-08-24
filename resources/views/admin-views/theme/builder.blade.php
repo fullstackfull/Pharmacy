@@ -788,6 +788,12 @@
                 backToSection: @json(translate('back_to_section')),
                 noBlocks: @json(translate('nothing_here_yet_add_the_first_item')),
                 settings: @json(translate('settings')),
+                groups: {
+                    content: @json(translate('content')),
+                    source: @json(translate('what_it_shows')),
+                    layout: @json(translate('arrangement')),
+                    action: @json(translate('where_it_leads')),
+                },
                 previewExpires: @json(translate('this_link_works_for_the_next')),
                 linkSearchTerm: @json(translate('what_to_search_for')),
                 linkAddress: @json(translate('https_example_com_page')),
@@ -836,6 +842,7 @@
                 schema: {},
                 settings: {},
                 contentKeys: [],
+                fieldGroups: {},
                 styleKeys: [],
                 accepts: [],
                 blockLabels: {},
@@ -1567,11 +1574,42 @@
 
                 if (state.tab === 'delivery') {
                     renderDeliveryForm();
+                } else if (state.tab === 'style') {
+                    renderFields(inspector, state.schema, state.settings, state.styleKeys, state.links);
                 } else {
-                    var keys = state.tab === 'style' ? state.styleKeys : state.contentKeys;
-                    renderFields(inspector, state.schema, state.settings, keys, state.links);
+                    // The section's own settings, in drawers rather than in one column of twenty
+                    // fields: what it shows, how it is arranged, where it leads, and the words the
+                    // merchant writes. A section with nothing in a drawer never grows that drawer.
+                    var groups = state.fieldGroups || {};
+                    var order = ['content', 'source', 'layout', 'action'];
+                    var drawn = 0;
 
-                    if (state.tab === 'content' && state.accepts.length) {
+                    order.forEach(function (group) {
+                        var keys = groups[group] || [];
+                        if (!keys.length) return;
+
+                        // One group is not a grouping: a section with only content settings reads
+                        // better as a plain form than as a single labelled drawer.
+                        var groupCount = order.filter(function (other) {
+                            return (groups[other] || []).length;
+                        }).length;
+
+                        if (groupCount > 1) {
+                            var heading = document.createElement('div');
+                            heading.className = 'tb-group-title';
+                            heading.textContent = T.groups[group] || group;
+                            inspector.appendChild(heading);
+                        }
+
+                        renderFields(inspector, state.schema, state.settings, keys, state.links);
+                        drawn++;
+                    });
+
+                    if (!drawn) {
+                        renderFields(inspector, state.schema, state.settings, state.contentKeys, state.links);
+                    }
+
+                    if (state.accepts.length) {
                         renderBlockList();
                     }
                 }
@@ -1810,6 +1848,7 @@
                     state.schema = data.schema || {};
                     state.settings = data.settings || {};
                     state.contentKeys = data.contentKeys || [];
+                    state.fieldGroups = data.fieldGroups || {};
                     state.styleKeys = data.styleKeys || [];
                     state.accepts = data.accepts || [];
                     state.blockLabels = data.blockLabels || {};
