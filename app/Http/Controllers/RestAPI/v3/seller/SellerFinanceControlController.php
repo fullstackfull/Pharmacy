@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\SellerApiAuthMiddleware;
+use App\Models\Product;
 use App\Models\ProductPriceChange;
 use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Marketplace\FeeSimulatorService;
+use App\Services\Marketplace\PricingPolicyService;
+use App\Services\Marketplace\SellerPrincipal;
 use App\Services\Marketplace\SellerReconciliationService;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +29,7 @@ class SellerFinanceControlController extends Controller
     public function __construct(
         private readonly SellerReconciliationService $reconciliation,
         private readonly FeeSimulatorService $simulator,
+        private readonly PricingPolicyService $pricing,
     ) {
     }
 
@@ -144,5 +149,75 @@ class SellerFinanceControlController extends Controller
                 'created_at' => $change->created_at,
             ])->all(),
         ], 200);
+    }
+
+    #[ApiDoc(
+        summary: 'The floor under your own prices',
+        description: 'A margin over recorded cost, an absolute minimum, or both, and whether they are '
+            . 'being enforced. Off until the seller turns it on: a floor that started refusing prices '
+            . 'the day it shipped would block whatever the shop is already doing on purpose. A margin '
+            . 'floor only applies to products with a recorded cost — a product with none has no margin '
+            . 'to compute, and the policy says nothing about it rather than inventing a floor of zero.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
+    public function pricingPolicy(Request $request): JsonResponse
+    {
+        $policy = $this->pricing->forSeller($request->seller->id);
+
+        return response()->json([
+            'min_margin_percent' => $policy?->min_margin_percent,
+            'min_price' => $policy?->min_price,
+            'enforce' => (bool) ($policy?->enforce ?? false),
+            'binding' => (bool) $policy?->isBinding(),
+            // How many of the shop's own products the policy can actually speak about, so a seller
+            // switching it on knows whether it covers their catalogue or a corner of it.
+            'products_with_a_cost' => Product::withoutGlobalScope('translate')
+                ->where(['added_by' => 'seller', 'user_id' => $request->seller->id])
+                ->where('purchase_price', '>', 0)
+                ->count(),
+            'products_total' => Product::withoutGlobalScope('translate')
+                ->where(['added_by' => 'seller', 'user_id' => $request->seller->id])
+                ->count(),
+        ], 200);
+    }
+
+    #[ApiDoc(
+        summary: 'Set the floor under your own prices',
+        description: 'Applies to the paths the seller controls — their own price edits, bulk price '
+            . 'changes and their automation rules. An admin correction, an import or a marketplace '
+            . 'promotion is not refused by it: those stay covered by the below-cost detector, which '
+            . 'is the honest division between refusing where the seller is acting and reporting '
+            . 'everywhere else.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        group: 'vendors',
+    )]
+    public function savePricingPolicy(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'min_margin_percent' => 'nullable|numeric|min:0|max:1000',
+            'min_price' => 'nullable|numeric|min:0',
+            'enforce' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::validationErrorProcessor($validator)], 403);
+        }
+
+        $this->pricing->save($this->principal($request), $validator->validated());
+
+        return response()->json(['message' => translate('pricing_policy_saved')], 200);
+    }
+
+    private function principal(Request $request): SellerPrincipal
+    {
+        $principal = $request->attributes->get(SellerApiAuthMiddleware::PRINCIPAL);
+
+        return $principal instanceof SellerPrincipal ? $principal : SellerPrincipal::owner($request->seller);
     }
 }

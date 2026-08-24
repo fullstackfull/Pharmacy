@@ -372,6 +372,12 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     });
 
                     Route::get('price-changes', 'priceChanges');
+
+                    // The floor under the shop's own prices. Readable by anyone who may see the
+                    // products it governs; setting it changes what the catalogue may be sold for,
+                    // so it needs the permission that manages products.
+                    Route::get('pricing-policy', 'pricingPolicy');
+                    Route::put('pricing-policy', 'savePricingPolicy')->middleware('seller_can:products.manage');
                 });
             });
 

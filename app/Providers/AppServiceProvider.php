@@ -34,6 +34,7 @@ use App\Services\SellerIntelligence\Producers\ShippingExceptionProducer;
 use App\Services\SellerIntelligence\Producers\StaleInventoryProducer;
 use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
 use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
+use App\Services\Marketplace\PricingPolicyService;
 use App\Services\SellerAutomation\Actions\HideListingAction;
 use App\Services\SellerAutomation\Actions\PublishListingAction;
 use App\Services\SellerAutomation\Actions\SetDiscountAction;
@@ -134,6 +135,11 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(SetDiscountAction::class),
             ],
         ));
+
+        // One instance, so its per-request cache is worth having: a bulk price change asks about
+        // the same shop's floor once per product, and a service resolved fresh each time would
+        // turn that into one query per row.
+        $this->app->singleton(PricingPolicyService::class);
 
         // One measurement of each seller's size per sweep, shared by every detector.
         $this->app->singleton(SellerBaselineProvider::class);

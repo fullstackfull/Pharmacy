@@ -6787,4 +6787,6 @@ return [
 	'open_issues' => 'Open issues',
 	'stopped_rules' => 'Stopped rules',
 	'failing_endpoints' => 'Failing endpoints',
+	'pricing_policy_saved' => 'Price floor saved',
+	'pricing_reason_below_your_floor' => 'Below the price floor you set',
 ];
