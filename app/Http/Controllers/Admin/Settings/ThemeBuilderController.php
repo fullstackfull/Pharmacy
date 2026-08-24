@@ -107,6 +107,9 @@ class ThemeBuilderController extends BaseController
             'themeSettings' => $this->themeManager->resolveSettings($version),
             'pages'         => $pages,
             'channel'       => $channel,
+            // The languages a text field can carry an override for — every live language except
+            // the default, whose text is the base value itself.
+            'localeOverrides' => \App\Services\Theme\LocalisedSettings::overridable(),
             'editable'      => $version ? $this->builder->isEditable($version) : false,
             'uploadAccept'  => '.' . implode(',.', ThemeAssetService::acceptedExtensions()),
         ]);

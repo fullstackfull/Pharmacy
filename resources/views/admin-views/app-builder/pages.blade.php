@@ -131,6 +131,43 @@
                              a second page: the app has to be able to reach it. --}}
                         {{ translate('a_new_page_is_composed_here_and_served_by_the_api_the_app_reaches_it_once_a_release_links_to_it') }}
                     </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <h5 class="mb-0">{{ translate('server_readiness') }}</h5>
+                            @if ($allGood)
+                                <span class="badge badge-soft-success">{{ translate('all_good') }}</span>
+                            @else
+                                <span class="badge badge-soft-danger">{{ translate('needs_attention') }}</span>
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            {{-- The builder's promises that depend on the server: a scheduled publish
+                                 needs the cron, the reach numbers need the rollup. Each failing row
+                                 carries its own fix, so "verify it on the server" is a checklist the
+                                 merchant can read rather than a log only a developer can. --}}
+                            <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+                                @foreach ($health as $check)
+                                    <li class="d-flex gap-2">
+                                        @if ($check['ok'])
+                                            <i class="fi fi-sr-check-circle text-success mt-1"></i>
+                                        @else
+                                            <i class="fi fi-sr-cross-circle text-danger mt-1"></i>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <div class="{{ $check['ok'] ? '' : 'fw-bold' }}">{{ translate($check['label']) }}</div>
+                                            @if (!$check['ok'] && $check['why'])
+                                                <small class="text-muted d-block">{{ translate($check['why']) }}</small>
+                                            @endif
+                                            @if (!$check['ok'] && $check['fix'])
+                                                <code dir="ltr" class="d-block text-break small mt-1">{{ $check['fix'] }}</code>
+                                            @endif
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif

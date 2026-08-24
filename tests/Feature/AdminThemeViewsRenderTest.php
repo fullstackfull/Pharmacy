@@ -177,10 +177,18 @@ class AdminThemeViewsRenderTest extends TestCase
             'ready' => true,
             'draft' => $this->draft,
             'editable' => true,
+            'health' => [
+                ['key' => 'store', 'ok' => true, 'label' => 'the_page_and_version_tables_are_migrated', 'why' => null, 'fix' => null],
+                ['key' => 'scheduler', 'ok' => false, 'label' => 'the_scheduler_is_running',
+                 'why' => 'scheduled_publishes_and_nightly_rollups_will_not_fire_until_the_cron_is_installed',
+                 'fix' => '* * * * * php artisan schedule:run'],
+            ],
+            'allGood' => false,
         ]);
 
         $this->assertStringContainsString('name="title"', $html, 'a page can be added');
         $this->assertStringContainsString('home', $html, 'and the built-in pages are listed');
+        $this->assertStringContainsString('schedule:run', $html, 'a failing check shows its fix');
     }
 
     public function test_the_app_builder_sections_catalogue_renders(): void
@@ -254,6 +262,50 @@ class AdminThemeViewsRenderTest extends TestCase
      *
      * @param  array<string, mixed>  $data
      */
+    public function test_the_app_builder_media_screen_renders_with_an_image_in_it(): void
+    {
+        Schema::dropIfExists('theme_assets');
+        Schema::create('theme_assets', function (Blueprint $table) {
+            $table->id(); $table->unsignedBigInteger('theme_id'); $table->string('label')->nullable();
+            $table->string('path'); $table->string('disk', 40)->default('public');
+            $table->string('mime_type', 100)->nullable(); $table->unsignedBigInteger('size_bytes')->default(0);
+            $table->string('uploaded_by_type', 40)->nullable(); $table->unsignedBigInteger('uploaded_by_id')->nullable();
+            $table->timestamps();
+        });
+        \App\Models\ThemeAsset::create([
+            'theme_id' => $this->theme->id, 'label' => 'Header logo',
+            'path' => 'theme-assets/logo.png', 'disk' => 'public',
+            'mime_type' => 'image/png', 'size_bytes' => 4096,
+        ]);
+
+        $html = $this->renderBody('admin-views.app-builder.media', [
+            'channel' => 'customer_app',
+            'theme' => $this->theme->load('assets'),
+            'assetsReady' => true,
+            'maxAssetSize' => \App\Services\Theme\ThemeAssetService::maxBytes(),
+            'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('Header logo', $html, 'the uploaded image is listed');
+        $this->assertStringContainsString('admin/theme/asset/upload', $html, 'uploading uses the theme\'s own action');
+    }
+
+    public function test_the_app_builder_templates_screen_renders_every_preset(): void
+    {
+        $html = $this->renderBody('admin-views.app-builder.templates', [
+            'channel' => 'customer_app',
+            'theme' => $this->theme,
+            'presets' => app(\App\Services\Theme\ThemePortabilityService::class)->presets(),
+            'exportable' => $this->draft,
+            'editable' => true,
+        ]);
+
+        foreach (app(\App\Services\Theme\ThemePortabilityService::class)->presets() as $key => $preset) {
+            $this->assertStringContainsString('value="' . $key . '"', $html, $key . ' can be applied');
+        }
+        $this->assertStringContainsString('admin/theme/import', $html, 'importing uses the existing action');
+    }
+
     private function renderBody(string $view, array $data): string
     {
         $source = File::get(resource_path('views/' . str_replace('.', '/', $view) . '.blade.php'));
