@@ -399,6 +399,9 @@ class ThemeDelivery
                 'subtitle'    => $settings['subtitle'] ?? null,
                 'link'        => $settings['link'] ?? null,
                 'button_text' => $settings['button_text'] ?? null,
+                // The merchant's strip text color travels with the card — the app reads a
+                // card's text_color, and without it every strip fell back to white.
+                'text_color'  => $settings['text_color'] ?? null,
             ], static fn ($value) => $value !== null && $value !== '')))];
         }
 

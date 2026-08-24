@@ -61,7 +61,10 @@ class ThemeSourceMap
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
             'flash_deal' => $this->flashDealProductsHint($settings),
-            'deal_of_the_day' => $this->api('/api/v1/dealsoftheday/deal-of-the-day'),
+            // The web counts this section down to midnight; the app ticks against the same
+            // moment, carried the same way the flash deal carries its end.
+            'deal_of_the_day' => $this->api('/api/v1/dealsoftheday/deal-of-the-day')
+                + ['deal_ends_at' => now()->endOfDay()->toIso8601String()],
             'featured_deal' => $this->api('/api/v1/deals/featured'),
             'clearance_sale' => $this->api('/api/v1/products/clearance-sale'),
 
