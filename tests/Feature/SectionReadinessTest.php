@@ -46,6 +46,36 @@ class SectionReadinessTest extends TestCase
         }
     }
 
+    public function test_an_empty_rail_says_which_kind_of_empty_it_is(): void
+    {
+        // Three ways a product rail comes up empty, three different jobs for the merchant. Two of
+        // them are fixed in the panel they are already looking at; only the third is waited out,
+        // and telling a merchant to wait for a category they never chose is how a section sits
+        // broken on a live page for a week.
+        $readiness = app(SectionReadiness::class);
+
+        $noSubject = $readiness->verdict('product_slider', ['source' => 'category'], []);
+        $noPicks = $readiness->verdict('product_slider', ['source' => 'manual'], []);
+        $configured = $readiness->verdict('product_slider', ['source' => 'best_selling'], []);
+
+        $this->assertSame(SectionReadiness::NEEDS_CHOICE, $noSubject['state']);
+        $this->assertSame(SectionReadiness::NEEDS_CHOICE, $noPicks['state']);
+        $this->assertNotSame($noSubject['reason_key'], $noPicks['reason_key'],
+            'picking a category and picking products are different instructions');
+
+        $this->assertSame(SectionReadiness::NO_CONTENT, $configured['state'],
+            'a source that IS configured is the shop having nothing, not the merchant having missed a step');
+    }
+
+    public function test_a_bundle_of_ids_that_are_all_zero_is_still_an_unpicked_bundle(): void
+    {
+        // `empty()` on the raw setting called "0" a choice. The merchant is then told the products
+        // are unavailable, and goes looking for products that were never picked.
+        $verdict = app(SectionReadiness::class)->verdict('bundle', ['product_ids' => '0,,0'], []);
+
+        $this->assertSame(SectionReadiness::NEEDS_CHOICE, $verdict['state']);
+    }
+
     public function test_a_block_section_with_no_cards_is_not_confused_with_one_whose_cards_are_empty(): void
     {
         // Two different jobs for the merchant: add a card, or fill in the one that is there.

@@ -134,6 +134,7 @@
                                         $published = $theme->versions->firstWhere('status', 'published');
                                         $latestDraft = $theme->versions->where('status', 'draft')->sortByDesc('id')->first();
                                     @endphp
+                                    @php $findings = $readiness[$theme->id] ?? ['blocking' => [], 'warnings' => []]; @endphp
                                     <tr>
                                         <td>
                                             <div class="fw-bold">{{ $theme->name }}</div>
@@ -141,14 +142,49 @@
                                             @if($theme->is_system)
                                                 <span class="badge badge-soft-secondary">{{ translate('system') }}</span>
                                             @endif
+
+                                            {{-- Said here, where there is width to say it, and before the
+                                                 publish button rather than after the live site shows it. --}}
+                                            @if($findings['blocking'])
+                                                <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+                                                    <strong>{{ translate('this_draft_cannot_be_published_yet') }}</strong>
+                                                    <ul class="mb-0 ps-3">
+                                                        @foreach($findings['blocking'] as $finding)
+                                                            <li>
+                                                                <strong>{{ translate($finding['label']) }}</strong>
+                                                                @if($finding['page'] !== 'home')<span class="text-muted">({{ translate($finding['page']) }})</span>@endif
+                                                                — {{ translate($finding['reason_key']) }}. {{ translate($finding['fix_key']) }}.
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
+                                            @if($findings['warnings'])
+                                                <div class="mt-2 small text-muted">
+                                                    <strong>{{ translate('publishing_this_draft_as_it_is') }}:</strong>
+                                                    <ul class="mb-0 ps-3">
+                                                        @foreach($findings['warnings'] as $finding)
+                                                            <li>@if($finding['label'] !== 'home'){{ translate($finding['label']) }} — @endif{{ translate($finding['reason_key']) }}.</li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
                                         </td>
                                         <td class="text-center">
                                             <span class="badge badge-soft-info">{{ $theme->versions->count() }}</span>
                                             @if($published)
                                                 <span class="badge badge-soft-success">{{ translate('published') }} #{{ $published->id }}</span>
+                                                @if($published->change_note)
+                                                    <div class="small text-muted mt-1">{{ $published->change_note }}</div>
+                                                @endif
                                             @endif
                                             @if($latestDraft)
                                                 <span class="badge badge-soft-warning">{{ translate('draft') }} #{{ $latestDraft->id }}</span>
+                                                @if($latestDraft->isScheduled())
+                                                    <span class="badge badge-soft-info" dir="auto">
+                                                        {{ translate('publishes') }} {{ $latestDraft->publish_at->toDayDateTimeString() }}
+                                                    </span>
+                                                @endif
                                                 @php $report = $compatibility[$theme->id] ?? null; @endphp
                                                 @if($report && $report['sections'] > 0)
                                                     <span class="badge {{ empty($report['withheld']) ? 'badge-soft-success' : 'badge-soft-danger' }}"
@@ -178,14 +214,52 @@
                                                 @endif
                                                 @if($latestDraft)
                                                     @php $report = $compatibility[$theme->id] ?? null; @endphp
-                                                    <form action="{{ route('admin.theme.version.publish') }}" method="post"
-                                                          onsubmit="return confirm('{{ !empty($report['withheld'])
-                                                              ? translate('publish_this_draft') . '? ' . count($report['withheld']) . ' ' . translate('section_types_will_not_appear_in_the_mobile_app')
-                                                              : translate('publish_this_draft') . '?' }}')">
-                                                        @csrf
-                                                        <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
-                                                        <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>
-                                                    </form>
+                                                    @if($findings['blocking'])
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                                title="{{ translate('fix_the_sections_listed_beside_this_theme_first') }}">
+                                                            {{ translate('publish_draft') }}
+                                                        </button>
+                                                    @else
+                                                        <form action="{{ route('admin.theme.version.publish') }}" method="post"
+                                                              class="d-flex flex-column gap-1"
+                                                              onsubmit="return confirm('{{ !empty($report['withheld'])
+                                                                  ? translate('publish_this_draft') . '? ' . count($report['withheld']) . ' ' . translate('section_types_will_not_appear_in_the_mobile_app')
+                                                                  : translate('publish_this_draft') . '?' }}')">
+                                                            @csrf
+                                                            <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
+                                                            {{-- The sentence that makes a rollback three months from now a choice
+                                                                 rather than a guess between two version numbers. --}}
+                                                            <input type="text" name="change_note" maxlength="300"
+                                                                   class="form-control form-control-sm"
+                                                                   placeholder="{{ translate('what_changed_optional') }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-success">{{ translate('publish_draft') }}</button>
+                                                        </form>
+
+                                                        {{-- Or at a chosen hour, with nobody at a keyboard for it. The same
+                                                             check runs again when it fires: hours pass, and a section that
+                                                             was fine when the time was set can be broken by the time it
+                                                             arrives. --}}
+                                                        @if($latestDraft->isScheduled())
+                                                            <form action="{{ route('admin.theme.version.schedule') }}" method="post">
+                                                                @csrf
+                                                                <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
+                                                                <input type="hidden" name="cancel" value="1">
+                                                                <button type="submit" class="btn btn-sm btn-outline-secondary">{{ translate('cancel_scheduled_publish') }}</button>
+                                                            </form>
+                                                        @elseif($schedulerOk)
+                                                            <form action="{{ route('admin.theme.version.schedule') }}" method="post"
+                                                                  class="d-flex flex-column gap-1">
+                                                                @csrf
+                                                                <input type="hidden" name="version_id" value="{{ $latestDraft->id }}">
+                                                                <input type="datetime-local" name="publish_at" class="form-control form-control-sm">
+                                                                <button type="submit" class="btn btn-sm btn-outline-info">{{ translate('publish_later') }}</button>
+                                                            </form>
+                                                        @else
+                                                            <small class="text-muted d-block" style="max-width:12rem">
+                                                                {{ translate('scheduled_publishing_needs_the_server_cron_to_be_running') }}
+                                                            </small>
+                                                        @endif
+                                                    @endif
                                                 @endif
                                                 @php $exportable = $published ?? $latestDraft; @endphp
                                                 @if($exportable)
@@ -197,7 +271,8 @@
                                                           onsubmit="return confirm('{{ translate('restore_this_version_into_a_new_draft') }}?')">
                                                         @csrf
                                                         <input type="hidden" name="version_id" value="{{ $archived->id }}">
-                                                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                                title="{{ $archived->change_note ?: ($archived->published_at?->toDayDateTimeString() ?? translate('never_published')) }}">
                                                             {{ translate('restore') }} #{{ $archived->id }}
                                                         </button>
                                                     </form>

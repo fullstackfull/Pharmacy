@@ -1409,6 +1409,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('delete', 'delete')->name('delete');
             Route::post('activate', 'activate')->name('activate');
             Route::post('version/publish', 'publishVersion')->name('version.publish');
+            Route::post('version/schedule', 'scheduleVersion')->name('version.schedule');
             Route::post('version/duplicate', 'duplicateVersion')->name('version.duplicate');
             Route::post('version/restore', 'restoreVersion')->name('version.restore');
             Route::get('version/export', 'exportVersion')->name('version.export');
@@ -1438,6 +1439,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('resources', 'resources')->name('resources');
                 Route::get('resource-labels', 'resourceLabels')->name('resource-labels');
             Route::post('preview/start', 'startPreview')->name('preview.start');
+            Route::post('preview/link', 'previewLink')->name('preview.link');
             Route::get('preview/stop', 'stopPreview')->name('preview.stop');
                 Route::post('section/add', 'addSection')->name('section.add');
                 Route::post('section/update', 'updateSection')->name('section.update');

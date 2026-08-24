@@ -46,19 +46,18 @@ class ThemeSourceMap
 
             // The showcases are product rails scoped to one picked category/brand — their data is
             // that scope's products, not the taxonomy list.
-            'category_showcase' => $this->api(
-                '/api/v1/categories/products/' . (int) ($settings['category_id'] ?? 0),
-                ['limit' => max(1, (int) ($settings['limit'] ?? 10)), 'offset' => 1],
+            'category_showcase' => $this->endpointFor(
+                ContentSource::scoped('category', $settings['category_id'] ?? null, $settings['limit'] ?? null),
             ),
-            'brand_showcase' => $this->api(
-                '/api/v1/brands/products/' . (int) ($settings['brand_id'] ?? 0),
-                ['limit' => max(1, (int) ($settings['limit'] ?? 10)), 'offset' => 1],
+            'brand_showcase' => $this->endpointFor(
+                ContentSource::scoped('brand', $settings['brand_id'] ?? null, $settings['limit'] ?? null),
             ),
 
-            // A bundle is exactly these products in exactly this order.
-            'bundle' => $this->api('/api/v1/products/by-ids', [
-                'ids' => implode(',', $this->pickedIds($settings['product_ids'] ?? null)),
-            ]),
+            // A bundle is exactly these products in exactly this order — and no more of them than
+            // the storefront's own bundle draws.
+            'bundle' => $this->endpointFor(
+                ContentSource::picked($settings['product_ids'] ?? null, SectionDataResolver::BUNDLE_LIMIT),
+            ),
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
             'flash_deal' => $this->api('/api/v1/flash-deals', [], 'Then /api/v1/flash-deals/products/{deal_id} for the products.'),
@@ -92,23 +91,33 @@ class ThemeSourceMap
      */
     public function products(array $settings): array
     {
-        $source = is_string($settings['source'] ?? null) ? $settings['source'] : 'featured';
-        $limit = max(1, (int) ($settings['limit'] ?? 10));
-        $paged = ['limit' => $limit, 'offset' => 1];
+        return $this->endpointFor(ContentSource::fromSettings($settings));
+    }
 
-        return match ($source) {
+    /**
+     * The catalogue endpoint one source resolves to.
+     *
+     * Takes the source object rather than a settings bag, so the mapping from "what the merchant
+     * chose" to "which route serves it" is the only thing this method knows — the reading of the
+     * choice itself happens once, in {@see ContentSource}.
+     *
+     * @return array<string, mixed>
+     */
+    public function endpointFor(ContentSource $source): array
+    {
+        $paged = ['limit' => $source->limit, 'offset' => 1];
+
+        return match ($source->kind) {
             'best_selling' => $this->api('/api/v1/products/best-sellings', $paged),
             'new_arrival'  => $this->api('/api/v1/products/new-arrival', $paged),
             'top_rated'    => $this->api('/api/v1/products/top-rated', $paged),
 
-            // The picked category or brand lives in `source_id` — the builder's picker follows the
-            // source dropdown, so one key serves both.
-            'category' => $this->api('/api/v1/categories/products/' . (int) ($settings['source_id'] ?? 0), $paged),
-            'brand'    => $this->api('/api/v1/brands/products/' . (int) ($settings['source_id'] ?? 0), $paged),
+            // The picked category or brand — the builder's picker follows the source dropdown, so
+            // one key serves both.
+            'category' => $this->api('/api/v1/categories/products/' . (int) $source->id, $paged),
+            'brand'    => $this->api('/api/v1/brands/products/' . (int) $source->id, $paged),
 
-            'manual' => $this->api('/api/v1/products/by-ids', [
-                'ids' => implode(',', $this->pickedIds($settings['product_ids'] ?? null)),
-            ]),
+            'manual' => $this->api('/api/v1/products/by-ids', ['ids' => implode(',', $source->ids)]),
 
             default => $this->api('/api/v1/products/featured', $paged),
         };
@@ -122,9 +131,7 @@ class ThemeSourceMap
      */
     public function pickedIds(string|array|null $picked): array
     {
-        $ids = is_array($picked) ? $picked : explode(',', (string) $picked);
-
-        return array_values(array_filter(array_map('intval', $ids), fn ($id) => $id > 0));
+        return ContentSource::pickedIds($picked);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Contracts\Repositories\ThemeRepositoryInterface;
 use App\Http\Controllers\BaseController;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
+use App\Services\Theme\PublishValidator;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ThemePermissionService;
 use App\Services\Theme\ThemePortabilityService;
@@ -55,13 +56,18 @@ class ThemeManagementController extends BaseController
         // App coverage per theme's latest draft, for the publish confirmation: "publish and the
         // app shows 9 of 11 sections" is a decision, the same sentence after publishing is a bug
         // report (spec §55). Only drafts are counted — that is the version a publish would ship.
+        // And what would STOP that publish: a section the merchant added and never finished
+        // configuring renders nothing, and the only place that used to show was the live site.
         $compatibility = [];
+        $readiness = [];
         if (Schema::hasColumn('theme_sections', 'uuid')) {
             $report = app(\App\Services\Theme\ThemeCompatibilityReport::class);
+            $validator = app(PublishValidator::class);
             foreach ($themes as $theme) {
                 $draft = $theme->versions->where('status', 'draft')->sortByDesc('id')->first();
                 if ($draft) {
                     $compatibility[$theme->id] = $report->for($draft);
+                    $readiness[$theme->id] = $validator->inspect($draft);
                 }
             }
         }
@@ -69,6 +75,11 @@ class ThemeManagementController extends BaseController
         return view('admin-views.theme.index', [
             'themes'       => $themes,
             'compatibility' => $compatibility,
+            'readiness'    => $readiness,
+            // A scheduled publish is only as good as the cron that fires it. Offering the control
+            // while the scheduler is down would promise a merchant a midnight launch that never
+            // happens — the same heartbeat the dashboard's health panel reads.
+            'schedulerOk'  => $this->schedulerIsRunning(),
             'search'       => $request?->get('searchValue'),
             'presets'      => $this->portability->presets(),
             'assetsReady'  => Schema::hasTable('theme_assets'),
@@ -183,10 +194,123 @@ class ThemeManagementController extends BaseController
             return $this->backToIndex();
         }
 
-        $this->themeManager->publish($version);
+        // The last check before a draft becomes the shop. A section the merchant never finished
+        // configuring does not render, and until now the only place that showed was the live site.
+        $findings = app(PublishValidator::class)->inspect($version);
+
+        if ($findings['blocking'] !== []) {
+            ToastMagic::error(
+                count($findings['blocking']) . ' ' . translate('sections_are_not_ready_to_publish') . '!',
+            );
+
+            return $this->backToIndex()->with('theme_publish_findings', $findings);
+        }
+
+        $this->themeManager->publish($version, $request['change_note'] ?? null);
         ToastMagic::success(translate('theme_version_published_successfully'));
 
+        return $findings['warnings'] === []
+            ? $this->backToIndex()
+            : $this->backToIndex()->with('theme_publish_findings', $findings);
+    }
+
+    /**
+     * Set (or clear) the moment a draft becomes the shop.
+     *
+     * Held to the same check as publishing now, because a schedule a merchant sets is a publish
+     * they will not be watching: telling them at midnight is telling nobody.
+     */
+    public function scheduleVersion(Request $request): RedirectResponse
+    {
+        if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+
+        if (!$this->permissions->canPublish()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_publish_a_theme') . '!');
+            return $this->backToIndex();
+        }
+
+        $version = ThemeVersion::find($request['version_id']);
+        if (!$version || !Schema::hasColumn($version->getTable(), 'publish_at')) {
+            ToastMagic::error(translate('theme_version_not_found') . '!');
+            return $this->backToIndex();
+        }
+
+        if ($request->boolean('cancel')) {
+            $version->forceFill(['publish_at' => null])->save();
+            ToastMagic::success(translate('scheduled_publish_cancelled'));
+
+            return $this->backToIndex();
+        }
+
+        $moment = $this->parseMoment($request['publish_at'] ?? null);
+        if ($moment === null) {
+            ToastMagic::error(translate('choose_a_date_and_time_in_the_future') . '!');
+            return $this->backToIndex();
+        }
+
+        $findings = app(PublishValidator::class)->inspect($version);
+        if ($findings['blocking'] !== []) {
+            ToastMagic::error(
+                count($findings['blocking']) . ' ' . translate('sections_are_not_ready_to_publish') . '!',
+            );
+
+            return $this->backToIndex()->with('theme_publish_findings', $findings);
+        }
+
+        $note = is_string($request['change_note'] ?? null) ? trim($request['change_note']) : '';
+        $version->forceFill([
+            'publish_at' => $moment,
+            // Written now so the note travels with the version the command later publishes: at
+            // fire time there is nobody to ask what this publish was for.
+            'change_note' => $note !== '' ? mb_substr($note, 0, 300) : $version->change_note,
+        ])->save();
+
+        ToastMagic::success(translate('this_version_will_publish_on') . ' ' . $moment->toDayDateTimeString());
+
         return $this->backToIndex();
+    }
+
+    /**
+     * Whether the server cron that fires scheduled work has run recently.
+     *
+     * Ten minutes, matching the system health panel: the schedule pings every five, so one missed
+     * beat is noise and two is a stopped cron.
+     */
+    private function schedulerIsRunning(): bool
+    {
+        if (!Schema::hasTable('business_settings')) {
+            return false;
+        }
+
+        $heartbeat = \App\Models\BusinessSetting::where('type', 'scheduler_last_run_at')->value('value');
+
+        if (!$heartbeat) {
+            return false;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($heartbeat)->greaterThan(now()->subMinutes(10));
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /** A future moment from the form, or null when it is unparseable or already past. */
+    private function parseMoment(mixed $input): ?\Illuminate\Support\Carbon
+    {
+        if (!is_string($input) || trim($input) === '') {
+            return null;
+        }
+
+        try {
+            $moment = \Illuminate\Support\Carbon::parse($input);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $moment->isFuture() ? $moment : null;
     }
 
     /** Duplicate a version into a fresh draft (revision / edit-a-copy workflow). */
