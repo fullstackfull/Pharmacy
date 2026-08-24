@@ -1234,8 +1234,41 @@ class SectionRegistry
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
             'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
             'resource' => $this->coerceResource($value, !empty($field['multiple'])),
+            // A link or image lands in an href/src on the storefront and in the app. A value whose
+            // scheme is not a web one — javascript:, data:, vbscript: — is the classic stored-XSS
+            // shape, and nothing legitimate a merchant pastes ever carries one.
+            'link', 'image' => $this->safeUrl($value),
+            'text'     => is_scalar($value) ? mb_substr((string) $value, 0, 1000) : ($field['default'] ?? null),
+            'textarea' => is_scalar($value) ? mb_substr((string) $value, 0, 20000) : ($field['default'] ?? null),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
         };
+    }
+
+    /**
+     * A URL safe to place in an href/src: relative paths, anchors, and http(s)/mailto/tel
+     * absolute URLs. Anything else — above all executable schemes — becomes null, which every
+     * renderer already treats as "no link".
+     */
+    private function safeUrl(mixed $value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $url = trim((string) $value);
+        if ($url === '') {
+            return null;
+        }
+        if (mb_strlen($url) > 2000) {
+            return null;
+        }
+
+        // No scheme at all: a storefront path, an anchor, a query — all fine as-is.
+        if (!preg_match('/^[a-z][a-z0-9+.\-]*:/i', $url)) {
+            return $url;
+        }
+
+        return preg_match('#^(https?:|mailto:|tel:)#i', $url) ? $url : null;
     }
 
     /**

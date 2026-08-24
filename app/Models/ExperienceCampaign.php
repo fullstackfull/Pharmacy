@@ -50,6 +50,13 @@ class ExperienceCampaign extends Model
     {
         $now ??= now();
 
+        // SCHEDULED means "live once its window opens" — one without a start time has no window
+        // to open, and serving it immediately would be an activation nobody performed. ACTIVE is
+        // an explicit go-live, so a missing start simply means "since activation".
+        if ($this->status === self::STATUS_SCHEDULED && $this->starts_at === null) {
+            return false;
+        }
+
         return in_array($this->status, self::SERVABLE_STATUSES, true)
             && ($this->starts_at === null || $now->greaterThanOrEqualTo($this->starts_at))
             && ($this->ends_at === null || $now->lessThan($this->ends_at));

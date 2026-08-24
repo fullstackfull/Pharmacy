@@ -116,7 +116,9 @@ class ExperienceHealthTest extends TestCase
             'settings' => ['source' => 'collection', 'collection_id' => 424242],
         ]);
 
-        $this->assertContains('critical', $this->severities(), 'this is being served wrong right now');
+        $section = ThemeSection::where('type', 'product_slider')->first();
+        $this->assertSame('critical', $this->severities()['broken_collection_ref_' . $section->id] ?? null,
+            'this is being served wrong right now');
     }
 
     public function test_an_unavailable_pin_is_a_warning(): void
@@ -169,7 +171,31 @@ class ExperienceHealthTest extends TestCase
             'variants' => [['key' => 'b', 'weight' => 50, 'settings' => ['title' => 'X']]],
         ]);
 
-        $this->assertContains('warning', $this->severities(), 'it is measuring nothing');
+        $experiment = ExperienceExperiment::first();
+        $this->assertSame('warning', $this->severities()['orphaned_experiment_' . $experiment->id] ?? null,
+            'it is measuring nothing');
+    }
+
+    public function test_stale_metrics_are_a_warning_with_the_timestamp(): void
+    {
+        ProductCollection::create(['name' => 'Any', 'slug' => 'any', 'status' => true,
+            'rules' => [], 'sort_by' => 'sales_30d']);
+        ProductMetric::create(['product_id' => 1, 'computed_at' => now()->subHours(30)]);
+
+        $this->assertSame('warning', $this->severities()['metrics_stale'] ?? null,
+            'rankings decaying quietly is exactly what this panel exists to catch');
+    }
+
+    public function test_status_drift_names_the_dead_tick(): void
+    {
+        ExperienceCampaign::create([
+            'name' => 'Over', 'status' => ExperienceCampaign::STATUS_ACTIVE, 'page' => 'home',
+            'priority' => 30, 'starts_at' => now()->subDays(2), 'ends_at' => now()->subHour(),
+            'overrides' => [],
+        ]);
+
+        $this->assertSame('info', $this->severities()['campaign_status_drift'] ?? null,
+            'the window protects shoppers, but the tick not running is worth knowing');
     }
 
     public function test_time_travel_evaluates_windows_as_of_the_chosen_moment(): void

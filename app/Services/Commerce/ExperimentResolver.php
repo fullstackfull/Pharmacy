@@ -51,25 +51,6 @@ class ExperimentResolver
         }
     }
 
-    /**
-     * The cache-key fragment this viewer's assignments contribute: bounded by the variant space
-     * of running experiments — a handful of entries — never by viewers (§65).
-     */
-    public function stamp(string $page, ?string $subject): ?string
-    {
-        $assignments = $this->assignmentsFor($page, $subject);
-
-        if ($assignments === []) {
-            return null;
-        }
-
-        ksort($assignments);
-
-        return substr(hash('crc32b', json_encode(array_map(
-            fn (array $assignment) => $assignment['variant'],
-            $assignments,
-        ))), 0, 8);
-    }
 
     /**
      * Patch one section's settings if an assignment names its uuid, and say which experiment did.

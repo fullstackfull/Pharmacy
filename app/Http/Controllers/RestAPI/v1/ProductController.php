@@ -968,6 +968,12 @@ class ProductController extends Controller
             (int) ($request['limit'] ?? 10) ?: 10,
         );
 
+        // The same rating surface every sibling list carries, loaded in one query — a collection
+        // card must not render starless beside a best-sellers card that has its stars.
+        if ($products->isNotEmpty()) {
+            $products->loadCount('reviews');
+        }
+
         return response()->json([
             'total_size' => $products->count(),
             'limit' => (int) ($request['limit'] ?? 10),

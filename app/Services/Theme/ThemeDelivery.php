@@ -82,7 +82,9 @@ class ThemeDelivery
                     return $empty;
                 }
 
-                $stamp = $this->campaignStamp();
+                // Every live campaign on every page: a campaign on a custom page must move this
+                // checksum too, or apps holding that page never learn it changed.
+                $stamp = $this->campaignStamp(null);
 
                 return [
                     'revision' => (int) ($version->revision ?: 1),
@@ -118,11 +120,16 @@ class ThemeDelivery
         }
 
         try {
+            // Experiment assignments are read ONCE and feed both the cache key and the build:
+            // two separate reads could disagree across a status flip and cache one variant's
+            // content under another's key for the whole TTL.
+            $assignments = $this->assignments($page, $viewer);
+
             return Cache::remember(
                 self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer)
-                    . $this->campaignKeyPart($page) . $this->experimentKeyPart($page, $viewer),
+                    . $this->campaignKeyPart($page) . $this->experimentKeyPart($assignments),
                 self::CACHE_TTL,
-                fn () => $this->build($page, $viewer),
+                fn () => $this->build($page, $viewer, null, $assignments),
             );
         } catch (\Throwable) {
             return $this->emptyPayload($page);
@@ -192,7 +199,7 @@ class ThemeDelivery
     /**
      * @return array<string, mixed>
      */
-    private function build(string $page, ViewerContext $viewer, ?ThemeVersion $version = null): array
+    private function build(string $page, ViewerContext $viewer, ?ThemeVersion $version = null, ?array $assignments = null): array
     {
         $version ??= $this->publishedVersion();
         if ($version === null) {
@@ -209,13 +216,10 @@ class ThemeDelivery
         $withheld = [];
 
         // Experiment assignments for this viewer (Phase 3.5): a settings patch per targeted
-        // section uuid. Empty on any failure — control is the answer to every problem (§48).
-        try {
-            $assignments = app(\App\Services\Commerce\ExperimentResolver::class)
-                ->assignmentsFor($page, $viewer->experimentSubject);
-        } catch (\Throwable) {
-            $assignments = [];
-        }
+        // section uuid, resolved by payload() so the cache key and this content agree; the
+        // preview path passes none and resolves here. Empty on any failure — control is the
+        // answer to every problem (§48).
+        $assignments ??= $this->assignments($page, $viewer);
 
         foreach ($rows as $row) {
             $section = [
@@ -225,6 +229,9 @@ class ThemeDelivery
                 'ends_at'    => $row->ends_at,
                 'platforms'  => $row->platforms,
                 'audience'   => $row->audience,
+                // Without this key the channel rule was inert on this path: a section restricted
+                // to the web was still delivered to every app.
+                'channels'   => $row->channels ?? null,
             ];
 
             if (!$this->visibility->passes($section, $viewer)) {
@@ -322,19 +329,14 @@ class ThemeDelivery
      */
     private function present(ThemeSection $row, ViewerContext $viewer, array $assignments = []): array
     {
-        // Folded to the request's language before anything reads them: after this line, `title` IS
-        // the title for the `lang` header this client sent, and no override key survives to reach
-        // a payload. That is what keeps this invisible to installed builds — strings in, strings
-        // out, just the right ones.
-        $settings = LocalisedSettings::collapse(
-            $this->registry->normalizeSettings($row->type, $row->settings ?? []),
-            $viewer->locale,
-        );
-
-        // An experiment variant is a settings patch over the published section (Phase 3.5);
-        // control — and every failure mode — is simply no patch.
+        // The experiment patch lands FIRST, then the language folds (Phase 3.5): a variant can
+        // carry its own per-locale text and have it localise like anything else, and no override
+        // key can ride a patch into a payload — after the collapse, `title` IS the title for the
+        // `lang` header this client sent, whatever wrote it.
         [$settings, $experiment] = app(\App\Services\Commerce\ExperimentResolver::class)
-            ->patch($row->uuid, $settings, $assignments);
+            ->patch($row->uuid, $this->registry->normalizeSettings($row->type, $row->settings ?? []), $assignments);
+
+        $settings = LocalisedSettings::collapse($settings, $viewer->locale);
 
         $blocks = $row->blocks
             ->where('is_visible', true)
@@ -514,17 +516,34 @@ class ThemeDelivery
      * enumerate capability sets that nobody records. The capability list is sorted before hashing,
      * because two clients that report the same components in a different order hold the same page.
      */
-    /** The cache-key fragment this viewer's experiment assignments contribute. */
-    private function experimentKeyPart(string $page, ViewerContext $viewer): string
+    /**
+     * This viewer's experiment assignments, or none — control answers every failure (§48).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function assignments(string $page, ViewerContext $viewer): array
     {
         try {
-            $stamp = app(\App\Services\Commerce\ExperimentResolver::class)
-                ->stamp($page, $viewer->experimentSubject);
+            return app(\App\Services\Commerce\ExperimentResolver::class)
+                ->assignmentsFor($page, $viewer->experimentSubject);
         } catch (\Throwable) {
-            $stamp = null;
+            return [];
+        }
+    }
+
+    /** The cache-key fragment the already-resolved assignments contribute. */
+    private function experimentKeyPart(array $assignments): string
+    {
+        if ($assignments === []) {
+            return '';
         }
 
-        return $stamp === null ? '' : '_x' . $stamp;
+        ksort($assignments);
+
+        return '_x' . substr(hash('crc32b', json_encode(array_map(
+            fn (array $assignment) => $assignment['variant'],
+            $assignments,
+        ))), 0, 8);
     }
 
     /** The cache-key fragment the live campaign set contributes; empty when none is live. */
@@ -535,7 +554,7 @@ class ThemeDelivery
         return $stamp === null ? '' : '_c' . $stamp;
     }
 
-    private function campaignStamp(string $page = 'home'): ?string
+    private function campaignStamp(?string $page = 'home'): ?string
     {
         try {
             return app(\App\Services\Commerce\CampaignResolver::class)->stamp($page);

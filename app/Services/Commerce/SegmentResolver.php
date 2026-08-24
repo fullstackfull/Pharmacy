@@ -126,6 +126,34 @@ class SegmentResolver
         });
     }
 
+    /**
+     * EVERY segment key on record — live or off, engine on or off. This is the save-time
+     * vocabulary: a token an admin once targeted must stay valid to SAVE even while the engine
+     * is disabled, or the save would silently widen the section to everyone. Serving still uses
+     * {@see keys()}, which respects both gates.
+     *
+     * @return array<int, string>
+     */
+    public function allKeys(): array
+    {
+        try {
+            if (!Schema::hasTable('customer_segments')) {
+                return [];
+            }
+
+            return CustomerSegment::query()->orderBy('key')->pluck('key')->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /** Drop the segment list caches so a create/update/delete reaches serving now, not in 60s. */
+    public static function forgetLists(): void
+    {
+        Cache::forget('commerce_segment_keys');
+        Cache::forget('commerce_segments_live');
+    }
+
     /** @return \Illuminate\Support\Collection<int, CustomerSegment> */
     private function liveSegments()
     {

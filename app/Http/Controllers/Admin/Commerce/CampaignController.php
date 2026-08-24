@@ -81,10 +81,18 @@ class CampaignController extends BaseController
             return back();
         }
 
+        // A page the engine cannot serve is an override nobody will ever see; refuse the typo
+        // here rather than storing it as a quiet no-op.
+        $page = (string) $request->input('page', 'home');
+        if (!in_array($page, $this->servablePageSlugs(), true)) {
+            ToastMagic::error(translate('that_is_not_a_page_this_shop_serves') . '!');
+            return back();
+        }
+
         $campaign = ExperienceCampaign::create([
             'name'      => trim($request->input('name')),
             'status'    => ExperienceCampaign::STATUS_DRAFT,
-            'page'      => $request->input('page', 'home'),
+            'page'      => $page,
             'priority'  => (int) ($request->input('priority') ?: 30),
             'starts_at' => $request->input('starts_at') ?: null,
             'ends_at'   => $request->input('ends_at') ?: null,
@@ -163,8 +171,14 @@ class CampaignController extends BaseController
             }
 
             // Going live — now or on schedule — is where a conflict would start being served,
-            // so it is where a conflict is refused (§38).
+            // so it is where a conflict is refused (§38). It is also publishing: the capability
+            // the plain module grant deliberately does NOT include.
             if (in_array($status, ExperienceCampaign::SERVABLE_STATUSES, true)) {
+                if (!$this->permissions->canPublish()) {
+                    ToastMagic::error(translate('putting_a_campaign_live_changes_the_storefront_and_needs_the_publish_permission') . '!');
+                    return back();
+                }
+
                 $probe = clone $campaign;
                 $probe->status = $status;
                 $conflicts = $this->rules->conflictsFor($probe);
@@ -183,6 +197,19 @@ class CampaignController extends BaseController
             }
 
             $campaign->status = $status;
+        }
+
+        // Editing a campaign that is ALREADY live re-runs the §38 check: a priority or window
+        // change can create the very tie the activation gate exists to refuse.
+        if (in_array($campaign->status, ExperienceCampaign::SERVABLE_STATUSES, true)) {
+            $conflicts = $this->rules->conflictsFor($campaign);
+
+            if ($conflicts !== []) {
+                ToastMagic::error(
+                    translate('this_would_contest_a_slot_at_equal_priority_with') . ': ' . implode(' · ', $conflicts),
+                );
+                return back();
+            }
         }
 
         $campaign->save();
@@ -233,8 +260,24 @@ class CampaignController extends BaseController
     /** A campaign transition must reach shoppers now, not a cache TTL from now. */
     private function flushServing(): void
     {
+        \App\Services\Commerce\CampaignResolver::forget();
         $this->delivery->flush();
         $this->renderer->flush();
+    }
+
+    /** @return array<int, string> every slug either channel can be served */
+    private function servablePageSlugs(): array
+    {
+        $theme = Theme::query()->where('is_active', true)->first();
+
+        if ($theme === null) {
+            return ExperiencePage::SYSTEM_SLUGS;
+        }
+
+        return array_values(array_unique([
+            ...$this->pages->servableSlugs($theme->id, Channel::WEB),
+            ...$this->pages->servableSlugs($theme->id, Channel::CUSTOMER_APP),
+        ]));
     }
 
     private function ready(): bool

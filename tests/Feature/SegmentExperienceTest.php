@@ -224,6 +224,68 @@ class SegmentExperienceTest extends TestCase
             'no segments, base experience — never an exception a page has to catch');
     }
 
+    public function test_every_rule_arm_reads_the_metrics_it_names(): void
+    {
+        $rules = app(SegmentRules::class);
+        $metrics = ['orders_count' => 3, 'days_since_last_order' => 12,
+                    'days_since_registration' => 200, 'total_spent' => 450.0];
+
+        $this->assertTrue($rules->holds(['field' => 'total_spent', 'operator' => 'between', 'value' => [100.0, 500.0]], $metrics));
+        $this->assertFalse($rules->holds(['field' => 'total_spent', 'operator' => 'between', 'value' => [500.0, 900.0]], $metrics));
+        $this->assertTrue($rules->holds(['field' => 'days_since_registration', 'operator' => 'greater_than', 'value' => 100.0], $metrics));
+        $this->assertTrue($rules->holds(['field' => 'orders_count', 'operator' => 'not_equals', 'value' => 4.0], $metrics));
+        $this->assertFalse($rules->holds(['field' => 'orders_count', 'operator' => 'not_equals', 'value' => 3.0], $metrics));
+        $this->assertTrue($rules->holds(['field' => 'days_since_last_order', 'operator' => 'less_than_or_equal', 'value' => 12.0], $metrics));
+    }
+
+    public function test_a_channel_restricted_section_is_withheld_from_the_other_channel(): void
+    {
+        // The rule was inert on the delivery path: the section array handed to visibility never
+        // carried the channels key, so a web-only section reached every app.
+        Schema::table('theme_sections', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->json('channels')->nullable();
+        });
+
+        $theme = Theme::create(['name' => 'C', 'slug' => 'c', 'is_active' => true]);
+        $version = ThemeVersion::create([
+            'theme_id' => $theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED, 'revision' => 1,
+        ]);
+        ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'spacer',
+            'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 10],
+            'channels' => ['web'],
+        ]);
+
+        $payload = app(ThemeDelivery::class)->payload('home', new ViewerContext(
+            platform: ViewerContext::PLATFORM_APP, device: ViewerContext::DEVICE_MOBILE,
+        ));
+
+        $this->assertSame([], $payload['sections'], 'a web-only section must never reach the app');
+    }
+
+    public function test_saving_delivery_rules_with_the_engine_off_never_widens_a_section(): void
+    {
+        // The save-time vocabulary must include every key ON RECORD and whatever the section
+        // already carried — an admin saving a schedule while commerce is disabled must not
+        // silently strip 'repeat-buyer' and show the section to everyone.
+        $this->repeatBuyerSegment();
+        config(['commerce.enabled' => false]);
+
+        $theme = Theme::create(['name' => 'W', 'slug' => 'w', 'is_active' => true]);
+        $version = ThemeVersion::create(['theme_id' => $theme->id, 'status' => ThemeVersion::STATUS_DRAFT]);
+        $section = ThemeSection::create([
+            'theme_version_id' => $version->id, 'page' => 'home', 'type' => 'spacer',
+            'sort_order' => 1, 'is_visible' => true, 'settings' => [],
+            'audience' => ['repeat-buyer'],
+        ]);
+
+        app(\App\Services\Theme\ThemeBuilderService::class)->setDeliveryRules($section, [
+            'audience' => ['repeat-buyer'],
+        ]);
+
+        $this->assertSame(['repeat-buyer'], $section->fresh()->audience);
+    }
+
     public function test_the_kill_switch_empties_every_segment(): void
     {
         $this->repeatBuyerSegment();

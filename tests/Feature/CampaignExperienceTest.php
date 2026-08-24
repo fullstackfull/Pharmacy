@@ -274,6 +274,68 @@ class CampaignExperienceTest extends TestCase
         $this->assertStringStartsWith('base1234', $dressed, 'the stored checksum is still the prefix');
     }
 
+    public function test_each_slot_lands_where_its_name_says(): void
+    {
+        $this->campaign(overrides: [
+            ['slot' => 'top', 'section' => ['type' => 'promotional_banner', 'settings' => ['title' => 'T']]],
+            ['slot' => 'middle', 'section' => ['type' => 'banner_strip', 'settings' => ['title' => 'M']]],
+            ['slot' => 'bottom', 'section' => ['type' => 'flash_deal', 'settings' => []]],
+        ]);
+
+        $this->assertSame(
+            // Base: hero, spacer. top sits under the hero (the hero is the page's face);
+            // middle splits the list as it stands when applied; bottom trails.
+            ['hero_banner', 'promotional_banner', 'banner_strip', 'spacer', 'flash_deal'],
+            $this->payloadTypes(),
+        );
+    }
+
+    public function test_a_hero_override_leads_a_page_that_has_no_hero(): void
+    {
+        ThemeSection::where('type', 'hero_banner')->delete();
+
+        $this->campaign(overrides: [
+            ['slot' => 'hero', 'section' => ['type' => 'hero_banner', 'settings' => ['title' => 'New face']]],
+        ]);
+
+        $this->assertSame(['hero_banner', 'spacer'], $this->payloadTypes());
+    }
+
+    public function test_a_scheduled_campaign_without_a_start_never_serves(): void
+    {
+        // SCHEDULED means "live once its window opens"; no start time is no window, and serving
+        // it immediately would be an activation nobody performed.
+        ExperienceCampaign::create([
+            'name' => 'No window', 'status' => ExperienceCampaign::STATUS_SCHEDULED, 'page' => 'home',
+            'priority' => 30, 'starts_at' => null, 'ends_at' => null,
+            'overrides' => app(CampaignRules::class)->validateOverrides([
+                ['slot' => 'top', 'section' => ['type' => 'spacer', 'settings' => ['height' => 1]]],
+            ])['overrides'],
+        ]);
+
+        $this->assertSame(['hero_banner', 'spacer'], $this->payloadTypes());
+    }
+
+    public function test_editing_a_live_campaign_moves_the_version_checksum(): void
+    {
+        $campaign = $this->campaign(overrides: [
+            ['slot' => 'top', 'section' => ['type' => 'spacer', 'settings' => ['height' => 1]]],
+        ]);
+
+        Cache::flush();
+        $before = app(ThemeDelivery::class)->revision()['checksum'];
+
+        // Same campaign, same slot, new content — the stamp must move or every cache and every
+        // synced app keeps the old text for a full TTL.
+        $this->travel(1)->seconds();
+        $campaign->update(['overrides' => app(CampaignRules::class)->validateOverrides([
+            ['slot' => 'top', 'section' => ['type' => 'spacer', 'settings' => ['height' => 2]]],
+        ])['overrides']]);
+
+        Cache::flush();
+        $this->assertNotSame($before, app(ThemeDelivery::class)->revision()['checksum']);
+    }
+
     public function test_the_tick_activates_and_ends_on_schedule(): void
     {
         $opening = ExperienceCampaign::create([

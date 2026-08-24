@@ -74,7 +74,7 @@
                             <div class="d-flex gap-2 align-items-center mb-1">
                                 <span class="badge bg-warning">{{ $override['slot'] }}</span>
                                 <span>{{ $campaignNames[$override['campaign_id']] ?? ('#' . $override['campaign_id']) }}</span>
-                                <code dir="ltr" class="small">{{ $override['section']['type'] }}</code>
+                                <code dir="ltr" class="small">{{ $override['section']['type'] ?? '?' }}</code>
                             </div>
                         @empty
                             <p class="text-muted small">{{ translate('no_campaign_is_dressing_the_page') }}</p>

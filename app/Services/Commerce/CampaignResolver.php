@@ -3,6 +3,7 @@
 namespace App\Services\Commerce;
 
 use App\Models\ExperienceCampaign;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -16,6 +17,13 @@ use Illuminate\Support\Facades\Schema;
 class CampaignResolver
 {
     /**
+     * How long a page's winning overrides may be served from cache. Short, because the overlay
+     * exists to open and close on time; campaign writes and the lifecycle tick call
+     * {@see forget()} so transitions land immediately, and this only bounds the un-flushed case.
+     */
+    private const OVERRIDES_TTL = 30;
+
+    /**
      * The winning override per slot for one page: live campaigns only, highest priority first,
      * older campaign breaking a tie the conflict check failed to prevent — deterministic, §36.
      *
@@ -27,6 +35,39 @@ class CampaignResolver
             return [];
         }
 
+        // Several render paths ask per request (the cache key, the build, the banner hand-off);
+        // one short-lived entry answers them all. A time-travel evaluation is never cached — it
+        // is a hypothetical, and the next real request must not inherit it.
+        if ($at === null) {
+            try {
+                return Cache::remember(
+                    'commerce_campaign_overrides_' . $page,
+                    self::OVERRIDES_TTL,
+                    fn () => $this->resolveOverrides($page, null),
+                );
+            } catch (\Throwable) {
+                return [];
+            }
+        }
+
+        return $this->resolveOverrides($page, $at);
+    }
+
+    /** Drop the cached overrides so a lifecycle transition reaches shoppers now. */
+    public static function forget(): void
+    {
+        try {
+            foreach (ExperienceCampaign::query()->distinct()->pluck('page') as $page) {
+                Cache::forget('commerce_campaign_overrides_' . $page);
+            }
+        } catch (\Throwable) {
+            // Nothing to forget is nothing to fail over.
+        }
+    }
+
+    /** @return array<int, array{slot: string, section: array<string, mixed>, campaign_id: int}> */
+    private function resolveOverrides(string $page, ?\Illuminate\Support\Carbon $at): array
+    {
         try {
             $campaigns = ExperienceCampaign::query()
                 ->where('page', $page)
@@ -66,18 +107,32 @@ class CampaignResolver
      * every installed app notices a campaign starting or ending on its next resume — the
      * revision number knows nothing about overlays, and must not start lying about them.
      */
-    public function stamp(string $page = 'home'): ?string
+    public function stamp(?string $page = 'home'): ?string
     {
-        $overrides = $this->overridesFor($page);
-
-        if ($overrides === []) {
+        if (!$this->serving()) {
             return null;
         }
 
-        return substr(hash('crc32b', json_encode(array_map(
-            fn (array $override) => [$override['campaign_id'], $override['slot']],
-            $overrides,
-        ))), 0, 8);
+        try {
+            // The stamp reads the LIVE campaign rows directly — id, page and updated_at — so it
+            // moves when a campaign opens, closes, or has its content edited while live, on any
+            // page. Hashing winners alone missed the edit case: same campaign, same slot, new
+            // text, stale caches everywhere.
+            $live = ExperienceCampaign::query()
+                ->when($page !== null, fn ($query) => $query->where('page', $page))
+                ->whereIn('status', ExperienceCampaign::SERVABLE_STATUSES)
+                ->get(['id', 'page', 'priority', 'starts_at', 'ends_at', 'status', 'updated_at', 'overrides'])
+                ->filter(fn (ExperienceCampaign $campaign) => $campaign->isLive())
+                ->map(fn (ExperienceCampaign $campaign) => [
+                    $campaign->id, $campaign->page, (string) $campaign->updated_at,
+                ])
+                ->values()
+                ->all();
+
+            return $live === [] ? null : substr(hash('crc32b', json_encode($live)), 0, 8);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -112,7 +167,11 @@ class CampaignResolver
 
             $sections = match ($override['slot']) {
                 'hero'   => $this->placeHero($sections, $made, $typeOf),
-                'top'    => [$made, ...$sections],
+                // Top of the page, but never above the hero: the hero is the page's face, and a
+                // "top" promo belongs directly under it — or first, when there is no hero.
+                'top'    => $typeOf($sections[0] ?? null) === 'hero_banner'
+                    ? [$sections[0], $made, ...array_slice($sections, 1)]
+                    : [$made, ...$sections],
                 'middle' => [...array_slice($sections, 0, (int) ceil(count($sections) / 2)),
                              $made,
                              ...array_slice($sections, (int) ceil(count($sections) / 2))],

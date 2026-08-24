@@ -51,7 +51,7 @@
             var event = {name: name};
             if (payload) {
                 if (payload.entityType) event.entity_type = String(payload.entityType).slice(0, 24);
-                if (payload.entityId) event.entity_id = String(payload.entityId).slice(0, 18);
+                if (payload.entityId) event.entity_id = String(payload.entityId).slice(0, 64);
                 if (payload.properties) event.properties = payload.properties;
                 if (payload.dedupeKey) event.dedupe_key = String(payload.dedupeKey).slice(0, 64);
             }

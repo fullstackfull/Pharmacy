@@ -301,11 +301,15 @@ class ThemeSectionApiTest extends TestCase
         $this->assertCount(1, $strip['images'], 'a still tile is one frame, not a missing key');
     }
 
-    public function test_input_nobody_can_spell_falls_back_instead_of_failing(): void
+    public function test_malformed_input_falls_back_and_a_real_unknown_slug_is_gone(): void
     {
         $this->mosaic(ThemeVersion::STATUS_PUBLISHED);
 
+        // `?page[]=x` is noise nobody typed on purpose: ordinary home, never a 500.
         $this->getJson('/api/v1/theme/sections?page[]=x&type[]=y')->assertOk()->assertJsonPath('page', 'home');
-        $this->getJson('/api/v1/theme/sections?page=nonsense')->assertOk()->assertJsonPath('page', 'home');
+
+        // A well-formed slug this channel cannot be served is honestly a 404 — answering it with
+        // the home payload put the home page inside whichever screen asked.
+        $this->getJson('/api/v1/theme/sections?page=nonsense')->assertNotFound();
     }
 }

@@ -96,11 +96,14 @@ class AppBuilderController extends BaseController
     public function media(Request $request): View
     {
         $theme = $this->activeTheme();
+        $assetsReady = Schema::hasTable('theme_assets');
 
         return view('admin-views.app-builder.media', [
             'channel'      => $this->channel($request),
-            'theme'        => $theme?->load('assets'),
-            'assetsReady'  => Schema::hasTable('theme_assets'),
+            // The relation loads only when its table exists — this screen is where a merchant
+            // learns the table is missing, and it must not 500 while telling them.
+            'theme'        => $assetsReady ? $theme?->load('assets') : $theme,
+            'assetsReady'  => $assetsReady,
             'maxAssetSize' => ThemeAssetService::maxBytes(),
             'editable'     => $this->permissions->canEdit(),
         ]);
@@ -119,11 +122,15 @@ class AppBuilderController extends BaseController
         $exportable = null;
 
         if ($theme !== null) {
-            $exportable = ThemeVersion::query()
-                ->where('theme_id', $theme->id)
-                ->where('status', ThemeVersion::STATUS_PUBLISHED)
-                ->orderByDesc('id')
-                ->first() ?? $this->latestDraft($theme);
+            try {
+                $exportable = ThemeVersion::query()
+                    ->where('theme_id', $theme->id)
+                    ->where('status', ThemeVersion::STATUS_PUBLISHED)
+                    ->orderByDesc('id')
+                    ->first() ?? $this->latestDraft($theme);
+            } catch (\Throwable) {
+                $exportable = null;
+            }
         }
 
         return view('admin-views.app-builder.templates', [
@@ -336,11 +343,16 @@ class AppBuilderController extends BaseController
 
     private function latestDraft(Theme $theme): ?ThemeVersion
     {
-        return ThemeVersion::query()
-            ->where('theme_id', $theme->id)
-            ->draft()
-            ->orderByDesc('id')
-            ->first();
+        try {
+            return ThemeVersion::query()
+                ->where('theme_id', $theme->id)
+                ->draft()
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable) {
+            // An unmigrated install has no drafts; the screens reporting that must still open.
+            return null;
+        }
     }
 
     /** Editing pages is editing the experience, and is gated on the same permission. */

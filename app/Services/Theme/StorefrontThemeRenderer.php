@@ -141,14 +141,15 @@ class StorefrontThemeRenderer
             $assignments = [];
         }
 
-        // Language is a per-request concern exactly as scheduling is: the cached structure keeps
-        // every language's text, and each request folds its own in. Done here, once, so no partial
-        // ever meets a `title_ar` key or needs to know the convention exists.
-        $runnable = array_map(function (array $section) use ($viewer, $assignments) {
-            $section['settings'] = LocalisedSettings::collapse($section['settings'] ?? [], $viewer->locale);
+        // The experiment patch lands FIRST, then the language folds — a variant can carry its
+        // own per-locale text, and no override key can ride a patch past the collapse. Done here,
+        // once per request, so no partial ever meets a `title_ar` key.
+        $experiments = app(\App\Services\Commerce\ExperimentResolver::class);
+        $runnable = array_map(function (array $section) use ($viewer, $assignments, $experiments) {
+            [$section['settings'], $section['experiment']] = $experiments
+                ->patch($section['uuid'] ?? null, $section['settings'] ?? [], $assignments);
 
-            [$section['settings'], $section['experiment']] = app(\App\Services\Commerce\ExperimentResolver::class)
-                ->patch($section['uuid'] ?? null, $section['settings'], $assignments);
+            $section['settings'] = LocalisedSettings::collapse($section['settings'], $viewer->locale);
             $section['blocks'] = array_map(function (array $block) use ($viewer) {
                 $block['settings'] = LocalisedSettings::collapse($block['settings'] ?? [], $viewer->locale);
                 return $block;
@@ -205,8 +206,11 @@ class StorefrontThemeRenderer
 
     private function customerIsSignedIn(): bool
     {
+        // Both guards, because this renderer serves the storefront (session guard) AND the
+        // legacy /theme/sections API (token guard): checking only the session left signed-in
+        // app users looking like guests on that endpoint, hiding customer-only sections.
         try {
-            return auth('customer')->check();
+            return auth('customer')->check() || auth('api')->check();
         } catch (\Throwable) {
             return false;
         }
@@ -220,7 +224,7 @@ class StorefrontThemeRenderer
     private function webExperimentSubject(): ?string
     {
         try {
-            $customerId = auth('customer')->id();
+            $customerId = auth('customer')->id() ?: auth('api')->id();
             if ($customerId) {
                 return 'c' . $customerId;
             }
@@ -235,14 +239,14 @@ class StorefrontThemeRenderer
 
     /**
      * The signed-in customer's segments, or none — resolution failing costs the personalised
-     * sections, never the page (§44).
+     * sections, never the page (§44). Both guards, for the same reason as customerIsSignedIn().
      *
      * @return array<int, string>
      */
     private function viewerSegments(): array
     {
         try {
-            $customerId = auth('customer')->id();
+            $customerId = auth('customer')->id() ?: auth('api')->id();
 
             return $customerId
                 ? app(\App\Services\Commerce\SegmentResolver::class)->segmentsFor((int) $customerId)
@@ -349,6 +353,16 @@ class StorefrontThemeRenderer
     /** Drop the cached structure for every page — call after publishing. */
     public function flush(array $pages = ['home', 'header', 'footer']): void
     {
+        // Custom pages are cached under the same prefix by their own slugs; a publish that only
+        // flushed the three built-ins left every composed page stale for a full TTL.
+        try {
+            if (Schema::hasTable('experience_pages')) {
+                $pages = array_unique([...$pages, ...\App\Models\ExperiencePage::query()->pluck('slug')->all()]);
+            }
+        } catch (\Throwable) {
+            // The built-ins still flush.
+        }
+
         foreach ($pages as $page) {
             Cache::forget(self::CACHE_KEY_PREFIX . $page);
         }
@@ -382,6 +396,8 @@ class StorefrontThemeRenderer
             'ends_at'    => $section->ends_at,
             'platforms'  => $section->platforms,
             'audience'   => $section->audience,
+            // Without this key the channel rule was inert on this path too.
+            'channels'   => $section->channels ?? null,
             'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
             'blocks'   => $section->blocks
                 ->where('is_visible', true)

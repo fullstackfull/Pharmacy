@@ -68,6 +68,13 @@ class SegmentController extends BaseController
             return back();
         }
 
+        // guest/customer are the built-in audience tokens; a segment wearing one of their names
+        // would hijack every section already targeted at them.
+        if (in_array($key, \App\Services\Theme\ViewerContext::AUDIENCES, true)) {
+            ToastMagic::error(translate('this_name_belongs_to_a_built_in_audience') . '!');
+            return back();
+        }
+
         $segment = CustomerSegment::create([
             'name'   => trim($request->input('name')),
             'key'    => $key,
@@ -80,6 +87,8 @@ class SegmentController extends BaseController
             subject: $segment,
             after: ['name' => $segment->name, 'key' => $segment->key, 'rules' => $segment->rules],
         );
+
+        \App\Services\Commerce\SegmentResolver::forgetLists();
 
         ToastMagic::success(translate('segment_created_successfully'));
 
@@ -131,6 +140,8 @@ class SegmentController extends BaseController
             after: ['name' => $segment->name, 'status' => $segment->status, 'rules' => $segment->rules],
         );
 
+        \App\Services\Commerce\SegmentResolver::forgetLists();
+
         ToastMagic::success(translate('segment_updated_successfully'));
 
         return back();
@@ -156,6 +167,8 @@ class SegmentController extends BaseController
             subject: $segment,
             before: ['name' => $segment->name, 'key' => $segment->key],
         );
+
+        \App\Services\Commerce\SegmentResolver::forgetLists();
 
         ToastMagic::success(translate('segment_deleted_sections_targeting_it_now_show_to_nobody_extra'));
 

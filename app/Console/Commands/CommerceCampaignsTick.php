@@ -42,6 +42,7 @@ class CommerceCampaignsTick extends Command
             ->update(['status' => ExperienceCampaign::STATUS_ENDED]);
 
         if ($activated > 0 || $ended > 0) {
+            \App\Services\Commerce\CampaignResolver::forget();
             $delivery->flush();
             $renderer->flush();
             $this->info("Activated {$activated}, ended {$ended} campaign(s).");

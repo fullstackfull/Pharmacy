@@ -112,15 +112,18 @@ config/*.php for configuration, ToastMagic flash pattern, `nwidart` modules for 
 ## F. Database plan (all additive; no existing table touched)
 
 ```
-product_collections        id, name, slug, status, rules(json), sort(json: metric+direction),
-                           merchandising(json: pins/excluded/boosts/min_items/fallback), timestamps
-product_metrics            product_id (unique), sales_30d, views_30d, carted_30d, rating, computed_at
+product_collections        id, name, slug, status, rules(json), sort_by(string),
+                           merchandising(json: pins/excluded/boosts/min_items/replace/fallback), timestamps
+product_metrics            product_id (unique), sales_30d, views_30d, carted_30d, rating,
+                           wishlist_count, computed_at
 experience_campaigns       id, name, status(draft/scheduled/active/paused/ended/cancelled),
-                           starts_at, ends_at, priority(int), page(slug), timestamps
-experience_campaign_overrides  id, campaign_id, slot(string), section payload(json), sort_order
-customer_segments          id, name, key, rules(json), status, timestamps
-experience_experiments     id, name, key, status, page, section_uuid, variants(json), split(json),
-                           starts_at, ends_at, timestamps
+                           page(slug), priority(int), starts_at, ends_at,
+                           overrides(json: validated [{slot, section}] rows — a child table was
+                           planned and deliberately not shipped: the set is small, validated,
+                           and read whole on every request), timestamps
+customer_segments          id, name, key, status, rules(json), timestamps
+experience_experiments     id, name, key, status, page, section_uuid, variants(json — weights
+                           live inside the rows; no schedule window), timestamps
 ```
 
 Each migration: guarded `Schema::hasTable`, up/re-up/down verified on sqlite; no locks on

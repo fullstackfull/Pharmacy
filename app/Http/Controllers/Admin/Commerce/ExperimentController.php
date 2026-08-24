@@ -137,10 +137,18 @@ class ExperimentController extends BaseController
                 return back();
             }
 
+            // Starting an experiment changes what shoppers are served, which is publishing —
+            // the capability the module grant deliberately does NOT include (ThemePermissionService).
+            if ($status === ExperienceExperiment::STATUS_RUNNING && !$this->permissions->canPublish()) {
+                ToastMagic::error(translate('starting_an_experiment_changes_the_live_storefront_and_needs_the_publish_permission') . '!');
+                return back();
+            }
+
             $experiment->status = $status;
         }
 
         $experiment->save();
+        $this->flushServing($experiment->page);
 
         $this->audit->record(
             action: 'commerce.experiment_updated',
@@ -168,6 +176,7 @@ class ExperimentController extends BaseController
         }
 
         $experiment->delete();
+        $this->flushServing($experiment->page);
 
         $this->audit->record(
             action: 'commerce.experiment_deleted',
@@ -222,6 +231,13 @@ class ExperimentController extends BaseController
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /** A lifecycle change must reach shoppers now, not when the 60s list cache expires. */
+    private function flushServing(string $page): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('commerce_experiments_' . $page);
+        app(\App\Services\Theme\ThemeDelivery::class)->flush();
     }
 
     private function ready(): bool

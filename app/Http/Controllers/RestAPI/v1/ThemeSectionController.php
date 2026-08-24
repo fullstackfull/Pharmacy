@@ -62,10 +62,21 @@ class ThemeSectionController extends Controller
      * or a typo must never be a 500. A page that exists but is turned off is unknown too — turning
      * one off is how a merchant takes it out of the app.
      */
-    private function servablePage(Request $request, ViewerContext $viewer): string
+    /**
+     * The page this channel may be served, or null when the request names one it may not.
+     *
+     * A malformed page parameter still falls back to home — `?page[]=x` is noise, not a request
+     * for a page. But a WELL-FORMED slug that is unknown, disabled, or another channel's is a
+     * page this client must not have, and answering it with the HOME payload put the home page
+     * inside the app's "Offers" screen. The honest answer is a 404 the client renders as such.
+     */
+    private function servablePage(Request $request, ViewerContext $viewer): ?string
     {
         $requested = $request->query('page', 'home');
-        $requested = is_string($requested) && $requested !== '' ? $requested : 'home';
+
+        if (!is_string($requested) || $requested === '') {
+            return 'home';
+        }
 
         $theme = \App\Models\Theme::query()->where('is_active', true)->value('id');
 
@@ -77,7 +88,7 @@ class ThemeSectionController extends Controller
             $allowed = self::GUARANTEED_PAGES;
         }
 
-        return in_array($requested, $allowed, true) ? $requested : 'home';
+        return in_array($requested, $allowed, true) ? $requested : null;
     }
 
     #[ApiDoc(
@@ -119,8 +130,13 @@ class ThemeSectionController extends Controller
     public function sections(Request $request): JsonResponse
     {
         // The house rule for request input: a value nobody can spell is not a filter. `?page[]=x`
-        // must fall back, never 500 a public endpoint.
+        // must fall back, never 500 a public endpoint — while a real slug this channel cannot be
+        // served is a 404, never somebody else's page.
         $page = $this->servablePage($request, ViewerContext::fromRequest($request));
+
+        if ($page === null) {
+            return response()->json(['errors' => [['code' => 'page', 'message' => 'page_not_found']]], 404);
+        }
 
         $type = $request->query('type');
         $type = is_string($type) && $type !== '' ? $type : null;
@@ -166,6 +182,10 @@ class ThemeSectionController extends Controller
     {
         $viewer = ViewerContext::fromRequest($request);
         $page = $this->servablePage($request, $viewer);
+
+        if ($page === null) {
+            return response()->json(['errors' => [['code' => 'page', 'message' => 'page_not_found']]], 404);
+        }
 
         // A merchant checking a draft on a real phone before it is anyone else's home page. The
         // preview path shares no cache and no validator with the published one: a draft changes on

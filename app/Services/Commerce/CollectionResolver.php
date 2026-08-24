@@ -205,18 +205,29 @@ class CollectionResolver
             ->get()
             ->keyBy('id');
 
+        // Every available pin is guaranteed a slot inside the visible list — a pin is the
+        // admin's hand, and the ranking must never displace it. Positions clamp into the list;
+        // a collision (or a clamp collision at the tail) takes the NEAREST free slot, searching
+        // up then down, so two pins at #10 on a rail of ten are #10 and #9 — both present.
         $slots = [];
         foreach ($config['pins'] as $pin) {
             $product = $pinned->get($pin['id']);
-            if ($product === null) {
+            if ($product === null || count($slots) >= $limit) {
                 continue;
             }
-            // Clamped into the visible list: a pin at #10 on a rail of four is a pin the
-            // admin expects to SEE, so it takes the last slot rather than silently vanishing.
-            $position = min(max(1, (int) $pin['position']), $limit);
-            while (isset($slots[$position]) && $position <= ContentSource::MAX_LIMIT) {
+
+            $wanted = min(max(1, (int) $pin['position']), $limit);
+            $position = $wanted;
+            while (isset($slots[$position]) && $position < $limit) {
                 $position++;
             }
+            if (isset($slots[$position])) {
+                $position = $wanted;
+                while (isset($slots[$position]) && $position > 1) {
+                    $position--;
+                }
+            }
+
             $slots[$position] = $product;
         }
 
@@ -226,7 +237,7 @@ class CollectionResolver
         $restIndex = 0;
         $total = min($limit, count($slots) + $rest->count());
 
-        for ($position = 1; count($result) < $total && $position <= ContentSource::MAX_LIMIT; $position++) {
+        for ($position = 1; count($result) < $total && $position <= $limit; $position++) {
             if (isset($slots[$position])) {
                 $result[] = $slots[$position];
             } elseif ($restIndex < $rest->count()) {
@@ -272,17 +283,21 @@ class CollectionResolver
     {
         $fallback = $config['fallback'];
 
+        $content = collect();
+
         if ($fallback['kind'] === 'source' && $fallback['source'] !== null) {
-            return app(\App\Services\Theme\SectionDataResolver::class)->productsFrom(
+            $content = app(\App\Services\Theme\SectionDataResolver::class)->productsFrom(
                 ContentSource::fromSettings(['source' => $fallback['source'], 'limit' => $limit]),
             );
+        } elseif ($fallback['kind'] === 'collection' && $fallback['id'] !== null) {
+            $content = $this->resolve($fallback['id'], $limit, isFallback: true);
         }
 
-        if ($fallback['kind'] === 'collection' && $fallback['id'] !== null) {
-            return $this->resolve($fallback['id'], $limit, isFallback: true);
-        }
-
-        return collect();
+        // The exclusions hold whichever door the products came through: a product the admin
+        // banned from this collection must not walk back in as its fallback.
+        return $config['excluded'] === []
+            ? $content
+            : $content->reject(fn (Product $product) => in_array((int) $product->id, $config['excluded'], true))->values();
     }
 
     private function joinMetrics(Builder $query): Builder
@@ -321,11 +336,35 @@ class CollectionResolver
                     ? $query->whereRaw('COALESCE(' . $column . ', 0) BETWEEN ? AND ?', $value)
                     : $query->whereBetween($column, $value))
                 : null,
-            'in'                    => is_array($value) ? $query->whereIn($column, $value) : null,
-            'not_in'                => is_array($value) ? $query->whereNotIn($column, $value) : null,
+            'in'                    => is_array($value) ? $this->inSet($query, $rule['field'], $column, $value, false) : null,
+            'not_in'                => is_array($value) ? $this->inSet($query, $rule['field'], $column, $value, true) : null,
             'within_last_days'      => $query->where($column, '>=', now()->subDays((int) $value)),
             default                 => null,
         };
+    }
+
+    /**
+     * A set rule. Category is special: the platform files a product under up to three levels
+     * (category, sub, sub-sub), and a merchant who says "in Vitamins" means ANY of them — the
+     * same reading every catalogue page applies. Excluding reads the same way, negated.
+     */
+    private function inSet(Builder $query, string $field, string $column, array $value, bool $negate): Builder
+    {
+        if ($field !== 'category') {
+            return $negate ? $query->whereNotIn($column, $value) : $query->whereIn($column, $value);
+        }
+
+        if ($negate) {
+            return $query
+                ->whereNotIn('products.category_id', $value)
+                ->where(fn (Builder $inner) => $inner->whereNotIn('products.sub_category_id', $value)->orWhereNull('products.sub_category_id'))
+                ->where(fn (Builder $inner) => $inner->whereNotIn('products.sub_sub_category_id', $value)->orWhereNull('products.sub_sub_category_id'));
+        }
+
+        return $query->where(fn (Builder $inner) => $inner
+            ->whereIn('products.category_id', $value)
+            ->orWhereIn('products.sub_category_id', $value)
+            ->orWhereIn('products.sub_sub_category_id', $value));
     }
 
     /**
@@ -351,8 +390,10 @@ class CollectionResolver
 
         return match ($sort) {
             'newest'     => $query->orderByDesc('products.id'),
-            'price_low'  => $query->orderBy('products.unit_price'),
-            'price_high' => $query->orderByDesc('products.unit_price'),
+            // The id tiebreak keeps equal-priced products in one order everywhere (§36 spirit:
+            // never a coin flip, even the database's).
+            'price_low'  => $query->orderBy('products.unit_price')->orderByDesc('products.id'),
+            'price_high' => $query->orderByDesc('products.unit_price')->orderByDesc('products.id'),
             default      => $query
                 ->orderByRaw('COALESCE(product_metrics.' . $sort . ', 0) DESC')
                 ->orderByDesc('products.id'),

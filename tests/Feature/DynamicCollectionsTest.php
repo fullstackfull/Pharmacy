@@ -423,6 +423,65 @@ class DynamicCollectionsTest extends TestCase
         $this->assertContains('fallback:cycle_detected', $checked['errors']);
     }
 
+    public function test_two_pins_colliding_at_the_tail_are_both_present(): void
+    {
+        $first = $this->product(['name' => 'Pin A']);
+        $second = $this->product(['name' => 'Pin B']);
+        $this->product(['name' => 'Organic 1']);
+        $this->product(['name' => 'Organic 2']);
+
+        $collection = $this->collection();
+        $collection->update(['merchandising' => [
+            // Both ask for the last slot of a rail of three: the ranking must not displace
+            // either — a pin is the admin's hand.
+            'pins' => [['id' => $first->id, 'position' => 9], ['id' => $second->id, 'position' => 9]],
+        ]]);
+
+        $names = app(CollectionResolver::class)->resolve($collection, 3)->pluck('name')->all();
+
+        $this->assertContains('Pin A', $names);
+        $this->assertContains('Pin B', $names);
+        $this->assertCount(3, $names);
+    }
+
+    public function test_the_fallback_respects_the_exclusion_list(): void
+    {
+        $banned = $this->product(['name' => 'Banned', 'featured' => 1]);
+        $this->product(['name' => 'Welcome', 'featured' => 1]);
+
+        $collection = $this->collection([
+            ['field' => 'price', 'operator' => 'less_than', 'value' => -1],
+        ]);
+        $collection->update(['merchandising' => [
+            'excluded'  => [$banned->id],
+            'min_items' => 1,
+            'fallback'  => ['kind' => 'source', 'source' => 'featured'],
+        ]]);
+
+        $this->assertSame(
+            ['Welcome'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+            'a product the admin banned must not walk back in through the fallback door',
+        );
+    }
+
+    public function test_a_category_rule_reads_every_level_a_product_is_filed_under(): void
+    {
+        $this->product(['name' => 'Top level', 'category_id' => 5]);
+        $this->product(['name' => 'Sub level', 'category_id' => 9, 'sub_category_id' => 5]);
+        $this->product(['name' => 'Elsewhere', 'category_id' => 7]);
+
+        $collection = $this->collection([
+            ['field' => 'category', 'operator' => 'in', 'value' => [5]],
+        ], sort: 'newest');
+
+        $this->assertEqualsCanonicalizing(
+            ['Top level', 'Sub level'],
+            app(CollectionResolver::class)->resolve($collection, 10)->pluck('name')->all(),
+            'the platform files a product under up to three category levels; "in Vitamins" means any of them',
+        );
+    }
+
     public function test_pinning_and_excluding_the_same_product_is_refused(): void
     {
         $checked = app(\App\Services\Commerce\MerchandisingRules::class)->validate([

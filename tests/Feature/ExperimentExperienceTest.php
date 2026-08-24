@@ -209,6 +209,34 @@ class ExperimentExperienceTest extends TestCase
 
     // ---- validation -------------------------------------------------------------------------
 
+    public function test_a_variant_carrying_its_own_translation_localises_like_anything_else(): void
+    {
+        // The patch lands before the language folds: a variant can say title + title_ar and the
+        // Arabic shopper in that bucket sees Arabic — and no override key reaches the payload.
+        \App\Models\BusinessSetting::create(['type' => 'language', 'value' => json_encode([
+            ['id' => 1, 'name' => 'english', 'code' => 'en', 'status' => 1, 'default' => true],
+            ['id' => 2, 'name' => 'arabic',  'code' => 'ar', 'status' => 1, 'default' => false],
+        ])]);
+        Cache::flush();
+        \App\Services\Theme\LocalisedSettings::forget();
+
+        $this->experiment([
+            ['key' => 'b', 'weight' => 100,
+             'settings' => ['title' => 'Variant title', 'title_ar' => 'عنوان التجربة']],
+        ]);
+
+        $payload = app(ThemeDelivery::class)->payload('home', new ViewerContext(
+            platform: ViewerContext::PLATFORM_WEB, locale: 'ar', experimentSubject: 'v-any',
+        ));
+        $settings = $payload['sections'][0]['settings'];
+
+        $this->assertSame('عنوان التجربة', $settings['title']);
+        $this->assertArrayNotHasKey('title_ar', $settings,
+            'no override key rides a patch into a payload');
+
+        \App\Services\Theme\LocalisedSettings::forget();
+    }
+
     public function test_variants_are_partial_patches_coerced_by_the_sections_own_schema(): void
     {
         $checked = app(ExperimentRules::class)->validateVariants([
