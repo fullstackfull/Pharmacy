@@ -26,8 +26,18 @@ class ThemeBlock extends Model
     {
         // A block carries the content its section is judged on — a hero with no slides, a tab with
         // no label — so editing one invalidates the same cached verdict a section edit does.
-        $forget = static function (self $block) {
-            PublishValidator::forget($block->section?->theme_version_id);
+        //
+        // The section lookup is remembered for the request because reordering saves every block in
+        // turn: without the memo, dragging one card to the top of ten costs ten identical lookups
+        // of the same section. A section never changes version, so the memo cannot go stale.
+        $versionOf = [];
+
+        $forget = static function (self $block) use (&$versionOf) {
+            $sectionId = (int) $block->theme_section_id;
+
+            $versionOf[$sectionId] ??= ThemeSection::whereKey($sectionId)->value('theme_version_id');
+
+            PublishValidator::forget($versionOf[$sectionId]);
         };
 
         static::saved($forget);

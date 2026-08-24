@@ -760,6 +760,12 @@ class ThemeBuilderController extends BaseController
      */
     public function previewLink(Request $request): JsonResponse
     {
+        // The token confers exactly the access this screen already grants — reading an unpublished
+        // version — so it is gated on the same permission rather than on merely being an admin.
+        if (!app(ThemePermissionService::class)->canView()) {
+            return $this->fail(translate('you_do_not_have_permission_to_view_a_theme'));
+        }
+
         $version = ThemeVersion::find($request['version_id']);
 
         if (!$version) {
