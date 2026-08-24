@@ -57,10 +57,18 @@
                                                         $experiment->variantRows(),
                                                     ));
                                                 @endphp
+                                                @php
+                                                    // Measured exposures beside the promised split: distinct shoppers
+                                                    // who actually had each variant on screen in the last month.
+                                                    $exposures = $reach->variantVisitors($experiment->key);
+                                                @endphp
                                                 <span class="badge badge-soft-secondary">control · {{ 100 - $claimed }}%</span>
                                                 @foreach ($experiment->variantRows() as $variant)
                                                     <span class="badge badge-soft-info">
                                                         {{ $variant['key'] ?? '?' }} · {{ $variant['weight'] ?? 0 }}%
+                                                        @if (isset($exposures[$variant['key'] ?? '']))
+                                                            · {{ $exposures[$variant['key']] }} {{ translate('seen') }}
+                                                        @endif
                                                     </span>
                                                 @endforeach
                                             </td>

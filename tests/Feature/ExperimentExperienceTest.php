@@ -209,6 +209,35 @@ class ExperimentExperienceTest extends TestCase
 
     // ---- validation -------------------------------------------------------------------------
 
+    public function test_exposures_are_read_back_as_distinct_shoppers_per_variant(): void
+    {
+        Schema::dropIfExists('analytics_events');
+        Schema::create('analytics_events', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->id(); $table->string('name', 48); $table->string('visitor_id', 64);
+            $table->json('properties')->nullable(); $table->timestamp('occurred_at');
+        });
+
+        $seed = function (string $visitor, ?string $tag, $when = null) {
+            \Illuminate\Support\Facades\DB::table('analytics_events')->insert([
+                'name' => 'section_viewed', 'visitor_id' => $visitor,
+                'properties' => $tag === null ? null : json_encode(['experiment' => $tag]),
+                'occurred_at' => $when ?? now(),
+            ]);
+        };
+
+        // One shopper seeing variant b five times is ONE exposure; a second shopper is two.
+        $seed('v1', 'hero-copy:b'); $seed('v1', 'hero-copy:b'); $seed('v2', 'hero-copy:b');
+        $seed('v3', 'hero-copy:control');
+        $seed('v4', null);                                       // an ordinary impression
+        $seed('v5', 'hero-copy:b', now()->subDays(40));           // outside the window
+
+        Cache::flush();
+        $this->assertSame(
+            ['b' => 2, 'control' => 1],
+            app(\App\Services\Commerce\ExperimentReach::class)->variantVisitors('hero-copy'),
+        );
+    }
+
     public function test_a_variant_carrying_its_own_translation_localises_like_anything_else(): void
     {
         // The patch lands before the language folds: a variant can say title + title_ar and the

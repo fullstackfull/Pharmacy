@@ -387,6 +387,7 @@ class AdminThemeViewsRenderTest extends TestCase
         $html = $this->renderBody('admin-views.commerce.experiments', [
             'ready' => true, 'enabled' => true,
             'experiments' => \App\Models\ExperienceExperiment::query()->get(),
+            'reach' => app(\App\Services\Commerce\ExperimentReach::class),
             'sections' => [], 'editable' => true,
         ]);
 

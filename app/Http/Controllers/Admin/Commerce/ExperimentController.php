@@ -37,6 +37,9 @@ class ExperimentController extends BaseController
         return view('admin-views.commerce.experiments', [
             'ready'       => $ready,
             'enabled'     => (bool) config('commerce.enabled', true),
+            // Who saw which variant: the number that makes an experiment an experiment rather
+            // than a coin flip nobody watched.
+            'reach'       => app(\App\Services\Commerce\ExperimentReach::class),
             'experiments' => $ready ? ExperienceExperiment::query()->orderByDesc('id')->get() : collect(),
             // The sections an experiment can target: what is LIVE, because control means "as
             // published" and a draft section has no shoppers to measure.
