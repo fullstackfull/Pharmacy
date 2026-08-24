@@ -1,0 +1,274 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\SellerInsight;
+use App\Services\SellerIntelligence\InsightDraft;
+use App\Services\SellerIntelligence\InsightProducer;
+use App\Services\SellerIntelligence\SellerInsightEngine;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+/**
+ * The one store that decides what a seller is told to look at.
+ *
+ * The properties asserted here are what separate an Action Center from a wall of noise:
+ *
+ * A warning has an identity — the seller, the kind of problem, the thing it is about — so a producer
+ * running every hour updates one row instead of stacking twenty-four copies of the same sentence.
+ *
+ * A warning disappears by itself when it stops being true. An alert list that has to be cleared by
+ * hand after the problem is fixed is one nobody reads a week later.
+ *
+ * The worst thing is first. Sorted by the stored word, "critical" lands after "high" alphabetically,
+ * and the most urgent thing on a seller's morning is second in the list.
+ *
+ * And a seller may decline a suggestion but not hide that their account is at risk.
+ */
+class SellerInsightEngineTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Schema::dropIfExists('seller_insights');
+        Schema::create('seller_insights', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('seller_id');
+            $table->string('type', 60);
+            $table->string('severity', 20)->default('medium');
+            $table->string('title', 191);
+            $table->text('body')->nullable();
+            $table->string('entity_type', 60)->nullable();
+            $table->string('entity_id', 60)->nullable();
+            $table->decimal('metric', 24, 4)->nullable();
+            $table->decimal('impact', 24, 4)->nullable();
+            $table->string('action_key', 60)->nullable();
+            $table->json('action_params')->nullable();
+            $table->string('fingerprint', 191)->unique();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('dismissed_at')->nullable();
+            $table->timestamp('resolved_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /** A producer that says exactly what the test tells it to. */
+    private function producer(string $type, array $drafts): InsightProducer
+    {
+        return new class($type, $drafts) implements InsightProducer {
+            public function __construct(private string $type, private array $drafts)
+            {
+            }
+
+            public function type(): string
+            {
+                return $this->type;
+            }
+
+            public function produce(int|string $sellerId): iterable
+            {
+                return $this->drafts;
+            }
+        };
+    }
+
+    private function draft(array $overrides = []): InsightDraft
+    {
+        return new InsightDraft(
+            sellerId: $overrides['sellerId'] ?? 1,
+            type: $overrides['type'] ?? 'STOCK',
+            severity: $overrides['severity'] ?? 'high',
+            title: $overrides['title'] ?? 'running_out',
+            body: $overrides['body'] ?? null,
+            entityType: $overrides['entityType'] ?? 'product',
+            entityId: $overrides['entityId'] ?? 7,
+            metric: $overrides['metric'] ?? 3.0,
+        );
+    }
+
+    public function test_running_a_producer_twice_updates_one_row_rather_than_stacking_copies(): void
+    {
+        $engine = new SellerInsightEngine([
+            $this->producer('STOCK', [$this->draft(['metric' => 3.0])]),
+        ]);
+        $engine->refresh(1);
+
+        // The same problem, worse than before: still one warning, with the new number.
+        $engine = new SellerInsightEngine([
+            $this->producer('STOCK', [$this->draft(['metric' => 1.0, 'severity' => 'critical'])]),
+        ]);
+        $engine->refresh(1);
+
+        $this->assertSame(1, SellerInsight::count(), 'The hourly run stacked a second copy.');
+        $this->assertSame(1.0, (float) SellerInsight::first()->metric);
+        $this->assertSame('critical', SellerInsight::first()->severity);
+    }
+
+    public function test_a_warning_resolves_itself_when_it_stops_being_true(): void
+    {
+        (new SellerInsightEngine([$this->producer('STOCK', [$this->draft()])]))->refresh(1);
+        $this->assertCount(1, (new SellerInsightEngine())->open(1)->all() ?: []);
+
+        // The seller restocked, so the producer no longer reports it.
+        $result = (new SellerInsightEngine([$this->producer('STOCK', [])]))->refresh(1);
+
+        $this->assertSame(1, $result['resolved']);
+        $this->assertNotNull(SellerInsight::first()->resolved_at);
+        $this->assertTrue((new SellerInsightEngine())->open(1)->isEmpty());
+    }
+
+    public function test_one_producer_resolving_does_not_touch_another_producers_warnings(): void
+    {
+        $engine = new SellerInsightEngine([
+            $this->producer('STOCK', [$this->draft(['type' => 'STOCK'])]),
+            $this->producer('QUALITY', [$this->draft(['type' => 'QUALITY', 'entityId' => 9])]),
+        ]);
+        $engine->refresh(1);
+
+        // Only STOCK runs, and finds nothing. QUALITY's warning is not its business.
+        (new SellerInsightEngine([$this->producer('STOCK', [])]))->refresh(1, ['STOCK']);
+
+        $open = (new SellerInsightEngine())->open(1);
+        $this->assertCount(1, $open);
+        $this->assertSame('QUALITY', $open->first()->type);
+    }
+
+    public function test_the_worst_thing_is_first(): void
+    {
+        // Written worst-first so severity runs *opposite* to insertion order. A sort that quietly
+        // ranks by id, or by only one of two keys, passes when the two happen to agree — which is
+        // how a medium insight reached the top of a real seller's list above a high one.
+        $engine = new SellerInsightEngine([
+            $this->producer('STOCK', [
+                $this->draft(['severity' => 'critical', 'entityId' => 1]),
+                $this->draft(['severity' => 'high', 'entityId' => 2]),
+                $this->draft(['severity' => 'medium', 'entityId' => 3]),
+                $this->draft(['severity' => 'low', 'entityId' => 4]),
+            ]),
+        ]);
+        $engine->refresh(1);
+
+        $open = (new SellerInsightEngine())->open(1);
+
+        // Sorted by the stored word, "critical" would also land after "high".
+        $this->assertSame(['critical', 'high', 'medium', 'low'], $open->pluck('severity')->all());
+        $this->assertSame(['1', '2', '3', '4'], $open->pluck('entity_id')->all());
+    }
+
+    public function test_two_warnings_of_the_same_kind_are_ranked_by_severity_not_by_age(): void
+    {
+        // The narrowest form of the same defect: the worse one was written first, so it has the
+        // lower id, and any sort that falls back to recency puts the milder one on top.
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [
+                $this->draft(['severity' => 'high', 'entityId' => 1]),
+                $this->draft(['severity' => 'medium', 'entityId' => 2]),
+            ]),
+        ]))->refresh(1);
+
+        $this->assertSame(['high', 'medium'], (new SellerInsightEngine())->open(1)->pluck('severity')->all());
+    }
+
+    public function test_a_seller_sees_only_their_own_warnings(): void
+    {
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [
+                $this->draft(['sellerId' => 1, 'entityId' => 1]),
+                $this->draft(['sellerId' => 2, 'entityId' => 2]),
+            ]),
+        ]))->refresh(1);
+
+        $this->assertCount(1, (new SellerInsightEngine())->open(1));
+        $this->assertSame(1, (new SellerInsightEngine())->open(1)->first()->seller_id);
+    }
+
+    public function test_a_seller_cannot_dismiss_another_sellers_warning(): void
+    {
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [$this->draft(['sellerId' => 2])]),
+        ]))->refresh(2);
+
+        $rival = SellerInsight::first();
+        $engine = new SellerInsightEngine();
+
+        // Refused, and refused the same way a nonexistent id is: an id is not a way to find out
+        // what other sellers have been warned about.
+        $this->assertFalse($engine->dismiss(1, $rival->id));
+        $this->assertFalse($engine->dismiss(1, 999999));
+        $this->assertNull($rival->fresh()->dismissed_at);
+    }
+
+    public function test_a_critical_warning_cannot_be_dismissed(): void
+    {
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [$this->draft(['severity' => 'critical'])]),
+        ]))->refresh(1);
+
+        $insight = SellerInsight::first();
+
+        $this->assertFalse((new SellerInsightEngine())->dismiss(1, $insight->id));
+        $this->assertNull($insight->fresh()->dismissed_at);
+    }
+
+    public function test_a_dismissed_warning_leaves_the_list_but_is_not_deleted(): void
+    {
+        (new SellerInsightEngine([$this->producer('STOCK', [$this->draft()])]))->refresh(1);
+        $engine = new SellerInsightEngine();
+
+        $this->assertTrue($engine->dismiss(1, SellerInsight::first()->id));
+
+        $this->assertTrue($engine->open(1)->isEmpty());
+        $this->assertSame(1, SellerInsight::count(), 'History is kept; only the list is quieter.');
+    }
+
+    public function test_an_expired_warning_stops_showing_without_anyone_acting(): void
+    {
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [
+                new InsightDraft(
+                    sellerId: 1, type: 'STOCK', severity: 'high', title: 'was_urgent_once',
+                    entityType: 'order', entityId: 5, expiresAt: now()->subDay(),
+                ),
+            ]),
+        ]))->refresh(1);
+
+        $this->assertTrue((new SellerInsightEngine())->open(1)->isEmpty());
+    }
+
+    public function test_a_producer_returning_something_malformed_is_ignored_rather_than_shown(): void
+    {
+        // A severity nothing can sort, and a type that is not this producer's, are bugs — and a bug
+        // here would put an unsortable or misattributed row in front of a seller.
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [
+                $this->draft(['severity' => 'apocalyptic', 'entityId' => 1]),
+                $this->draft(['type' => 'SOMETHING_ELSE', 'entityId' => 2]),
+                $this->draft(['entityId' => 3]),
+            ]),
+        ]))->refresh(1);
+
+        $open = (new SellerInsightEngine())->open(1);
+        $this->assertCount(1, $open);
+        $this->assertSame('3', $open->first()->entity_id);
+    }
+
+    public function test_counts_are_what_a_home_badge_needs(): void
+    {
+        (new SellerInsightEngine([
+            $this->producer('STOCK', [
+                $this->draft(['severity' => 'critical', 'entityId' => 1]),
+                $this->draft(['severity' => 'critical', 'entityId' => 2]),
+                $this->draft(['severity' => 'low', 'entityId' => 3]),
+            ]),
+        ]))->refresh(1);
+
+        $counts = (new SellerInsightEngine())->counts(1);
+
+        $this->assertSame(2, $counts['critical']);
+        $this->assertSame(0, $counts['high']);
+        $this->assertSame(1, $counts['low']);
+        $this->assertSame(3, $counts['total']);
+    }
+}

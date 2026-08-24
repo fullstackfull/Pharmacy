@@ -156,9 +156,14 @@ class ForgotPasswordController extends Controller
 
         if ($data || $data2) {
 
+            // The reset ends every existing session. Someone resetting their
+            // password because they believe they were compromised was leaving
+            // the attacker signed in: the password changed and auth_token did
+            // not, so the stolen bearer kept working.
             DB::table('sellers')->where('phone', 'like', "%{$request['identity']}%")
                 ->update([
-                    'password' => bcrypt(str_replace(' ', '', $request['password']))
+                    'password' => bcrypt(str_replace(' ', '', $request['password'])),
+                    'auth_token' => Str::random(50),
                 ]);
 
             DB::table('password_resets')

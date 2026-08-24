@@ -5,6 +5,8 @@ namespace App\Http\Controllers\RestAPI\v3\seller;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Events\OrderStatusEvent;
 use App\Http\Controllers\Controller;
+use App\Services\DeveloperPortal\ApiDoc;
+use App\Services\SellerInvoiceService;
 use App\Http\Requests\API\v3\DigitalProductFileUploadAfterSell;
 use App\Models\BusinessSetting;
 use App\Models\DeliveryManTransaction;
@@ -117,6 +119,30 @@ class OrderController extends Controller
         ], 200);
     }
 
+    #[ApiDoc(
+        summary: "The seller's own invoice for one of their orders",
+        description: 'The same document the vendor panel prints, returned as an array of byte values '
+            . 'for a client that saves the file itself. Scoped to the seller who is asking: an invoice '
+            . "carries a customer's name, address and phone, so an order that is not theirs is not found.",
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
+    public function invoice(Request $request, $id, SellerInvoiceService $invoices): JsonResponse
+    {
+        $order = $invoices->orderFor(orderId: $id, sellerId: $request->seller->id);
+
+        if (!$order) {
+            return response()->json(['errors' => [
+                ['code' => 'order', 'message' => translate('order_not_found')],
+            ]], 404);
+        }
+
+        return response()->json($invoices->bytes($order, $request->seller->id), 200);
+    }
+
     public function details(Request $request, $id): JsonResponse
     {
         $seller = $request->seller;
@@ -124,7 +150,15 @@ class OrderController extends Controller
             return $query->orderBy('updated_at', 'desc');
         }])->where(['seller_id' => $seller['id'], 'order_id' => $id])->get();
 
-        $productList = $this->getProductListWithAllDetails(ids: $detailsList?->pluck('product_id')->toArray());
+        if ($detailsList->isEmpty()) {
+            // Either no such order, or one belonging to another seller. Both are the same answer
+            // from here: this seller has no order by that id.
+            return response()->json(['errors' => [
+                ['code' => 'order', 'message' => translate('order_not_found')],
+            ]], 404);
+        }
+
+        $productList = $this->getProductListWithAllDetails(ids: $detailsList->pluck('product_id')->toArray());
 
         $orderEditPaymentHistory = OrderEditHistory::where('order_id', $id)->orderBy('id', 'asc')->get();
         $filteredEditPaymentHistory = $orderEditPaymentHistory->filter(function ($item) {
@@ -140,8 +174,11 @@ class OrderController extends Controller
         $paymentInfo = collect()->merge($filteredEditPaymentHistory)->merge($unpaidDue)->values();
 
         $firstDetails = $detailsList->first();
-        if ($firstDetails?->init_order_amount <= 0) {
-            Order::where('id', $firstDetails->order?->id)->update(['init_order_amount' => $firstDetails->order['order_amount']]);
+        // `null <= 0` is true in PHP, so a missing order used to pass this guard and then fatal on
+        // the next line — an order that was deleted, or that belongs to another seller, answered a
+        // 500 HTML page instead of a not-found.
+        if ($firstDetails?->order && $firstDetails->init_order_amount <= 0) {
+            $firstDetails->order->update(['init_order_amount' => $firstDetails->order['order_amount']]);
         }
 
         foreach ($detailsList as $detail) {

@@ -119,6 +119,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'maintenance_mode' => MaintenanceModeMiddleware::class,
             'delivery_man_auth' => DeliveryManAuth::class,
             'seller_api_auth' => SellerApiAuthMiddleware::class,
+            // Enforced on the route, never by hiding a menu item.
+            'seller_can' => \App\Http\Middleware\EnsureSellerPermission::class,
             'deliverysyria_auth' => \App\Http\Middleware\DeliverySyriaWebhookAuthMiddleware::class,
             'guestCheck' => GuestMiddleware::class,
             'apiGuestCheck' => APIGuestMiddleware::class,
@@ -147,6 +149,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Evaluate seller SLA thresholds into the breach ledger. Previously only the admin button ran
         // this, so breaches went stale between manual clicks.
         $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
+
+        // Recompute what each seller should be looking at. Hourly rather than daily because the
+        // things it raises — stock about to run out, an order approaching its deadline — stop being
+        // useful the moment they are stale.
+        $schedule->command('seller:refresh-insights')->hourly()->withoutOverlapping();
 
         // Publish the theme versions a merchant scheduled. Five minutes is the resolution the
         // builder promises, and matches the heartbeat that tells the dashboard the cron is alive —

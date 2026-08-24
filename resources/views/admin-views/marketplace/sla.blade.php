@@ -32,9 +32,12 @@
                         <input type="number" step="0.01" min="0" max="1" name="sla_max_refund_rate" value="{{ $thresholds['refund_rate'] }}" class="form-control"></div>
                     <div class="col-sm-2"><label class="form-label fs-12">{{ translate('min_rating') }} (0–5)</label>
                         <input type="number" step="0.1" min="0" max="5" name="sla_min_rating" value="{{ $thresholds['avg_rating'] }}" class="form-control"></div>
+                    <div class="col-sm-3"><label class="form-label fs-12">{{ translate('hours_to_process_an_order') }}</label>
+                        <input type="number" step="1" min="1" max="720" name="sla_processing_hours" value="{{ $thresholds['processing_hours'] }}" class="form-control"></div>
                     <div class="col-sm-1"><button class="btn btn-primary w-100">{{ translate('save') }}</button></div>
                 </form>
-                <small class="text-muted d-block mt-2">{{ translate('rates_are_ceilings_rating_is_a_floor_and_is_only_enforced_once_a_seller_has_at_least_five_reviews') }}.</small>
+                <small class="text-muted d-block mt-2">{{ translate('rates_are_ceilings_rating_is_a_floor_and_is_only_enforced_once_a_seller_has_at_least_five_reviews') }}.
+                    {{ translate('the_processing_window_is_what_the_seller_center_counts_down_against') }}.</small>
             </div>
         </div>
 

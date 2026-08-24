@@ -22,6 +22,10 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
 use App\Services\AuditLogger;
+use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
+use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
+use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
+use App\Services\SellerIntelligence\SellerInsightEngine;
 use App\Traits\UpdateClass;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
@@ -66,6 +70,14 @@ class AppServiceProvider extends ServiceProvider
         // without this line every one of those constructors received null and
         // every `$this->audit?->record()` in the marketplace was a silent no-op.
         $this->app->singleton(AuditLogger::class);
+
+        // One engine, one ordered set of producers. Registered here rather than discovered, so the
+        // order the Action Center falls back on is explicit and a new producer is a deliberate act.
+        $this->app->singleton(SellerInsightEngine::class, fn ($app) => new SellerInsightEngine([
+            $app->make(InventoryRiskProducer::class),
+            $app->make(OrderSlaProducer::class),
+            $app->make(ListingQualityProducer::class),
+        ]));
 
         $loader = AliasLoader::getInstance();
         $loader->alias('Helper', \App\Utils\Helpers::class);

@@ -1761,7 +1761,14 @@ class ProductController extends Controller
 
     public function updateProductQuantity(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
+        // Scoped to the caller's own shop. Looked up by id alone, this accepted any product id in
+        // the marketplace: a seller could set a rival's stock to zero and take their listings out of
+        // the search results. Ownership is proved by the WHERE clause, never by the id in the body.
+        $product = $this->productRepo->getFirstWhere(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
         if ($product) {
             $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [
                 'current_stock' => $request['current_stock'],
@@ -1963,9 +1970,20 @@ class ProductController extends Controller
 
     public function deleteImage(Request $request):JsonResponse
     {
-        $product = Product::withCount('reviews')->find($request['id']);
+        // Scoped to the seller asking. Found by id alone, this deleted images from any seller's
+        // product — and a product that did not exist fatalled on the next line instead of answering.
+        $product = Product::withCount('reviews')
+            ->where(['id' => $request['id'], 'added_by' => 'seller', 'user_id' => $request->seller->id])
+            ->first();
+
+        if (!$product) {
+            return response()->json(['errors' => [
+                ['code' => 'product', 'message' => translate('product_not_found')],
+            ]], 404);
+        }
+
         $array = [];
-        if (count(json_decode($product['images'])) < 2) {
+        if (count(json_decode($product['images']) ?? []) < 2) {
             return response()->json(['message' => translate('you_can_not_delete_all_images')], 403);
         }
         $colors = json_decode($product['colors']);
@@ -1999,10 +2017,11 @@ class ProductController extends Controller
                 $this->deleteFile('/product/' . $request['name']);
             }
         }
-        Product::withCount('reviews')->where('id', $request['id'])->update([
+        $product->update([
             'images' => json_encode($array),
             'color_image' => json_encode($color_image_arr),
         ]);
+
         return response()->json(translate('product_image_removed_successfully'), 200);
     }
 
@@ -2027,7 +2046,20 @@ class ProductController extends Controller
 
     public function deletePreviewFile(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['product_id']]);
+        // Scoped to the seller asking. Found by id alone, this cleared the preview file on any
+        // seller's product.
+        $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
+
+        if (!$product) {
+            return response()->json(['errors' => [
+                ['code' => 'product', 'message' => translate('product_not_found')],
+            ]], 404);
+        }
+
         $this->productService->deletePreviewFile(product: $product);
         $this->productRepo->update(id: $request['product_id'], data: ['preview_file' => null]);
         return response()->json([
@@ -2054,7 +2086,9 @@ class ProductController extends Controller
 
         if (!$seller) {
             return response()->json([
-                'auth-001' => translate('Your_existing_session_token_does_not_authorize_you_any_more')
+                // The same wording the middleware uses. Two spellings of one refusal
+                // meant a client matching on the message saw two different errors.
+                'auth-001' => translate('Your existing session token does not authorize you any more')
             ], 401);
         }
 
@@ -2104,7 +2138,13 @@ class ProductController extends Controller
 
     public function updateRestockQuantity(Request $request): JsonResponse
     {
-        $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
+        // Same scoping as updateProductQuantity, and for the same reason: the restock screen is a
+        // second door onto the same write.
+        $product = $this->productRepo->getFirstWhere(params: [
+            'id' => $request['product_id'],
+            'added_by' => 'seller',
+            'user_id' => $request->seller->id,
+        ]);
 
         if ($product && $request['current_stock'] >= 0) {
             $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [
@@ -2126,7 +2166,9 @@ class ProductController extends Controller
 
         if (!$seller) {
             return response()->json([
-                'auth-001' => translate('Your_existing_session_token_does_not_authorize_you_any_more')
+                // The same wording the middleware uses. Two spellings of one refusal
+                // meant a client matching on the message saw two different errors.
+                'auth-001' => translate('Your existing session token does not authorize you any more')
             ], 401);
         }
 

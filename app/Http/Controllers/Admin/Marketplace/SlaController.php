@@ -60,6 +60,9 @@ class SlaController extends BaseController
             'sla_max_return_rate' => 'required|numeric|min:0|max:1',
             'sla_max_refund_rate' => 'required|numeric|min:0|max:1',
             'sla_min_rating' => 'required|numeric|min:0|max:5',
+            // Whole hours, and at least one: a zero-hour deadline would mark every order late the
+            // instant it arrived.
+            'sla_processing_hours' => 'required|integer|min:1|max:720',
         ]);
 
         foreach ($validated as $type => $value) {

@@ -32,6 +32,16 @@ class DashboardService
             $range = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             $type = 'day_of_week';
             $keyRange = $range;
+        } else {
+            // Anything else — including an absent type — reads as the year, which is what every
+            // caller opens on. This used to fall through with all five values null, and the callers
+            // type their arguments, so an unrecognised type produced a TypeError and a 500 instead
+            // of a report.
+            $from = Carbon::now()->startOfYear()->format('Y-m-d');
+            $to = Carbon::now()->endOfYear()->format('Y-m-d');
+            $range = range(1, 12);
+            $type = 'month';
+            $keyRange = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         }
         return [
             'from' => $from,
