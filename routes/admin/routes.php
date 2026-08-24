@@ -1438,6 +1438,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 // Pickers: which category / brand / product / flash deal a section shows.
                 Route::get('resources', 'resources')->name('resources');
                 Route::get('resource-labels', 'resourceLabels')->name('resource-labels');
+                // Where a link goes, composed from what the merchant picked rather than typed.
+                Route::post('link/compose', 'composeLink')->name('link.compose');
             Route::post('preview/start', 'startPreview')->name('preview.start');
             Route::post('preview/link', 'previewLink')->name('preview.link');
             Route::get('preview/stop', 'stopPreview')->name('preview.stop');
