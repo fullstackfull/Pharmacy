@@ -26,6 +26,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReturnController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerStatementController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
@@ -355,6 +356,15 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index')->middleware('seller_can:finance.view');
                     Route::post('/', 'store')->middleware('seller_can:payouts.request');
                     Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // The account, line by line. Reading the books is a separate permission from moving
+            // money out of them, and this is squarely the first.
+            Route::group(['prefix' => 'statement', 'middleware' => 'seller_can:finance.view'], function () {
+                Route::controller(SellerStatementController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('export', 'export');
                 });
             });
 

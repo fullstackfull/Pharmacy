@@ -6597,4 +6597,5 @@ return [
 	'Order_timeline' => 'Order timeline',
 	'stock_updated' => 'Stock updated',
 	'adjustment_would_make_stock_negative' => 'Adjustment would make stock negative',
+	'payout' => 'Payout',
 ];
