@@ -273,6 +273,15 @@ Brand Banner.
   that type's data variable is called). Two types that draw one body — `featured_deal` and
   `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
   the two invariants: every renderable type has a partial, and every partial compiles.
+- **Display styles reach both clients.** Every section type's `style` / `layout` option is mapped
+  per type in the app — `productLayoutFor`, `contentLayoutFor`, `taxonomyLayoutFor`,
+  `bannerLayoutFor`, `utilityLayoutFor` — because the types speak different vocabularies for the
+  same shelf (a flash deal has strips and banners, a category grid has circles and chips). Reading
+  them through one loose switch is how a style the builder offers ends up drawing the default:
+  `interest_tiles` branched on a word the builder never emits, and the brand slider's three styles
+  all drew one rail. `test/section_variant_coverage_test.dart` asserts every style a type offers
+  maps to a layout of its own; its lists mirror `SectionRegistry`'s options, and are the app's
+  statement of what it believes the server offers.
 - **Links are chosen, not typed.** `app/Services/Theme/LinkComposer.php` is the inverse of
   `ActionResolver`: the builder's destination control offers product / category / brand / vendor /
   flash deal / list page / search / cart / wishlist / external address, and the server composes the
