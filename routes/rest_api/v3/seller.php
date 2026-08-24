@@ -18,6 +18,7 @@ use App\Http\Controllers\RestAPI\v3\seller\POSController;
 use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerAutomationController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
@@ -333,6 +334,29 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index');
                     Route::get('briefing', 'briefing');
                     Route::put('issues/{id}/status', 'updateStatus')->whereNumber('id');
+                });
+            });
+
+            // Rules the seller writes for their own shop, and the complete record of what those
+            // rules did to it. Reading is open to anyone who may see the shop; writing a rule and
+            // undoing what one did are gated on the permission the rule's own action requires,
+            // which is checked again inside the service rather than only here.
+            Route::group(['prefix' => 'automation'], function () {
+                Route::controller(SellerAutomationController::class)->group(function () {
+                    Route::get('catalogue', 'catalogue');
+                    Route::get('activity', 'activity');
+                    Route::get('rules', 'index');
+                    Route::get('rules/{id}', 'show')->whereNumber('id');
+                    Route::get('rules/{id}/preview', 'preview')->whereNumber('id');
+
+                    Route::middleware('seller_can:products.manage')->group(function () {
+                        Route::post('rules', 'store');
+                        Route::put('rules/{id}', 'update')->whereNumber('id');
+                        Route::put('rules/{id}/status', 'setStatus')->whereNumber('id');
+                        Route::delete('rules/{id}', 'destroy')->whereNumber('id');
+                        Route::post('rules/{id}/run', 'runNow')->whereNumber('id');
+                        Route::post('activity/{id}/revert', 'revert')->whereNumber('id');
+                    });
                 });
             });
 

@@ -33,6 +33,14 @@ use App\Services\SellerIntelligence\Producers\ShippingExceptionProducer;
 use App\Services\SellerIntelligence\Producers\StaleInventoryProducer;
 use App\Services\SellerIntelligence\Producers\ListingQualityProducer;
 use App\Services\SellerIntelligence\Producers\OrderSlaProducer;
+use App\Services\SellerAutomation\Actions\HideListingAction;
+use App\Services\SellerAutomation\Actions\PublishListingAction;
+use App\Services\SellerAutomation\Actions\SetDiscountAction;
+use App\Services\SellerAutomation\AutomationRegistry;
+use App\Services\SellerAutomation\Triggers\LowStockTrigger;
+use App\Services\SellerAutomation\Triggers\OutOfStockTrigger;
+use App\Services\SellerAutomation\Triggers\RestockedTrigger;
+use App\Services\SellerAutomation\Triggers\StaleStockTrigger;
 use App\Services\SellerIntelligence\SellerInsightEngine;
 use App\Services\SellerIntelligence\Severity\SellerBaselineProvider;
 use App\Services\SellerIntelligence\Severity\SeverityEngine;
@@ -106,6 +114,23 @@ class AppServiceProvider extends ServiceProvider
             // seller's.
             severity: $app->make(SeverityEngine::class),
             baselines: $app->make(SellerBaselineProvider::class),
+        ));
+
+        // What a seller may build a rule out of. Registered rather than discovered for the same
+        // reason as the producers: adding a way for the marketplace to change a shop unattended
+        // should be a deliberate line in a file somebody reviews, not a class appearing in a folder.
+        $this->app->singleton(AutomationRegistry::class, fn ($app) => new AutomationRegistry(
+            triggers: [
+                $app->make(OutOfStockTrigger::class),
+                $app->make(LowStockTrigger::class),
+                $app->make(RestockedTrigger::class),
+                $app->make(StaleStockTrigger::class),
+            ],
+            actions: [
+                $app->make(HideListingAction::class),
+                $app->make(PublishListingAction::class),
+                $app->make(SetDiscountAction::class),
+            ],
         ));
 
         // One measurement of each seller's size per sweep, shared by every detector.

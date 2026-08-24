@@ -165,6 +165,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // detection would spend a sweep to learn nothing almost every time.
         $schedule->command('seller:escalate-issues')->everyFourHours()->withoutOverlapping();
 
+        // Seller rules. Every fifteen minutes is the floor a rule's own cooldown is measured
+        // against — a rule set to run hourly still runs hourly; this only decides how often the
+        // sweep asks. Non-overlapping, because two sweeps evaluating the same rule would each see
+        // the pre-run state and could both act on the same listing.
+        $schedule->command('seller:run-automation')->everyFifteenMinutes()->withoutOverlapping();
+
         // Bulk price and stock changes are queued, which makes them depend on a worker running. A
         // deployment without one would leave every bulk job at `queued` for ever while the app shows
         // the seller a change that is never going to happen — the exact failure the receipt exists to
