@@ -151,20 +151,28 @@ class ThemeSourceMap
     private function flashDealProductsHint(array $settings): array
     {
         try {
-            $dealId = (int) ($settings['deal_id'] ?? 0)
-                ?: (int) \App\Models\FlashDeal::query()
-                    ->where(['deal_type' => 'flash_deal', 'status' => 1])
-                    ->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())
-                    ->value('id');
+            $deal = \App\Models\FlashDeal::query()
+                ->where(['deal_type' => 'flash_deal', 'status' => 1])
+                ->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())
+                ->when((int) ($settings['deal_id'] ?? 0) > 0,
+                    fn ($query) => $query->whereKey((int) $settings['deal_id']))
+                ->first(['id', 'end_date']);
         } catch (\Throwable) {
-            $dealId = 0;
+            $deal = null;
         }
 
-        if ($dealId < 1) {
+        if ($deal === null) {
             return ['kind' => 'none', 'note' => 'No live flash deal. Hide this section.'];
         }
 
-        return $this->api('/api/v1/flash-deals/products/' . $dealId, ['limit' => 24, 'offset' => 1]);
+        $hint = $this->api('/api/v1/flash-deals/products/' . $deal->id, ['limit' => 24, 'offset' => 1]);
+        // When the urgency ends — the number the countdown on both clients ticks against. The
+        // deal's own products endpoint does not carry it, and a flash deal without a clock is
+        // just a product rail wearing the wrong name.
+        $hint['deal_ends_at'] = optional($deal->end_date)->toIso8601String()
+            ?? (is_string($deal->end_date) ? $deal->end_date : null);
+
+        return $hint;
     }
 
     /**
