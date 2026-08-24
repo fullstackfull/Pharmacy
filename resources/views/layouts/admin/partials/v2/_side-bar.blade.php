@@ -683,7 +683,7 @@
                 @endif
 
                 @if (Route::has('admin.marketplace.approvals.index'))
-                    <div class="v2-nav-item v2-has-children {{ (Request::is('admin/marketplace/approvals*') || Request::is('admin/marketplace/seller-verification*') || Request::is('admin/marketplace/seller-scorecard*') || Request::is('admin/marketplace/sla*') || Request::is('admin/marketplace/product-moderation*') || Request::is('admin/marketplace/category-governance*')) ? 'v2-is-active' : '' }}" data-item="marketplace-sellers">
+                    <div class="v2-nav-item v2-has-children {{ (Request::is('admin/marketplace/approvals*') || Request::is('admin/marketplace/seller-verification*') || Request::is('admin/marketplace/seller-scorecard*') || Request::is('admin/marketplace/sla*') || Request::is('admin/marketplace/product-moderation*') || Request::is('admin/marketplace/category-governance*') || Request::is('admin/marketplace/seller-operations*')) ? 'v2-is-active' : '' }}" data-item="marketplace-sellers">
                         <a class="v2-nav-btn" href="{{ route('admin.marketplace.approvals.index') }}">
                             <span class="v2-nav-label">{{ translate('seller_governance') }}</span>
                         </a>
@@ -696,6 +696,12 @@
                         </div>
                     </div>
                     <div class="v2-nav-children v2-is-collapsed" data-children-for="marketplace-sellers">
+                        @if (Route::has('admin.marketplace.seller-operations.index'))
+                            <a class="v2-nav-child {{ Request::is('admin/marketplace/seller-operations*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.seller-operations.index') }}">
+                                <span class="v2-nav-child-dot" data-tone="primary"></span>
+                                <span class="v2-nav-child-label">{{ translate('seller_operations') }}</span>
+                            </a>
+                        @endif
                         <a class="v2-nav-child {{ Request::is('admin/marketplace/approvals*') ? 'v2-is-on' : '' }}" href="{{ route('admin.marketplace.approvals.index') }}">
                             <span class="v2-nav-child-dot" data-tone="primary"></span>
                             <span class="v2-nav-child-label">{{ translate('approvals') }}</span>

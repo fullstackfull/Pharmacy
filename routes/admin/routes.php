@@ -629,6 +629,24 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             });
         });
 
+        // What the sellers are doing with the platform: rules that change catalogues unattended,
+        // keys that act as a shop without a person, endpoints we call, staff who are not the
+        // account holder, bulk operations. Read-mostly. The three writes are the interventions
+        // only the marketplace can make — stopping a rule that is damaging a catalogue, killing a
+        // leaked key, and switching off an endpoint being hammered — and each is recorded.
+        Route::group(['prefix' => 'seller-operations', 'as' => 'seller-operations.'], function () {
+            Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerOperationsController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('automation', 'automation')->name('automation');
+                Route::get('integrations', 'integrations')->name('integrations');
+                Route::get('team', 'team')->name('team');
+                Route::get('bulk-jobs', 'bulkJobs')->name('bulk-jobs');
+                Route::post('suspend-rule', 'suspendRule')->name('suspend-rule');
+                Route::post('revoke-key', 'revokeKey')->name('revoke-key');
+                Route::post('disable-webhook', 'disableWebhook')->name('disable-webhook');
+            });
+        });
+
         // Seller performance scorecard: quality metrics and a derived health tier per seller.
         Route::group(['prefix' => 'seller-scorecard', 'as' => 'seller-scorecard.'], function () {
             Route::controller(\App\Http\Controllers\Admin\Marketplace\SellerScorecardController::class)->group(function () {
