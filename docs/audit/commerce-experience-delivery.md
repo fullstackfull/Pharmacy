@@ -1,7 +1,7 @@
 # Commerce Experience & Merchandising Engine — delivery report (§91)
 
-Branch `claude/flutter-app-review-9o7car` · backend suite **1474 passed / 2 skipped**,
-Flutter suite **82 passed** at delivery.
+Branch `claude/flutter-app-review-9o7car` · backend suite **1495 passed / 2 skipped**,
+Flutter suite **85 passed** after the verification sweep and fixes.
 
 ## Architecture
 
@@ -129,8 +129,27 @@ pages, readiness earlier) — total suite 1474 passed. Flutter: 82 passed.
 App Builder V2 serves exactly as before — no migration reversal, no data loss. Tables can be
 dropped independently afterwards; nothing existing references them.
 
-## Verification sweep
+## Verification sweep — results
 
-A 50-agent adversarial review (20 dimensions × finder, 2 verifiers per substantive finding,
-completeness critic, synthesis) ran over both repos after delivery. Results and fixes: see the
-"verification" section appended below after the sweep.
+**59 agents** reviewed both repos across 20 dimensions (collections, merchandising, campaigns,
+segments, experiments, delivery contract, web renderer, localisation, admin screens, custom
+pages, Flutter, migrations, performance, fail-safety, security, analytics, RBAC/audit, tests,
+cohesion/docs), with adversarial verifiers on the substantive claims. Every confirmed finding
+was fixed and regression-tested in commits `c1501cbb` (backend) and `75d08a0` (app); the fix
+list is those commits' messages. Highlights: inert channel targeting on both render paths,
+home-payload served for unknown page slugs, session-only auth on the stateless sections API,
+experiment-patch/locale-collapse ordering, javascript: URLs surviving link coercion, segment
+tokens stripped on engine-off saves, live-campaign edits invisible to caches and sync, pin
+collisions dropping pins, fallbacks bypassing exclusions, category rules reading one of three
+levels, and a set of cache-invalidation and permission (publish-capability) gaps. Refuted
+claims (kept as records, unfixed by design): `dropIfExists` down-migrations, the version/payload
+checksum domain split (pre-existing, one extra conditional GET per resume), 10-minute segment
+metric freshness (documented TTL).
+
+Final state after fixes: backend **1495 passed / 2 skipped**, Flutter **85 passed**, analyzer
+clean. A permanent `AdminPanelWiringTest` now holds the panel together: every route the sidebar
+and every Commerce/App Builder/Theme screen references must exist, every such route must land on
+a real controller method, the sidebar must carry all four areas (App Builder, Commerce
+Experience, Theme Management, Analytics), each area nav all of its screens, every product-source
+hint the payload can emit must resolve to a registered API route, and the measurement pipeline
+must have both of its ends (beacon collect + theme sync endpoints).
