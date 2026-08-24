@@ -81,6 +81,8 @@
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
         /* A section the chosen channel will not receive: still listed, still editable, visibly
            not part of what that client gets. */
+        .tb-item__reach { display: inline-flex; align-items: center; gap: .2rem; font-size: .62rem;
+                          padding: .12rem .3rem; border-radius: .3rem; background: #1b2b25; color: #7fc3ae; }
         .tb-item.is-off-channel { opacity: .42; }
         .tb-item.is-off-channel .tb-item__label { text-decoration: line-through; }
         .tb-publish { position: absolute; inset-inline-end: 1rem; top: 3.5rem; z-index: 40; width: 17rem;
@@ -603,6 +605,16 @@
                                     <span class="tb-item__flag tb-item__flag--{{ $section['readiness']['state'] }}"
                                           title="{{ translate($section['readiness']['reason_key']) }}">
                                         <i class="fi {{ $section['readiness']['state'] === 'needs_choice' ? 'fi-rr-pencil' : 'fi-rr-eye-crossed' }}"></i>
+                                    </span>
+                                @endif
+                                {{-- What this row is worth: how many shoppers got far enough down
+                                     the page to see it. A section nobody reaches looks exactly like
+                                     a section nobody wants, and only one of those is fixed by
+                                     dragging it up. Absent until analytics has measured something,
+                                     because a zero would say the opposite of "not counted yet". --}}
+                                @if (isset($reach[$section['id']]))
+                                    <span class="tb-item__reach" title="{{ translate('shoppers_who_saw_this_section_in_the_last_30_days') }}">
+                                        <i class="fi fi-rr-eye"></i>{{ $reach[$section['id']] }}
                                     </span>
                                 @endif
                                 @if (count($section['blocks']))

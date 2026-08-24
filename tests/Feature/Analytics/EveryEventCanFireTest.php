@@ -67,7 +67,11 @@ class EveryEventCanFireTest extends TestCase
             }
 
             $this->assertTrue(
-                str_contains($senders, "'" . $name . "'") || str_contains($senders, 'data-analytics="' . $name . '"'),
+                str_contains($senders, "'" . $name . "'")
+                    || str_contains($senders, 'data-analytics="' . $name . '"')
+                    // The other way an element names its own event: a section reports itself when
+                    // it scrolls into view, which is a thing no click handler can see.
+                    || str_contains($senders, 'data-analytics-view="' . $name . '"'),
                 "{$name} is accepted from the browser and nothing in the beacon or the theme ever sends it",
             );
         }
@@ -151,7 +155,15 @@ class EveryEventCanFireTest extends TestCase
     {
         $markup = '';
 
-        foreach (glob(resource_path('themes/default/web-views/**/*.blade.php'), GLOB_BRACE) ?: [] as $view) {
+        $views = array_merge(
+            glob(resource_path('themes/default/web-views/**/*.blade.php'), GLOB_BRACE) ?: [],
+            // The composed storefront: its shell marks the sections, and its per-type partials
+            // carry the banner links.
+            glob(resource_path('views/theme-sections/*.blade.php')) ?: [],
+            glob(resource_path('views/theme-sections/**/*.blade.php')) ?: [],
+        );
+
+        foreach ($views as $view) {
             $markup .= (string) file_get_contents($view);
         }
 

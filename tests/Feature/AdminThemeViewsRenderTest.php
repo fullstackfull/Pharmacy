@@ -184,6 +184,7 @@ class AdminThemeViewsRenderTest extends TestCase
             'goLive' => ['live' => false, 'active' => true, 'published' => false],
             'compatibility' => app(ThemeCompatibilityReport::class)->for($this->draft),
             'publishCheck' => app(PublishValidator::class)->inspect($this->draft),
+            'reach' => [],
             'themeSettings' => app(ThemeManager::class)->resolveSettings($this->draft),
             'pages' => ['home', 'header', 'footer'],
             'editable' => true,
