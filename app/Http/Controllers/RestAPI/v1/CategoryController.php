@@ -21,7 +21,7 @@ class CategoryController extends Controller
     public function get_categories(Request $request): JsonResponse
     {
         $categoriesID = [];
-        $shop = $request->has('shop_slug') && empty($request['shop_slug']) ? Shop::where('slug', $request['shop_slug'])->first() : null;
+        $shop = $request->has('shop_slug') && !empty($request['shop_slug']) ? Shop::where('slug', $request['shop_slug'])->first() : null;
 
         if ($shop) {
             $categoriesID = Product::active()

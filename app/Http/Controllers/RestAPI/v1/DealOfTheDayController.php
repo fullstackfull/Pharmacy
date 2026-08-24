@@ -44,7 +44,7 @@ class DealOfTheDayController extends Controller
         // Additive: whether this is the merchant's configured deal or the legacy random stand-in.
         // The web hides the section when no deal is live; the theme renderer in the app reads
         // this flag to do the same, while every stock screen keeps its old behavior untouched.
-        if (is_object($product) || is_array($product)) {
+        if (!empty($product)) {
             $product = json_decode(json_encode($product), true) ?: [];
             $product['is_configured_deal'] = isset($dealOfTheDay);
         }
