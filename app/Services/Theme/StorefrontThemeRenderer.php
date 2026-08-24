@@ -74,7 +74,7 @@ class StorefrontThemeRenderer
         $previewVersionId = $this->activePreviewVersionId();
         if ($previewVersionId !== null) {
             try {
-                return $this->runnable($this->buildSections($previewVersionId, $page));
+                return $this->runnable($this->buildSections($previewVersionId, $page), $page);
             } catch (\Throwable) {
                 return null;
             }
@@ -95,7 +95,7 @@ class StorefrontThemeRenderer
             // the cache: a campaign that opens at 09:00 would otherwise open up to a TTL late, and
             // a guest and a signed-in customer would share whichever of them warmed the entry.
             // What is cached is the shape of the page; what varies per request is who may see it.
-            return $this->runnable($cached['sections'] ?? null);
+            return $this->runnable($cached['sections'] ?? null, $page);
         } catch (\Throwable) {
             // A theme problem must never take the storefront down.
             return null;
@@ -108,7 +108,7 @@ class StorefrontThemeRenderer
      * @param  array<int, array<string, mixed>>|null  $sections
      * @return array<int, array<string, mixed>>|null
      */
-    private function runnable(?array $sections): ?array
+    private function runnable(?array $sections, string $page = 'home'): ?array
     {
         if ($sections === null) {
             return null;
@@ -143,6 +143,47 @@ class StorefrontThemeRenderer
 
             return $section;
         }, $runnable);
+
+        // Campaign overlay (§33): live campaign overrides dress the page per request, on top of
+        // the cached base — so a campaign opens and closes on time, and the base page is never
+        // written. Any failure here serves the base page unchanged (§37).
+        try {
+            $campaigns = app(\App\Services\Commerce\CampaignResolver::class);
+            $overrides = $campaigns->overridesFor($page);
+
+            if ($overrides !== []) {
+                $registry = $this->registry;
+                $runnable = $campaigns->splice(
+                    $runnable,
+                    $overrides,
+                    fn (array $section, int $campaignId) => !isset($registry->types()[$section['type'] ?? ''])
+                        ? null
+                        : [
+                        'id'         => null,
+                        'uuid'       => 'campaign-' . $campaignId . '-' . $section['type'],
+                        'type'       => $section['type'],
+                        'is_visible' => true,
+                        'starts_at'  => null, 'ends_at' => null,
+                        'platforms'  => null, 'audience' => null,
+                        'settings'   => LocalisedSettings::collapse(
+                            $registry->normalizeSettings($section['type'], $section['settings'] ?? []),
+                            $viewer->locale,
+                        ),
+                        'blocks'     => array_map(fn (array $block) => [
+                            'id'       => null,
+                            'type'     => $block['type'],
+                            'settings' => LocalisedSettings::collapse(
+                                $registry->normalizeBlockSettings($block['type'], $block['settings'] ?? []),
+                                $viewer->locale,
+                            ),
+                        ], $section['blocks'] ?? []),
+                    ],
+                    fn (array $section) => $section['type'] ?? null,
+                );
+            }
+        } catch (\Throwable) {
+            // The base page is the answer whenever the overlay cannot be.
+        }
 
         // An empty result means the same thing as no theme: keep the storefront's own templates,
         // rather than publishing a page whose every section happens to be out of schedule.

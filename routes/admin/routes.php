@@ -81,6 +81,7 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Commerce\CampaignController;
 use App\Http\Controllers\Admin\Commerce\CollectionController;
 use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
@@ -1419,6 +1420,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('collections/update', 'update')->name('collections.update');
             Route::post('collections/delete', 'delete')->name('collections.delete');
             Route::get('collections/preview', 'preview')->name('collections.preview');
+        });
+        Route::controller(CampaignController::class)->group(function () {
+            Route::get('campaigns', 'index')->name('campaigns.index');
+            Route::post('campaigns/store', 'store')->name('campaigns.store');
+            Route::post('campaigns/update', 'update')->name('campaigns.update');
+            Route::post('campaigns/delete', 'delete')->name('campaigns.delete');
         });
     });
 

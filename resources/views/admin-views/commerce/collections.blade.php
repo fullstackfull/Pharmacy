@@ -4,6 +4,8 @@
 
 @section('content')
     <div class="content container-fluid">
+        @include('admin-views.commerce._nav', ['current' => 'collections'])
+
         <div class="d-flex align-items-center gap-2 mb-3">
             <h2 class="h1 mb-0">{{ translate('dynamic_collections') }}</h2>
             @if (!$enabled)

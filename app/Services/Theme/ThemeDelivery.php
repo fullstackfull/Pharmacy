@@ -82,9 +82,14 @@ class ThemeDelivery
                     return $empty;
                 }
 
+                $stamp = $this->campaignStamp();
+
                 return [
                     'revision' => (int) ($version->revision ?: 1),
-                    'checksum' => $version->checksum,
+                    // A live campaign folds into the checksum: the app's "did anything change"
+                    // question must answer YES when an overlay opened or closed, and the stored
+                    // revision knows nothing about overlays.
+                    'checksum' => $stamp === null ? $version->checksum : $version->checksum . '-' . $stamp,
                     'schema_version' => ComponentCapabilityRegistry::SCHEMA_VERSION,
                     'engine_version' => ComponentCapabilityRegistry::CURRENT_ENGINE_VERSION,
                     'published_at' => $version->published_at?->toIso8601String(),
@@ -114,7 +119,7 @@ class ThemeDelivery
 
         try {
             return Cache::remember(
-                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer),
+                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer) . $this->campaignKeyPart($page),
                 self::CACHE_TTL,
                 fn () => $this->build($page, $viewer),
             );
@@ -227,6 +232,55 @@ class ThemeDelivery
             }
 
             $sections[] = $this->present($row, $viewer);
+        }
+
+        // Campaign overlay (§33): live overrides join the delivered list through the same
+        // present() pipeline as stored sections — same normalisation, same action typing, same
+        // capability withholding. Any failure serves the base payload unchanged (§37).
+        try {
+            $campaigns = app(\App\Services\Commerce\CampaignResolver::class);
+            $overrides = $campaigns->overridesFor($page);
+
+            if ($overrides !== []) {
+                $sections = $campaigns->splice(
+                    $sections,
+                    $overrides,
+                    function (array $definition, int $campaignId) use ($viewer) {
+                        // A type this SERVER does not render is a corrupted row, whatever wrote
+                        // it; and a type this CLIENT cannot draw is withheld exactly as a stored
+                        // section of that type would be.
+                        if (!isset($this->registry->types()[$definition['type'] ?? ''])) {
+                            return null;
+                        }
+                        if ($viewer->platform !== ViewerContext::PLATFORM_WEB
+                            && !$this->capabilities->clientHolds($definition['type'], $viewer)) {
+                            return null;
+                        }
+
+                        $row = new ThemeSection();
+                        $row->forceFill([
+                            'uuid'     => 'campaign-' . $campaignId . '-' . $definition['type'],
+                            'type'     => $definition['type'],
+                            'settings' => $definition['settings'] ?? [],
+                            'is_visible' => true,
+                        ]);
+                        $row->setRelation('blocks', collect(array_map(function (array $block) {
+                            $model = new \App\Models\ThemeBlock();
+                            $model->forceFill([
+                                'type' => $block['type'], 'settings' => $block['settings'] ?? [],
+                                'is_visible' => true, 'sort_order' => 1,
+                            ]);
+
+                            return $model;
+                        }, $definition['blocks'] ?? [])));
+
+                        return $this->present($row, $viewer);
+                    },
+                    fn (array $section) => $section['type'] ?? null,
+                );
+            }
+        } catch (\Throwable) {
+            // The base payload is the answer whenever the overlay cannot be.
         }
 
         $payload = [
@@ -442,6 +496,23 @@ class ThemeDelivery
      * enumerate capability sets that nobody records. The capability list is sorted before hashing,
      * because two clients that report the same components in a different order hold the same page.
      */
+    /** The cache-key fragment the live campaign set contributes; empty when none is live. */
+    private function campaignKeyPart(string $page): string
+    {
+        $stamp = $this->campaignStamp($page);
+
+        return $stamp === null ? '' : '_c' . $stamp;
+    }
+
+    private function campaignStamp(string $page = 'home'): ?string
+    {
+        try {
+            return app(\App\Services\Commerce\CampaignResolver::class)->stamp($page);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function fingerprint(ViewerContext $viewer): string
     {
         $components = $viewer->supportedComponents;

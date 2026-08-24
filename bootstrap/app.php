@@ -206,6 +206,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // would rank against yesterday twice.
         $schedule->command('commerce:metrics-refresh')->hourlyAt(22)->withoutOverlapping();
 
+        // Campaign lifecycle: the serve path already obeys the window, so this only tidies
+        // statuses and flushes caches at the exact transition (§32–33).
+        $schedule->command('commerce:campaigns-tick')->everyFiveMinutes()->withoutOverlapping();
+
         // Compress raw request telemetry into daily rollups for Analytics; the
         // nightly run also prunes raw rows past the retention window.
         $schedule->command('telemetry:rollup')->hourlyAt(7)->withoutOverlapping();
