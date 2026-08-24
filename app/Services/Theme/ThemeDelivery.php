@@ -40,6 +40,8 @@ class ThemeDelivery
         private readonly SectionVisibility $visibility,
         private readonly ComponentCapabilityRegistry $capabilities,
         private readonly ActionResolver $actions,
+        private readonly ThemeSourceMap $sources,
+        private readonly SectionDestination $destinations,
         private readonly ThemeManager $manager,
     ) {
     }
@@ -285,7 +287,7 @@ class ThemeDelivery
             // The contract generation this section is delivered under. A client that negotiated a
             // lower version for this type never receives it — but one that simply ignores the key
             // behaves exactly as it does today, which is what every installed build does.
-            'component_version' => app(SectionRegistry::class)->types()[$row->type]['version'] ?? 1,
+            'component_version' => $this->registry->types()[$row->type]['version'] ?? 1,
             'settings' => $this->shape($settings, $viewer),
             'blocks'   => $blocks,
             'cards'    => $storeCards ?? ($bannerBacked
@@ -297,11 +299,11 @@ class ThemeDelivery
                     ])->values()->all()),
                 )
                 : null),
-            'source'   => app(ThemeSourceMap::class)->for($row->type, $settings, $blocks),
+            'source'   => $this->sources->for($row->type, $settings, $blocks),
             // Where the heading's "view all" leads, decided from what the section shows rather
             // than from its type alone — so a rail scoped to one category opens that category on
             // the phone, exactly as it does on the web. `none` when the section leads nowhere.
-            'view_all' => app(SectionDestination::class)->actionFor($row->type, $settings),
+            'view_all' => $this->destinations->actionFor($row->type, $settings),
         ];
     }
 
@@ -312,8 +314,7 @@ class ThemeDelivery
      */
     private function variantOf(string $type, array $settings): ?string
     {
-        $registry = app(SectionRegistry::class);
-        $key = $registry->variantKeyFor($type);
+        $key = $this->registry->variantKeyFor($type);
 
         if ($key === null) {
             return null;

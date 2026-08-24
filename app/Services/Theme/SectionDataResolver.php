@@ -23,6 +23,9 @@ use Illuminate\Support\Collection;
  */
 class SectionDataResolver
 {
+    /** How many products a bundle draws — shared with the app's hint so both show one set. */
+    public const BUNDLE_LIMIT = 12;
+
     /**
      * One brand with its products — the brand half of category_showcase.
      *
@@ -165,7 +168,9 @@ class SectionDataResolver
      */
     public function productsFrom(ContentSource $source): Collection
     {
-        $limit = $this->bounded($source->limit, 24);
+        // Bounded once, where the source is read. Clamping again here is how the web and the app
+        // ended up with two different ceilings for the same rail.
+        $limit = $source->limit;
 
         if ($source->isManual()) {
             return $this->pickedProducts($source->ids, $limit);
@@ -878,7 +883,7 @@ class SectionDataResolver
      */
     public function bundle(array $settings): ?array
     {
-        $products = $this->pickedProducts($settings['product_ids'] ?? null, 12);
+        $products = $this->pickedProducts($settings['product_ids'] ?? null, self::BUNDLE_LIMIT);
         if ($products->count() < 2) {
             return null;
         }

@@ -53,8 +53,11 @@ class ThemeSourceMap
                 ContentSource::scoped('brand', $settings['brand_id'] ?? null, $settings['limit'] ?? null),
             ),
 
-            // A bundle is exactly these products in exactly this order.
-            'bundle' => $this->endpointFor(ContentSource::picked($settings['product_ids'] ?? null)),
+            // A bundle is exactly these products in exactly this order — and no more of them than
+            // the storefront's own bundle draws.
+            'bundle' => $this->endpointFor(
+                ContentSource::picked($settings['product_ids'] ?? null, SectionDataResolver::BUNDLE_LIMIT),
+            ),
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
             'flash_deal' => $this->api('/api/v1/flash-deals', [], 'Then /api/v1/flash-deals/products/{deal_id} for the products.'),

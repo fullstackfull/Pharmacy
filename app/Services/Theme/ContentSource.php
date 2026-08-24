@@ -31,8 +31,14 @@ final class ContentSource
 
     public const DEFAULT_KIND = 'featured';
 
-    /** What a section may ask for at once, so no configuration can query the whole catalogue. */
-    public const MAX_LIMIT = 40;
+    /**
+     * What a section may ask for at once.
+     *
+     * One number, because it bounds two things that must agree: the rows the storefront query
+     * takes and the `limit` the app's endpoint hint asks for. A merchant who types 100 into the
+     * builder would otherwise see a rail of 24 on the web and 40 on the phone.
+     */
+    public const MAX_LIMIT = 24;
 
     /**
      * @param  array<int, int>  $ids  hand-picked records, in the merchant's order
@@ -87,14 +93,22 @@ final class ContentSource
         );
     }
 
-    /** A source naming exactly these records, in this order — the `manual` case, built directly. */
+    /**
+     * A source naming exactly these records, in this order — the `manual` case, built directly.
+     *
+     * The picks are truncated to the limit rather than merely counted against it: a client is told
+     * about the records it will actually be shown, so a bundle of twenty picks cannot render as
+     * twelve products on the web and twenty in the app.
+     */
     public static function picked(string|array|null $ids, ?int $limit = null): self
     {
+        $limit = self::boundedLimit($limit);
+
         return new self(
             kind: 'manual',
             id: null,
-            ids: self::pickedIds($ids),
-            limit: self::boundedLimit($limit),
+            ids: array_slice(self::pickedIds($ids), 0, $limit),
+            limit: $limit,
         );
     }
 

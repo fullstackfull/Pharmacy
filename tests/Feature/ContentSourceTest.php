@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Theme\ContentSource;
+use App\Services\Theme\SectionDataResolver;
 use App\Services\Theme\SectionDestination;
 use App\Services\Theme\ThemeSourceMap;
 use Tests\TestCase;
@@ -51,6 +52,32 @@ class ContentSourceTest extends TestCase
         $this->assertSame(8, ContentSource::fromSettings([], defaultLimit: 8)->limit);
         $this->assertSame(10, ContentSource::fromSettings([])->limit);
         $this->assertSame(6, ContentSource::fromSettings(['limit' => 6], defaultLimit: 8)->limit);
+    }
+
+    public function test_the_web_and_the_app_are_bounded_by_the_same_number(): void
+    {
+        // The builder's item count is a free-text number. The storefront query capped it at 24 and
+        // the app's endpoint hint capped it nowhere, so a merchant who typed 100 got a rail of 24
+        // in the browser and a longer one on the phone, from one published section.
+        $hundred = ['source' => 'best_selling', 'limit' => 100];
+
+        $this->assertSame(
+            ContentSource::MAX_LIMIT,
+            app(ThemeSourceMap::class)->for('product_slider', $hundred, [])['params']['limit'],
+        );
+        $this->assertSame(ContentSource::MAX_LIMIT, ContentSource::fromSettings($hundred)->limit);
+    }
+
+    public function test_a_bundle_names_the_products_it_will_actually_show(): void
+    {
+        // by-ids has no limit parameter, so an over-long pick list had to be cut where it is read
+        // rather than counted where it is used: the web drew twelve and the app drew all of them.
+        $ids = implode(',', range(1, 20));
+
+        $delivered = app(ThemeSourceMap::class)->for('bundle', ['product_ids' => $ids], [])['params']['ids'];
+
+        $this->assertCount(SectionDataResolver::BUNDLE_LIMIT, explode(',', $delivered));
+        $this->assertSame('1', explode(',', $delivered)[0], 'and in the merchant\'s order');
     }
 
     public function test_no_configuration_can_ask_for_the_whole_catalogue(): void
