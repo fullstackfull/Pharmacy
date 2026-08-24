@@ -6589,4 +6589,6 @@ return [
 	'insight_running_out' => 'Running out of stock',
 	'insight_product_rejected' => 'Listing was rejected',
 	'insight_listing_incomplete' => 'Listing is missing information',
+	'your_role_does_not_allow_this' => 'Your role does not allow this',
+	'payouts_unavailable' => 'Payouts unavailable',
 ];

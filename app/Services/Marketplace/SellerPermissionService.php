@@ -2,6 +2,7 @@
 
 namespace App\Services\Marketplace;
 
+use App\Models\Seller;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use Illuminate\Support\Facades\Schema;
@@ -81,6 +82,59 @@ class SellerPermissionService
         $active = ($role->status ?? SellerRole::STATUS_ACTIVE) === SellerRole::STATUS_ACTIVE;
 
         return $active && $role->grants($permission);
+    }
+
+    /**
+     * Who is holding this bearer token, and what may they do?
+     *
+     * Tried in order: the shop owner, then their staff. A staff member resolves to their employer's
+     * shop, so `sellerId()` keeps meaning exactly what it meant before staff could hold a token at
+     * all — every existing query that scopes on it is unaffected.
+     *
+     * An inactive staff member, one whose employer is no longer approved, or one whose role has been
+     * switched off resolves to nothing: the safe answer for an authentication check.
+     */
+    public function principalFor(string $token): ?SellerPrincipal
+    {
+        $seller = Seller::approved()->where('auth_token', $token)->first();
+        if ($seller) {
+            return SellerPrincipal::owner($seller);
+        }
+
+        if (!Schema::hasTable('seller_staff')) {
+            return null;
+        }
+
+        $staff = SellerStaff::with('role')->where('auth_token', $token)->first();
+        if (!$staff || $staff->status !== SellerStaff::STATUS_ACTIVE) {
+            return null;
+        }
+
+        $employer = Seller::approved()->find($staff->seller_id);
+        if (!$employer) {
+            return null;
+        }
+
+        return SellerPrincipal::staff($employer, $staff, $this->permissionsOf($staff));
+    }
+
+    /**
+     * What a staff member's role grants them right now.
+     *
+     * Read at request time rather than stored on the token, so revoking a permission takes effect on
+     * the member's next request instead of whenever they next sign in.
+     *
+     * @return array<int, string>
+     */
+    public function permissionsOf(SellerStaff $staff): array
+    {
+        $role = $staff->role;
+
+        if ($role === null || ($role->status ?? SellerRole::STATUS_ACTIVE) !== SellerRole::STATUS_ACTIVE) {
+            return [];
+        }
+
+        return $this->sanitize(is_array($role->permissions) ? $role->permissions : []);
     }
 
     /**

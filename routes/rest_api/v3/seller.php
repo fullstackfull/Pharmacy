@@ -342,11 +342,14 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 });
             });
 
+            // The only place a seller's money leaves the platform, so reading and moving are two
+            // different permissions: a finance clerk can be given the books without being given the
+            // ability to withdraw from them.
             Route::group(['prefix' => 'payouts'], function () {
                 Route::controller(SellerPayoutController::class)->group(function () {
-                    Route::get('/', 'index');
-                    Route::post('/', 'store');
-                    Route::post('{id}/cancel', 'cancel')->whereNumber('id');
+                    Route::get('/', 'index')->middleware('seller_can:finance.view');
+                    Route::post('/', 'store')->middleware('seller_can:payouts.request');
+                    Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
                 });
             });
         });
