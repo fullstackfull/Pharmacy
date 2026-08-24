@@ -65,6 +65,12 @@ class ThemeManager
                 'status'   => ThemeVersion::STATUS_DRAFT,
                 'settings' => $settings ?: null,
             ]);
+
+            // Home, header and footer exist for every theme from the moment it does — the clients
+            // ask for them by name, so they are the engine's guarantee rather than the merchant's
+            // first chore.
+            app(ExperiencePageService::class)->ensureSystemPages($theme);
+
             return $theme->refresh();
         });
     }

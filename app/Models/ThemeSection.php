@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
 class ThemeSection extends Model
 {
     protected $fillable = [
-        'theme_version_id', 'uuid', 'page', 'type', 'sort_order', 'is_visible', 'settings',
-        'starts_at', 'ends_at', 'platforms', 'audience',
+        'theme_version_id', 'experience_page_id', 'uuid', 'page', 'type', 'sort_order',
+        'is_visible', 'settings', 'starts_at', 'ends_at', 'platforms', 'audience', 'channels',
     ];
 
     protected $casts = [
@@ -26,6 +26,7 @@ class ThemeSection extends Model
         'ends_at'    => 'datetime',
         'platforms'  => 'array',
         'audience'   => 'array',
+        'channels'   => 'array',
     ];
 
     protected static function booted(): void
@@ -54,6 +55,17 @@ class ThemeSection extends Model
     }
 
     /**
+     * The page row this section sits on, where one exists.
+     *
+     * Nullable by design: `page` remains the slug every renderer resolves by, so a section that
+     * predates the page table — or arrived through an import — still renders.
+     */
+    public function experiencePage(): BelongsTo
+    {
+        return $this->belongsTo(ExperiencePage::class, 'experience_page_id');
+    }
+
+    /**
      * The identity and delivery-rule attributes a copy should carry, limited to the columns that
      * actually exist — the copy paths run against test schemas and mid-migration databases too.
      *
@@ -72,6 +84,17 @@ class ThemeSection extends Model
             $attributes['ends_at']   = $this->ends_at;
             $attributes['platforms'] = $this->platforms;
             $attributes['audience']  = $this->audience;
+        }
+
+        // A copy sits on the same page as its original — both a draft of a version and a
+        // duplicated section. The slug travels separately, as it always has.
+        if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'experience_page_id')) {
+            $attributes['experience_page_id'] = $this->experience_page_id;
+        }
+
+        // Its own guard: channels arrived in a later migration than the rest of the rules.
+        if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'channels')) {
+            $attributes['channels'] = $this->channels;
         }
 
         return $attributes;

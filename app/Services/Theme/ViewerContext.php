@@ -42,6 +42,10 @@ final class ViewerContext
         public readonly ?string $locale = null,
         public readonly int $uiEngineVersion = 0,
         public readonly array $supportedComponents = [],
+        // Which surface asked. Null means "work it out from the platform", which is what every
+        // client that predates channels does — and what keeps this constructor's old call sites
+        // correct without touching them.
+        public readonly ?string $channel = null,
     ) {
     }
 
@@ -67,6 +71,10 @@ final class ViewerContext
         $engineRaw = $request->header('X-UI-Engine') ?? $request->query('ui_engine');
         $engine = is_numeric($engineRaw) ? max(0, (int) $engineRaw) : 0;
 
+        // A client may name its own channel; one that does not is placed by its platform, so every
+        // installed app keeps landing on customer_app without sending anything new.
+        $channel = Channel::normalize($request->header('X-UI-Channel') ?? $request->query('channel'));
+
         return new self(
             platform: $platform,
             device: $device,
@@ -74,6 +82,7 @@ final class ViewerContext
             locale: app()->getLocale(),
             uiEngineVersion: $engine,
             supportedComponents: $components,
+            channel: $channel,
         );
     }
 
@@ -96,6 +105,12 @@ final class ViewerContext
     public function audience(): string
     {
         return $this->authenticated ? self::AUDIENCE_CUSTOMER : self::AUDIENCE_GUEST;
+    }
+
+    /** The surface this viewer belongs to — declared, or derived from the platform. */
+    public function channel(): string
+    {
+        return Channel::forViewer($this);
     }
 
     /**

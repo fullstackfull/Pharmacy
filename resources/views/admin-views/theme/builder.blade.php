@@ -627,6 +627,11 @@
                 deliveryPlatformsHint: @json(translate('shows_in_every_place_you_tick_nothing_ticked_means_everywhere')),
                 deliveryAudience: @json(translate('who_sees_it')),
                 deliveryAudienceHint: @json(translate('nothing_ticked_means_everyone')),
+                deliveryChannels: @json(translate('which_app')),
+                deliveryChannelsHint: @json(translate('nothing_ticked_means_every_surface_use_this_only_to_keep_a_section_out_of_one_app')),
+                channelWeb: @json(translate('web_storefront')),
+                channelCustomerApp: @json(translate('customer_app')),
+                channelVendorApp: @json(translate('vendor_app')),
                 platformWeb: @json(translate('website')),
                 platformApp: @json(translate('mobile_app')),
                 platformDesktop: @json(translate('desktop')),
@@ -1560,10 +1565,17 @@
                     [['guest', T.audienceGuest], ['customer', T.audienceCustomer]]
                         .forEach(function (pair) { wrap.appendChild(check('audience', pair[0], pair[1], d.audience || [])); });
                 });
+
+                // Which surface, as opposed to which platform: both apps are "app", so only this
+                // can keep a section out of one of them.
+                group(T.deliveryChannels, T.deliveryChannelsHint, function (wrap) {
+                    [['web', T.channelWeb], ['customer_app', T.channelCustomerApp], ['vendor_app', T.channelVendorApp]]
+                        .forEach(function (pair) { wrap.appendChild(check('channels', pair[0], pair[1], d.channels || [])); });
+                });
             }
 
             function collectDeliveryRules() {
-                var rules = {section_id: state.sectionId, platforms: [], audience: []};
+                var rules = {section_id: state.sectionId, platforms: [], audience: [], channels: []};
                 inspector.querySelectorAll('[data-delivery-key]').forEach(function (input) {
                     rules[input.dataset.deliveryKey] = input.value || null;
                 });

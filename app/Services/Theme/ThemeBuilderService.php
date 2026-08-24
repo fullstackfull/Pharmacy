@@ -47,6 +47,11 @@ class ThemeBuilderService
             'sort_order'       => $nextOrder + 1,
             'is_visible'       => true,
             'settings'         => $this->registry->normalizeSettings($type, $settings),
+            // The page row beside the slug: the slug is what renders, the id is what lets the page
+            // be renamed or disabled later without touching a section. Column-guarded like every
+            // other newer field here — the builder runs against databases this migration has not
+            // reached, and against the hand-built schemas the tests stand up.
+            ...$this->pageReference($version, $page),
         ]);
 
         app(AuditLogger::class)->record(
@@ -90,7 +95,7 @@ class ThemeBuilderService
      * a window that can never open would silently hide the section, which is precisely the state
      * these rules exist to make impossible to reach by accident.
      *
-     * @param  array{starts_at?: ?string, ends_at?: ?string, platforms?: mixed, audience?: mixed}  $rules
+     * @param  array{starts_at?: ?string, ends_at?: ?string, platforms?: mixed, audience?: mixed, channels?: mixed}  $rules
      */
     public function setDeliveryRules(ThemeSection $section, array $rules): bool
     {
@@ -117,6 +122,7 @@ class ThemeBuilderService
             'ends_at'   => $section->getOriginal('ends_at'),
             'platforms' => $section->getOriginal('platforms'),
             'audience'  => $section->getOriginal('audience'),
+            'channels'  => $section->getOriginal('channels'),
         ];
 
         $section->platforms = $this->ruleTokens(
@@ -124,6 +130,12 @@ class ThemeBuilderService
             [...\App\Services\Theme\ViewerContext::PLATFORMS, ...\App\Services\Theme\ViewerContext::DEVICES],
         );
         $section->audience = $this->ruleTokens($rules['audience'] ?? null, \App\Services\Theme\ViewerContext::AUDIENCES);
+
+        // Only written where the column exists — the channels migration is newer than the rest of
+        // the delivery rules, and a builder running ahead of it must still save the others.
+        if (\Illuminate\Support\Facades\Schema::hasColumn($section->getTable(), 'channels')) {
+            $section->channels = $this->ruleTokens($rules['channels'] ?? null, Channel::ALL);
+        }
 
         $saved = $section->save();
 
@@ -137,6 +149,23 @@ class ThemeBuilderService
         }
 
         return $saved;
+    }
+
+    /**
+     * The page row a new section belongs to, as a spreadable attribute list.
+     *
+     * Empty when the column does not exist yet, or when the theme has no row for this slug — both
+     * mean "resolve by slug", which is what every reader already does.
+     *
+     * @return array<string, int|null>
+     */
+    private function pageReference(ThemeVersion $version, string $page): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn((new ThemeSection())->getTable(), 'experience_page_id')) {
+            return [];
+        }
+
+        return ['experience_page_id' => app(ExperiencePageService::class)->idFor($version->theme_id, $page)];
     }
 
     private function parseRuleTime(mixed $value): ?\Illuminate\Support\Carbon
@@ -522,14 +551,16 @@ class ThemeBuilderService
     {
         $platforms = is_array($section->platforms) ? $section->platforms : [];
         $audience = is_array($section->audience) ? $section->audience : [];
+        $channels = is_array($section->channels) ? $section->channels : [];
 
         return [
             'starts_at' => $section->starts_at?->format('Y-m-d\TH:i'),
             'ends_at'   => $section->ends_at?->format('Y-m-d\TH:i'),
             'platforms' => $platforms,
             'audience'  => $audience,
+            'channels'  => $channels,
             'scheduled' => $section->starts_at !== null || $section->ends_at !== null,
-            'targeted'  => $platforms !== [] || $audience !== [],
+            'targeted'  => $platforms !== [] || $audience !== [] || $channels !== [],
         ];
     }
 }

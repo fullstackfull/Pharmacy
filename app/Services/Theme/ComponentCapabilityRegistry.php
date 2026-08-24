@@ -132,16 +132,55 @@ class ComponentCapabilityRegistry
      */
     public function servableTo(ViewerContext $viewer): array
     {
-        if ($viewer->platform === ViewerContext::PLATFORM_WEB) {
-            // The web renders from the same schema but is not capability-limited: it ships with
-            // the server and can always draw whatever the registry can compose.
+        return $this->servableToChannel($viewer->channel(), $viewer);
+    }
+
+    /**
+     * What one channel can draw, for this viewer.
+     *
+     * Keyed by channel rather than by platform so a third surface is an entry here instead of a
+     * branch: the web ships with the server and can draw whatever the registry composes; the
+     * customer app draws what its build declares; the vendor app declares nothing yet, and an
+     * empty answer is the honest one — it renders no sections rather than being sent sections it
+     * cannot draw.
+     *
+     * @return array<int, string>
+     */
+    public function servableToChannel(string $channel, ?ViewerContext $viewer = null): array
+    {
+        if ($channel === Channel::WEB) {
             return array_keys(app(SectionRegistry::class)->types());
         }
+
+        if ($channel === Channel::VENDOR_APP) {
+            return [];
+        }
+
+        $viewer ??= new ViewerContext(platform: ViewerContext::PLATFORM_APP);
 
         return array_values(array_filter(
             array_keys(self::APP_COMPONENTS),
             fn (string $type) => $this->clientHolds($type, $viewer),
         ));
+    }
+
+    /**
+     * Which channels can draw a type at all, ignoring any one build's declaration.
+     *
+     * This is what the builder needs to say "the app will not show this" before anything is
+     * published, and what a section's channel picker offers.
+     *
+     * @return array<int, string>
+     */
+    public function channelsFor(string $type): array
+    {
+        $channels = [Channel::WEB];
+
+        if (isset(self::APP_COMPONENTS[$type])) {
+            $channels[] = Channel::CUSTOMER_APP;
+        }
+
+        return $channels;
     }
 
     /**
