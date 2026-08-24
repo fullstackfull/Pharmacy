@@ -64,6 +64,10 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
             Route::get('seller-info', 'getSellerInfo');
             Route::get('get-earning-statitics', 'getEarningStatics');
             Route::get('order-statistics', 'order_statistics');
+            // Deleting an account is not a read. GET is kept only so builds already
+            // installed keep working, and can go once they are gone; new callers
+            // use DELETE, which no prefetcher, retry layer or proxy will replay.
+            Route::delete('account-delete', 'account_delete');
             Route::get('account-delete', 'account_delete');
             Route::get('seller-delivery-man', 'seller_delivery_man');
             Route::get('shop-product-reviews', 'shop_product_reviews');
