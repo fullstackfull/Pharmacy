@@ -21,6 +21,18 @@ class ThemePermissionService
     public const EDIT    = 'theme_edit';
     public const PUBLISH = 'theme_publish';
 
+    /**
+     * Two capabilities that are edits with a wider blast radius than editing one section.
+     *
+     * Restoring replaces the draft somebody may be part-way through composing, and the global
+     * styles are the colours and type of every page at once. Neither changes what customers see
+     * until a publish, which is why they sit beside EDIT rather than beside PUBLISH — but a shop
+     * that wants a junior staff member arranging sections without repainting the whole storefront
+     * needs them to be separable, and they were not.
+     */
+    public const RESTORE = 'theme_restore';
+    public const STYLES  = 'theme_styles';
+
     /** The coarse module that already gates the theme routes. */
     private const MODULE = 'themes_and_addons';
 
@@ -43,8 +55,11 @@ class ThemePermissionService
             return true;
         }
 
-        // Backward compatibility: an existing role holding the module keeps view + edit, but NOT
-        // publish — pushing to the live storefront must be granted deliberately.
+        // Backward compatibility: an existing role holding the module keeps everything it could do
+        // before this feature — which is everything except publishing. Pushing to the live
+        // storefront must be granted deliberately; restoring and restyling could already be done by
+        // anyone with the module, and taking that away from existing roles would be a silent
+        // regression dressed as security.
         if (in_array(self::MODULE, $granted, true)) {
             return $capability !== self::PUBLISH;
         }
@@ -65,6 +80,37 @@ class ThemePermissionService
     public function canPublish(): bool
     {
         return $this->can(self::PUBLISH);
+    }
+
+    public function canRestore(): bool
+    {
+        return $this->can(self::RESTORE);
+    }
+
+    public function canManageStyles(): bool
+    {
+        return $this->can(self::STYLES);
+    }
+
+    /**
+     * Every capability a role can be granted, with the label the role form shows.
+     *
+     * These were enforced from the day they were written and offered by nothing: the role form had
+     * no theme section, so `theme_publish` — the one capability that deliberately does NOT come
+     * with the module — could not be granted to anybody. Any admin who was not the master admin
+     * could compose a page and never publish it, with no way for anyone to fix that.
+     *
+     * @return array<string, string>
+     */
+    public static function all(): array
+    {
+        return [
+            self::VIEW    => 'theme_view_the_builder',
+            self::EDIT    => 'theme_edit_pages_and_sections',
+            self::PUBLISH => 'theme_publish_to_the_live_storefront',
+            self::RESTORE => 'theme_restore_an_older_version',
+            self::STYLES  => 'theme_manage_global_styles',
+        ];
     }
 
     /** @return array<int, string> */

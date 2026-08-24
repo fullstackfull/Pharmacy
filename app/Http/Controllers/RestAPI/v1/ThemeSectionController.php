@@ -4,6 +4,8 @@ namespace App\Http\Controllers\RestAPI\v1;
 
 use App\Http\Controllers\Controller;
 use App\Services\DeveloperPortal\ApiDoc;
+use App\Services\Theme\Channel;
+use App\Services\Theme\ExperiencePageService;
 use App\Services\Theme\SectionDataResolver;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
@@ -32,8 +34,13 @@ use Illuminate\Http\Request;
  */
 class ThemeSectionController extends Controller
 {
-    /** The page areas the builder composes; anything else has no sections to serve. */
-    private const PAGES = ['home', 'header', 'footer'];
+    /**
+     * The pages the engine guarantees, used when the page table has not been migrated yet.
+     *
+     * The real list comes from {@see ExperiencePageService}: a merchant who adds a page has to be
+     * able to fetch it, and a list written into this file could never know about one.
+     */
+    private const GUARANTEED_PAGES = ['home', 'header', 'footer'];
 
     /** Settings keys whose value is an image path a phone must be able to fetch. */
     private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image'];
@@ -44,7 +51,33 @@ class ThemeSectionController extends Controller
         private readonly ThemeSourceMap $sources,
         private readonly ThemeDelivery $delivery,
         private readonly ThemePreviewToken $previews,
+        private readonly ExperiencePageService $pages,
     ) {
+    }
+
+    /**
+     * The page this request may be served, or the home page.
+     *
+     * An unknown name falls back rather than erroring: this is a public endpoint, and `?page[]=x`
+     * or a typo must never be a 500. A page that exists but is turned off is unknown too — turning
+     * one off is how a merchant takes it out of the app.
+     */
+    private function servablePage(Request $request, ViewerContext $viewer): string
+    {
+        $requested = $request->query('page', 'home');
+        $requested = is_string($requested) && $requested !== '' ? $requested : 'home';
+
+        $theme = \App\Models\Theme::query()->where('is_active', true)->value('id');
+
+        $allowed = $theme === null
+            ? self::GUARANTEED_PAGES
+            : $this->pages->servableSlugs((int) $theme, $viewer->channel() ?? Channel::CUSTOMER_APP);
+
+        if ($allowed === []) {
+            $allowed = self::GUARANTEED_PAGES;
+        }
+
+        return in_array($requested, $allowed, true) ? $requested : 'home';
     }
 
     #[ApiDoc(
@@ -87,8 +120,7 @@ class ThemeSectionController extends Controller
     {
         // The house rule for request input: a value nobody can spell is not a filter. `?page[]=x`
         // must fall back, never 500 a public endpoint.
-        $page = $request->query('page', 'home');
-        $page = is_string($page) && in_array($page, self::PAGES, true) ? $page : 'home';
+        $page = $this->servablePage($request, ViewerContext::fromRequest($request));
 
         $type = $request->query('type');
         $type = is_string($type) && $type !== '' ? $type : null;
@@ -132,10 +164,8 @@ class ThemeSectionController extends Controller
     )]
     public function home(Request $request): JsonResponse
     {
-        $page = $request->query('page', 'home');
-        $page = is_string($page) && in_array($page, self::PAGES, true) ? $page : 'home';
-
         $viewer = ViewerContext::fromRequest($request);
+        $page = $this->servablePage($request, $viewer);
 
         // A merchant checking a draft on a real phone before it is anyone else's home page. The
         // preview path shares no cache and no validator with the published one: a draft changes on

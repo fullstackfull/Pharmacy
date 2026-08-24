@@ -1001,6 +1001,15 @@
             @if (Helpers::module_permission_check('themes_and_addons') && Route::has('admin.theme.index'))
                 <div class="v2-ctx-group">
                     <div class="v2-ctx-group-head"><span>{{ translate('appearance') }}</span></div>
+                    {{-- The mobile app's own entrance. The same engine composes both, but a
+                         merchant arranging the phone app should not have to go looking for it
+                         inside the website's settings. --}}
+                    @if (Route::has('admin.app-builder.index'))
+                        <a class="v2-nav-item {{ Request::is('admin/app-builder*') ? 'v2-is-active' : '' }}" data-item="app-builder" href="{{ route('admin.app-builder.index') }}">
+                            <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('App_Builder') }}</span></span>
+                            <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="app-builder" aria-label="Pin"></button></div>
+                        </a>
+                    @endif
                     <a class="v2-nav-item {{ (Request::is('admin/theme') || Request::is('admin/theme/*')) ? 'v2-is-active' : '' }}" data-item="theme-management" href="{{ route('admin.theme.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Theme_Management') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="theme-management" aria-label="Pin"></button></div>

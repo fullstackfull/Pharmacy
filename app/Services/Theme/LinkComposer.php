@@ -81,6 +81,13 @@ class LinkComposer
             'campaign' => $this->identified('/flash-deals/', $reference),
 
             'collection' => self::COLLECTIONS[is_string($reference) ? $reference : ''] ?? null,
+
+            // A page the merchant composed. Stored by slug rather than by id: the slug is what
+            // both clients ask for, and a page restored from an export keeps its slug and not its
+            // row number.
+            'page' => is_string($reference) && trim($reference) !== ''
+                ? '/p/' . trim($reference)
+                : null,
             'cart', 'wishlist' => self::FIXED[$kind],
 
             'search' => is_string($reference) && trim($reference) !== ''
@@ -131,6 +138,9 @@ class LinkComposer
             ],
             ActionResolver::COLLECTION => [
                 'kind' => 'collection', 'reference' => $action['collection'] ?? null, 'label' => null,
+            ],
+            ActionResolver::PAGE => [
+                'kind' => 'page', 'reference' => $action['slug'] ?? null, 'label' => $action['slug'] ?? null,
             ],
             ActionResolver::SEARCH => [
                 'kind' => 'search', 'reference' => $action['query'] ?? '', 'label' => null,

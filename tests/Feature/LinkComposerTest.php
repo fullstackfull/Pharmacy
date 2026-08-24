@@ -167,6 +167,7 @@ class LinkComposerTest extends TestCase
             ['brand', $brand->id],
             ['product', $product->id],
             ['collection', 'best_selling'],
+            ['page', 'ramadan-offers'],
             ['search', 'vitamin'],
             ['cart', null],
             ['wishlist', null],
@@ -178,6 +179,31 @@ class LinkComposerTest extends TestCase
 
             $this->assertSame($kind, $described['kind'], $kind);
         }
+    }
+
+    public function test_a_composed_page_survives_the_round_trip(): void
+    {
+        // The App Builder writes /p/{slug} and the app reads it back as a typed page action. Break
+        // either half and a banner pointing at a merchant's Offers page opens a browser instead of
+        // the screen the app already knows how to draw.
+        $composer = app(LinkComposer::class);
+        $action = app(ActionResolver::class)->resolve($composer->compose('page', 'ramadan-offers'));
+
+        $this->assertSame(ActionResolver::PAGE, $action['type']);
+        $this->assertSame('ramadan-offers', $action['slug']);
+
+        $described = $composer->describe('/p/ramadan-offers');
+        $this->assertSame('page', $described['kind']);
+        $this->assertSame('ramadan-offers', $described['reference']);
+    }
+
+    public function test_a_page_link_needs_a_slug(): void
+    {
+        $composer = app(LinkComposer::class);
+
+        $this->assertNull($composer->compose('page', ''));
+        $this->assertNull($composer->compose('page', '   '));
+        $this->assertNull($composer->compose('page', null));
     }
 
     public function test_an_empty_or_unreadable_link_is_simply_no_link(): void

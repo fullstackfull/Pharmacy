@@ -143,4 +143,45 @@ class SectionCatalogueTest extends TestCase
         $this->assertArrayHasKey('autoplay', $hero['schema']);
         $this->assertSame('hero', $hero['preview']);
     }
+
+    public function test_every_setting_lands_in_a_drawer_that_describes_it(): void
+    {
+        // The inspector showed one column of twenty fields per section. Grouping them is only
+        // useful if the grouping is right, and it is derived from the key rather than written into
+        // each of thirty-nine definitions — which is what keeps it from disagreeing with the shared
+        // vocabulary the whole registry is built on.
+        $registry = app(SectionRegistry::class);
+        $stray = [];
+
+        foreach (array_keys($registry->types()) as $type) {
+            $groups = $registry->fieldGroupsFor($type);
+
+            // Every key the type declares appears exactly once, in exactly one drawer.
+            $grouped = array_merge(...array_values($groups ?: [[]]));
+            $declared = array_keys($registry->ownSchemaFor($type));
+
+            sort($grouped);
+            sort($declared);
+            $this->assertSame($declared, $grouped, $type);
+
+            // And the content drawer holds only things a merchant types — anything else landing
+            // there is a key nobody classified.
+            foreach ($groups['content'] ?? [] as $key) {
+                if (!in_array($key, ['title', 'subtitle', 'eyebrow', 'text', 'content', 'image', 'products', 'stats'], true)) {
+                    $stray[] = $type . '.' . $key;
+                }
+            }
+        }
+
+        $this->assertSame([], $stray, 'these settings fell into "content" because nothing classified them');
+    }
+
+    public function test_a_section_with_one_kind_of_setting_is_not_given_headings(): void
+    {
+        // A spacer has a height and nothing else. Labelling that single field "arrangement" is
+        // ceremony, not organisation.
+        $groups = app(SectionRegistry::class)->fieldGroupsFor('spacer');
+
+        $this->assertCount(1, $groups);
+    }
 }

@@ -207,6 +207,15 @@ Route::group(['namespace' => 'Web', 'middleware' => ['maintenance_mode', 'guestC
         Route::get('helpTopic', 'getHelpTopicView')->name('helpTopic');
     });
 
+    /*
+     * A page the merchant composed in the App Builder. Prefixed so it can never collide with a
+     * product slug or a category slug — those own their own namespaces, and a custom page that
+     * shadowed one would be a shop losing a product to a typo.
+     */
+    Route::get('p/{slug}', [\App\Http\Controllers\Web\ExperiencePageController::class, 'show'])
+        ->where('slug', '[a-z0-9\-]+')
+        ->name('experience-page');
+
     Route::controller(ProductDetailsController::class)->group(function () {
         Route::get('/product/{slug}', 'index')->name('product');
     });
