@@ -131,6 +131,8 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
         Route::group(['prefix' => 'orders'], function () {
             Route::controller(OrderController::class)->group(function () {
                 Route::post('list', 'list');
+                // Ahead of the catch-all `/{id}`, which would otherwise swallow it.
+                Route::get('{id}/invoice', 'invoice')->whereNumber('id');
                 Route::get('/{id}', 'details');
                 Route::put('order-detail-status/{id}', 'order_detail_status');
                 Route::put('assign-delivery-man', 'assign_delivery_man');
