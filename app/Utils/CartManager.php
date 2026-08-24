@@ -12,7 +12,6 @@ use App\Models\Color;
 use App\Models\Product;
 use App\Models\ShippingType;
 use App\Models\Shop;
-use App\Services\Marketplace\B2BPricingService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
@@ -410,23 +409,6 @@ class CartManager
         }
     }
 
-    /**
-     * B2B / wholesale pricing (Phase 3, Stage E): the effective unit price for this customer.
-     *
-     * Backward-compatible by construction — a guest, or a logged-in customer in no active customer
-     * group, gets the base price back unchanged, so retail checkout (and the mobile API, which stores
-     * the same Cart.price) behaves exactly as before. Group pricing only ever lowers the price, and the
-     * best (lowest) of a customer's groups wins. Applied to Cart.price at add time so the wholesale
-     * price flows into the order snapshot, taxes and commission consistently across web and API.
-     */
-    public static function customerGroupPrice($product, string|int|null $customerId, float $basePrice): float
-    {
-        if (!$customerId) {
-            return $basePrice;
-        }
-
-        return (float) (new B2BPricingService())->priceFor($product->id, $customerId, $basePrice)['price'];
-    }
 
     public static function addToCartPhysicalProduct($request, $product, $shippingType, $sellerShippingList): array
     {
@@ -505,7 +487,6 @@ class CartManager
             $price = $product->unit_price;
         }
 
-        $price = self::customerGroupPrice($product, $user == 'offline' ? null : ($user['id'] ?? null), (float) $price);
 
         $getProductDiscount = getProductPriceByType(product: $product, type: 'discounted_amount', result: 'value', price: $price);
 
@@ -676,7 +657,6 @@ class CartManager
             $isGuest = 0;
         }
 
-        $price = self::customerGroupPrice($product, $isGuest ? null : $customerId, (float) $price);
 
         $getProductDiscount = getProductPriceByType(product: $product, type: 'discounted_amount', result: 'value', price: $price);
         $cartArray = [

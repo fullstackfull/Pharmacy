@@ -6701,4 +6701,8 @@ return [
 	"return_is_not_in_a_receivable_state" => "This return is not in a state where it can be received",
 	"only_an_authorized_return_can_be_marked_in_transit" => "Only an authorised return can be marked in transit",
 	"refund_request_not_found" => "Refund request not found",
+	"notify_listing_quality" => "Listings need attention",
+	"notify_inventory_risk" => "Stock needs attention",
+	"notify_order_sla" => "Orders need shipping",
+	"seller_operations" => "Seller operations",
 ];

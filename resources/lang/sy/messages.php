@@ -9499,4 +9499,8 @@ return [
 	"return_not_found" => "طلب الإرجاع غير موجود",
 	"return_could_not_be_updated" => "تعذّر تحديث هذا الإرجاع",
 	"refund_request_not_found" => "طلب الاسترداد غير موجود",
+	"notify_listing_quality" => "إدراجات تحتاج انتباهك",
+	"notify_inventory_risk" => "المخزون يحتاج انتباهك",
+	"notify_order_sla" => "طلبات تحتاج شحناً",
+	"seller_operations" => "عمليات البائع",
 ];
