@@ -21,6 +21,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
@@ -64,6 +65,10 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
             Route::get('seller-info', 'getSellerInfo');
             Route::get('get-earning-statitics', 'getEarningStatics');
             Route::get('order-statistics', 'order_statistics');
+            // Deleting an account is not a read. GET is kept only so builds already
+            // installed keep working, and can go once they are gone; new callers
+            // use DELETE, which no prefetcher, retry layer or proxy will replay.
+            Route::delete('account-delete', 'account_delete');
             Route::get('account-delete', 'account_delete');
             Route::get('seller-delivery-man', 'seller_delivery_man');
             Route::get('shop-product-reviews', 'shop_product_reviews');
@@ -131,6 +136,8 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
         Route::group(['prefix' => 'orders'], function () {
             Route::controller(OrderController::class)->group(function () {
                 Route::post('list', 'list');
+                // Ahead of the catch-all `/{id}`, which would otherwise swallow it.
+                Route::get('{id}/invoice', 'invoice')->whereNumber('id');
                 Route::get('/{id}', 'details');
                 Route::put('order-detail-status/{id}', 'order_detail_status');
                 Route::put('assign-delivery-man', 'assign_delivery_man');
@@ -312,13 +319,24 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 });
             });
 
+            // Everything waiting for the seller, from the one insight store — so Home, this list
+            // and notifications cannot disagree about what needs attention.
+            Route::group(['prefix' => 'action-center'], function () {
+                Route::controller(SellerActionCenterController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::post('{id}/dismiss', 'dismiss')->whereNumber('id');
+                });
+            });
+
             // The panel's report pages, as data. Every figure comes from SellerReportService, which
             // the vendor controllers read too, so the app and the panel cannot drift apart.
             Route::group(['prefix' => 'reports'], function () {
                 Route::controller(SellerReportController::class)->group(function () {
                     Route::get('orders', 'orders');
                     Route::get('orders/export', 'exportOrders');
+                    Route::get('orders/export-pdf', 'exportOrdersPdf');
                     Route::get('products', 'products');
+                    Route::get('products/export', 'exportProducts');
                     Route::get('stock', 'stock');
                     Route::get('stock/export', 'exportStock');
                 });

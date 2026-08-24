@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Exports\OrderReportExport;
+use App\Exports\ProductReportExport;
 use App\Exports\ProductStockReportExport;
 use App\Http\Controllers\Controller;
 use App\Services\DeveloperPortal\ApiDoc;
@@ -11,6 +12,8 @@ use App\Services\Reports\SellerReportService;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -229,6 +232,83 @@ class SellerReportController extends Controller
             'sort' => $this->sort($request),
             'stock_limit' => $this->reports->stockLimitFor($request->seller),
         ]), 'product-stock-report.xlsx');
+    }
+
+    #[ApiDoc(
+        summary: 'The product report as a spreadsheet',
+        description: 'Returns the products the report lists as an .xlsx download, rendered by the same '
+            . 'exporter the vendor panel uses. Takes the same period and search parameters. Responds '
+            . 'with a file, not JSON.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
+    public function exportProducts(Request $request): BinaryFileResponse
+    {
+        $window = $this->window($request);
+        $search = $this->search($request);
+
+        return Excel::download(new ProductReportExport([
+            'products' => $this->reports->productQuery($request->seller->id, $window, $search)->get(),
+            'search' => $search,
+            'seller' => $request->seller,
+            'from' => $window->from->toDateString(),
+            'to' => $window->to->toDateString(),
+            'date_type' => $window->type,
+        ]), 'product-report.xlsx');
+    }
+
+    #[ApiDoc(
+        summary: 'The order report as a PDF',
+        description: 'The printed summary the vendor panel produces — the orders plus the totals at its '
+            . 'foot, two of which cannot be summed from a column: waived shipping was never charged, and '
+            . 'a delivery incentive is only owed on the seller\'s own deliveries. Responds with a file, '
+            . 'not JSON.',
+        audience: ApiDoc::VENDOR_APP,
+        stability: ApiDoc::STABLE,
+        since: 'v3',
+        idempotent: true,
+        group: 'vendors',
+    )]
+    public function exportOrdersPdf(Request $request): Response
+    {
+        $window = $this->window($request);
+        $orders = $this->reports->orderQuery($request->seller->id, $window, $this->search($request))->get();
+        $seller = $request->seller;
+
+        $data = array_merge($this->reports->orderTotals($orders), [
+            'orders' => $orders,
+            'search' => $this->search($request),
+            'seller' => trim("{$seller->f_name} {$seller->l_name}"),
+            'type' => 'seller',
+            'from' => $window->from->toDateString(),
+            'to' => $window->to->toDateString(),
+            'date_type' => $window->type,
+            'company_name' => getWebConfig(name: 'company_name'),
+            'company_email' => getWebConfig(name: 'company_email'),
+            'company_phone' => getWebConfig(name: 'company_phone'),
+            'company_web_logo' => getWebConfig(name: 'company_web_logo'),
+        ]);
+
+        $mpdf = new \Mpdf\Mpdf([
+            'default_font' => 'FreeSerif',
+            'mode' => 'utf-8',
+            'format' => [190, 250],
+            'autoLangToFont' => true,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont = true;
+        $mpdf->WriteHTML(View::make('admin-views.transaction.total_orders_report_pdf', ['data' => $data])->render());
+
+        // Returned as a body rather than written to the output stream: a mobile
+        // client saves the file itself, and `Output(..., 'D')` would emit headers
+        // this response has no say over.
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="order-report.pdf"',
+        ]);
     }
 
     /**

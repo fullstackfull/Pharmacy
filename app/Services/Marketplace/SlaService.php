@@ -44,6 +44,13 @@ class SlaService
             'return_rate' => (float) ($this->setting('sla_max_return_rate') ?? 0.10),
             'refund_rate' => (float) ($this->setting('sla_max_refund_rate') ?? 0.15),
             'avg_rating' => (float) ($this->setting('sla_min_rating') ?? 3.5),
+            // How long a seller has to get an order moving, in hours.
+            //
+            // 24 is the marketplace's declared policy, not a placeholder: a processing deadline is a
+            // promise made to customers and held against sellers, so the number has to come from
+            // whoever runs the market. It is editable on the SLA policy page like every other line
+            // here, and the seller-facing countdown reads this and nothing else.
+            'processing_hours' => max(1, (int) ($this->setting('sla_processing_hours') ?? 24)),
         ];
     }
 

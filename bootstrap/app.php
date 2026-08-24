@@ -148,6 +148,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // this, so breaches went stale between manual clicks.
         $schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')->withoutOverlapping();
 
+        // Recompute what each seller should be looking at. Hourly rather than daily because the
+        // things it raises — stock about to run out, an order approaching its deadline — stop being
+        // useful the moment they are stale.
+        $schedule->command('seller:refresh-insights')->hourly()->withoutOverlapping();
+
         // Publish the theme versions a merchant scheduled. Five minutes is the resolution the
         // builder promises, and matches the heartbeat that tells the dashboard the cron is alive —
         // a scheduled publish is only as trustworthy as the run that fires it.

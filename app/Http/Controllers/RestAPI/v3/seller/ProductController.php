@@ -2079,7 +2079,9 @@ class ProductController extends Controller
 
         if (!$seller) {
             return response()->json([
-                'auth-001' => translate('Your_existing_session_token_does_not_authorize_you_any_more')
+                // The same wording the middleware uses. Two spellings of one refusal
+                // meant a client matching on the message saw two different errors.
+                'auth-001' => translate('Your existing session token does not authorize you any more')
             ], 401);
         }
 
@@ -2151,7 +2153,9 @@ class ProductController extends Controller
 
         if (!$seller) {
             return response()->json([
-                'auth-001' => translate('Your_existing_session_token_does_not_authorize_you_any_more')
+                // The same wording the middleware uses. Two spellings of one refusal
+                // meant a client matching on the message saw two different errors.
+                'auth-001' => translate('Your existing session token does not authorize you any more')
             ], 401);
         }
 
