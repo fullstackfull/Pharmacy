@@ -19,9 +19,14 @@ class SellerApiAuthMiddleware
      */
     public function handle(Request $request, Closure $next): mixed
     {
-        $token = explode(' ', $request->header('authorization'));
+        $token = explode(' ', (string) $request->header('authorization'));
         if (count($token) > 1 && strlen($token[1]) > 30) {
-            $seller = Seller::where(['auth_token' => $token['1']])->first();
+            // Status is checked here, not only at login. It used to be enforced
+            // on the way in and never again, so a vendor rejected or set back to
+            // pending after signing in kept full API access — orders, POS,
+            // payouts, staff — until someone happened to press suspend. What
+            // login refuses to start, this refuses to continue.
+            $seller = Seller::approved()->where(['auth_token' => $token['1']])->first();
             if (isset($seller)) {
                 $request['seller'] = $seller;
                 return $next($request);
