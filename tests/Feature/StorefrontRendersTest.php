@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Theme;
+use App\Models\ThemeBlock;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use App\Services\Theme\SectionRegistry;
@@ -95,6 +96,90 @@ class StorefrontRendersTest extends TestCase
         $this->assertSame([], $failures, 'these section types throw while rendering the storefront');
     }
 
+    public function test_every_section_renders_with_its_cards_in_it(): void
+    {
+        // An empty section takes the "nothing to show" path, which is the one path that draws no
+        // card markup at all. Every hero slide, promo tile and FAQ row lives past that branch.
+        $failures = [];
+
+        foreach ($this->homeTypes() as $type) {
+            $blockType = app(SectionRegistry::class)->defaultBlockType($type);
+            if ($blockType === null) {
+                continue;
+            }
+
+            $section = $this->only($type);
+            ThemeBlock::create([
+                'theme_section_id' => $section->id, 'type' => $blockType, 'sort_order' => 1,
+                'is_visible' => true,
+                // Enough for any card shape: a title, an image, a link, and the before/after pair.
+                'settings' => [
+                    'title' => 'Ramadan', 'subtitle' => 'Up to 40%', 'label' => 'Vitamins',
+                    'body' => 'Delivered the same day.', 'image' => '/storage/banner/a.webp',
+                    'after' => '/storage/banner/b.webp', 'link' => '/products',
+                    'button_text' => 'Shop', 'value' => '4.9', 'icon' => 'truck',
+                ],
+            ]);
+            $this->flush();
+
+            try {
+                $html = view('theme-sections.home')->render();
+                $this->assertNotSame('', trim($html), $type);
+            } catch (\Throwable $exception) {
+                $failures[$type] = $exception->getMessage();
+            }
+        }
+
+        $this->assertSame([], $failures, 'these section types throw once they have a card in them');
+    }
+
+    public function test_the_header_and_footer_pages_render_too(): void
+    {
+        // Same renderer, two more pages. A section type that only ever appears in the footer would
+        // otherwise be covered by nothing at all.
+        $registry = app(SectionRegistry::class);
+
+        foreach (['header', 'footer'] as $page) {
+            $types = array_keys(array_filter(
+                $registry->types(),
+                static fn (array $definition) => in_array($page, $definition['pages'], true),
+            ));
+
+            ThemeSection::where('theme_version_id', $this->version->id)->delete();
+            foreach ($types as $index => $type) {
+                ThemeSection::create([
+                    'theme_version_id' => $this->version->id, 'page' => $page, 'type' => $type,
+                    'sort_order' => $index + 1, 'is_visible' => true, 'settings' => [],
+                ]);
+            }
+            $this->flush();
+
+            view('theme-sections.' . $page)->render();
+        }
+
+        // Reached only if neither page threw; the render itself is the assertion.
+        $this->assertTrue(true);
+    }
+
+    public function test_no_partial_reads_a_name_blade_reserves(): void
+    {
+        // $__data cost an outage. The others in this list cost the same way: Blade either strips
+        // them at the include boundary or overwrites them inside the view, so a section reading one
+        // gets something other than what the shell put there.
+        $reserved = ['$__data', '$__path', '$__currentLoopData'];
+
+        foreach (glob(resource_path('views/theme-sections/**/*.blade.php'), GLOB_BRACE)
+                 + glob(resource_path('views/theme-sections/*.blade.php')) as $view) {
+            foreach ($reserved as $name) {
+                $this->assertStringNotContainsString(
+                    $name,
+                    file_get_contents($view),
+                    basename($view) . ' reads ' . $name . ', which belongs to Blade',
+                );
+            }
+        }
+    }
+
     public function test_a_page_of_every_section_at_once_still_renders(): void
     {
         // Types interact: one section leaves state behind for the next, and the shell resolves data
@@ -147,14 +232,17 @@ class StorefrontRendersTest extends TestCase
         ));
     }
 
-    private function only(string $type): void
+    private function only(string $type): ThemeSection
     {
         ThemeSection::where('theme_version_id', $this->version->id)->delete();
-        ThemeSection::create([
+
+        $section = ThemeSection::create([
             'theme_version_id' => $this->version->id, 'page' => 'home', 'type' => $type,
             'sort_order' => 1, 'is_visible' => true, 'settings' => [],
         ]);
         $this->flush();
+
+        return $section;
     }
 
     private function flush(): void
