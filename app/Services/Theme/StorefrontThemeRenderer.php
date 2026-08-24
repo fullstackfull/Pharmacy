@@ -124,6 +124,7 @@ class StorefrontThemeRenderer
             // narrower audience and therefore the safe assumption.
             authenticated: $this->customerIsSignedIn(),
             locale: app()->getLocale(),
+            segments: $this->viewerSegments(),
         );
 
         $runnable = array_values(array_filter(
@@ -196,6 +197,25 @@ class StorefrontThemeRenderer
             return auth('customer')->check();
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * The signed-in customer's segments, or none — resolution failing costs the personalised
+     * sections, never the page (§44).
+     *
+     * @return array<int, string>
+     */
+    private function viewerSegments(): array
+    {
+        try {
+            $customerId = auth('customer')->id();
+
+            return $customerId
+                ? app(\App\Services\Commerce\SegmentResolver::class)->segmentsFor((int) $customerId)
+                : [];
+        } catch (\Throwable) {
+            return [];
         }
     }
 

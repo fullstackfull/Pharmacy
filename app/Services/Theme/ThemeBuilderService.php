@@ -129,7 +129,12 @@ class ThemeBuilderService
             $rules['platforms'] ?? null,
             [...\App\Services\Theme\ViewerContext::PLATFORMS, ...\App\Services\Theme\ViewerContext::DEVICES],
         );
-        $section->audience = $this->ruleTokens($rules['audience'] ?? null, \App\Services\Theme\ViewerContext::AUDIENCES);
+        // Audience admits guest/customer AND live segment keys (Phase 3.4) — one union list,
+        // validated against what actually exists so a typo cannot restrict a section to nobody.
+        $section->audience = $this->ruleTokens($rules['audience'] ?? null, [
+            ...\App\Services\Theme\ViewerContext::AUDIENCES,
+            ...app(\App\Services\Commerce\SegmentResolver::class)->keys(),
+        ]);
 
         // Only written where the column exists — the channels migration is newer than the rest of
         // the delivery rules, and a builder running ahead of it must still save the others.

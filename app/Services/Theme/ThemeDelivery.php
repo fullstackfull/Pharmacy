@@ -523,6 +523,10 @@ class ThemeDelivery
             $viewer->platform,
             $viewer->device,
             $viewer->audience(),
+            // The matched segment SET joins the key (§64–65): what varies the response must vary
+            // the cache. Bounded by the segments actually defined, not by customers — two repeat
+            // buyers share one entry, and no customer data is ever IN a shared value.
+            implode(',', $viewer->segments),
             // Text is folded to the request's language before caching, so the language is part of
             // what makes two deliveries the same delivery. Without it, the first shopper's locale
             // would warm the cache for everybody's.

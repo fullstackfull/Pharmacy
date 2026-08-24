@@ -14,6 +14,10 @@
            class="{{ ($current ?? '') === 'campaigns' ? 'is-active' : '' }}">
             <i class="fi fi-rr-megaphone"></i> {{ translate('campaigns') }}
         </a>
+        <a href="{{ route('admin.commerce.segments.index') }}"
+           class="{{ ($current ?? '') === 'segments' ? 'is-active' : '' }}">
+            <i class="fi fi-rr-users"></i> {{ translate('segments') }}
+        </a>
         <a href="{{ route('admin.app-builder.index') }}">
             <i class="fi fi-rr-layout-fluid"></i> {{ translate('app_builder') }}
         </a>

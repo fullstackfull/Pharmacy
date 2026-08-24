@@ -46,6 +46,10 @@ final class ViewerContext
         // client that predates channels does — and what keeps this constructor's old call sites
         // correct without touching them.
         public readonly ?string $channel = null,
+        // The customer segments this viewer belongs to (Phase 3.4). Empty for guests, for
+        // unresolvable customers, and everywhere the commerce engine is off — all three of which
+        // mean the same thing downstream: the base, non-personalised experience.
+        public readonly array $segments = [],
     ) {
     }
 
@@ -83,7 +87,27 @@ final class ViewerContext
             uiEngineVersion: $engine,
             supportedComponents: $components,
             channel: $channel,
+            segments: self::resolvedSegments(),
         );
+    }
+
+    /**
+     * The authenticated customer's segments, or none — never an error. Personalisation failing
+     * must cost the personalised sections, not the page (§44).
+     *
+     * @return array<int, string>
+     */
+    private static function resolvedSegments(): array
+    {
+        try {
+            $customerId = auth('api')->id();
+
+            return $customerId
+                ? app(\App\Services\Commerce\SegmentResolver::class)->segmentsFor((int) $customerId)
+                : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

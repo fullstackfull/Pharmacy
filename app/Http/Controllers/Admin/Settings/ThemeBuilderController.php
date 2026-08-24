@@ -110,6 +110,11 @@ class ThemeBuilderController extends BaseController
             // The languages a text field can carry an override for — every live language except
             // the default, whose text is the base value itself.
             'localeOverrides' => \App\Services\Theme\LocalisedSettings::overridable(),
+            // Live customer segments, offered beside guest/customer in the Visibility tab.
+            'segmentAudiences' => \Illuminate\Support\Facades\Schema::hasTable('customer_segments')
+                ? \App\Models\CustomerSegment::query()->where('status', true)->orderBy('name')
+                    ->pluck('name', 'key')->all()
+                : [],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
             'uploadAccept'  => '.' . implode(',.', ThemeAssetService::acceptedExtensions()),
         ]);

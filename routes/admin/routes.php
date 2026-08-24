@@ -82,6 +82,7 @@ use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Commerce\CampaignController;
+use App\Http\Controllers\Admin\Commerce\SegmentController;
 use App\Http\Controllers\Admin\Commerce\CollectionController;
 use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
@@ -1426,6 +1427,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('campaigns/store', 'store')->name('campaigns.store');
             Route::post('campaigns/update', 'update')->name('campaigns.update');
             Route::post('campaigns/delete', 'delete')->name('campaigns.delete');
+        });
+        Route::controller(SegmentController::class)->group(function () {
+            Route::get('segments', 'index')->name('segments.index');
+            Route::post('segments/store', 'store')->name('segments.store');
+            Route::post('segments/update', 'update')->name('segments.update');
+            Route::post('segments/delete', 'delete')->name('segments.delete');
         });
     });
 
