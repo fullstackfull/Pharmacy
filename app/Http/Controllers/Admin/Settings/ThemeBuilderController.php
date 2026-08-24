@@ -110,6 +110,11 @@ class ThemeBuilderController extends BaseController
             // The languages a text field can carry an override for — every live language except
             // the default, whose text is the base value itself.
             'localeOverrides' => \App\Services\Theme\LocalisedSettings::overridable(),
+            // Live customer segments, offered beside guest/customer in the Visibility tab.
+            'segmentAudiences' => \Illuminate\Support\Facades\Schema::hasTable('customer_segments')
+                ? \App\Models\CustomerSegment::query()->where('status', true)->orderBy('name')
+                    ->pluck('name', 'key')->all()
+                : [],
             'editable'      => $version ? $this->builder->isEditable($version) : false,
             'uploadAccept'  => '.' . implode(',.', ThemeAssetService::acceptedExtensions()),
         ]);
@@ -395,6 +400,19 @@ class ThemeBuilderController extends BaseController
                     'value' => $deal->id,
                     'label' => $deal->title . ' · ' . ($deal->status ? translate('active') : translate('inactive')),
                 ]),
+            // Dynamic collections a section can be sourced from (Phase 3.1). Live ones only:
+            // offering a disabled collection would compose a section that renders nothing.
+            'product_collection' => !app(\App\Services\Commerce\CollectionResolver::class)->ready()
+                ? collect()
+                : \App\Models\ProductCollection::query()->live()
+                    ->when($term !== '', fn ($query) => $query->where('name', 'like', $like))
+                    ->orderBy('name')
+                    ->take($limit)->get(['id', 'name', 'sort_by'])
+                    ->map(fn ($row) => [
+                        'value' => $row->id,
+                        'label' => $row->name . ' · ' . translate($row->sort_by),
+                    ]),
+
             // Pages the merchant composed. Valued by slug rather than id: the slug is what both
             // clients ask for, and what survives an export and an import. Scoped to the channel
             // being composed, so an app-only page — the kind the App Builder creates — is offered

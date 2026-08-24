@@ -46,6 +46,15 @@ final class ViewerContext
         // client that predates channels does — and what keeps this constructor's old call sites
         // correct without touching them.
         public readonly ?string $channel = null,
+        // The customer segments this viewer belongs to (Phase 3.4). Empty for guests, for
+        // unresolvable customers, and everywhere the commerce engine is off — all three of which
+        // mean the same thing downstream: the base, non-personalised experience.
+        public readonly array $segments = [],
+        // A stable identity for experiment bucketing (Phase 3.5): the customer id when signed
+        // in (survives devices), else the analytics visitor id (the SAME identity the telemetry
+        // already uses — §47 says use existing identifiers, not a third population). Null means
+        // control, deterministically.
+        public readonly ?string $experimentSubject = null,
     ) {
     }
 
@@ -83,7 +92,47 @@ final class ViewerContext
             uiEngineVersion: $engine,
             supportedComponents: $components,
             channel: $channel,
+            segments: self::resolvedSegments(),
+            experimentSubject: self::resolvedSubject($request),
         );
+    }
+
+    /**
+     * @see \App\Services\Commerce\ExperimentResolver — null yields control, never randomness.
+     */
+    private static function resolvedSubject(Request $request): ?string
+    {
+        try {
+            $customerId = auth('api')->id();
+            if ($customerId) {
+                return 'c' . $customerId;
+            }
+
+            $visitorId = app(\App\Services\Analytics\VisitorContext::class)->visitorId($request);
+
+            return $visitorId !== null ? 'v' . $visitorId : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The authenticated customer's segments, or none — never an error. Personalisation failing
+     * must cost the personalised sections, not the page (§44).
+     *
+     * @return array<int, string>
+     */
+    private static function resolvedSegments(): array
+    {
+        try {
+            $customerId = auth('api')->id();
+
+            return $customerId
+                ? app(\App\Services\Commerce\SegmentResolver::class)->segmentsFor((int) $customerId)
+                : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

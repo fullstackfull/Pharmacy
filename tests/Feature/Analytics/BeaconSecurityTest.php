@@ -65,6 +65,28 @@ class BeaconSecurityTest extends TestCase
         $this->assertTrue(AnalyticsEvent::isClientAllowed(AnalyticsEvent::PRODUCT_LIST_VIEWED));
     }
 
+    public function test_an_impression_keeps_its_experiment_and_campaign_identity(): void
+    {
+        // The exposure pipeline's narrowest gate: the tag and the overlay id must pass, or every
+        // experiment is measured at zero and every campaign impression is anonymous.
+        $clean = app(\App\Services\Analytics\Support\ClientEventIngest::class)->clean([
+            'entity_type' => 'theme_section',
+            'entity_id'   => 'campaign-12',
+            'properties'  => ['experiment' => 'hero-copy:b', 'evil' => 'x'],
+        ]);
+
+        $this->assertSame('campaign-12', $clean['entity_id']);
+        $this->assertSame('hero-copy:b', $clean['properties']['experiment']);
+        $this->assertArrayNotHasKey('evil', $clean['properties'], 'unknown properties stay out');
+
+        // And the id gate still refuses anything that is not a row id or the one named overlay
+        // shape — probing strings die here, exactly as before.
+        $probe = app(\App\Services\Analytics\Support\ClientEventIngest::class)->clean([
+            'entity_id' => 'campaign-12; drop table',
+        ]);
+        $this->assertArrayNotHasKey('entity_id', $probe);
+    }
+
     public function test_the_javascript_allow_list_matches_the_server_one(): void
     {
         // A browser-side list that drifts from the server's produces events that are sent on every

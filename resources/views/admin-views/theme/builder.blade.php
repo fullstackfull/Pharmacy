@@ -836,6 +836,9 @@
 
             // code => display name for every live language except the default. A text field
             // renders one extra input per entry; empty list, no extra inputs, exactly as before.
+            // key => name of every live customer segment; ticks join the audience token list.
+            var SEGMENT_AUDIENCES = @json($segmentAudiences ?? []);
+
             var LOCALE_OVERRIDES = (function () {
                 try {
                     var parsed = JSON.parse(root.dataset.localeOverrides || '{}');
@@ -2095,6 +2098,9 @@
 
                 group(T.deliveryAudience, T.deliveryAudienceHint, function (wrap) {
                     [['guest', T.audienceGuest], ['customer', T.audienceCustomer]]
+                        .concat(Object.keys(SEGMENT_AUDIENCES).map(function (key) {
+                            return [key, SEGMENT_AUDIENCES[key]];
+                        }))
                         .forEach(function (pair) { wrap.appendChild(check('audience', pair[0], pair[1], d.audience || [])); });
                 });
 

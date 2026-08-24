@@ -119,6 +119,11 @@ class ThemeSourceMap
 
             'manual' => $this->api('/api/v1/products/by-ids', ['ids' => implode(',', $source->ids)]),
 
+            // A dynamic collection (Phase 3.1). The endpoint answers in the same product-list
+            // dialect as every route above, which is what lets every installed build render a
+            // collection the day it is composed — the hint is new, the contract is not.
+            'collection' => $this->api('/api/v1/products/theme-collection', $paged + ['id' => (int) $source->id]),
+
             default => $this->api('/api/v1/products/featured', $paged),
         };
     }

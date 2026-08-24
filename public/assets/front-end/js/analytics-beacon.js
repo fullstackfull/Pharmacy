@@ -51,7 +51,7 @@
             var event = {name: name};
             if (payload) {
                 if (payload.entityType) event.entity_type = String(payload.entityType).slice(0, 24);
-                if (payload.entityId) event.entity_id = String(payload.entityId).slice(0, 18);
+                if (payload.entityId) event.entity_id = String(payload.entityId).slice(0, 64);
                 if (payload.properties) event.properties = payload.properties;
                 if (payload.dedupeKey) event.dedupe_key = String(payload.dedupeKey).slice(0, 64);
             }
@@ -169,10 +169,17 @@
                     var element = entry.target;
                     seen.unobserve(element);
 
-                    push(element.getAttribute('data-analytics-view'), {
+                    var viewPayload = {
                         entityType: element.getAttribute('data-analytics-type'),
                         entityId: element.getAttribute('data-analytics-id')
-                    });
+                    };
+                    // A section under experiment says which variant was on screen, so exposure
+                    // per variant is measurable from the same impressions everything else uses.
+                    var experiment = element.getAttribute('data-analytics-experiment');
+                    if (experiment) {
+                        viewPayload.properties = {experiment: experiment};
+                    }
+                    push(element.getAttribute('data-analytics-view'), viewPayload);
 
                     // No dedupe_key on purpose. An explicit key is hashed without the visitor, so
                     // it is unique across the whole shop — right for an order, and for an

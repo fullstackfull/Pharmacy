@@ -129,7 +129,21 @@ class ThemeBuilderService
             $rules['platforms'] ?? null,
             [...\App\Services\Theme\ViewerContext::PLATFORMS, ...\App\Services\Theme\ViewerContext::DEVICES],
         );
-        $section->audience = $this->ruleTokens($rules['audience'] ?? null, \App\Services\Theme\ViewerContext::AUDIENCES);
+        // Audience admits guest/customer AND segment keys (Phase 3.4) — one union list. Validated
+        // against every key ON RECORD (allKeys, not the serving list): a save made while the
+        // commerce engine is off, or before its migration ran, must never strip a segment token
+        // and silently widen the section to everyone. Tokens the section already carried are
+        // preserved for the same reason — dropping what this save cannot re-validate is a
+        // decision, and it is not this method's to make.
+        $previous = array_filter(
+            is_array($section->getOriginal('audience')) ? $section->getOriginal('audience') : [],
+            'is_string',
+        );
+        $section->audience = $this->ruleTokens($rules['audience'] ?? null, array_unique([
+            ...\App\Services\Theme\ViewerContext::AUDIENCES,
+            ...app(\App\Services\Commerce\SegmentResolver::class)->allKeys(),
+            ...$previous,
+        ]));
 
         // Only written where the column exists — the channels migration is newer than the rest of
         // the delivery rules, and a builder running ahead of it must still save the others.

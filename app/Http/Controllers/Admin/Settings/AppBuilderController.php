@@ -96,11 +96,14 @@ class AppBuilderController extends BaseController
     public function media(Request $request): View
     {
         $theme = $this->activeTheme();
+        $assetsReady = Schema::hasTable('theme_assets');
 
         return view('admin-views.app-builder.media', [
             'channel'      => $this->channel($request),
-            'theme'        => $theme?->load('assets'),
-            'assetsReady'  => Schema::hasTable('theme_assets'),
+            // The relation loads only when its table exists — this screen is where a merchant
+            // learns the table is missing, and it must not 500 while telling them.
+            'theme'        => $assetsReady ? $theme?->load('assets') : $theme,
+            'assetsReady'  => $assetsReady,
             'maxAssetSize' => ThemeAssetService::maxBytes(),
             'editable'     => $this->permissions->canEdit(),
         ]);
@@ -119,11 +122,15 @@ class AppBuilderController extends BaseController
         $exportable = null;
 
         if ($theme !== null) {
-            $exportable = ThemeVersion::query()
-                ->where('theme_id', $theme->id)
-                ->where('status', ThemeVersion::STATUS_PUBLISHED)
-                ->orderByDesc('id')
-                ->first() ?? $this->latestDraft($theme);
+            try {
+                $exportable = ThemeVersion::query()
+                    ->where('theme_id', $theme->id)
+                    ->where('status', ThemeVersion::STATUS_PUBLISHED)
+                    ->orderByDesc('id')
+                    ->first() ?? $this->latestDraft($theme);
+            } catch (\Throwable) {
+                $exportable = null;
+            }
         }
 
         return view('admin-views.app-builder.templates', [
@@ -133,6 +140,106 @@ class AppBuilderController extends BaseController
             'exportable' => $exportable,
             'editable'   => $this->permissions->canEdit(),
         ]);
+    }
+
+    /**
+     * Experience Health (Phase 3.7–3.8): what is quietly wrong, why a section is or is not
+     * showing, and what WOULD serve at another time or to another kind of shopper.
+     *
+     * Evaluations only — the same resolvers the serve path runs, asked hypothetical questions
+     * (§59–62). Nothing here mutates anything, so it is safe at any hour on a live shop.
+     */
+    public function health(Request $request): View
+    {
+        $experienceHealth = app(\App\Services\Commerce\ExperienceHealth::class);
+        $campaigns = app(\App\Services\Commerce\CampaignResolver::class);
+
+        // Time-travel (§61): evaluate campaign windows as of a chosen moment. Parse failures
+        // simply mean "now" — a bad date must not take the health page down.
+        $at = null;
+        if (is_string($request->get('at')) && trim($request->get('at')) !== '') {
+            try {
+                $at = \Illuminate\Support\Carbon::parse($request->get('at'));
+            } catch (\Throwable) {
+                $at = null;
+            }
+        }
+
+        $campaignNames = \Illuminate\Support\Facades\Schema::hasTable('experience_campaigns')
+            ? \App\Models\ExperienceCampaign::query()->pluck('name', 'id')->all()
+            : [];
+
+        // Segment preview (§62): a synthetic viewer carrying one segment key — never a real
+        // customer, never a mutation.
+        $asSegment = is_string($request->get('as_segment')) ? trim($request->get('as_segment')) : '';
+        $segmentPreview = null;
+        if ($asSegment !== '') {
+            $viewer = new \App\Services\Theme\ViewerContext(
+                authenticated: true,
+                segments: [$asSegment],
+            );
+            $visibility = app(\App\Services\Theme\SectionVisibility::class);
+            $segmentPreview = collect($this->publishedHomeSections())
+                ->map(fn (array $section) => [
+                    'label'  => $section['type'] . ' · #' . $section['sort_order'],
+                    'shown'  => $visibility->passes($section, $viewer),
+                    'reason' => $visibility->reasonFor($section, $viewer),
+                ])
+                ->all();
+        }
+
+        return view('admin-views.app-builder.health', [
+            'channel'        => $this->channel($request),
+            'findings'       => $experienceHealth->findings(),
+            'infra'          => $this->readiness->checks(),
+            'overrides'      => $campaigns->overridesFor('home', $at),
+            'campaignNames'  => $campaignNames,
+            'at'             => $at,
+            'experiments'    => \Illuminate\Support\Facades\Schema::hasTable('experience_experiments')
+                ? \App\Models\ExperienceExperiment::query()
+                    ->where('status', \App\Models\ExperienceExperiment::STATUS_RUNNING)->get()
+                : collect(),
+            'segments'       => \Illuminate\Support\Facades\Schema::hasTable('customer_segments')
+                ? \App\Models\CustomerSegment::query()->where('status', true)->pluck('name', 'key')->all()
+                : [],
+            'asSegment'      => $asSegment,
+            'segmentPreview' => $segmentPreview,
+        ]);
+    }
+
+    /** @return array<int, array<string, mixed>> the published home, as visibility sees it */
+    private function publishedHomeSections(): array
+    {
+        try {
+            $theme = $this->activeTheme();
+            $versionId = $theme === null ? null : ThemeVersion::query()
+                ->where('theme_id', $theme->id)
+                ->where('status', ThemeVersion::STATUS_PUBLISHED)
+                ->value('id');
+
+            if ($versionId === null) {
+                return [];
+            }
+
+            return \App\Models\ThemeSection::query()
+                ->where('theme_version_id', $versionId)
+                ->where('page', 'home')
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn ($section) => [
+                    'type'       => $section->type,
+                    'sort_order' => $section->sort_order,
+                    'is_visible' => (bool) $section->is_visible,
+                    'settings'   => $section->settings ?? [],
+                    'starts_at'  => $section->starts_at,
+                    'ends_at'    => $section->ends_at,
+                    'platforms'  => $section->platforms,
+                    'audience'   => $section->audience,
+                ])
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function storePage(Request $request): RedirectResponse
@@ -236,11 +343,16 @@ class AppBuilderController extends BaseController
 
     private function latestDraft(Theme $theme): ?ThemeVersion
     {
-        return ThemeVersion::query()
-            ->where('theme_id', $theme->id)
-            ->draft()
-            ->orderByDesc('id')
-            ->first();
+        try {
+            return ThemeVersion::query()
+                ->where('theme_id', $theme->id)
+                ->draft()
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable) {
+            // An unmigrated install has no drafts; the screens reporting that must still open.
+            return null;
+        }
     }
 
     /** Editing pages is editing the experience, and is gated on the same permission. */

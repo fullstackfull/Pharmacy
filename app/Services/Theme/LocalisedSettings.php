@@ -18,7 +18,15 @@ namespace App\Services\Theme;
  */
 class LocalisedSettings
 {
-    /** @var array<int, string>|null memoised for the request: read once, used per section */
+    /**
+     * Memoised list of live locale codes. Static, so it outlives the request in long-running
+     * workers — which is fine for a value that changes when an admin edits languages (rare, and
+     * the language save path calls {@see forget()}), and would NOT be fine for a failure: an
+     * empty read is never memoised, so a transient config blip cannot switch localisation off
+     * for the life of the worker.
+     *
+     * @var array<int, string>|null
+     */
     private static ?array $activeLocales = null;
 
     /**
@@ -30,8 +38,29 @@ class LocalisedSettings
      * @param array<string, mixed> $settings
      * @return array<string, mixed>
      */
-    public static function collapse(array $settings, ?string $locale): array
+    public static function collapse(array $settings, ?string $locale, ?array $overrides = null): array
     {
+        // Schema-aware path: the caller names exactly which keys are locale overrides (from
+        // SectionRegistry::localeOverrideKeys), so a real setting whose name merely ends in a
+        // language code — `source_id` beside Indonesian's `id` — can never be mistaken for one.
+        if ($overrides !== null) {
+            foreach ($overrides as $key => [$base, $code]) {
+                if (!array_key_exists($key, $settings)) {
+                    continue;
+                }
+
+                $value = $settings[$key];
+
+                if ($code === $locale && is_string($value) && trim($value) !== '') {
+                    $settings[$base] = $value;
+                }
+
+                unset($settings[$key]);
+            }
+
+            return $settings;
+        }
+
         $codes = self::activeLocales();
         if ($codes === []) {
             return $settings;
@@ -103,10 +132,22 @@ class LocalisedSettings
     /** @return array<int, string> */
     public static function activeLocales(): array
     {
-        return self::$activeLocales ??= array_values(array_filter(array_map(
+        if (self::$activeLocales !== null) {
+            return self::$activeLocales;
+        }
+
+        $codes = array_values(array_filter(array_map(
             static fn (array $language) => (string) ($language['code'] ?? ''),
             self::languages(),
         ), static fn (string $code) => $code !== ''));
+
+        // An empty answer is indistinguishable from a failed read, and memoising a failure would
+        // disable collapse — leaking override keys into payloads — until the worker restarts.
+        if ($codes !== []) {
+            self::$activeLocales = $codes;
+        }
+
+        return $codes;
     }
 
     /** Tests swap languages mid-process; a memo that outlives the shop's language list lies. */

@@ -72,7 +72,7 @@ class ClientEventIngest
     {
         $properties = [];
 
-        foreach (['position', 'variant', 'list', 'depth', 'section'] as $key) {
+        foreach (['position', 'variant', 'list', 'depth', 'section', 'experiment'] as $key) {
             if (isset($event['properties'][$key]) && is_scalar($event['properties'][$key])) {
                 $properties[$key] = mb_substr((string) $event['properties'][$key], 0, 64);
             }
@@ -82,9 +82,11 @@ class ClientEventIngest
             'entity_type' => isset($event['entity_type']) && is_string($event['entity_type'])
                 ? mb_substr($event['entity_type'], 0, 24)
                 : null,
-            // Ids are coerced to digits: an entity id is a database key, and anything else in that
-            // column is somebody probing.
-            'entity_id' => isset($event['entity_id']) && preg_match('/^\d{1,18}$/', (string) $event['entity_id'])
+            // An entity id is a database key — digits — with one named exception: campaign
+            // overlay sections report as campaign-{id}, the only non-numeric identity the theme
+            // deliberately emits. Anything else in that column is somebody probing.
+            'entity_id' => isset($event['entity_id'])
+                && preg_match('/^(?:\d{1,18}|campaign-\d{1,18})$/', (string) $event['entity_id'])
                 ? (string) $event['entity_id']
                 : null,
             'path' => isset($event['path']) && is_string($event['path']) ? mb_substr($event['path'], 0, 300) : null,

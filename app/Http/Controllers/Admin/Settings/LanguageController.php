@@ -99,6 +99,9 @@ class LanguageController extends BaseController
 
     public function add(LanguageRequest $request, LanguageService $languageService): RedirectResponse
     {
+        // The theme's per-field localisation memoises the live language list; a language change
+        // must reach it now, not at the next worker restart.
+        \App\Services\Theme\LocalisedSettings::forget();
         $language = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'language']);
         $dataArray = $languageService->getAddData(request: $request, language: $language);
         $this->businessSettingRepo->updateOrInsert(type: 'language', value: $dataArray['languages']);
@@ -111,6 +114,9 @@ class LanguageController extends BaseController
 
     public function updateStatus(Request $request, LanguageService $languageService): JsonResponse
     {
+        // The theme's per-field localisation memoises the live language list; a language change
+        // must reach it now, not at the next worker restart.
+        \App\Services\Theme\LocalisedSettings::forget();
         $language = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'language']);
         $languageArray = $languageService->getStatusData(request: $request, language: $language);
         clearWebConfigCacheKeys();
@@ -124,6 +130,9 @@ class LanguageController extends BaseController
 
     public function updateDefaultStatus(Request $request, LanguageService $languageService): RedirectResponse
     {
+        // The theme's per-field localisation memoises the live language list; a language change
+        // must reach it now, not at the next worker restart.
+        \App\Services\Theme\LocalisedSettings::forget();
         $language = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'language']);
         $languageArray = $languageService->getDefaultData(request: $request, language: $language);
         $this->businessSettingRepo->updateOrInsert(type: 'language', value: $languageArray);
@@ -134,6 +143,9 @@ class LanguageController extends BaseController
 
     public function update(LanguageRequest $request, LanguageService $languageService): RedirectResponse
     {
+        // The theme's per-field localisation memoises the live language list; a language change
+        // must reach it now, not at the next worker restart.
+        \App\Services\Theme\LocalisedSettings::forget();
         $language = $this->businessSettingRepo->getFirstWhere(params: ['type' => 'language']);
         $languageArray = $languageService->getUpdateData(request: $request, language: $language);
         $this->businessSettingRepo->updateOrInsert(type: 'language', value: $languageArray);

@@ -146,6 +146,19 @@ class PublishValidator
                 'it_will_appear_on_its_own_once_there_is_something_to_show');
         }
 
+        // A section sourced from a collection that no longer exists (or was switched off) would
+        // fall into the generic "nothing to show" warning above — true, but useless: the fix is
+        // not "add products", it is "this reference is broken". Say so by name.
+        $source = ContentSource::fromSettings($section->settings ?? []);
+        if ($source->kind === 'collection' && $source->id !== null) {
+            $resolver = app(\App\Services\Commerce\CollectionResolver::class);
+            if ($resolver->ready() && $resolver->enabled() && $resolver->find($source->id) === null) {
+                $findings[] = $this->finding($section, self::WARNING,
+                    'the_collection_this_section_is_sourced_from_was_deleted_or_disabled',
+                    'pick_another_collection_or_another_source');
+            }
+        }
+
         if (!$this->capabilities->isAppSafe($section->type)) {
             $findings[] = $this->finding($section, self::WARNING,
                 $this->capabilities->exclusionReason($section->type) ?? 'no_app_renderer_exists_for_this_section',

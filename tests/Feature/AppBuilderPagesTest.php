@@ -174,10 +174,11 @@ class AppBuilderPagesTest extends TestCase
         $this->assertSame('spacer', $payload['sections'][0]['type'] ?? null);
     }
 
-    public function test_a_page_that_does_not_exist_falls_back_to_home(): void
+    public function test_an_unknown_page_is_a_404_and_malformed_input_still_falls_back(): void
     {
-        // A public endpoint: a typo, a stale app build asking for a page that was removed, or
-        // `?page[]=x` must be an ordinary home page rather than an error.
+        // Answering an unknown slug with the HOME payload put the home page inside the app's
+        // "Offers" screen — a well-formed slug this channel cannot be served is honestly gone.
+        // Malformed input (`?page[]=x`) stays noise, not a request for a page: ordinary home.
         $version = ThemeVersion::create([
             'theme_id' => $this->theme->id, 'status' => ThemeVersion::STATUS_PUBLISHED, 'revision' => 1,
         ]);
@@ -186,7 +187,7 @@ class AppBuilderPagesTest extends TestCase
             'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 24],
         ]);
 
-        $this->assertSame('home', $this->getJson('/api/v1/theme/home?page=nowhere')->assertOk()->json('page'));
+        $this->getJson('/api/v1/theme/home?page=nowhere')->assertNotFound();
         $this->assertSame('home', $this->getJson('/api/v1/theme/home?page[]=x')->assertOk()->json('page'));
     }
 
@@ -232,11 +233,7 @@ class AppBuilderPagesTest extends TestCase
             'sort_order' => 1, 'is_visible' => true, 'settings' => ['height' => 24],
         ]);
 
-        $this->assertSame(
-            'home',
-            $this->getJson('/api/v1/theme/home?page=offers')->assertOk()->json('page'),
-            'a page turned off is a page the app cannot ask for',
-        );
+        $this->getJson('/api/v1/theme/home?page=offers')->assertNotFound();
     }
 
     public function test_the_link_picker_offers_a_channels_own_destinations(): void

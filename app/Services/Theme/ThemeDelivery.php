@@ -50,7 +50,7 @@ class ThemeDelivery
      * Settings keys whose value is an image path a client with no origin must be able to fetch.
      * Mirrors ThemeSectionController's list, which this service now backs.
      */
-    private const IMAGE_KEYS = ['image', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image', 'after'];
 
     /**
      * The cheap question: what is live, and is it what you already hold.
@@ -82,9 +82,16 @@ class ThemeDelivery
                     return $empty;
                 }
 
+                // Every live campaign on every page: a campaign on a custom page must move this
+                // checksum too, or apps holding that page never learn it changed.
+                $stamp = $this->campaignStamp(null);
+
                 return [
                     'revision' => (int) ($version->revision ?: 1),
-                    'checksum' => $version->checksum,
+                    // A live campaign folds into the checksum: the app's "did anything change"
+                    // question must answer YES when an overlay opened or closed, and the stored
+                    // revision knows nothing about overlays.
+                    'checksum' => $stamp === null ? $version->checksum : $version->checksum . '-' . $stamp,
                     'schema_version' => ComponentCapabilityRegistry::SCHEMA_VERSION,
                     'engine_version' => ComponentCapabilityRegistry::CURRENT_ENGINE_VERSION,
                     'published_at' => $version->published_at?->toIso8601String(),
@@ -113,10 +120,16 @@ class ThemeDelivery
         }
 
         try {
+            // Experiment assignments are read ONCE and feed both the cache key and the build:
+            // two separate reads could disagree across a status flip and cache one variant's
+            // content under another's key for the whole TTL.
+            $assignments = $this->assignments($page, $viewer);
+
             return Cache::remember(
-                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer),
+                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer)
+                    . $this->campaignKeyPart($page) . $this->experimentKeyPart($assignments),
                 self::CACHE_TTL,
-                fn () => $this->build($page, $viewer),
+                fn () => $this->build($page, $viewer, null, $assignments),
             );
         } catch (\Throwable) {
             return $this->emptyPayload($page);
@@ -186,7 +199,7 @@ class ThemeDelivery
     /**
      * @return array<string, mixed>
      */
-    private function build(string $page, ViewerContext $viewer, ?ThemeVersion $version = null): array
+    private function build(string $page, ViewerContext $viewer, ?ThemeVersion $version = null, ?array $assignments = null): array
     {
         $version ??= $this->publishedVersion();
         if ($version === null) {
@@ -202,6 +215,12 @@ class ThemeDelivery
         $sections = [];
         $withheld = [];
 
+        // Experiment assignments for this viewer (Phase 3.5): a settings patch per targeted
+        // section uuid, resolved by payload() so the cache key and this content agree; the
+        // preview path passes none and resolves here. Empty on any failure — control is the
+        // answer to every problem (§48).
+        $assignments ??= $this->assignments($page, $viewer);
+
         foreach ($rows as $row) {
             $section = [
                 'is_visible' => (bool) $row->is_visible,
@@ -210,6 +229,9 @@ class ThemeDelivery
                 'ends_at'    => $row->ends_at,
                 'platforms'  => $row->platforms,
                 'audience'   => $row->audience,
+                // Without this key the channel rule was inert on this path: a section restricted
+                // to the web was still delivered to every app.
+                'channels'   => $row->channels ?? null,
             ];
 
             if (!$this->visibility->passes($section, $viewer)) {
@@ -226,7 +248,59 @@ class ThemeDelivery
                 continue;
             }
 
-            $sections[] = $this->present($row, $viewer);
+            $sections[] = $this->present($row, $viewer, $assignments);
+        }
+
+        // Campaign overlay (§33): live overrides join the delivered list through the same
+        // present() pipeline as stored sections — same normalisation, same action typing, same
+        // capability withholding. Any failure serves the base payload unchanged (§37).
+        try {
+            $campaigns = app(\App\Services\Commerce\CampaignResolver::class);
+            $overrides = $campaigns->overridesFor($page);
+
+            if ($overrides !== []) {
+                $sections = $campaigns->splice(
+                    $sections,
+                    $overrides,
+                    function (array $definition, int $campaignId) use ($viewer, &$withheld) {
+                        // A type this SERVER does not render is a corrupted row, whatever wrote
+                        // it; and a type this CLIENT cannot draw is withheld exactly as a stored
+                        // section of that type would be — named in the compatibility report, so
+                        // "the campaign shows on the web and not on my phone" has an answer.
+                        if (!isset($this->registry->types()[$definition['type'] ?? ''])) {
+                            return null;
+                        }
+                        if ($viewer->platform !== ViewerContext::PLATFORM_WEB
+                            && !$this->capabilities->clientHolds($definition['type'], $viewer)) {
+                            $withheld[$definition['type']] ??= $this->capabilities->exclusionReason($definition['type'])
+                                ?? 'this_build_does_not_report_support_for_this_section';
+                            return null;
+                        }
+
+                        $row = new ThemeSection();
+                        $row->forceFill([
+                            'uuid'     => 'campaign-' . $campaignId . '-' . $definition['type'],
+                            'type'     => $definition['type'],
+                            'settings' => $definition['settings'] ?? [],
+                            'is_visible' => true,
+                        ]);
+                        $row->setRelation('blocks', collect(array_map(function (array $block) {
+                            $model = new \App\Models\ThemeBlock();
+                            $model->forceFill([
+                                'type' => $block['type'], 'settings' => $block['settings'] ?? [],
+                                'is_visible' => true, 'sort_order' => 1,
+                            ]);
+
+                            return $model;
+                        }, $definition['blocks'] ?? [])));
+
+                        return $this->present($row, $viewer);
+                    },
+                    fn (array $section) => $section['type'] ?? null,
+                );
+            }
+        } catch (\Throwable) {
+            // The base payload is the answer whenever the overlay cannot be.
         }
 
         $payload = [
@@ -256,16 +330,16 @@ class ThemeDelivery
      *
      * @return array<string, mixed>
      */
-    private function present(ThemeSection $row, ViewerContext $viewer): array
+    private function present(ThemeSection $row, ViewerContext $viewer, array $assignments = []): array
     {
-        // Folded to the request's language before anything reads them: after this line, `title` IS
-        // the title for the `lang` header this client sent, and no override key survives to reach
-        // a payload. That is what keeps this invisible to installed builds — strings in, strings
-        // out, just the right ones.
-        $settings = LocalisedSettings::collapse(
-            $this->registry->normalizeSettings($row->type, $row->settings ?? []),
-            $viewer->locale,
-        );
+        // The experiment patch lands FIRST, then the language folds (Phase 3.5): a variant can
+        // carry its own per-locale text and have it localise like anything else, and no override
+        // key can ride a patch into a payload — after the collapse, `title` IS the title for the
+        // `lang` header this client sent, whatever wrote it.
+        [$settings, $experiment] = app(\App\Services\Commerce\ExperimentResolver::class)
+            ->patch($row->uuid, $this->registry->normalizeSettings($row->type, $row->settings ?? []), $assignments);
+
+        $settings = LocalisedSettings::collapse($settings, $viewer->locale, $this->registry->localeOverrideKeys($row->type));
 
         $blocks = $row->blocks
             ->where('is_visible', true)
@@ -276,6 +350,7 @@ class ThemeDelivery
                     LocalisedSettings::collapse(
                         $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
                         $viewer->locale,
+                        $this->registry->blockLocaleOverrideKeys($block->type),
                     ),
                     $viewer,
                 ),
@@ -328,11 +403,15 @@ class ThemeDelivery
                         'settings' => LocalisedSettings::collapse(
                             $this->registry->normalizeBlockSettings($b->type, $b->settings ?? []),
                             $viewer->locale,
+                            $this->registry->blockLocaleOverrideKeys($b->type),
                         ),
                     ])->values()->all()),
                 )
                 : null),
             'source'   => $this->sources->for($row->type, $settings, $blocks),
+            // Which experiment variant this section is, when it is one. Optional and additive:
+            // clients that ignore it render the variant they were given, which is the point.
+            'experiment' => $experiment,
             // Where the heading's "view all" leads, decided from what the section shows rather
             // than from its type alone — so a rail scoped to one category opens that category on
             // the phone, exactly as it does on the web. `none` when the section leads nowhere.
@@ -411,6 +490,15 @@ class ThemeDelivery
             }
         }
 
+        // A frames list is a list of images: the sections endpoint absolutizes it, and the two
+        // surfaces must hand the phone the same URLs.
+        if (isset($values['images']) && is_array($values['images'])) {
+            $values['images'] = array_map(
+                static fn ($image) => is_string($image) && str_starts_with($image, '/') ? url($image) : $image,
+                $values['images'],
+            );
+        }
+
         return $values;
     }
 
@@ -442,6 +530,53 @@ class ThemeDelivery
      * enumerate capability sets that nobody records. The capability list is sorted before hashing,
      * because two clients that report the same components in a different order hold the same page.
      */
+    /**
+     * This viewer's experiment assignments, or none — control answers every failure (§48).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function assignments(string $page, ViewerContext $viewer): array
+    {
+        try {
+            return app(\App\Services\Commerce\ExperimentResolver::class)
+                ->assignmentsFor($page, $viewer->experimentSubject);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /** The cache-key fragment the already-resolved assignments contribute. */
+    private function experimentKeyPart(array $assignments): string
+    {
+        if ($assignments === []) {
+            return '';
+        }
+
+        ksort($assignments);
+
+        return '_x' . substr(hash('crc32b', json_encode(array_map(
+            fn (array $assignment) => $assignment['variant'],
+            $assignments,
+        ))), 0, 8);
+    }
+
+    /** The cache-key fragment the live campaign set contributes; empty when none is live. */
+    private function campaignKeyPart(string $page): string
+    {
+        $stamp = $this->campaignStamp($page);
+
+        return $stamp === null ? '' : '_c' . $stamp;
+    }
+
+    private function campaignStamp(?string $page = 'home'): ?string
+    {
+        try {
+            return app(\App\Services\Commerce\CampaignResolver::class)->stamp($page);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function fingerprint(ViewerContext $viewer): string
     {
         $components = $viewer->supportedComponents;
@@ -452,6 +587,10 @@ class ThemeDelivery
             $viewer->platform,
             $viewer->device,
             $viewer->audience(),
+            // The matched segment SET joins the key (§64–65): what varies the response must vary
+            // the cache. Bounded by the segments actually defined, not by customers — two repeat
+            // buyers share one entry, and no customer data is ever IN a shared value.
+            implode(',', $viewer->segments),
             // Text is folded to the request's language before caching, so the language is part of
             // what makes two deliveries the same delivery. Without it, the first shopper's locale
             // would warm the cache for everybody's.

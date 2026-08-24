@@ -864,7 +864,9 @@
             $gap = (int) ($s['gap'] ?? 16);
             $cols = max(1, (int) ($s['columns'] ?? 4));
             $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
-            $sectionKey = 'tbs-' . ($__section['id'] ?? $loop->index);
+            // Campaign overlays have no row id; their uuid keeps the DOM id and the breakpoint
+            // CSS selector from colliding with a stored section that happens to share the index.
+            $sectionKey = 'tbs-' . ($__section['id'] ?? $__section['uuid'] ?? $loop->index);
             $height = isset($s['height']) && $s['height'] !== '' && $s['height'] !== null ? (int) $s['height'] : null;
             $wrapStyle = "padding-top:{$pt}px;padding-bottom:{$pb}px;--tb-cols:{$cols};--tb-gap:{$gap}px;"
                 . ($height !== null ? "--tb-h:{$height}px;" : '')
@@ -880,7 +882,6 @@
             $deal = $type === 'flash_deal'
                 ? $__resolver->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
                 : null;
-            if ($deal) { $__shownDeals[] = $deal['id']; }
             $showcase = $type === 'category_showcase' ? $__resolver->categoryShowcase($s) : null;
             $vendors = $type === 'vendor_slider'
                 ? $__resolver->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
@@ -940,15 +941,32 @@
             'appStores' => $appStores,
         ]))
 
+        @php
+            // Recorded only for a section that will actually render: a HIDDEN flash-deal section
+            // consuming the running deal was blanking every visible one after it.
+            if ($deal) { $__shownDeals[] = $deal['id']; }
+        @endphp
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         {{-- The section reports itself when it comes into view. Whether anyone scrolled this far
              is the one thing the server cannot know and the one thing that decides an order. --}}
+        @php
+            // What this section reports itself as: stored sections by id, campaign overlays as
+            // campaign-{id} — one key per campaign, short enough for the beacon, so a campaign's
+            // reach lands in the same impression pipeline as everything else.
+            $__analyticsId = $__section['id']
+                ?? (preg_match('/^campaign-(\d+)-/', (string) ($__section['uuid'] ?? ''), $__campaignMatch)
+                    ? 'campaign-' . $__campaignMatch[1]
+                    : null);
+        @endphp
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
                  data-tb-section="{{ $__section['id'] ?? '' }}"
-                 @if (!empty($__section['id']))
+                 @if (!empty($__analyticsId))
                      data-analytics-view="section_viewed"
                      data-analytics-type="theme_section"
-                     data-analytics-id="{{ $__section['id'] }}"
+                     data-analytics-id="{{ $__analyticsId }}"
+                     @if (!empty($__section['experiment']['key']))
+                         data-analytics-experiment="{{ $__section['experiment']['key'] }}:{{ $__section['experiment']['variant'] }}"
+                     @endif
                  @endif>
             <div class="{{ $full ? 'container-fluid px-0' : 'container' }}">
                 {{-- One partial per section type, resolved by name.
