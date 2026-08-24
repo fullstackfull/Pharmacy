@@ -68,6 +68,8 @@ class ThemeBuilderController extends BaseController
             'previewUrl'    => $this->builderPreviewUrl($page),
             'structure'     => $version ? $this->builder->getPageStructure($version, $page) : [],
             'sectionTypes'  => $version ? $this->registry->forPage($page) : [],
+            // The same types, grouped into the families the picker browses by.
+            'sectionCatalogue' => $version ? $this->registry->catalogue($page) : [],
             'blockLabels'   => array_map(fn ($block) => $block['label'], $this->registry->blockTypes()),
             'goLive'        => $version ? $this->goLiveState($version) : null,
             // What the customer app will and will not show of this version — surfaced while the
