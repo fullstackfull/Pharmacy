@@ -50,6 +50,11 @@ final class ViewerContext
         // unresolvable customers, and everywhere the commerce engine is off — all three of which
         // mean the same thing downstream: the base, non-personalised experience.
         public readonly array $segments = [],
+        // A stable identity for experiment bucketing (Phase 3.5): the customer id when signed
+        // in (survives devices), else the analytics visitor id (the SAME identity the telemetry
+        // already uses — §47 says use existing identifiers, not a third population). Null means
+        // control, deterministically.
+        public readonly ?string $experimentSubject = null,
     ) {
     }
 
@@ -88,7 +93,27 @@ final class ViewerContext
             supportedComponents: $components,
             channel: $channel,
             segments: self::resolvedSegments(),
+            experimentSubject: self::resolvedSubject($request),
         );
+    }
+
+    /**
+     * @see \App\Services\Commerce\ExperimentResolver — null yields control, never randomness.
+     */
+    private static function resolvedSubject(Request $request): ?string
+    {
+        try {
+            $customerId = auth('api')->id();
+            if ($customerId) {
+                return 'c' . $customerId;
+            }
+
+            $visitorId = app(\App\Services\Analytics\VisitorContext::class)->visitorId($request);
+
+            return $visitorId !== null ? 'v' . $visitorId : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

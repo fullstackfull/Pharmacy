@@ -84,6 +84,7 @@ use App\Http\Controllers\Admin\Settings\RedirectController;
 use App\Http\Controllers\Admin\Commerce\CampaignController;
 use App\Http\Controllers\Admin\Commerce\SegmentController;
 use App\Http\Controllers\Admin\Commerce\CollectionController;
+use App\Http\Controllers\Admin\Commerce\ExperimentController;
 use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
@@ -1433,6 +1434,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('segments/store', 'store')->name('segments.store');
             Route::post('segments/update', 'update')->name('segments.update');
             Route::post('segments/delete', 'delete')->name('segments.delete');
+        });
+        Route::controller(ExperimentController::class)->group(function () {
+            Route::get('experiments', 'index')->name('experiments.index');
+            Route::post('experiments/store', 'store')->name('experiments.store');
+            Route::post('experiments/update', 'update')->name('experiments.update');
+            Route::post('experiments/delete', 'delete')->name('experiments.delete');
         });
     });
 

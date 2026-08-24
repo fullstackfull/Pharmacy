@@ -119,7 +119,8 @@ class ThemeDelivery
 
         try {
             return Cache::remember(
-                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer) . $this->campaignKeyPart($page),
+                self::CACHE_PREFIX . $page . '_' . $this->fingerprint($viewer)
+                    . $this->campaignKeyPart($page) . $this->experimentKeyPart($page, $viewer),
                 self::CACHE_TTL,
                 fn () => $this->build($page, $viewer),
             );
@@ -207,6 +208,15 @@ class ThemeDelivery
         $sections = [];
         $withheld = [];
 
+        // Experiment assignments for this viewer (Phase 3.5): a settings patch per targeted
+        // section uuid. Empty on any failure — control is the answer to every problem (§48).
+        try {
+            $assignments = app(\App\Services\Commerce\ExperimentResolver::class)
+                ->assignmentsFor($page, $viewer->experimentSubject);
+        } catch (\Throwable) {
+            $assignments = [];
+        }
+
         foreach ($rows as $row) {
             $section = [
                 'is_visible' => (bool) $row->is_visible,
@@ -231,7 +241,7 @@ class ThemeDelivery
                 continue;
             }
 
-            $sections[] = $this->present($row, $viewer);
+            $sections[] = $this->present($row, $viewer, $assignments);
         }
 
         // Campaign overlay (§33): live overrides join the delivered list through the same
@@ -310,7 +320,7 @@ class ThemeDelivery
      *
      * @return array<string, mixed>
      */
-    private function present(ThemeSection $row, ViewerContext $viewer): array
+    private function present(ThemeSection $row, ViewerContext $viewer, array $assignments = []): array
     {
         // Folded to the request's language before anything reads them: after this line, `title` IS
         // the title for the `lang` header this client sent, and no override key survives to reach
@@ -320,6 +330,11 @@ class ThemeDelivery
             $this->registry->normalizeSettings($row->type, $row->settings ?? []),
             $viewer->locale,
         );
+
+        // An experiment variant is a settings patch over the published section (Phase 3.5);
+        // control — and every failure mode — is simply no patch.
+        [$settings, $experiment] = app(\App\Services\Commerce\ExperimentResolver::class)
+            ->patch($row->uuid, $settings, $assignments);
 
         $blocks = $row->blocks
             ->where('is_visible', true)
@@ -387,6 +402,9 @@ class ThemeDelivery
                 )
                 : null),
             'source'   => $this->sources->for($row->type, $settings, $blocks),
+            // Which experiment variant this section is, when it is one. Optional and additive:
+            // clients that ignore it render the variant they were given, which is the point.
+            'experiment' => $experiment,
             // Where the heading's "view all" leads, decided from what the section shows rather
             // than from its type alone — so a rail scoped to one category opens that category on
             // the phone, exactly as it does on the web. `none` when the section leads nowhere.
@@ -496,6 +514,19 @@ class ThemeDelivery
      * enumerate capability sets that nobody records. The capability list is sorted before hashing,
      * because two clients that report the same components in a different order hold the same page.
      */
+    /** The cache-key fragment this viewer's experiment assignments contribute. */
+    private function experimentKeyPart(string $page, ViewerContext $viewer): string
+    {
+        try {
+            $stamp = app(\App\Services\Commerce\ExperimentResolver::class)
+                ->stamp($page, $viewer->experimentSubject);
+        } catch (\Throwable) {
+            $stamp = null;
+        }
+
+        return $stamp === null ? '' : '_x' . $stamp;
+    }
+
     /** The cache-key fragment the live campaign set contributes; empty when none is live. */
     private function campaignKeyPart(string $page): string
     {

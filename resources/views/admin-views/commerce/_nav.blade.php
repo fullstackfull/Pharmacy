@@ -18,6 +18,10 @@
            class="{{ ($current ?? '') === 'segments' ? 'is-active' : '' }}">
             <i class="fi fi-rr-users"></i> {{ translate('segments') }}
         </a>
+        <a href="{{ route('admin.commerce.experiments.index') }}"
+           class="{{ ($current ?? '') === 'experiments' ? 'is-active' : '' }}">
+            <i class="fi fi-rr-test-tube"></i> {{ translate('experiments') }}
+        </a>
         <a href="{{ route('admin.app-builder.index') }}">
             <i class="fi fi-rr-layout-fluid"></i> {{ translate('app_builder') }}
         </a>

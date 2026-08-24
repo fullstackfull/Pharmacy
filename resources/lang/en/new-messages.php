@@ -6704,4 +6704,5 @@ return [
 	'a_collection_does_nothing_by_itself_source_a_product_section_from_it_in_the_builder_and_publish' => 'A collection does nothing by itself source a product section from it in the builder and publish',
 	'commerce_experience' => 'Commerce experience',
 	'segments' => 'Segments',
+	'experiments' => 'Experiments',
 ];

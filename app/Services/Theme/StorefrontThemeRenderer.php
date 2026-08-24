@@ -132,11 +132,23 @@ class StorefrontThemeRenderer
             fn (array $section) => $this->visibility->passes($section, $viewer),
         ));
 
+        // Experiment assignments for this viewer (Phase 3.5) — empty means control everywhere,
+        // which is also the answer to every failure (§48).
+        try {
+            $assignments = app(\App\Services\Commerce\ExperimentResolver::class)
+                ->assignmentsFor($page, $this->webExperimentSubject());
+        } catch (\Throwable) {
+            $assignments = [];
+        }
+
         // Language is a per-request concern exactly as scheduling is: the cached structure keeps
         // every language's text, and each request folds its own in. Done here, once, so no partial
         // ever meets a `title_ar` key or needs to know the convention exists.
-        $runnable = array_map(function (array $section) use ($viewer) {
+        $runnable = array_map(function (array $section) use ($viewer, $assignments) {
             $section['settings'] = LocalisedSettings::collapse($section['settings'] ?? [], $viewer->locale);
+
+            [$section['settings'], $section['experiment']] = app(\App\Services\Commerce\ExperimentResolver::class)
+                ->patch($section['uuid'] ?? null, $section['settings'], $assignments);
             $section['blocks'] = array_map(function (array $block) use ($viewer) {
                 $block['settings'] = LocalisedSettings::collapse($block['settings'] ?? [], $viewer->locale);
                 return $block;
@@ -197,6 +209,27 @@ class StorefrontThemeRenderer
             return auth('customer')->check();
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * The identity experiments bucket this web viewer by — the same rule ViewerContext applies
+     * for the API: customer id first, the analytics visitor cookie otherwise, control when
+     * neither resolves.
+     */
+    private function webExperimentSubject(): ?string
+    {
+        try {
+            $customerId = auth('customer')->id();
+            if ($customerId) {
+                return 'c' . $customerId;
+            }
+
+            $visitorId = app(\App\Services\Analytics\VisitorContext::class)->visitorId(request());
+
+            return $visitorId !== null ? 'v' . $visitorId : null;
+        } catch (\Throwable) {
+            return null;
         }
     }
 
