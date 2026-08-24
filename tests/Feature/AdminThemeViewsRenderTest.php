@@ -338,6 +338,83 @@ class AdminThemeViewsRenderTest extends TestCase
         $this->assertStringContainsString('admin/commerce/collections/store', $html);
     }
 
+    public function test_the_campaigns_screen_renders(): void
+    {
+        $this->commerceTables();
+        $campaign = \App\Models\ExperienceCampaign::create([
+            'name' => 'Ramadan Sale', 'status' => 'active', 'page' => 'home', 'priority' => 80,
+            'overrides' => [['slot' => 'hero', 'section' => ['type' => 'hero_banner', 'settings' => []]]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.campaigns', [
+            'ready' => true, 'enabled' => true,
+            'campaigns' => collect([$campaign]),
+            'reach' => app(\App\Services\Theme\SectionReach::class),
+            'pages' => ['home'], 'slots' => \App\Services\Commerce\CampaignRules::SLOTS,
+            'editable' => true, 'schedulerOk' => true,
+        ]);
+
+        $this->assertStringContainsString('Ramadan Sale', $html);
+    }
+
+    public function test_the_segments_screen_renders(): void
+    {
+        $this->commerceTables();
+        \App\Models\CustomerSegment::create([
+            'name' => 'Repeat buyer', 'key' => 'repeat-buyer', 'status' => true,
+            'rules' => [['field' => 'orders_count', 'operator' => 'greater_than_or_equal', 'value' => 2]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.segments', [
+            'ready' => true, 'enabled' => true,
+            'segments' => \App\Models\CustomerSegment::query()->get(),
+            'fields' => \App\Services\Commerce\SegmentRules::FIELDS,
+            'operators' => \App\Services\Commerce\SegmentRules::OPERATORS,
+            'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('Repeat buyer', $html);
+    }
+
+    public function test_the_experiments_screen_renders(): void
+    {
+        $this->commerceTables();
+        \App\Models\ExperienceExperiment::create([
+            'name' => 'Hero copy', 'key' => 'hero-copy', 'status' => 'running', 'page' => 'home',
+            'section_uuid' => 'u-1', 'variants' => [['key' => 'b', 'weight' => 50, 'settings' => []]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.experiments', [
+            'ready' => true, 'enabled' => true,
+            'experiments' => \App\Models\ExperienceExperiment::query()->get(),
+            'sections' => [], 'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('Hero copy', $html);
+    }
+
+    private function commerceTables(): void
+    {
+        foreach (['experience_campaigns', 'customer_segments', 'experience_experiments'] as $table) {
+            Schema::dropIfExists($table);
+        }
+        Schema::create('experience_campaigns', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('status', 20)->default('draft');
+            $table->string('page', 60)->default('home'); $table->unsignedInteger('priority')->default(30);
+            $table->timestamp('starts_at')->nullable(); $table->timestamp('ends_at')->nullable();
+            $table->json('overrides')->nullable(); $table->timestamps();
+        });
+        Schema::create('customer_segments', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('key', 60)->unique();
+            $table->boolean('status')->default(true); $table->json('rules')->nullable(); $table->timestamps();
+        });
+        Schema::create('experience_experiments', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('key', 60)->unique();
+            $table->string('status', 20)->default('draft'); $table->string('page', 60)->default('home');
+            $table->uuid('section_uuid')->nullable(); $table->json('variants')->nullable(); $table->timestamps();
+        });
+    }
+
     public function test_the_experience_health_screen_renders_findings_and_previews(): void
     {
         $html = $this->renderBody('admin-views.app-builder.health', [

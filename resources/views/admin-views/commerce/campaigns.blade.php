@@ -50,6 +50,11 @@
                                                 <small class="text-muted">
                                                     {{ translate('page') }}: <code dir="ltr">{{ $campaign->page }}</code>
                                                     · {{ count($campaign->overrideRows()) }} {{ translate('overrides') }}
+                                                    @if (($campaignReach = $reach->campaignVisitors($campaign->id)) !== null)
+                                                        {{-- Measured, not promised: shoppers whose screens actually
+                                                             showed this campaign's sections in the last month. --}}
+                                                        · <span class="badge badge-soft-info">{{ $campaignReach }} {{ translate('shoppers_reached_30d') }}</span>
+                                                    @endif
                                                 </small>
                                             </td>
                                             <td class="text-center small" dir="ltr">

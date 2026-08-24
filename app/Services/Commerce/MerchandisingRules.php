@@ -112,9 +112,18 @@ class MerchandisingRules
     {
         $stored = is_array($collection->merchandising) ? $collection->merchandising : [];
 
+        // The save path refuses a product that is both pinned and excluded; a row written past
+        // the save path (an import, a hand edit) can still carry the contradiction, and here the
+        // exclusion wins — it is the stronger statement, and rendering a banned product because
+        // it is also pinned is the wrong reading of both.
+        $excluded = $this->ids($stored['excluded'] ?? [], self::MAX_EXCLUSIONS);
+
         return [
-            'pins'      => $this->pins($stored['pins'] ?? []),
-            'excluded'  => $this->ids($stored['excluded'] ?? [], self::MAX_EXCLUSIONS),
+            'pins'      => array_values(array_filter(
+                $this->pins($stored['pins'] ?? []),
+                fn (array $pin) => !in_array($pin['id'], $excluded, true),
+            )),
+            'excluded'  => $excluded,
             'boosts'    => array_values(array_filter(
                 is_array($stored['boosts'] ?? null) ? $stored['boosts'] : [],
                 fn ($boost) => is_array($boost) && in_array($boost['kind'] ?? null, self::BOOST_KINDS, true),

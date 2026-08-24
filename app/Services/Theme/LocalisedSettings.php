@@ -38,8 +38,29 @@ class LocalisedSettings
      * @param array<string, mixed> $settings
      * @return array<string, mixed>
      */
-    public static function collapse(array $settings, ?string $locale): array
+    public static function collapse(array $settings, ?string $locale, ?array $overrides = null): array
     {
+        // Schema-aware path: the caller names exactly which keys are locale overrides (from
+        // SectionRegistry::localeOverrideKeys), so a real setting whose name merely ends in a
+        // language code — `source_id` beside Indonesian's `id` — can never be mistaken for one.
+        if ($overrides !== null) {
+            foreach ($overrides as $key => [$base, $code]) {
+                if (!array_key_exists($key, $settings)) {
+                    continue;
+                }
+
+                $value = $settings[$key];
+
+                if ($code === $locale && is_string($value) && trim($value) !== '') {
+                    $settings[$base] = $value;
+                }
+
+                unset($settings[$key]);
+            }
+
+            return $settings;
+        }
+
         $codes = self::activeLocales();
         if ($codes === []) {
             return $settings;

@@ -149,9 +149,17 @@ class StorefrontThemeRenderer
             [$section['settings'], $section['experiment']] = $experiments
                 ->patch($section['uuid'] ?? null, $section['settings'] ?? [], $assignments);
 
-            $section['settings'] = LocalisedSettings::collapse($section['settings'], $viewer->locale);
+            $section['settings'] = LocalisedSettings::collapse(
+                $section['settings'],
+                $viewer->locale,
+                $this->registry->localeOverrideKeys((string) ($section['type'] ?? '')),
+            );
             $section['blocks'] = array_map(function (array $block) use ($viewer) {
-                $block['settings'] = LocalisedSettings::collapse($block['settings'] ?? [], $viewer->locale);
+                $block['settings'] = LocalisedSettings::collapse(
+                    $block['settings'] ?? [],
+                    $viewer->locale,
+                    $this->registry->blockLocaleOverrideKeys((string) ($block['type'] ?? '')),
+                );
                 return $block;
             }, $section['blocks'] ?? []);
 
@@ -182,6 +190,7 @@ class StorefrontThemeRenderer
                         'settings'   => LocalisedSettings::collapse(
                             $registry->normalizeSettings($section['type'], $section['settings'] ?? []),
                             $viewer->locale,
+                            $registry->localeOverrideKeys($section['type']),
                         ),
                         'blocks'     => array_map(fn (array $block) => [
                             'id'       => null,
@@ -189,6 +198,7 @@ class StorefrontThemeRenderer
                             'settings' => LocalisedSettings::collapse(
                                 $registry->normalizeBlockSettings($block['type'], $block['settings'] ?? []),
                                 $viewer->locale,
+                                $registry->blockLocaleOverrideKeys($block['type']),
                             ),
                         ], $section['blocks'] ?? []),
                     ],

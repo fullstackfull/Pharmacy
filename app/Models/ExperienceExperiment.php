@@ -49,7 +49,13 @@ class ExperienceExperiment extends Model
         $bucket = hexdec(substr(hash('crc32b', $this->key . ':' . $subject), 0, 8)) % 100;
         $floor = 0;
 
-        foreach ($this->variantRows() as $variant) {
+        // Walked in KEY order, not storage order: assignment must survive the variants JSON
+        // being rewritten, reordered, or hand-repaired. A shopper's bucket is a function of the
+        // experiment key, their subject, and the variant keys — never of row position.
+        $rows = $this->variantRows();
+        usort($rows, static fn (array $a, array $b) => strcmp((string) ($a['key'] ?? ''), (string) ($b['key'] ?? '')));
+
+        foreach ($rows as $variant) {
             $weight = max(0, min(100, (int) ($variant['weight'] ?? 0)));
 
             if ($bucket < $floor + $weight) {

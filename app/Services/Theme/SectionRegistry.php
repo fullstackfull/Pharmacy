@@ -1209,6 +1209,43 @@ class SectionRegistry
      * @param array<string, mixed> $settings
      * @param array<string, mixed> $field
      */
+    /**
+     * The locale-override keys this type's schema can legitimately carry, mapped to what each
+     * folds into: ['title_ar' => ['title', 'ar'], ...]. This map is what makes the collapse
+     * schema-aware — without it, a shop adding a language whose code collides with a real
+     * settings suffix (Indonesian's `id` against `source_id`) would have genuine settings
+     * deleted from every payload as "someone else's override".
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public function localeOverrideKeys(string $type): array
+    {
+        return $this->overrideKeyMap($this->schemaFor($type));
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    public function blockLocaleOverrideKeys(string $blockType): array
+    {
+        return $this->overrideKeyMap($this->blockSchemaFor($blockType));
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    private function overrideKeyMap(array $schema): array
+    {
+        $map = [];
+
+        foreach ($schema as $key => $field) {
+            if (!in_array($field['type'] ?? '', ['text', 'textarea'], true)) {
+                continue;
+            }
+            foreach (LocalisedSettings::activeLocales() as $code) {
+                $map[$key . '_' . $code] = [$key, $code];
+            }
+        }
+
+        return $map;
+    }
+
     private function keepLocaleOverrides(array &$clean, array $settings, string $key, array $field): void
     {
         if (!in_array($field['type'] ?? '', ['text', 'textarea'], true) || !empty($field['plain'])) {

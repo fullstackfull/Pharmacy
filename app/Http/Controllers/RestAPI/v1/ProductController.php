@@ -974,10 +974,13 @@ class ProductController extends Controller
             $products->loadCount('reviews');
         }
 
+        // The whole composed list in one answer, never a page of one: pins are woven by
+        // position, and slicing the weave would move them. total_size IS the total, and the
+        // offset is fixed at 1 rather than echoing a parameter this endpoint does not honor.
         return response()->json([
             'total_size' => $products->count(),
             'limit' => (int) ($request['limit'] ?? 10),
-            'offset' => (int) ($request['offset'] ?? 1),
+            'offset' => 1,
             'products' => $products->isNotEmpty()
                 ? Helpers::product_data_formatting($products, true)
                 : [],

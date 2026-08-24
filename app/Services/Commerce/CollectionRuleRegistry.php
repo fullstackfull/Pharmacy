@@ -61,7 +61,10 @@ class CollectionRuleRegistry
     public function validate(mixed $rows): array
     {
         if (!is_array($rows)) {
-            return ['rules' => [], 'errors' => []];
+            // Nothing readable is NOT "no rules": a collection with no rules matches the whole
+            // catalogue, and a malformed payload silently widening to everything is the exact
+            // shape of corruption this validator exists to refuse.
+            return ['rules' => [], 'errors' => ['rules:not_a_list']];
         }
 
         $clean = [];

@@ -50,13 +50,15 @@ class SectionReach
             $reach = [];
 
             foreach ($breakdown['rows'] ?? [] as $row) {
-                $id = (int) ($row['key'] ?? 0);
+                $key = (string) ($row['key'] ?? '');
 
-                if ($id > 0) {
-                    // Visitors, not events: the same person scrolling past a rail on three visits
-                    // is one shopper who has seen it, and "how many people got here" is the
-                    // question being asked.
-                    $reach[$id] = (int) ($row['visitors'] ?? 0);
+                // Visitors, not events: the same person scrolling past a rail on three visits
+                // is one shopper who has seen it, and "how many people got here" is the
+                // question being asked. Stored sections report a numeric id; campaign overlay
+                // sections report campaign-{id} — casting everything to int silently threw the
+                // campaign rows away.
+                if (preg_match('/^(?:[1-9]\d*|campaign-[1-9]\d*)$/', $key)) {
+                    $reach[$key] = (int) ($row['visitors'] ?? 0);
                 }
             }
 
@@ -65,6 +67,14 @@ class SectionReach
     }
 
     /** Whether there is anything to show at all — nothing measured yet is not zero reach. */
+    /** How many shoppers a campaign's overlay sections reached in the window, or null unmeasured. */
+    public function campaignVisitors(int $campaignId): ?int
+    {
+        $visitors = $this->visitors()['campaign-' . $campaignId] ?? null;
+
+        return $visitors === null ? null : (int) $visitors;
+    }
+
     public function measured(): bool
     {
         return $this->visitors() !== [];

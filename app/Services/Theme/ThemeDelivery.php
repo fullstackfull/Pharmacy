@@ -50,7 +50,7 @@ class ThemeDelivery
      * Settings keys whose value is an image path a client with no origin must be able to fetch.
      * Mirrors ThemeSectionController's list, which this service now backs.
      */
-    private const IMAGE_KEYS = ['image', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image', 'after'];
 
     /**
      * The cheap question: what is live, and is it what you already hold.
@@ -262,15 +262,18 @@ class ThemeDelivery
                 $sections = $campaigns->splice(
                     $sections,
                     $overrides,
-                    function (array $definition, int $campaignId) use ($viewer) {
+                    function (array $definition, int $campaignId) use ($viewer, &$withheld) {
                         // A type this SERVER does not render is a corrupted row, whatever wrote
                         // it; and a type this CLIENT cannot draw is withheld exactly as a stored
-                        // section of that type would be.
+                        // section of that type would be — named in the compatibility report, so
+                        // "the campaign shows on the web and not on my phone" has an answer.
                         if (!isset($this->registry->types()[$definition['type'] ?? ''])) {
                             return null;
                         }
                         if ($viewer->platform !== ViewerContext::PLATFORM_WEB
                             && !$this->capabilities->clientHolds($definition['type'], $viewer)) {
+                            $withheld[$definition['type']] ??= $this->capabilities->exclusionReason($definition['type'])
+                                ?? 'this_build_does_not_report_support_for_this_section';
                             return null;
                         }
 
@@ -336,7 +339,7 @@ class ThemeDelivery
         [$settings, $experiment] = app(\App\Services\Commerce\ExperimentResolver::class)
             ->patch($row->uuid, $this->registry->normalizeSettings($row->type, $row->settings ?? []), $assignments);
 
-        $settings = LocalisedSettings::collapse($settings, $viewer->locale);
+        $settings = LocalisedSettings::collapse($settings, $viewer->locale, $this->registry->localeOverrideKeys($row->type));
 
         $blocks = $row->blocks
             ->where('is_visible', true)
@@ -347,6 +350,7 @@ class ThemeDelivery
                     LocalisedSettings::collapse(
                         $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
                         $viewer->locale,
+                        $this->registry->blockLocaleOverrideKeys($block->type),
                     ),
                     $viewer,
                 ),
@@ -399,6 +403,7 @@ class ThemeDelivery
                         'settings' => LocalisedSettings::collapse(
                             $this->registry->normalizeBlockSettings($b->type, $b->settings ?? []),
                             $viewer->locale,
+                            $this->registry->blockLocaleOverrideKeys($b->type),
                         ),
                     ])->values()->all()),
                 )
@@ -483,6 +488,15 @@ class ThemeDelivery
             if (is_string($value) && str_starts_with($value, '/')) {
                 $values[$key] = url($value);
             }
+        }
+
+        // A frames list is a list of images: the sections endpoint absolutizes it, and the two
+        // surfaces must hand the phone the same URLs.
+        if (isset($values['images']) && is_array($values['images'])) {
+            $values['images'] = array_map(
+                static fn ($image) => is_string($image) && str_starts_with($image, '/') ? url($image) : $image,
+                $values['images'],
+            );
         }
 
         return $values;

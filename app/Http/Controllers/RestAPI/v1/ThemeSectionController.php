@@ -43,7 +43,7 @@ class ThemeSectionController extends Controller
     private const GUARANTEED_PAGES = ['home', 'header', 'footer'];
 
     /** Settings keys whose value is an image path a phone must be able to fetch. */
-    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image', 'after'];
 
     public function __construct(
         private readonly StorefrontThemeRenderer $renderer,

@@ -46,6 +46,9 @@ class CampaignController extends BaseController
         return view('admin-views.commerce.campaigns', [
             'ready'     => $ready,
             'enabled'   => (bool) config('commerce.enabled', true),
+            // How many shoppers each campaign's overlay actually reached (30d): the number that
+            // answers "did the campaign work" on the same screen that runs it.
+            'reach'     => app(\App\Services\Theme\SectionReach::class),
             'campaigns' => $ready
                 ? ExperienceCampaign::query()->orderByDesc('id')->get()
                 : collect(),
