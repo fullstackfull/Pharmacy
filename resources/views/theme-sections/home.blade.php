@@ -9,7 +9,7 @@
      storefront blades. --}}
 @php
     $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('home');
-    $__data = app(\App\Services\Theme\SectionDataResolver::class);
+    $__resolver = app(\App\Services\Theme\SectionDataResolver::class);
     $__ready = app(\App\Services\Theme\SectionReadiness::class);
     $__where = app(\App\Services\Theme\SectionDestination::class);
     $__placeholder = dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png');
@@ -845,14 +845,14 @@
     // first one instead of moving on to the next deal.
     $__shownDeals = [];
     // One query for the whole page: every card draws its heart from this list.
-    $__wishlisted = $__data->wishlistedProductIds();
+    $__wishlisted = $__resolver->wishlistedProductIds();
 @endphp
 <div class="theme-builder-sections ml-sections">
     @foreach ($__sections as $__section)
         @php
             $type = $__section['type'] ?? null;
             $s = $__section['settings'] ?? [];
-            $blocks = $__data->blockCards($__section['blocks'] ?? []);
+            $blocks = $__resolver->blockCards($__section['blocks'] ?? []);
             $pt = (int) ($s['padding_top'] ?? 56);
             $pb = (int) ($s['padding_bottom'] ?? 56);
             $bg = $s['background'] ?? null;
@@ -874,29 +874,29 @@
             // wrapper is opened: with nothing to draw they must not leave a padded empty band on
             // the page, which reads as a broken gap rather than an absent section.
             $deal = $type === 'flash_deal'
-                ? $__data->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
+                ? $__resolver->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
                 : null;
             if ($deal) { $__shownDeals[] = $deal['id']; }
-            $showcase = $type === 'category_showcase' ? $__data->categoryShowcase($s) : null;
+            $showcase = $type === 'category_showcase' ? $__resolver->categoryShowcase($s) : null;
             $vendors = $type === 'vendor_slider'
-                ? $__data->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
+                ? $__resolver->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
                 : collect();
-            $vendorShowcase = $type === 'vendor_showcase' ? $__data->vendorShowcase($s) : null;
-            $dotd = $type === 'deal_of_the_day' ? $__data->dealOfTheDay() : null;
+            $vendorShowcase = $type === 'vendor_showcase' ? $__resolver->vendorShowcase($s) : null;
+            $dotd = $type === 'deal_of_the_day' ? $__resolver->dealOfTheDay() : null;
             $offerProducts = match ($type) {
-                'featured_deal' => $__data->featuredDealProducts((int) ($s['limit'] ?? 10)),
-                'clearance_sale' => $__data->clearanceProducts((int) ($s['limit'] ?? 10)),
+                'featured_deal' => $__resolver->featuredDealProducts((int) ($s['limit'] ?? 10)),
+                'clearance_sale' => $__resolver->clearanceProducts((int) ($s['limit'] ?? 10)),
                 default => collect(),
             };
-            $coupons = $type === 'coupon_strip' ? $__data->coupons((int) ($s['limit'] ?? 4)) : collect();
-            $set = $type === 'bundle' ? $__data->bundle($s) : null;
-            $posts = $type === 'blog_posts' ? $__data->blogPosts((int) ($s['limit'] ?? 3)) : collect();
-            $secondsLeft = $type === 'shipping_cutoff' ? $__data->shippingCutoff((string) ($s['cutoff'] ?? '16:00')) : null;
-            $brandShowcase = $type === 'brand_showcase' ? $__data->brandShowcase($s) : null;
+            $coupons = $type === 'coupon_strip' ? $__resolver->coupons((int) ($s['limit'] ?? 4)) : collect();
+            $set = $type === 'bundle' ? $__resolver->bundle($s) : null;
+            $posts = $type === 'blog_posts' ? $__resolver->blogPosts((int) ($s['limit'] ?? 3)) : collect();
+            $secondsLeft = $type === 'shipping_cutoff' ? $__resolver->shippingCutoff((string) ($s['cutoff'] ?? '16:00')) : null;
+            $brandShowcase = $type === 'brand_showcase' ? $__resolver->brandShowcase($s) : null;
             $searchTerms = $type === 'trending_searches'
-                ? $__data->trendingSearches((int) ($s['days'] ?? 30), (int) ($s['limit'] ?? 10))
+                ? $__resolver->trendingSearches((int) ($s['days'] ?? 30), (int) ($s['limit'] ?? 10))
                 : collect();
-            $seenProducts = $type === 'recently_viewed' ? $__data->recentlyViewed((int) ($s['limit'] ?? 8)) : collect();
+            $seenProducts = $type === 'recently_viewed' ? $__resolver->recentlyViewed((int) ($s['limit'] ?? 8)) : collect();
             $appStores = $type === 'app_download'
                 ? array_filter([
                     'android' => app(\App\Services\DeepLink\AppLinkService::class)->storeUrl('android'),
@@ -906,9 +906,9 @@
             // Block-driven sections are nothing but their blocks: one whose blocks carry no
             // content yet would open a padded band with nothing inside it.
             $rawBlocks = match ($type) {
-                'stories' => $__data->blocksWithContent($__section['blocks'] ?? [], either: ['image', 'video']),
-                'branches' => $__data->blocksWithContent($__section['blocks'] ?? [], required: ['title']),
-                'before_after' => $__data->blocksWithContent($__section['blocks'] ?? [], required: ['image', 'after']),
+                'stories' => $__resolver->blocksWithContent($__section['blocks'] ?? [], either: ['image', 'video']),
+                'branches' => $__resolver->blocksWithContent($__section['blocks'] ?? [], required: ['title']),
+                'before_after' => $__resolver->blocksWithContent($__section['blocks'] ?? [], required: ['image', 'after']),
                 default => $__section['blocks'] ?? [],
             };
         @endphp

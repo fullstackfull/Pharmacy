@@ -3,7 +3,7 @@
      the builder's "display style". --}}
 
 @php
-    $products = $__data->products($s);
+    $products = $__resolver->products($s);
     // Five presentations of one row of products, because the right one
     // depends on what is being sold: a rail for browsing, a grid for
     // comparing, a peeking carousel that says "there is more", a spotlight

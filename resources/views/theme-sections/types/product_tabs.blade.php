@@ -12,7 +12,7 @@
         if (empty($tabSettings['label'])) { continue; }
         $tabs[] = [
             'label' => $tabSettings['label'],
-            'products' => $__data->products($tabSettings + ['limit' => (int) ($s['limit'] ?? 8)]),
+            'products' => $__resolver->products($tabSettings + ['limit' => (int) ($s['limit'] ?? 8)]),
         ];
     }
     $tabs = array_values(array_filter($tabs, fn ($tab) => $tab['products']->isNotEmpty()));

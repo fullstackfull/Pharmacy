@@ -1,5 +1,27 @@
 @extends('layouts.front-end.app')
 
+{{-- Visual Theme Builder home sections (Phase 1). When a published theme defines home sections they
+     REPLACE the hardcoded home below — one theme on the page, never two stacked. With no published
+     sections this outputs nothing and the default home renders unchanged.
+
+     Rendered HERE, before any section or stack is opened, and not where it is echoed. A view that
+     throws while being rendered inside a section takes Laravel's whole view state with it —
+     handleViewException calls flushState(), which drops the open @section, and the page then dies
+     at @endsection with "cannot end a section without first starting one". The catch below is
+     useless in that position: the exception is reported, the storefront still 500s, and the error
+     the merchant sees names a line of layout code with nothing wrong with it. Out here a flush
+     costs nothing, so the promise this guard makes — a broken section never takes the shop down —
+     is one it can actually keep. --}}
+@php
+    $__themedHome = '';
+    try {
+        $__themedHome = trim(view('theme-sections.home')->render());
+    } catch (\Throwable $themeSectionsError) {
+        report($themeSectionsError);
+        $__themedHome = '';
+    }
+@endphp
+
 @section('title', $web_config['meta_title'])
 
 @push('css_or_js')
@@ -25,21 +47,7 @@
 
 @section('content')
 
-{{-- Visual Theme Builder home sections (Phase 1). When a published theme defines home sections they
-     REPLACE the hardcoded home below — one theme on the page, never two stacked. With no published
-     sections this outputs nothing and the default home renders unchanged.
-     Guarded: a problem inside a section must NEVER take the storefront (or the builder iframe) down —
-     it is logged and the default home renders as the fallback. --}}
-@php
-    $__themedHome = '';
-    try {
-        $__themedHome = trim(view('theme-sections.home')->render());
-    } catch (\Throwable $themeSectionsError) {
-        report($themeSectionsError);
-        $__themedHome = '';
-    }
-    echo $__themedHome;
-@endphp
+{!! $__themedHome !!}
 
 @if(function_exists('getCheckAddonPublishedStatus') && getCheckAddonPublishedStatus(moduleName: 'Auction') && getWebConfig(name: 'auction_feature_status'))
 <div class="auction__badge dropdown">

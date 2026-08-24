@@ -4,7 +4,7 @@
      brand's own landing page, which carries its banner and category chips. --}}
 
 @php
-    $brands = $__data->brands((int) ($s['limit'] ?? 12));
+    $brands = $__resolver->brands((int) ($s['limit'] ?? 12));
     $brandStyle = $s['style'] ?? 'marquee';
     $brandUrl = fn ($brand) => \Illuminate\Support\Facades\Route::has('brand-products') && $brand->slug
         ? route('brand-products', ['slug' => $brand->slug])

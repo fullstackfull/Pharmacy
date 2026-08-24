@@ -1,7 +1,7 @@
 {{-- Real approved product reviews — the merchant chooses how many and the
      minimum rating; nothing is invented. --}}
 
-@php $reviews = $__data->testimonials((int) ($s['limit'] ?? 3), (int) ($s['min_rating'] ?? 4)); @endphp
+@php $reviews = $__resolver->testimonials((int) ($s['limit'] ?? 3), (int) ($s['min_rating'] ?? 4)); @endphp
 @if ($reviews->isNotEmpty())
     <div class="ml-sec-head ml-sec-head--center ml-reveal">
         <span class="ml-eyebrow">{{ $s['eyebrow'] ?: translate('customer_voices') }}</span>
