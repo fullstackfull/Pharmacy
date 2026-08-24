@@ -11,8 +11,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
 
+use App\Http\Requests\Concerns\ChecksBrandEntitlement;
+
 class ProductUpdateRequest extends FormRequest
 {
+    use ChecksBrandEntitlement;
+
     use CalculatorTrait, ResponseHandler;
     use VatTaxManagement;
 
@@ -94,6 +98,8 @@ class ProductUpdateRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
+                $this->validateBrandEntitlement($validator);
+
 
                 $disallowedExtensions = getDisallowedExtensionsListArray();
 

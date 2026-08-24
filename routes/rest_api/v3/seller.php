@@ -19,6 +19,7 @@ use App\Http\Controllers\RestAPI\v3\seller\ProductController;
 use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAutomationController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerBrandClaimController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerControlTowerController;
@@ -335,6 +336,25 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index');
                     Route::get('briefing', 'briefing');
                     Route::put('issues/{id}/status', 'updateStatus')->whereNumber('id');
+                });
+            });
+
+            // Who may sell under a brand. Reading where the shop stands is open to anyone who may
+            // see the catalogue; making a claim and attaching evidence to it is a change to how the
+            // shop is allowed to trade, so it needs the permission that manages products.
+            Route::group(['prefix' => 'brand-claims'], function () {
+                Route::controller(SellerBrandClaimController::class)->group(function () {
+                    Route::get('exposure', 'exposure');
+                    Route::get('/', 'index');
+                    Route::get('{id}/documents/{documentId}', 'document')->whereNumber('id')->whereNumber('documentId');
+
+                    Route::middleware('seller_can:products.manage')->group(function () {
+                        Route::post('/', 'store');
+                        Route::post('{id}/documents', 'attach')->whereNumber('id');
+                        Route::delete('{id}/documents/{documentId}', 'detach')->whereNumber('id')->whereNumber('documentId');
+                        Route::post('{id}/submit', 'submit')->whereNumber('id');
+                        Route::post('{id}/withdraw', 'withdraw')->whereNumber('id');
+                    });
                 });
             });
 

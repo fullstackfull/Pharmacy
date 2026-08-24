@@ -36,6 +36,7 @@ use App\Models\StockClearanceProduct;
 use App\Models\Tag;
 use App\Models\Translation;
 use App\Repositories\DigitalProductPublishingHouseRepository;
+use App\Services\Marketplace\BrandRegistryService;
 use App\Services\ProductService;
 use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
@@ -808,6 +809,8 @@ class ProductController extends Controller
             'minimum_order_qty.min' => translate('The minimum order quantity must be positive!'),
         ]);
 
+        $validator->after($this->brandClaimGuard($request, $seller));
+
         $taxData = $this->getTaxSystemType();
         $productWiseTax = $taxData['productWiseTax'] && !$taxData['is_included'];
 
@@ -1238,6 +1241,8 @@ class ProductController extends Controller
             'minimum_order_qty.required' => 'The minimum order quantity is required!',
             'minimum_order_qty.min' => 'The minimum order quantity must be positive!',
         ]);
+
+        $validator->after($this->brandClaimGuard($request, $seller));
 
         $taxData = $this->getTaxSystemType();
         $productWiseTax = $taxData['productWiseTax'] && !$taxData['is_included'];
@@ -2197,5 +2202,37 @@ class ProductController extends Controller
         return response()->json([
             'brands' => $brands,
         ], 200);
+    }
+
+    /**
+     * Refuse a listing under a brand this shop is not entitled to sell — but only once the
+     * marketplace has switched enforcement on.
+     *
+     * Written as a validator clause rather than an early return so the refusal arrives in the same
+     * shape as every other one the form already handles, and lands on the brand field where the
+     * seller is looking.
+     *
+     * While enforcement is off this does nothing at all. The mismatches are still found and still
+     * reported — the brand detector raises them, with the affected listings counted — which is how a
+     * legitimate reseller learns they need paperwork before the day their listings stop working
+     * rather than on it.
+     */
+    private function brandClaimGuard(object $request, object $seller): callable
+    {
+        return function ($validator) use ($request, $seller): void {
+            $brandId = $request['product_type'] === 'physical' ? ($request['brand_id'] ?? null) : null;
+
+            if (!$brandId) {
+                return;
+            }
+
+            $registry = app(BrandRegistryService::class);
+
+            if (!$registry->isEnforcing() || $registry->mayList($seller->id, $brandId)) {
+                return;
+            }
+
+            $validator->errors()->add('brand_id', translate('brand_claim_required_to_list_under_this_brand') . '!');
+        };
     }
 }

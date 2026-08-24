@@ -22,6 +22,7 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
 use App\Services\AuditLogger;
+use App\Services\SellerIntelligence\Producers\BrandComplianceProducer;
 use App\Services\SellerIntelligence\Producers\CatalogIntegrityProducer;
 use App\Services\SellerIntelligence\Producers\FinanceIntegrityProducer;
 use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
@@ -106,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(PricingRiskProducer::class),
                 $app->make(ListingQualityProducer::class),
                 $app->make(CatalogIntegrityProducer::class),
+                $app->make(BrandComplianceProducer::class),
                 $app->make(StaleInventoryProducer::class),
             ],
             // Severity is measured against the seller's own business rather than declared, so both
