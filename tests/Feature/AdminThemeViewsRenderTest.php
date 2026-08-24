@@ -459,9 +459,64 @@ class AdminThemeViewsRenderTest extends TestCase
         File::put($probe, $source);
 
         try {
-            return view('admin-views.theme.__render_probe', $data)->render();
+            $html = view('admin-views.theme.__render_probe', $data)->render();
         } finally {
             File::delete($probe);
+        }
+
+        $this->assertNothingRepeats($html, $view);
+
+        return $html;
+    }
+
+    /**
+     * No screen may offer the same choice twice or collect the same field twice.
+     *
+     * Run on EVERY render this suite performs, because duplication is exactly the class of bug
+     * that arrives through a merge: two branches add the same block at nearby lines, git keeps
+     * both, every test that checks "the option is there" still passes — and the merchant sees
+     * the option twice. Uniqueness has to be asserted, not implied.
+     */
+    private function assertNothingRepeats(string $html, string $view): void
+    {
+        $document = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="utf-8"?><body>' . $html . '</body>');
+        libxml_clear_errors();
+
+        foreach ($document->getElementsByTagName('select') as $select) {
+            $values = [];
+            foreach ($select->getElementsByTagName('option') as $option) {
+                $value = $option->getAttribute('value') !== '' ? $option->getAttribute('value') : trim($option->textContent);
+                if ($value !== '') {
+                    $values[] = $value;
+                }
+            }
+            $repeated = array_filter(array_count_values($values), fn (int $count) => $count > 1);
+            $this->assertSame([], $repeated,
+                $view . ': a select repeats these options: ' . implode(', ', array_keys($repeated)));
+        }
+
+        foreach ($document->getElementsByTagName('form') as $form) {
+            $names = [];
+            foreach (['input', 'select', 'textarea'] as $tag) {
+                foreach ($form->getElementsByTagName($tag) as $field) {
+                    $name = $field->getAttribute('name');
+                    // Array fields repeat by design; checkbox+hidden pairs are the Laravel idiom
+                    // for "unchecked still submits".
+                    if ($name === '' || $name === '_token' || str_ends_with($name, '[]')) {
+                        continue;
+                    }
+                    if ($field->getAttribute('type') === 'hidden'
+                        || ($tag === 'input' && $field->getAttribute('type') === 'checkbox')) {
+                        continue;
+                    }
+                    $names[] = $name;
+                }
+            }
+            $repeated = array_filter(array_count_values($names), fn (int $count) => $count > 1);
+            $this->assertSame([], $repeated,
+                $view . ': a form collects these fields twice: ' . implode(', ', array_keys($repeated)));
         }
     }
 }
