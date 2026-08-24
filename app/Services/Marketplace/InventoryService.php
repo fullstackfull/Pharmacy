@@ -117,8 +117,14 @@ class InventoryService
         }
     }
 
-    /** Recent movements, optionally narrowed to one product or one type. */
-    public function recent(?int $productId = null, ?string $type = null, int $perPage = 25)
+    /**
+     * Recent movements, optionally narrowed to one product, one type, or one seller.
+     *
+     * `sellerId` is not optional decoration: without it this is an admin view of every seller's
+     * stock history, and the seller-facing endpoint that reads it would hand one shop the movement
+     * log of another.
+     */
+    public function recent(?int $productId = null, ?string $type = null, int $perPage = 25, int|string|null $sellerId = null)
     {
         $query = StockMovement::query()->orderByDesc('id');
         if ($productId) {
@@ -126,6 +132,9 @@ class InventoryService
         }
         if ($type) {
             $query->where('type', $type);
+        }
+        if ($sellerId !== null) {
+            $query->where('seller_id', $sellerId);
         }
 
         return $query->paginate($perPage)->withQueryString();

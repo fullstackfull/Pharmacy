@@ -6595,4 +6595,6 @@ return [
 	'Items_total' => 'Items total',
 	'The_marketplace_has_not_recorded_the_earning_for_this_order_yet' => 'The marketplace has not recorded the earning for this order yet',
 	'Order_timeline' => 'Order timeline',
+	'stock_updated' => 'Stock updated',
+	'adjustment_would_make_stock_negative' => 'Adjustment would make stock negative',
 ];

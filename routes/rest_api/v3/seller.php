@@ -20,6 +20,7 @@ use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
@@ -353,6 +354,20 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index')->middleware('seller_can:finance.view');
                     Route::post('/', 'store')->middleware('seller_can:payouts.request');
                     Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // The stock ledger the marketplace has kept since Phase 3, which no seller has ever been
+            // able to see. Reading is open to anyone who can open the app; changing a balance needs
+            // the same permission as changing it one product at a time.
+            Route::group(['prefix' => 'inventory'], function () {
+                Route::controller(SellerInventoryController::class)->group(function () {
+                    Route::get('overview', 'overview');
+                    Route::get('movements', 'movements');
+                    Route::get('warehouses', 'warehouses');
+                    Route::get('batches', 'batches');
+                    Route::post('products/{id}/adjust', 'adjust')
+                        ->whereNumber('id')->middleware('seller_can:inventory.manage');
                 });
             });
 
