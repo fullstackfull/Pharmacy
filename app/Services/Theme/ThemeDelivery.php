@@ -298,6 +298,10 @@ class ThemeDelivery
                 )
                 : null),
             'source'   => app(ThemeSourceMap::class)->for($row->type, $settings, $blocks),
+            // Where the heading's "view all" leads, decided from what the section shows rather
+            // than from its type alone — so a rail scoped to one category opens that category on
+            // the phone, exactly as it does on the web. `none` when the section leads nowhere.
+            'view_all' => app(SectionDestination::class)->actionFor($row->type, $settings),
         ];
     }
 

@@ -11,6 +11,7 @@
     $__sections = app(\App\Services\Theme\StorefrontThemeRenderer::class)->sectionsFor('home');
     $__data = app(\App\Services\Theme\SectionDataResolver::class);
     $__ready = app(\App\Services\Theme\SectionReadiness::class);
+    $__where = app(\App\Services\Theme\SectionDestination::class);
     $__placeholder = dynamicAsset(path: 'public/assets/front-end/img/image-place-holder.png');
     // Types this file can draw. A section whose type has no renderer here is skipped entirely
     // rather than emitting an empty padded <section>, which reads on the page as a broken gap.
@@ -865,6 +866,9 @@
                 . ($height !== null ? "--tb-h:{$height}px;" : '')
                 . ($bg ? "background:{$bg};" : '');
             $breakpointCss = theme_section_breakpoint_css(settings: $s, selector: '#' . $sectionKey);
+            // Where this section's heading link leads, from the same object the app is told. A
+            // rail scoped to one category leads to that category, not to the whole catalogue.
+            $viewAllUrl = $__where->urlFor($type, $s);
 
             // Sections whose whole content comes from the catalogue are resolved BEFORE the
             // wrapper is opened: with nothing to draw they must not leave a padded empty band on
@@ -1039,8 +1043,8 @@
                                             <button type="button" class="ml-rail-btn" data-ml-rail="{{ $railId }}" data-dir="1" aria-label="{{ translate('next') }}">&#8250;</button>
                                         </div>
                                     @endif
-                                    @if ($s['view_all'] ?? true)
-                                        <a class="ml-viewall" href="{{ route('products') }}">{{ translate('view_all') }}</a>
+                                    @if (($s['view_all'] ?? true) && $viewAllUrl)
+                                        <a class="ml-viewall" href="{{ $viewAllUrl }}">{{ translate('view_all') }}</a>
                                     @endif
                                 </div>
                             </div>
@@ -1177,7 +1181,7 @@
                             $showcaseId = 'ml-showcase-' . ($__section['id'] ?? $loop->index);
                         @endphp
                         @if ($showcase)
-                            @php $categoryUrl = route('products', ['category_id' => $showcase['category']->id]); @endphp
+                            @php $categoryUrl = $viewAllUrl ?: route('products', ['category_id' => $showcase['category']->id]); @endphp
 
                             @if ($showcase['banner'])
                                 <a class="ml-tile ml-showcase__banner ml-reveal"
@@ -1516,8 +1520,8 @@
                                     @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
                                     <h2>{{ $s['title'] ?: translate('from_the_blog') }}</h2>
                                 </div>
-                                @if (($s['view_all'] ?? true) && \Illuminate\Support\Facades\Route::has('frontend.blog.index'))
-                                    <a class="ml-viewall" href="{{ route('frontend.blog.index') }}">{{ translate('view_all') }}</a>
+                                @if (($s['view_all'] ?? true) && $viewAllUrl)
+                                    <a class="ml-viewall" href="{{ $viewAllUrl }}">{{ translate('view_all') }}</a>
                                 @endif
                             </div>
                             @php $postStyle = $s['style'] ?? 'cards'; @endphp
@@ -1651,8 +1655,8 @@
                                 @if (!empty($s['eyebrow']))<span class="ml-eyebrow">{{ $s['eyebrow'] }}</span>@endif
                                 <h2>{{ $s['title'] ?: translate('our_vendors') }}</h2>
                             </div>
-                            @if (($s['view_all'] ?? true) && \Illuminate\Support\Facades\Route::has('vendors'))
-                                <a class="ml-viewall" href="{{ route('vendors') }}">{{ translate('view_all') }}</a>
+                            @if (($s['view_all'] ?? true) && $viewAllUrl)
+                                <a class="ml-viewall" href="{{ $viewAllUrl }}">{{ translate('view_all') }}</a>
                             @endif
                         </div>
 
@@ -2040,7 +2044,7 @@
                                 </div>
                             </div>
                             @if ($s['view_all'] ?? true)
-                                <a class="ml-viewall" href="{{ route('products', ['brand_id' => $brandShowcase['brand']->id]) }}">{{ translate('view_all') }}</a>
+                                <a class="ml-viewall" href="{{ $viewAllUrl ?: route('products', ['brand_id' => $brandShowcase['brand']->id]) }}">{{ translate('view_all') }}</a>
                             @endif
                         </div>
                         <div class="{{ $brandRail ? 'ml-rail' : 'ml-grid' }} ml-reveal">
