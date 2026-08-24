@@ -10,6 +10,8 @@ use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Http\RedirectResponse;
+use App\Services\Theme\Channel;
+use App\Services\Theme\ExperiencePageService;
 use App\Services\Theme\LinkComposer;
 use App\Services\Theme\SectionRegistry;
 use App\Services\Theme\StorefrontThemeRenderer;
@@ -38,6 +40,7 @@ class ThemeBuilderController extends BaseController
         private readonly SectionRegistry     $registry,
         private readonly ThemeManager        $themeManager,
         private readonly ThemeAssetService   $assets,
+        private readonly ExperiencePageService $pages,
     )
     {
     }
@@ -49,13 +52,31 @@ class ThemeBuilderController extends BaseController
             ? ThemeVersion::find($versionId)
             : $this->resolveEditableDraft();
 
+        // Which channel this builder session is composing for. The App Builder opens on the
+        // customer app; the theme editor keeps opening on the web, and both drive the same engine.
+        $channel = Channel::normalize($request?->get('channel')) ?? Channel::WEB;
+
+        // The pages this theme actually has, rather than a list written into three files. Falls
+        // back to the guaranteed system pages while the pages table is still being migrated.
+        $pages = $version?->theme
+            ? $this->pages->forChannel($version->theme->id, $channel)
+            : $this->pages->forChannel(0, $channel);
+
+        $slugs = array_column($pages, 'slug');
         $page = $request?->get('page', 'home') ?: 'home';
+        $page = in_array($page, $slugs, true) ? $page : ($slugs[0] ?? 'home');
 
         // Activate live preview for the version being edited so the builder's storefront iframe renders
         // this exact draft (its sections + global settings). Session-scoped and admin-only, exactly like
         // the explicit Preview button — nothing leaks to customers.
         if ($version && $this->builder->isEditable($version)) {
             session([StorefrontThemeRenderer::PREVIEW_SESSION_KEY => $version->id]);
+
+            // A theme that predates the page table — or arrived through an import — gains its
+            // pages the first time somebody opens the builder, rather than needing a command.
+            if ($version->theme) {
+                $this->pages->ensureSystemPages($version->theme);
+            }
 
             // Register any banner-backed blocks composed before the smart link existed, so Banner
             // Setup catches up the moment the builder opens.
@@ -84,7 +105,8 @@ class ThemeBuilderController extends BaseController
             // answers what was arranged; this is the only thing that answers whether it worked.
             'reach'         => $version ? app(\App\Services\Theme\SectionReach::class)->visitors() : [],
             'themeSettings' => $this->themeManager->resolveSettings($version),
-            'pages'         => ['home', 'header', 'footer'],
+            'pages'         => $pages,
+            'channel'       => $channel,
             'editable'      => $version ? $this->builder->isEditable($version) : false,
             'uploadAccept'  => '.' . implode(',.', ThemeAssetService::acceptedExtensions()),
         ]);

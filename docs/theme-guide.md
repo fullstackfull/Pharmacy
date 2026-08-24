@@ -273,6 +273,18 @@ Brand Banner.
   that type's data variable is called). Two types that draw one body — `featured_deal` and
   `clearance_sale` — share it by including the other's partial. `ThemeSectionPartialsTest` holds
   the two invariants: every renderable type has a partial, and every partial compiles.
+- **App Builder.** `/admin/app-builder` is the same engine entered as the app rather than as the
+  theme: it opens the composer on `customer_app`, manages that channel's **pages**, and lists the
+  section catalogue. Everything else in its navigation links to the screen that already does the
+  job (global styles, publishing, version history) — a second copy of any of them would be the
+  duplication the architecture exists to avoid. `/admin/theme/builder` keeps working and opens on
+  `web`.
+- **Pages.** `experience_pages` is read now, not just written: the builder's page switcher, the API's
+  `?page=` and the Pages screen all come from `ExperiencePageService`. `home`, `header` and `footer`
+  are **shared** — one arrangement both channels read — and a page a merchant creates belongs to the
+  channel it was made for. A built-in page can be renamed, never disabled or deleted; a custom page
+  turned off keeps its sections and stops being servable. Falls back to the three guaranteed slugs
+  while the table is unmigrated.
 - **Did the arrangement work?** `section_viewed` is reported by whichever client drew the page —
   the web from an IntersectionObserver at a quarter visible, the app from one scroll listener that
   measures each section's box when the scroll settles — because how far down a page anyone scrolled

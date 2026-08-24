@@ -81,6 +81,7 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
 use App\Http\Controllers\Admin\Settings\SeoTranslationController;
@@ -1395,6 +1396,24 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('', 'update');
                 Route::post('update-by-type', 'updateByType')->name('update-by-type');
             });
+        });
+    });
+
+    /*
+     * App Builder — the same experience engine, entered as the app rather than as the theme.
+     *
+     * Pages of a channel are the part nothing could manage before; everything else here links to
+     * the screens that already do the job (the composer, publishing, versions, global styles)
+     * rather than growing a second copy of them.
+     */
+    Route::group(['prefix' => 'app-builder', 'as' => 'app-builder.', 'middleware' => ['module:themes_and_addons']], function () {
+        Route::controller(AppBuilderController::class)->group(function () {
+            Route::get('', 'index')->name('index');
+            Route::get('pages', 'pages')->name('pages');
+            Route::get('sections', 'sections')->name('sections');
+            Route::post('pages/store', 'storePage')->name('pages.store');
+            Route::post('pages/update', 'updatePage')->name('pages.update');
+            Route::post('pages/delete', 'deletePage')->name('pages.delete');
         });
     });
 

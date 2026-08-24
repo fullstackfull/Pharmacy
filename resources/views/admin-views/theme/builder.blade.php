@@ -81,6 +81,7 @@
         .tb-compat i { color: #6ea8fe; margin-top: .15rem; }
         /* A section the chosen channel will not receive: still listed, still editable, visibly
            not part of what that client gets. */
+        .tb-seg a.is-off { opacity: .45; text-decoration: line-through; }
         .tb-item__reach { display: inline-flex; align-items: center; gap: .2rem; font-size: .62rem;
                           padding: .12rem .3rem; border-radius: .3rem; background: #1b2b25; color: #7fc3ae; }
         .tb-item.is-off-channel { opacity: .42; }
@@ -334,6 +335,7 @@
         <div class="tb-app"
              data-version="{{ $version->id }}"
              data-page="{{ $page }}"
+             data-channel="{{ $channel }}"
              data-editable="{{ $editable ? 1 : 0 }}"
              data-url-add="{{ route('admin.theme.builder.section.add') }}"
              data-url-update="{{ route('admin.theme.builder.section.update') }}"
@@ -372,13 +374,22 @@
                 </div>
 
                 <div class="tb-bar__group is-grow justify-content-center">
+                    {{-- The pages this theme has, read from the page table rather than written
+                         into the template: home is one page among them, which is the whole point
+                         of the page abstraction. A disabled page is still listed for its owner —
+                         it is a page they turned off, not a page that stopped existing. --}}
                     <nav class="tb-seg">
                         @foreach ($pages as $availablePage)
-                            <a class="{{ $page === $availablePage ? 'is-active' : '' }}"
-                               href="{{ route('admin.theme.builder.index', ['page' => $availablePage, 'version' => $version->id]) }}">
-                                {{ translate($availablePage) }}
+                            <a class="{{ $page === $availablePage['slug'] ? 'is-active' : '' }} {{ $availablePage['enabled'] ? '' : 'is-off' }}"
+                               title="{{ $availablePage['enabled'] ? '' : translate('this_page_is_turned_off') }}"
+                               href="{{ route('admin.theme.builder.index', ['page' => $availablePage['slug'], 'version' => $version->id, 'channel' => $channel]) }}">
+                                {{ translate($availablePage['title']) }}
                             </a>
                         @endforeach
+                        @if ($editable)
+                            <a href="{{ route('admin.app-builder.pages', ['channel' => $channel]) }}"
+                               title="{{ translate('manage_pages') }}"><i class="fi fi-rr-settings-sliders"></i></a>
+                        @endif
                     </nav>
                 </div>
 
@@ -388,8 +399,14 @@
                          width; this changes what the page actually consists of, which is a
                          different question and the one a merchant asks before publishing. --}}
                     <div class="tb-seg" role="group" aria-label="{{ translate('channel') }}">
-                        <button type="button" class="is-active" data-channel="web" title="{{ translate('website') }}"><i class="fi fi-rr-globe"></i></button>
-                        <button type="button" data-channel="customer_app" title="{{ translate('customer_app') }}"><i class="fi fi-rr-mobile-notch"></i></button>
+                        {{-- Links rather than buttons: the channel decides which pages exist and
+                             what each one may contain, and those are the server's answers. --}}
+                        <a class="{{ $channel === 'customer_app' ? '' : 'is-active' }}" data-channel="web"
+                           title="{{ translate('website') }}"
+                           href="{{ route('admin.theme.builder.index', ['page' => $page, 'version' => $version->id, 'channel' => 'web']) }}"><i class="fi fi-rr-globe"></i></a>
+                        <a class="{{ $channel === 'customer_app' ? 'is-active' : '' }}" data-channel="customer_app"
+                           title="{{ translate('customer_app') }}"
+                           href="{{ route('admin.theme.builder.index', ['page' => $page, 'version' => $version->id, 'channel' => 'customer_app']) }}"><i class="fi fi-rr-mobile-notch"></i></a>
                     </div>
                     <div class="tb-seg" role="group" aria-label="{{ translate('device_preview') }}">
                         <button type="button" class="is-active" data-device="desktop" title="{{ translate('desktop') }}"><i class="fi fi-rr-computer"></i></button>
@@ -1811,7 +1828,7 @@
             // Not a second preview, a filter on the one that exists: the iframe cannot render the
             // app, but the list of what the app receives is knowable and is most of the answer.
             (function () {
-                var buttons = document.querySelectorAll('.tb-seg button[data-channel]');
+                var buttons = document.querySelectorAll('.tb-seg [data-channel]');
                 if (!buttons.length) return;
 
                 function apply(channel) {
@@ -1824,20 +1841,17 @@
                     });
                 }
 
-                buttons.forEach(function (button) {
-                    button.addEventListener('click', function () {
-                        buttons.forEach(function (other) { other.classList.remove('is-active'); });
-                        button.classList.add('is-active');
-                        apply(button.dataset.channel);
+            // The channel is whatever the page was opened for; switching it reloads, because the
+            // channel decides which pages exist and which sections may appear on them.
+            var openedFor = root.dataset.channel || 'web';
+            apply(openedFor);
 
-                        // Looking through the app's eyes at a desktop-width frame is a mixed
-                        // message; the phone frame is what that channel actually is.
-                        if (button.dataset.channel === 'customer_app' && stage) {
-                            var phone = document.querySelector('.tb-seg button[data-device="mobile"]');
-                            if (phone) phone.click();
-                        }
-                    });
-                });
+            // Looking through the app's eyes at a desktop-width frame is a mixed message; the phone
+            // frame is what that channel actually is.
+            if (openedFor === 'customer_app' && stage) {
+                var phone = document.querySelector('.tb-seg button[data-device="mobile"]');
+                if (phone) phone.click();
+            }
             })();
 
             // ---------- publish -----------------------------------------------------------

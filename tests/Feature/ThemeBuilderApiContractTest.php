@@ -5,10 +5,6 @@ namespace Tests\Feature;
 use App\Models\Theme;
 use App\Models\ThemeSection;
 use App\Models\ThemeVersion;
-use App\Services\Theme\SectionRegistry;
-use App\Services\Theme\ThemeAssetService;
-use App\Services\Theme\ThemeBuilderService;
-use App\Services\Theme\ThemeManager;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -66,10 +62,10 @@ class ThemeBuilderApiContractTest extends TestCase
             $t->json('settings')->nullable(); $t->timestamps();
         });
 
-        $registry = new SectionRegistry();
-        $this->controller = new \App\Http\Controllers\Admin\Settings\ThemeBuilderController(
-            new ThemeBuilderService($registry, app(\App\Services\Theme\SectionReadiness::class)), $registry, new ThemeManager(), new ThemeAssetService()
-        );
+        // Resolved rather than hand-assembled: the controller's collaborators are its own
+        // business, and a test that lists them breaks whenever one is added without ever testing
+        // anything about the list.
+        $this->controller = app(\App\Http\Controllers\Admin\Settings\ThemeBuilderController::class);
 
         $theme = Theme::create(['name' => 'T', 'slug' => 't', 'is_active' => true]);
         $this->draft = ThemeVersion::create(['theme_id' => $theme->id, 'status' => ThemeVersion::STATUS_DRAFT]);

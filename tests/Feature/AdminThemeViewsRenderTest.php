@@ -163,6 +163,38 @@ class AdminThemeViewsRenderTest extends TestCase
         $this->assertStringNotContainsString('name="change_note"', $html, 'the publish form is not offered');
     }
 
+    public function test_the_app_builder_pages_screen_renders(): void
+    {
+        // The screen that makes a page something a merchant can make. It has to render in the state
+        // a fresh shop is in — one theme, the three built-in pages, no custom ones yet.
+        app(\App\Services\Theme\ExperiencePageService::class)->ensureSystemPages($this->theme);
+
+        $html = $this->renderBody('admin-views.app-builder.pages', [
+            'channel' => 'customer_app',
+            'theme' => $this->theme,
+            'pages' => app(\App\Services\Theme\ExperiencePageService::class)
+                ->forChannel($this->theme->id, 'customer_app'),
+            'ready' => true,
+            'draft' => $this->draft,
+            'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('name="title"', $html, 'a page can be added');
+        $this->assertStringContainsString('home', $html, 'and the built-in pages are listed');
+    }
+
+    public function test_the_app_builder_sections_catalogue_renders(): void
+    {
+        $html = $this->renderBody('admin-views.app-builder.sections', [
+            'channel' => 'customer_app',
+            'catalogue' => app(\App\Services\Theme\SectionRegistry::class)->catalogue(null),
+            'channels' => \App\Services\Theme\Channel::RENDERABLE,
+        ]);
+
+        $this->assertStringContainsString('ab-search', $html, 'the catalogue is searchable');
+        $this->assertStringContainsString('data-family', $html, 'and filterable by family');
+    }
+
     // -----------------------------------------------------------------------------------------
 
     /** @return array<string, mixed> */
@@ -186,7 +218,10 @@ class AdminThemeViewsRenderTest extends TestCase
             'publishCheck' => app(PublishValidator::class)->inspect($this->draft),
             'reach' => [],
             'themeSettings' => app(ThemeManager::class)->resolveSettings($this->draft),
-            'pages' => ['home', 'header', 'footer'],
+            // The pages this theme has, in the shape the page service hands over — home is one of
+            // them rather than the only one the template knows about.
+            'pages' => app(\App\Services\Theme\ExperiencePageService::class)->forChannel($this->theme->id, 'web'),
+            'channel' => 'web',
             'editable' => true,
             'uploadAccept' => '.png,.jpg',
         ];
