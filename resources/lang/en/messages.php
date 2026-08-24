@@ -6694,4 +6694,11 @@ return [
 	"adjustment_would_make_stock_negative" => "That would take the stock below zero",
 	"adjustment_cannot_be_zero" => "A correction of zero changes nothing",
 	"products_unavailable" => "Products are unavailable right now",
+	"return_updated" => "Return updated",
+	"return_not_found" => "Return not found",
+	"return_could_not_be_updated" => "This return could not be updated",
+	"return_is_not_open" => "This return is already closed",
+	"return_is_not_in_a_receivable_state" => "This return is not in a state where it can be received",
+	"only_an_authorized_return_can_be_marked_in_transit" => "Only an authorised return can be marked in transit",
+	"refund_request_not_found" => "Refund request not found",
 ];

@@ -25,6 +25,7 @@ use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerReturnController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
@@ -354,6 +355,18 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index')->middleware('seller_can:finance.view');
                     Route::post('/', 'store')->middleware('seller_can:payouts.request');
                     Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // The goods coming back. Reading is open to anyone who can open the app; deciding what
+            // happens to a return is the same permission as working an order.
+            Route::group(['prefix' => 'returns'], function () {
+                Route::controller(SellerReturnController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('{id}', 'show')->whereNumber('id');
+                    Route::post('{id}/in-transit', 'markInTransit')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/receive', 'receive')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/reject', 'reject')->whereNumber('id')->middleware('seller_can:orders.manage');
                 });
             });
 

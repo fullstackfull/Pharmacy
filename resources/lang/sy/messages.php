@@ -9495,4 +9495,8 @@ return [
 	"stock_updated" => "تم تحديث المخزون",
 	"stock_adjustment_refused" => "تم رفض تغيير المخزون",
 	"products_unavailable" => "المنتجات غير متاحة حالياً",
+	"return_updated" => "تم تحديث الإرجاع",
+	"return_not_found" => "طلب الإرجاع غير موجود",
+	"return_could_not_be_updated" => "تعذّر تحديث هذا الإرجاع",
+	"refund_request_not_found" => "طلب الاسترداد غير موجود",
 ];

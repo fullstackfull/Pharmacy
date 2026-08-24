@@ -77,13 +77,13 @@ class ReturnLogisticsService
      * Receive the goods. If the return is restockable and points at a product, restock it (locked)
      * and record a `return` movement; otherwise the return is simply marked received.
      */
-    public function receive(ReturnShipment $rma, int|string|null $by = null): array
+    public function receive(ReturnShipment $rma, int|string|null $by = null, string $byType = 'admin'): array
     {
         if (!$rma->isOpen()) {
             return ['ok' => false, 'reason' => 'return_is_not_in_a_receivable_state'];
         }
 
-        return DB::transaction(function () use ($rma, $by) {
+        return DB::transaction(function () use ($rma, $by, $byType) {
             $restocked = false;
             $balanceAfter = null;
 
@@ -122,7 +122,9 @@ class ReturnLogisticsService
                         referenceId: $rma->id,
                         sellerId: $rma->seller_id,
                         createdBy: $by,
-                        createdByType: 'admin',
+                        // Who actually received the goods. Stamping every receipt 'admin' made the
+                        // stock log say the marketplace handled a return the seller handled.
+                        createdByType: $byType,
                     );
                     $restocked = true;
                 }
@@ -161,6 +163,39 @@ class ReturnLogisticsService
         );
 
         return ['ok' => true, 'return' => $rma];
+    }
+
+    /**
+     * Open the return that an approved refund implies, once.
+     *
+     * A refund approved on a physical product means goods are coming back, and until now nothing
+     * recorded that: the money moved and the units did not exist anywhere. Without an RMA the return
+     * never restocks, so a seller who refunds a customer quietly loses the stock as well as the sale.
+     *
+     * Idempotent on the refund request, so approving twice — or an admin having opened one already —
+     * does not create a second return for the same goods.
+     */
+    public function authorizeForRefund(
+        int|string $refundRequestId,
+        array $data,
+        int|string|null $by = null,
+        string $byType = 'seller',
+    ): ?ReturnShipment {
+        if (!Schema::hasTable('return_shipments')) {
+            return null;
+        }
+
+        $existing = ReturnShipment::where('refund_request_id', $refundRequestId)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->authorize(
+            data: $data + ['refund_request_id' => $refundRequestId],
+            by: $by,
+            byType: $byType,
+        );
     }
 
     private function nextReference(): string
