@@ -248,6 +248,43 @@ class SellerReportService
         ];
     }
 
+    /**
+     * The totals a printed order report carries at its foot.
+     *
+     * Two of them cannot be summed from a column: shipping the seller waived under a free-shipping
+     * offer was never charged, and a delivery incentive is only owed on the seller's own deliveries.
+     *
+     * @param  Collection<int, \App\Models\Order>  $orders
+     * @return array<string, float|int>
+     */
+    public function orderTotals(Collection $orders): array
+    {
+        $deliveryCharge = 0.0;
+        $deliverymanIncentive = 0.0;
+
+        foreach ($orders as $order) {
+            $deliveryCharge += (float) $order->shipping_cost
+                - ($order->extra_discount_type === 'free_shipping_over_order_amount' ? (float) $order->extra_discount : 0);
+            $deliverymanIncentive += ($order->delivery_type === 'self_delivery' && $order->delivery_man_id)
+                ? (float) $order->deliveryman_charge
+                : 0;
+        }
+
+        return [
+            'total_orders' => $orders->count(),
+            'total_order_amount' => (float) $orders->sum('order_amount'),
+            'total_product_discount' => (float) $orders->sum('details_sum_discount'),
+            'total_coupon_discount' => (float) $orders->sum('discount_amount'),
+            'total_referral_discount' => (float) $orders->sum('refer_and_earn_discount'),
+            'tota_order_due_amount' => (float) $orders->sum('edit_due_amount'),
+            'total_order_return_amount' => (float) $orders->sum('edit_return_amount'),
+            'total_tax' => (float) $orders->sum('details_sum_tax'),
+            'total_order_commission' => (float) $orders->sum('admin_commission'),
+            'total_delivery_charge' => $deliveryCharge,
+            'total_deliveryman_incentive' => $deliverymanIncentive,
+        ];
+    }
+
     /** @return Collection<int, OrderDetail> */
     private function topProducts(int|string $sellerId, int $limit = 5): Collection
     {

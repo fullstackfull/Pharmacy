@@ -324,7 +324,9 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::controller(SellerReportController::class)->group(function () {
                     Route::get('orders', 'orders');
                     Route::get('orders/export', 'exportOrders');
+                    Route::get('orders/export-pdf', 'exportOrdersPdf');
                     Route::get('products', 'products');
+                    Route::get('products/export', 'exportProducts');
                     Route::get('stock', 'stock');
                     Route::get('stock/export', 'exportStock');
                 });
