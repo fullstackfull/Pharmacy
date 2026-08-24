@@ -4,10 +4,12 @@ namespace App\Services\Marketplace\Bulk;
 
 use App\Jobs\RunSellerBulkJob;
 use App\Models\Product;
+use App\Models\ProductPriceChange;
 use App\Models\Seller;
 use App\Models\SellerBulkJob;
 use App\Models\SellerStaff;
 use App\Services\AuditLogger;
+use App\Services\Marketplace\PriceChangeRecorder;
 use App\Services\Marketplace\SellerPermissionService;
 use App\Services\Marketplace\SellerPrincipal;
 use Illuminate\Support\Facades\Validator;
@@ -148,6 +150,26 @@ class SellerBulkJobService
             'started_at' => now(),
         ])->save();
 
+        $requestedIds = array_map('intval', $job->input['product_ids'] ?? []);
+        $settings = $job->input['settings'] ?? [];
+        $failures = [];
+        $succeeded = 0;
+        $processed = 0;
+
+        // Everything this job changes is attributed to the job, not to whoever happens to be signed
+        // in when the worker runs — which, on a queue, is nobody.
+        return PriceChangeRecorder::attributeTo(
+            ProductPriceChange::SOURCE_BULK_JOB,
+            'Bulk job #' . $job->id . ' (' . $job->type . ')',
+            fn () => $this->apply($job, $operation, $principal),
+        );
+    }
+
+    /**
+     * The loop itself, separated so the attribution above wraps every write inside it.
+     */
+    private function apply(SellerBulkJob $job, BulkOperation $operation, SellerPrincipal $principal): SellerBulkJob
+    {
         $requestedIds = array_map('intval', $job->input['product_ids'] ?? []);
         $settings = $job->input['settings'] ?? [];
         $failures = [];

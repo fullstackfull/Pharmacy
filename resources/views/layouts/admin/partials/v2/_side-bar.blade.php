@@ -796,12 +796,6 @@
                     </div>
                 @endif
 
-                @if (Route::has('admin.marketplace.customer-groups.index'))
-                    <a class="v2-nav-item {{ Request::is('admin/marketplace/customer-groups*') ? 'v2-is-active' : '' }}" data-item="customer-groups-b2b" href="{{ route('admin.marketplace.customer-groups.index') }}">
-                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('customer_groups') }} (B2B)</span></span>
-                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="customer-groups-b2b" aria-label="Pin"></button></div>
-                    </a>
-                @endif
                 @if (Route::has('admin.marketplace.audit-log'))
                     <a class="v2-nav-item {{ Request::is('admin/marketplace/audit-log*') ? 'v2-is-active' : '' }}" data-item="marketplace-audit-log" href="{{ route('admin.marketplace.audit-log') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('audit_log') }}</span></span>

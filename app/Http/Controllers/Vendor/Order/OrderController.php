@@ -59,6 +59,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Rap2hpoutre\FastExcel\FastExcel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\Marketplace\SellerOrderBreakdownService;
+use App\Services\Marketplace\SellerOrderTimelineService;
 
 class OrderController extends BaseController
 {
@@ -509,9 +511,16 @@ class OrderController extends BaseController
 
         $orderEditPaymentHistory = $this->orderEditHistoryRepo->getListWhere(filters: ['order_id' => $order['id']], dataLimit: 'all');
 
+        // The same two services the seller app reads. Keeping the panel on its own arithmetic is how
+        // the two end up quoting a seller different margins for the same order.
+        $sellerId = auth('seller')->id();
+        $sellerEarning = app(SellerOrderBreakdownService::class)->breakdownFor(orderId: $order['id'], sellerId: $sellerId);
+        $sellerTimeline = app(SellerOrderTimelineService::class)->timelineFor(orderId: $order['id'], sellerId: $sellerId)
+            ?? ['events' => [], 'sla' => null];
+
         if ($order['order_type'] == 'default_type') {
             $orderCount = $this->orderRepo->getListWhereCount(filters: ['customer_id' => $order['customer_id']]);
-            return view('vendor-views.order.order-details', compact('order', 'linkedOrders',
+            return view('vendor-views.order.order-details', compact('order', 'linkedOrders', 'sellerEarning', 'sellerTimeline',
                 'deliveryMen', 'totalDelivered', 'physicalProduct', 'isOrderOnlyDigital',
                 'countryRestrictStatus','totalDelivered', 'zipRestrictStatus', 'countries', 'zipCodes', 'orderCount', 'previousOrder', 'nextOrder', 'allProductsList', 'isOrderEditable', 'orderProductsSession', 'editOrderSummary', 'orderEditPaymentHistory'));
         } else {

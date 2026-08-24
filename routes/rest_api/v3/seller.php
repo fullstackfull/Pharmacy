@@ -20,10 +20,13 @@ use App\Http\Controllers\RestAPI\v3\seller\RefundController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerAnalyticsController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerBulkJobController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerCenterController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerInventoryController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerPayoutController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerActionCenterController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerReportController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerReturnController;
+use App\Http\Controllers\RestAPI\v3\seller\SellerStatementController;
 use App\Http\Controllers\RestAPI\v3\seller\SellerVerificationController;
 use App\Http\Controllers\RestAPI\v3\seller\shippingController;
 use App\Http\Controllers\RestAPI\v3\seller\ShippingMethodController;
@@ -353,6 +356,41 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                     Route::get('/', 'index')->middleware('seller_can:finance.view');
                     Route::post('/', 'store')->middleware('seller_can:payouts.request');
                     Route::post('{id}/cancel', 'cancel')->whereNumber('id')->middleware('seller_can:payouts.request');
+                });
+            });
+
+            // The account, line by line. Reading the books is a separate permission from moving
+            // money out of them, and this is squarely the first.
+            Route::group(['prefix' => 'statement', 'middleware' => 'seller_can:finance.view'], function () {
+                Route::controller(SellerStatementController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('export', 'export');
+                });
+            });
+
+            // The goods coming back. Reading is open to anyone who can open the app; deciding what
+            // happens to a return is the same permission as working an order.
+            Route::group(['prefix' => 'returns'], function () {
+                Route::controller(SellerReturnController::class)->group(function () {
+                    Route::get('/', 'index');
+                    Route::get('{id}', 'show')->whereNumber('id');
+                    Route::post('{id}/in-transit', 'markInTransit')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/receive', 'receive')->whereNumber('id')->middleware('seller_can:orders.manage');
+                    Route::post('{id}/reject', 'reject')->whereNumber('id')->middleware('seller_can:orders.manage');
+                });
+            });
+
+            // The stock ledger the marketplace has kept since Phase 3, which no seller has ever been
+            // able to see. Reading is open to anyone who can open the app; changing a balance needs
+            // the same permission as changing it one product at a time.
+            Route::group(['prefix' => 'inventory'], function () {
+                Route::controller(SellerInventoryController::class)->group(function () {
+                    Route::get('overview', 'overview');
+                    Route::get('movements', 'movements');
+                    Route::get('warehouses', 'warehouses');
+                    Route::get('batches', 'batches');
+                    Route::post('products/{id}/adjust', 'adjust')
+                        ->whereNumber('id')->middleware('seller_can:inventory.manage');
                 });
             });
 

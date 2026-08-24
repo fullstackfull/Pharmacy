@@ -40,6 +40,7 @@ use App\Models\ReferralCustomer;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Models\DigitalProductVariation;
 use Modules\TaxModule\app\Traits\VatTaxManagement;
 
@@ -1368,6 +1369,55 @@ class OrderManager
                 couponCode: $orderReward['coupon_code'],
                 couponDiscount: $orderReward['coupon_discount'],
             );
+        }
+
+        // Every line now carries its own commission snapshot. Make the order's aggregate their sum.
+        self::syncOrderCommissionFromLines($orderId);
+    }
+
+    /**
+     * Make `orders.admin_commission` the sum of the per-line commission snapshots.
+     *
+     * Two commission figures have coexisted on every order. `orders.admin_commission` was computed
+     * before the order existed, from whatever percentage the seller happened to carry that day
+     * applied to the whole basket; `order_item_commissions` is written per line by CommissionEngine,
+     * which resolves scope, priority, effective dates and caps. They can disagree — and a monitoring
+     * panel already reports when they do, in as many words.
+     *
+     * That is not a reporting inconvenience. `orders.admin_commission` is what `order_transactions`
+     * derives `seller_amount` from, so the number a seller is actually paid could differ from the
+     * number the commission rules say they are owed. Whichever was right, they cannot both be.
+     *
+     * The per-line snapshot wins, because it is the one that knows which rule was applied to what,
+     * survives a rate change, and can be reversed one line at a time when a single item is refunded.
+     * The aggregate becomes derived rather than independently computed, and every existing reader of
+     * it — transactions, payouts, reports — keeps working and starts agreeing.
+     *
+     * If no snapshot exists the legacy figure is left alone. A missing snapshot means the engine did
+     * not run (its call is deliberately non-fatal), and zeroing a seller's commission because a
+     * logging path failed would be far worse than the disagreement this fixes.
+     */
+    public static function syncOrderCommissionFromLines(int|string $orderId): void
+    {
+        try {
+            if (!Schema::hasTable('order_item_commissions') || !Schema::hasTable('orders')) {
+                return;
+            }
+
+            $snapshot = DB::table('order_item_commissions')
+                ->where('order_id', $orderId)
+                ->selectRaw('COUNT(*) as lines, SUM(commission_amount) as commission')
+                ->first();
+
+            if (!$snapshot || (int) $snapshot->lines === 0) {
+                return;
+            }
+
+            DB::table('orders')->where('id', $orderId)
+                ->update(['admin_commission' => round((float) $snapshot->commission, 2)]);
+        } catch (\Throwable $exception) {
+            // Never the reason an order fails to be placed.
+            Log::warning('Commission aggregate sync failed for order ' . $orderId . ': ' . $exception->getMessage());
         }
     }
 
