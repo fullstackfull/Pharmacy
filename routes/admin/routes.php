@@ -647,6 +647,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('team', 'team')->name('team');
                 Route::get('bulk-jobs', 'bulkJobs')->name('bulk-jobs');
                 Route::post('suspend-rule', 'suspendRule')->name('suspend-rule');
+                Route::post('release-rule', 'releaseRule')->name('release-rule');
                 Route::post('revoke-key', 'revokeKey')->name('revoke-key');
                 Route::post('disable-webhook', 'disableWebhook')->name('disable-webhook');
             });

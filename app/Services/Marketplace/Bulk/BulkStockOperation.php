@@ -79,8 +79,8 @@ class BulkStockOperation implements BulkOperation
             delta: $delta,
             reason: 'bulk_' . $settings['mode'],
             note: $settings['note'] ?? null,
-            by: $principal->staffId() ?? $principal->sellerId(),
-            byType: $principal->isOwner() ? 'seller' : 'seller_staff',
+            by: $principal->actorId(),
+            byType: $principal->actorType(),
         );
 
         if (!($result['ok'] ?? false)) {

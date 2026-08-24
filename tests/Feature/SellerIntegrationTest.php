@@ -124,7 +124,9 @@ class SellerIntegrationTest extends TestCase
         return SellerWebhook::create(array_merge([
             'seller_id' => self::SELLER,
             'name' => 'ERP',
-            'url' => 'https://erp.example.com/hook',
+            // A literal public address, so the SSRF guard the dispatcher runs before every dial
+            // reaches its verdict without needing DNS in the test environment.
+            'url' => 'https://198.51.100.7/hook',
             'events' => ['order.placed'],
             'secret' => 'a-signing-secret',
             'status' => SellerWebhook::STATUS_ACTIVE,
@@ -258,6 +260,58 @@ class SellerIntegrationTest extends TestCase
         $this->assertSame(1, SellerApiKey::count());
     }
 
+    public function test_a_key_cannot_reach_a_route_that_does_not_say_what_it_needs(): void
+    {
+        $issued = $this->issue(['orders.view', 'products.view']);
+        $headers = ['Authorization' => 'Bearer ' . $issued['plaintext'], 'Accept' => 'application/json'];
+
+        // The whole point of scoping a key is that it costs the seller only what it was issued
+        // for. Scope enforcement lives on the route, and most of this API predates it — so a key
+        // is refused anywhere the route does not declare what it needs, rather than being handed
+        // the shop by default. `seller-update` bcrypts a caller-chosen password onto the owner's
+        // row and returns a fresh owner token; `account-delete` is unrecoverable.
+        foreach ([
+            ['put', '/api/v3/seller/seller-update'],
+            ['delete', '/api/v3/seller/account-delete'],
+            ['post', '/api/v3/seller/balance-withdraw'],
+            ['post', '/api/v3/seller/payment-information/update'],
+        ] as [$method, $uri]) {
+            $response = $this->withHeaders($headers)->{$method . 'Json'}($uri, ['password' => 'taken']);
+
+            $response->assertStatus(403);
+            $this->assertContains(
+                data_get($response->json(), 'errors.0.code'),
+                ['api_key', 'permission', 'owner_only'],
+                $uri,
+            );
+        }
+    }
+
+    public function test_taking_the_account_is_refused_to_everybody_but_the_account_holder(): void
+    {
+        $role = SellerRole::create([
+            'seller_id' => self::SELLER,
+            'name' => 'Everything',
+            // Every permission the catalogue has. None of them is the account itself.
+            'permissions' => app(\App\Services\Marketplace\SellerPermissionService::class)->allKeys(),
+        ]);
+        SellerStaff::create([
+            'seller_id' => self::SELLER, 'seller_role_id' => $role->id, 'name' => 'Manager',
+            'email' => 'manager@example.com', 'password' => Hash::make('x'),
+            'auth_token' => 'staff-token-long-enough-to-clear-the-gate',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer staff-token-long-enough-to-clear-the-gate',
+            'Accept' => 'application/json',
+        ])->deleteJson('/api/v3/seller/account-delete');
+
+        // A role that could delete the shop would be a role that can take the shop, and an owner
+        // granting "manage everything" is not consenting to that.
+        $response->assertStatus(403);
+        $this->assertSame('owner_only', data_get($response->json(), 'errors.0.code'));
+    }
+
     public function test_a_key_may_still_read_the_integration_list(): void
     {
         $issued = $this->issue(['shop_settings.manage']);
@@ -359,7 +413,9 @@ class SellerIntegrationTest extends TestCase
 
         $delivery->refresh();
         $this->assertSame(500, $delivery->response_code);
-        $this->assertSame('upstream exploded', $delivery->response_body);
+        // The code, never the body: persisting what answered would turn the delivery log into a
+        // read-back channel for anything the platform's network can reach.
+        $this->assertNull($delivery->response_body);
         // Still pending: it has attempts left, and the next one is scheduled rather than immediate.
         $this->assertSame(SellerWebhookDelivery::STATUS_PENDING, $delivery->status);
         $this->assertNotNull($delivery->next_attempt_at);
@@ -404,6 +460,22 @@ class SellerIntegrationTest extends TestCase
         $delivery->refresh();
         $this->assertNull($delivery->response_code);
         $this->assertStringContainsString('connection refused', (string) $delivery->error);
+        $this->assertSame(1, $webhook->fresh()->consecutive_failures);
+    }
+
+    public function test_an_endpoint_repointed_at_the_internal_network_is_not_dialled(): void
+    {
+        // A URL that passed the check when it was registered can be re-pointed afterwards, so the
+        // destination is judged again immediately before the request leaves.
+        Http::fake(['*' => Http::response('secrets', 200)]);
+        $webhook = $this->webhook(['url' => 'http://169.254.169.254/latest/meta-data/']);
+        $delivery = $this->delivery($webhook);
+
+        $this->assertFalse(app(SellerWebhookDispatcher::class)->attempt($delivery));
+
+        Http::assertNothingSent();
+        $delivery->refresh();
+        $this->assertSame('destination_refused:destination_is_private_or_reserved', $delivery->error);
         $this->assertSame(1, $webhook->fresh()->consecutive_failures);
     }
 

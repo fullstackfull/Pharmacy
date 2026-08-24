@@ -64,6 +64,20 @@ class SellerApiAuthMiddleware
                 $request->attributes->set(self::PRINCIPAL, $principal);
 
                 if ($principal->apiKey !== null) {
+                    // A key may only reach a route that says what scope it needs.
+                    //
+                    // Scope enforcement lives on `seller_can`, and most of this API predates it:
+                    // roughly a hundred authenticated routes carry `seller_api_auth` alone, which
+                    // meant a key issued to read reviews could reset the owner's password, redirect
+                    // the payout account and delete the shop. Requiring the declaration here rather
+                    // than trusting each route to remember makes the gap fail closed — a route
+                    // added tomorrow without a scope refuses keys instead of handing them the shop.
+                    if (!$this->routeDeclaresAScope($request)) {
+                        return response()->json(['errors' => [
+                            ['code' => 'api_key', 'message' => translate('this_endpoint_does_not_accept_an_api_key')],
+                        ]], 403);
+                    }
+
                     // "Last used" has to come from real traffic, which is what makes it worth
                     // reading when deciding whether a key is still needed.
                     $this->apiKeys->touch($principal->apiKey, $request->ip());
@@ -76,5 +90,29 @@ class SellerApiAuthMiddleware
         return response()->json([
             'auth-001' => translate('Your existing session token does not authorize you any more')
         ], 401);
+    }
+
+    /**
+     * Does the matched route say which permission it needs?
+     *
+     * Read from the route's own middleware rather than from a list kept somewhere else, so the
+     * answer cannot drift from the routing table. `gatherMiddleware()` includes group middleware,
+     * which is where most of these declarations live.
+     */
+    private function routeDeclaresAScope(Request $request): bool
+    {
+        $route = $request->route();
+
+        if (!$route) {
+            return false;
+        }
+
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (is_string($middleware) && str_starts_with($middleware, 'seller_can:')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

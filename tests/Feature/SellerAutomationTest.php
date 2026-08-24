@@ -123,6 +123,13 @@ class SellerAutomationTest extends TestCase
     private function runAutomationMigration(): void
     {
         (require base_path('database/migrations/2026_09_12_000001_create_seller_automation_tables.php'))->up();
+        // The column that records which credential wrote the rule, so revoking a key stops it.
+        (require base_path('database/migrations/2026_09_16_000001_record_who_created_deferred_seller_work.php'))->up();
+        // And the one that records who stopped it, so a marketplace suspension is not the seller's
+        // to clear.
+        (require base_path('database/migrations/2026_09_16_000002_record_who_suspended_an_automation_rule.php'))->up();
+        // And the one that releases automation's claim on a listing somebody else has changed.
+        (require base_path('database/migrations/2026_09_16_000003_note_when_something_else_changed_what_a_rule_touched.php'))->up();
     }
 
     private function product(array $attributes = []): Product
@@ -299,6 +306,38 @@ class SellerAutomationTest extends TestCase
         $this->assertSame(0, (int) $bySeller->fresh()->status);
     }
 
+    public function test_a_listing_the_seller_has_since_decided_about_is_no_longer_the_rules_to_put_back(): void
+    {
+        $product = $this->product(['status' => 0, 'current_stock' => 10, 'name' => 'Was out of stock']);
+
+        SellerAutomationAction::create([
+            'run_id' => 999, 'rule_id' => 999, 'seller_id' => self::SELLER,
+            'subject_type' => SellerAutomationAction::SUBJECT_PRODUCT, 'subject_id' => $product->id,
+            'action' => 'hide_listing', 'status' => SellerAutomationAction::STATUS_APPLIED,
+            'before' => ['status' => 1], 'after' => ['status' => 0],
+        ]);
+
+        // The seller puts it back themselves, then takes it down again on purpose. The trail still
+        // says the last thing automation did was hide it, and that is no longer the point.
+        $product->forceFill(['status' => 1])->save();
+        $product->forceFill(['status' => 0])->save();
+
+        $this->engine()->run($this->rule([
+            'name' => 'Put back what stock allows',
+            'trigger' => 'restocked_after_automation_hid_it',
+            'action' => 'publish_listing',
+            'trigger_settings' => ['threshold' => 1],
+        ]));
+
+        $this->assertSame(0, (int) $product->fresh()->status);
+
+        // Nor may the same stale row be undone: putting back what the rule replaced would overwrite
+        // a decision taken after it.
+        $record = SellerAutomationAction::where('subject_id', $product->id)->first();
+        $this->assertNotNull($record->superseded_at);
+        $this->assertFalse($record->isRevertible());
+    }
+
     public function test_a_markdown_refuses_rather_than_quietly_applying_a_smaller_one(): void
     {
         $product = $this->product(['current_stock' => 5, 'unit_price' => 100]);
@@ -455,6 +494,40 @@ class SellerAutomationTest extends TestCase
         $this->assertSame(0, (int) $product->fresh()->status);
     }
 
+    public function test_a_rule_written_by_a_key_stops_when_the_key_is_revoked(): void
+    {
+        (require base_path('database/migrations/2026_09_14_000001_create_seller_integration_tables.php'))->up();
+
+        $issued = app(\App\Services\Marketplace\SellerApiKeyService::class)
+            ->issue($this->principal(), 'ERP', ['products.manage']);
+
+        $this->product(['current_stock' => 0]);
+
+        $rule = app(SellerAutomationRuleService::class)->create([
+            'name' => 'Hide sold-out lines',
+            'trigger' => 'out_of_stock',
+            'action' => 'hide_listing',
+            'trigger_settings' => ['threshold' => 0],
+        ], \App\Services\Marketplace\SellerPrincipal::integration(
+            Seller::find(self::SELLER),
+            $issued['key'],
+            ['products.manage'],
+        ));
+
+        // The key is recorded, not flattened into "no staff id", which used to mean "the owner".
+        $this->assertSame($issued['key']->id, (int) $rule->created_by_api_key_id);
+
+        app(\App\Services\Marketplace\SellerApiKeyService::class)->revoke($issued['key'], $this->principal());
+
+        $run = $this->engine()->run($rule->fresh());
+
+        // Revoking a credential has to stop the work it created, exactly as deactivating a staff
+        // member already did — otherwise a revoked key keeps changing the catalogue for ever.
+        $this->assertSame(SellerAutomationRun::OUTCOME_FAILED, $run->outcome);
+        $this->assertSame(SellerAutomationRule::STATUS_SUSPENDED, $rule->fresh()->status);
+        $this->assertSame(1, (int) Product::withoutGlobalScope('translate')->first()->status);
+    }
+
     public function test_a_rule_stops_running_when_the_shop_stops_being_allowed_to_act(): void
     {
         $this->product(['current_stock' => 0]);
@@ -500,7 +573,7 @@ class SellerAutomationTest extends TestCase
         $this->assertSame(['threshold' => 2], $rule->trigger_settings);
     }
 
-    public function test_rewriting_a_rule_clears_the_suspension_it_earned(): void
+    public function test_rewriting_a_rule_clears_the_suspension_it_earned_without_restarting_it(): void
     {
         $this->product(['current_stock' => 0]);
         $this->product(['current_stock' => 0]);
@@ -517,11 +590,69 @@ class SellerAutomationTest extends TestCase
             'max_actions_per_run' => 50,
         ], $this->principal());
 
-        // The rule that failed is not the rule that now exists.
+        // The rule that failed is not the rule that now exists: the suspension and the failures it
+        // earned are gone. It does not start running again on its own, though — the seller says so.
         $rule->refresh();
-        $this->assertSame(SellerAutomationRule::STATUS_ACTIVE, $rule->status);
+        $this->assertSame(SellerAutomationRule::STATUS_PAUSED, $rule->status);
         $this->assertNull($rule->suspension_reason);
+        $this->assertNull($rule->suspended_by);
         $this->assertSame(0, $rule->consecutive_failures);
+
+        $this->assertTrue(
+            app(SellerAutomationRuleService::class)
+                ->setStatus($rule, SellerAutomationRule::STATUS_ACTIVE, $this->principal())['ok'],
+        );
+        $this->assertSame(SellerAutomationRule::STATUS_ACTIVE, $rule->fresh()->status);
+    }
+
+    public function test_an_edit_that_says_nothing_about_a_setting_leaves_it_alone(): void
+    {
+        $rule = $this->rule(['max_actions_per_run' => 5, 'cooldown_minutes' => 240]);
+        app(SellerAutomationRuleService::class)->setStatus($rule, SellerAutomationRule::STATUS_PAUSED, $this->principal());
+
+        app(SellerAutomationRuleService::class)->update($rule->fresh(), [
+            'name' => 'A clearer name',
+            'trigger' => 'out_of_stock',
+            'action' => 'hide_listing',
+        ], $this->principal());
+
+        // Renaming a rule is not asking for it to start running, nor for the two limits that stop
+        // it running away to go back to their defaults.
+        $rule->refresh();
+        $this->assertSame('A clearer name', $rule->name);
+        $this->assertSame(SellerAutomationRule::STATUS_PAUSED, $rule->status);
+        $this->assertSame(5, $rule->max_actions_per_run);
+        $this->assertSame(240, $rule->cooldown_minutes);
+    }
+
+    public function test_a_rule_the_marketplace_stopped_is_not_the_sellers_to_restart(): void
+    {
+        $rule = $this->rule();
+        $rule->forceFill([
+            'status' => SellerAutomationRule::STATUS_SUSPENDED,
+            'suspended_at' => now(),
+            'suspension_reason' => 'automation_suspended_by_marketplace',
+            'suspended_by' => SellerAutomationRule::SUSPENDED_BY_MARKETPLACE,
+        ])->save();
+
+        $service = app(SellerAutomationRuleService::class);
+
+        $result = $service->setStatus($rule, SellerAutomationRule::STATUS_ACTIVE, $this->principal());
+        $this->assertFalse($result['ok']);
+        $this->assertSame('automation_reason_suspended_by_marketplace', $result['reason']);
+
+        // Nor by the back door: editing the rule does not clear a stop the marketplace applied.
+        $service->update($rule->fresh(), [
+            'name' => 'Hide sold-out lines',
+            'trigger' => 'out_of_stock',
+            'action' => 'hide_listing',
+            'status' => SellerAutomationRule::STATUS_ACTIVE,
+        ], $this->principal());
+
+        $rule->refresh();
+        $this->assertSame(SellerAutomationRule::STATUS_SUSPENDED, $rule->status);
+        $this->assertSame('automation_suspended_by_marketplace', $rule->suspension_reason);
+        $this->assertFalse($rule->isDue());
     }
 
     public function test_deleting_a_rule_keeps_the_record_of_what_it_did(): void

@@ -167,8 +167,8 @@ class SellerReturnController extends Controller
         return $this->answer(
             $this->returns->receive(
                 rma: $rma,
-                by: $principal->staffId() ?? $principal->sellerId(),
-                byType: $principal->isOwner() ? 'seller' : 'seller_staff',
+                by: $principal->actorId(),
+                byType: $principal->actorType(),
             ),
             $request,
         );

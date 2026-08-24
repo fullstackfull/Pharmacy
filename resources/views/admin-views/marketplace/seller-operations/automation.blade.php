@@ -72,11 +72,22 @@
                                         @if ($rule->status !== 'suspended')
                                             <form method="POST"
                                                   action="{{ route('admin.marketplace.seller-operations.suspend-rule') }}"
-                                                  onsubmit="return confirm('{{ translate('stop_this_rule_the_seller_will_have_to_restart_it') }}')">
+                                                  onsubmit="return confirm('{{ translate('stop_this_rule_only_the_marketplace_can_start_it_again') }}')">
                                                 @csrf
                                                 <input type="hidden" name="id" value="{{ $rule->id }}">
                                                 <x-k.button variant="danger" size="sm" type="submit">
                                                     {{ translate('stop') }}
+                                                </x-k.button>
+                                            </form>
+                                        @elseif ($rule->suspended_by === \App\Models\SellerAutomationRule::SUSPENDED_BY_MARKETPLACE)
+                                            {{-- Only shown where the seller is the one who cannot
+                                                 lift it: a breaker suspension is theirs to clear. --}}
+                                            <form method="POST"
+                                                  action="{{ route('admin.marketplace.seller-operations.release-rule') }}">
+                                                @csrf
+                                                <input type="hidden" name="id" value="{{ $rule->id }}">
+                                                <x-k.button variant="secondary" size="sm" type="submit">
+                                                    {{ translate('allow_again') }}
                                                 </x-k.button>
                                             </form>
                                         @endif

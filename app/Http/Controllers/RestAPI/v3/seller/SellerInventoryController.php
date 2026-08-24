@@ -172,8 +172,8 @@ class SellerInventoryController extends Controller
             delta: (int) $request['delta'],
             reason: $request['reason'],
             note: $request['note'],
-            by: $principal->staffId() ?? $principal->sellerId(),
-            byType: $principal->isOwner() ? 'seller' : 'seller_staff',
+            by: $principal->actorId(),
+            byType: $principal->actorType(),
         );
 
         if (!($result['ok'] ?? false)) {

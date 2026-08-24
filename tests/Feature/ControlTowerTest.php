@@ -6,6 +6,8 @@ use App\Models\SellerInsight;
 use App\Services\SellerIntelligence\ControlTowerService;
 use App\Services\SellerIntelligence\DailyBriefingService;
 use App\Services\SellerIntelligence\IssueEscalationService;
+use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
+use App\Services\SellerIntelligence\Producers\StaleInventoryProducer;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -33,11 +35,19 @@ class ControlTowerTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['sellers', 'orders', 'order_details', 'refund_requests', 'vendor_ledger_entries', 'business_settings', 'audit_logs'] as $table) {
+        foreach (['sellers', 'orders', 'order_details', 'refund_requests', 'vendor_ledger_entries', 'business_settings', 'audit_logs', 'seller_staff'] as $table) {
             Schema::dropIfExists($table);
         }
 
         $this->createIssueTable();
+
+        Schema::create('seller_staff', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('seller_id');
+            $table->string('name', 120)->nullable();
+            $table->string('status', 20)->default('active');
+            $table->timestamps();
+        });
 
         Schema::create('business_settings', function (Blueprint $table) {
             $table->id();
@@ -68,6 +78,7 @@ class ControlTowerTest extends TestCase
             $table->string('delivery_status', 30)->nullable();
             $table->integer('qty')->default(1);
             $table->decimal('price', 24, 3)->default(0);
+            $table->decimal('discount', 24, 3)->default(0);
             $table->timestamps();
         });
         Schema::create('refund_requests', function (Blueprint $table) {
@@ -340,6 +351,36 @@ class ControlTowerTest extends TestCase
         $this->assertSame(1, $briefing['waiting']['sla_at_risk']);
     }
 
+    public function test_briefing_revenue_is_net_of_the_line_discount(): void
+    {
+        DB::table('order_details')->insert([
+            'order_id' => 1, 'seller_id' => 1, 'delivery_status' => 'delivered', 'qty' => 2, 'price' => 100,
+            'discount' => 10, 'created_at' => now()->subHours(2), 'updated_at' => now(),
+        ]);
+
+        // The same arithmetic as reconciliation, the statement and the payout. A briefing that read
+        // it gross would be the one number of the four that disagreed.
+        $this->assertEquals(190, app(DailyBriefingService::class)->forSeller(1)['today']['revenue']);
+    }
+
+    public function test_slow_moving_stock_is_not_counted_as_stock_running_out(): void
+    {
+        $this->issue([
+            'type' => InventoryRiskProducer::TYPE,
+            'category' => SellerInsight::CATEGORY_INVENTORY,
+            'affected_count' => 2,
+        ]);
+        $this->issue([
+            'type' => StaleInventoryProducer::TYPE,
+            'category' => SellerInsight::CATEGORY_INVENTORY,
+            'affected_count' => 40,
+        ]);
+
+        // Both are inventory problems and they are not the same problem: forty slow movers are not
+        // forty things about to sell out.
+        $this->assertSame(2, app(DailyBriefingService::class)->forSeller(1)['waiting']['low_stock_products']);
+    }
+
     // ----------------------------------------------------------- endpoints
 
     public function test_a_seller_can_say_they_are_working_on_something(): void
@@ -368,6 +409,45 @@ class ControlTowerTest extends TestCase
             ->assertStatus(403);
 
         $this->assertSame(SellerInsight::STATUS_OPEN, $issue->refresh()->status);
+    }
+
+    public function test_an_issue_cannot_be_handed_to_somebody_from_another_shop(): void
+    {
+        $issue = $this->issue();
+        $theirs = DB::table('seller_staff')->insertGetId([
+            'seller_id' => 2, 'name' => 'Rival clerk', 'status' => 'active',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->withHeaders(['Authorization' => 'Bearer ' . self::OWNER_TOKEN, 'Accept' => 'application/json'])
+            ->putJson("/api/v3/seller/seller-center/control-tower/issues/{$issue->id}/status", [
+                'status' => SellerInsight::STATUS_IN_PROGRESS,
+                'assigned_staff_id' => $theirs,
+            ])
+            ->assertStatus(403);
+
+        // Refused rather than partly applied: neither the assignment nor the status change lands.
+        $issue->refresh();
+        $this->assertNull($issue->assigned_staff_id);
+        $this->assertSame(SellerInsight::STATUS_OPEN, $issue->status);
+    }
+
+    public function test_an_issue_can_be_handed_to_somebody_who_works_here(): void
+    {
+        $issue = $this->issue();
+        $ours = DB::table('seller_staff')->insertGetId([
+            'seller_id' => 1, 'name' => 'Our clerk', 'status' => 'active',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->withHeaders(['Authorization' => 'Bearer ' . self::OWNER_TOKEN, 'Accept' => 'application/json'])
+            ->putJson("/api/v3/seller/seller-center/control-tower/issues/{$issue->id}/status", [
+                'status' => SellerInsight::STATUS_IN_PROGRESS,
+                'assigned_staff_id' => $ours,
+            ])
+            ->assertStatus(200);
+
+        $this->assertSame($ours, $issue->refresh()->assigned_staff_id);
     }
 
     public function test_another_sellers_issue_cannot_be_moved(): void

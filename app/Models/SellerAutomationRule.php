@@ -21,12 +21,19 @@ class SellerAutomationRule extends Model
 
     public const SELLER_SETTABLE_STATUSES = [self::STATUS_ACTIVE, self::STATUS_PAUSED];
 
+    /** The breaker stopped it — the seller's own rule, the seller's to restart. */
+    public const SUSPENDED_BY_PLATFORM = 'platform';
+
+    /** A person here stopped it. The seller does not get to undo that from their own console. */
+    public const SUSPENDED_BY_MARKETPLACE = 'marketplace';
+
     /** Three in a row is a pattern, not a bad afternoon. */
     public const FAILURE_LIMIT = 3;
 
     protected $fillable = [
         'seller_id',
         'created_by_staff_id',
+        'created_by_api_key_id',
         'name',
         'trigger',
         'action',
@@ -63,6 +70,12 @@ class SellerAutomationRule extends Model
     public function isSuspended(): bool
     {
         return $this->status === self::STATUS_SUSPENDED;
+    }
+
+    /** A suspension the seller cannot clear, however they edit the rule. */
+    public function isSuspendedByMarketplace(): bool
+    {
+        return $this->isSuspended() && $this->suspended_by === self::SUSPENDED_BY_MARKETPLACE;
     }
 
     /**

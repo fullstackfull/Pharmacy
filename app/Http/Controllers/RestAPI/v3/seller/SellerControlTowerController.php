@@ -5,6 +5,7 @@ namespace App\Http\Controllers\RestAPI\v3\seller;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Models\SellerInsight;
+use App\Models\SellerStaff;
 use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\SellerIntelligence\ControlTowerService;
@@ -12,6 +13,7 @@ use App\Services\SellerIntelligence\DailyBriefingService;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -100,13 +102,23 @@ class SellerControlTowerController extends Controller
 
         $principal = $this->principal($request);
 
+        // Defaults to the person acting: somebody who starts work on an issue owns it unless they
+        // say otherwise, which is what happens on a team in practice.
+        $assignee = $request->has('assigned_staff_id')
+            ? $request['assigned_staff_id']
+            : ($issue->assigned_staff_id ?? $principal->staffId());
+
+        if ($assignee !== null && !$this->employs($request->seller->id, $assignee)) {
+            // An id is not a way to reach into another shop's team, nor to leave a row pointing at
+            // somebody who does not work here.
+            return response()->json(['errors' => [
+                ['code' => 'assigned_staff_id', 'message' => translate('that_person_does_not_work_in_this_shop')],
+            ]], 403);
+        }
+
         $issue->forceFill([
             'status' => $request['status'],
-            // Defaults to the person acting: somebody who starts work on an issue owns it unless
-            // they say otherwise, which is what happens on a team in practice.
-            'assigned_staff_id' => $request->has('assigned_staff_id')
-                ? $request['assigned_staff_id']
-                : ($issue->assigned_staff_id ?? $principal->staffId()),
+            'assigned_staff_id' => $assignee,
         ])->save();
 
         return response()->json([
@@ -114,6 +126,13 @@ class SellerControlTowerController extends Controller
             'status' => $issue->status,
             'assigned_staff_id' => $issue->assigned_staff_id,
         ], 200);
+    }
+
+    /** Is this staff id one of this shop's own people? */
+    private function employs(int|string $sellerId, int|string $staffId): bool
+    {
+        return Schema::hasTable('seller_staff')
+            && SellerStaff::where(['id' => $staffId, 'seller_id' => $sellerId])->exists();
     }
 
     private function principal(Request $request): SellerPrincipal

@@ -70,6 +70,9 @@ class SellerOperationsAdminTest extends TestCase
     private function installAutomation(): void
     {
         (require base_path('database/migrations/2026_09_12_000001_create_seller_automation_tables.php'))->up();
+        (require base_path('database/migrations/2026_09_16_000001_record_who_created_deferred_seller_work.php'))->up();
+        (require base_path('database/migrations/2026_09_16_000002_record_who_suspended_an_automation_rule.php'))->up();
+        (require base_path('database/migrations/2026_09_16_000003_note_when_something_else_changed_what_a_rule_touched.php'))->up();
     }
 
     private function installIntegrations(): void
@@ -235,6 +238,41 @@ class SellerOperationsAdminTest extends TestCase
         ]);
 
         $this->assertStringContainsString('Not installed', $html);
+    }
+
+    public function test_only_a_marketplace_suspension_offers_the_control_that_lifts_it(): void
+    {
+        $this->installAutomation();
+
+        $byBreaker = SellerAutomationRule::create([
+            'seller_id' => self::SELLER, 'name' => 'Failed too often', 'trigger' => 'out_of_stock',
+            'action' => 'hide_listing', 'status' => SellerAutomationRule::STATUS_SUSPENDED,
+        ]);
+        $byBreaker->forceFill([
+            'suspension_reason' => 'automation_suspended_repeated_failures',
+            'suspended_by' => SellerAutomationRule::SUSPENDED_BY_PLATFORM,
+        ])->save();
+
+        SellerAutomationRule::create([
+            'seller_id' => self::SELLER, 'name' => 'Stopped from here', 'trigger' => 'out_of_stock',
+            'action' => 'hide_listing', 'status' => SellerAutomationRule::STATUS_SUSPENDED,
+        ])->forceFill([
+            'suspension_reason' => 'automation_suspended_by_marketplace',
+            'suspended_by' => SellerAutomationRule::SUSPENDED_BY_MARKETPLACE,
+        ])->save();
+
+        $html = $this->renderBody('admin-views.marketplace.seller-operations.automation', [
+            'rules' => $this->overview()->rules(),
+            'activity' => $this->overview()->automationActivity(),
+            'sellers' => collect(),
+        ]);
+
+        // One "Allow again", not two: a breaker suspension is the seller's own to clear, and a
+        // control that lifted it here would take that away from them.
+        $this->assertSame(1, substr_count($html, 'Allow again'));
+        // Both are on the page, each saying why it stopped.
+        $this->assertStringContainsString('Stopped by the marketplace', $html);
+        $this->assertStringContainsString(translate('automation_suspended_repeated_failures'), $html);
     }
 
     public function test_the_integrations_page_renders_a_webhook_that_has_never_been_called(): void

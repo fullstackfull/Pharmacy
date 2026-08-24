@@ -155,12 +155,53 @@ class SellerOperationsController extends BaseController
             'status' => SellerAutomationRule::STATUS_SUSPENDED,
             'suspended_at' => now(),
             'suspension_reason' => mb_substr($reason, 0, 191),
+            // Marked as ours, so the seller's own console cannot clear it by editing the rule.
+            'suspended_by' => SellerAutomationRule::SUSPENDED_BY_MARKETPLACE,
         ])->save();
 
         $this->audit->record(
             action: 'seller.automation_rule_suspended',
             subject: ['type' => 'seller_automation_rule', 'id' => $rule->id],
             context: ['seller_id' => $rule->seller_id, 'reason' => $reason, 'by' => 'marketplace'],
+        );
+
+        ToastMagic::success(translate('automation_rule_updated'));
+
+        return back();
+    }
+
+    /**
+     * Let a rule the marketplace stopped be run again.
+     *
+     * Left paused rather than started: the marketplace is lifting its objection, not deciding that
+     * the rule should run tonight. That call belongs to the seller, who can now make it.
+     */
+    public function releaseRule(Request $request): RedirectResponse
+    {
+        $rule = SellerAutomationRule::find($request->input('id'));
+
+        if (!$rule || !$rule->isSuspended()) {
+            ToastMagic::error(translate('automation_rule_not_found'));
+
+            return back();
+        }
+
+        $reason = $rule->suspension_reason;
+
+        $rule->forceFill([
+            'status' => SellerAutomationRule::STATUS_PAUSED,
+            'suspended_at' => null,
+            'suspension_reason' => null,
+            'suspended_by' => null,
+            'consecutive_failures' => 0,
+        ])->save();
+
+        $this->audit->record(
+            action: 'seller.automation_rule_released',
+            subject: ['type' => 'seller_automation_rule', 'id' => $rule->id],
+            before: ['status' => SellerAutomationRule::STATUS_SUSPENDED, 'suspension_reason' => $reason],
+            after: ['status' => SellerAutomationRule::STATUS_PAUSED],
+            context: ['seller_id' => $rule->seller_id, 'by' => 'marketplace'],
         );
 
         ToastMagic::success(translate('automation_rule_updated'));

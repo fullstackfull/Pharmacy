@@ -191,18 +191,39 @@ class SellerFinanceControlTest extends TestCase
         ]);
     }
 
-    private function credit(int $orderId, float $amount): void
+    /**
+     * Credit an order line the way the platform actually does it.
+     *
+     * Two entries, keyed on `order_details.id`: the earning is the commissionable amount and the
+     * commission is a separate debit against the same line. The fixture used to write one entry
+     * with `reference_type = 'order'`, a shape production never produces — so the suite passed
+     * while the screen reported every credited order as unpaid.
+     */
+    private function credit(int $detailId, float $net, float $commission = 10): void
     {
         DB::table('vendor_ledger_entries')->insert([
-            'seller_id' => self::SELLER,
-            'seller_is' => 'seller',
-            'entry_type' => VendorLedgerEntry::TYPE_ORDER_EARNING,
-            'debit' => 0,
-            'credit' => $amount,
-            'reference_type' => 'order',
-            'reference_id' => (string) $orderId,
-            'created_at' => now()->subDays(2),
-            'updated_at' => now(),
+            [
+                'seller_id' => self::SELLER,
+                'seller_is' => 'seller',
+                'entry_type' => VendorLedgerEntry::TYPE_ORDER_EARNING,
+                'debit' => 0,
+                'credit' => $net + $commission,
+                'reference_type' => 'order_details',
+                'reference_id' => (string) $detailId,
+                'created_at' => now()->subDays(2),
+                'updated_at' => now(),
+            ],
+            [
+                'seller_id' => self::SELLER,
+                'seller_is' => 'seller',
+                'entry_type' => VendorLedgerEntry::TYPE_COMMISSION_CHARGE,
+                'debit' => $commission,
+                'credit' => 0,
+                'reference_type' => 'order_details',
+                'reference_id' => (string) $detailId,
+                'created_at' => now()->subDays(2),
+                'updated_at' => now(),
+            ],
         ]);
     }
 
@@ -210,7 +231,7 @@ class SellerFinanceControlTest extends TestCase
     {
         $detailId = $this->deliveredLine();
         $this->earning(500, $detailId, net: 90);
-        $this->credit(500, 90);
+        $this->credit($detailId, net: 90);
 
         $result = $this->reconciliation()->forSeller(self::SELLER);
 
@@ -254,7 +275,7 @@ class SellerFinanceControlTest extends TestCase
         // extra credit that happens to make the totals agree.
         $first = $this->deliveredLine(['order_id' => 500]);
         $this->earning(500, $first, net: 90);
-        $this->credit(500, 90);
+        $this->credit($first, net: 90);
         $this->deliveredLine(['order_id' => 501]);
 
         $result = $this->reconciliation()->forSeller(self::SELLER);
@@ -270,7 +291,7 @@ class SellerFinanceControlTest extends TestCase
     {
         $detailId = $this->deliveredLine();
         $this->earning(500, $detailId, net: 90, reversed: 90);
-        $this->credit(500, 0);
+        $this->credit($detailId, net: 0);
 
         $result = $this->reconciliation()->forSeller(self::SELLER);
 

@@ -80,6 +80,10 @@ class SellerSecurityController extends Controller
     )]
     public function storeRole(Request $request): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $validator = validator($request->all(), [
             'name' => 'required|string|max:120',
             'permissions' => 'nullable|array',
@@ -89,7 +93,7 @@ class SellerSecurityController extends Controller
             return $this->refuse($validator->errors()->toArray());
         }
 
-        $role = $this->team->createRole($request->seller->id, $validator->validated());
+        $role = $this->team->createRole($request->seller->id, $validator->validated(), $this->principal($request));
 
         return response()->json(['message' => translate('role_created'), 'id' => $role->id], 201);
     }
@@ -105,6 +109,10 @@ class SellerSecurityController extends Controller
     )]
     public function updateRole(Request $request, $id): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $role = $this->ownedRole($request, $id);
 
         if (!$role) {
@@ -121,7 +129,7 @@ class SellerSecurityController extends Controller
             return $this->refuse($validator->errors()->toArray());
         }
 
-        $this->team->updateRole($role, $validator->validated());
+        $this->team->updateRole($role, $validator->validated(), $this->principal($request));
 
         return response()->json(['message' => translate('role_updated')], 200);
     }
@@ -138,6 +146,10 @@ class SellerSecurityController extends Controller
     )]
     public function destroyRole(Request $request, $id): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $role = $this->ownedRole($request, $id);
 
         if (!$role) {
@@ -183,6 +195,10 @@ class SellerSecurityController extends Controller
     )]
     public function storeStaff(Request $request): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $validator = validator($request->all(), [
             'name' => 'required|string|max:120',
             'email' => 'required|email|max:191',
@@ -216,6 +232,10 @@ class SellerSecurityController extends Controller
     )]
     public function updateStaff(Request $request, $id): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $staff = $this->ownedStaff($request, $id);
 
         if (!$staff) {
@@ -253,6 +273,10 @@ class SellerSecurityController extends Controller
     )]
     public function signOutStaff(Request $request, $id): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $staff = $this->ownedStaff($request, $id);
 
         if (!$staff) {
@@ -273,6 +297,10 @@ class SellerSecurityController extends Controller
     )]
     public function destroyStaff(Request $request, $id): JsonResponse
     {
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $staff = $this->ownedStaff($request, $id);
 
         if (!$staff) {
@@ -319,11 +347,41 @@ class SellerSecurityController extends Controller
     )]
     public function audit(Request $request): JsonResponse
     {
+        // `?action[]=` arrives as an array, and the trail takes a prefix. Reading it as anything
+        // other than one string turned a malformed query into a five hundred.
+        $action = $request->get('action');
+
         return response()->json($this->trail->recent(
             sellerId: $request->seller->id,
             limit: (int) $request->get('limit', 50),
-            action: $request->get('action'),
+            action: is_scalar($action) ? (string) $action : null,
         ), 200);
+    }
+
+    /**
+     * A key may not change who works here.
+     *
+     * The key console already refuses a key that tries to mint a key. Minting a *person* is the
+     * larger escalation and was open: a key holding `staff.manage` could write a role with every
+     * permission, attach an account with a password of its choosing, and sign in as a human —
+     * surviving its own revocation, because the planted account is not the key.
+     */
+    private function refuseIntegration(SellerPrincipal $principal): ?JsonResponse
+    {
+        if ($principal->apiKey === null) {
+            return null;
+        }
+
+        return response()->json(['errors' => [
+            ['code' => 'api_key', 'message' => translate('api_keys_cannot_manage_people')],
+        ]], 403);
+    }
+
+    private function principal(Request $request): SellerPrincipal
+    {
+        $principal = $request->attributes->get(SellerApiAuthMiddleware::PRINCIPAL);
+
+        return $principal instanceof SellerPrincipal ? $principal : SellerPrincipal::owner($request->seller);
     }
 
     private function ownedRole(Request $request, $id): ?SellerRole

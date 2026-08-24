@@ -96,6 +96,7 @@ class SellerBulkJobService
         $job = SellerBulkJob::create([
             'seller_id' => $principal->sellerId(),
             'created_by_staff_id' => $principal->staffId(),
+            'created_by_api_key_id' => $principal->apiKeyId(),
             'type' => $type,
             'status' => SellerBulkJob::STATUS_QUEUED,
             'total' => count($productIds),
@@ -280,6 +281,7 @@ class SellerBulkJobService
         return app(SellerPermissionService::class)->principalForSeller(
             sellerId: $job->seller_id,
             staffId: $job->created_by_staff_id,
+            apiKeyId: $job->created_by_api_key_id,
         );
     }
 }

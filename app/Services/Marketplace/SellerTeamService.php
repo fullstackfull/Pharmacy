@@ -2,10 +2,12 @@
 
 namespace App\Services\Marketplace;
 
+use App\Models\SellerApiKey;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -30,14 +32,16 @@ class SellerTeamService
     /**
      * @throws ValidationException
      */
-    public function createRole(int|string $sellerId, array $input): SellerRole
+    public function createRole(int|string $sellerId, array $input, ?SellerPrincipal $by = null): SellerRole
     {
         $role = SellerRole::create([
             'seller_id' => $sellerId,
             'name' => $input['name'],
             // Sanitised against the catalogue, so a request naming a permission that does not exist
-            // stores nothing rather than a string that later reads as an authority.
-            'permissions' => $this->permissions->sanitize($input['permissions'] ?? []),
+            // stores nothing rather than a string that later reads as an authority — and narrowed
+            // to what the writer holds, so writing a role is never a way to grant yourself more
+            // than you were given.
+            'permissions' => $this->grantable($input['permissions'] ?? [], $by),
             'status' => SellerRole::STATUS_ACTIVE,
         ]);
 
@@ -51,13 +55,13 @@ class SellerTeamService
         return $role;
     }
 
-    public function updateRole(SellerRole $role, array $input): SellerRole
+    public function updateRole(SellerRole $role, array $input, ?SellerPrincipal $by = null): SellerRole
     {
         $before = ['name' => $role->name, 'permissions' => $role->permissions, 'status' => $role->status];
 
         $role->update([
             'name' => $input['name'],
-            'permissions' => $this->permissions->sanitize($input['permissions'] ?? []),
+            'permissions' => $this->grantable($input['permissions'] ?? [], $by),
             'status' => $input['status'] ?? SellerRole::STATUS_ACTIVE,
         ]);
 
@@ -144,8 +148,18 @@ class SellerTeamService
         $staff->update($attributes);
 
         // Switching somebody off has to end the session they are already in, not merely stop the
-        // next one starting. Their token is what the API reads, so it goes with the status.
+        // next one starting. Their token is what the API reads, so it goes with the status — and
+        // so do the keys they issued, which otherwise keep acting for the shop after the person
+        // who created them has gone.
         if ($attributes['status'] !== SellerStaff::STATUS_ACTIVE) {
+            $staff->forceFill(['auth_token' => null])->save();
+            $this->revokeKeysIssuedBy($staff);
+        }
+
+        // A new password is how somebody responds to a stolen token, so it has to end the sessions
+        // that token is in. Saying "updated" while every stolen bearer kept working would be worse
+        // than not offering the field.
+        if (!empty($input['password'])) {
             $staff->forceFill(['auth_token' => null])->save();
         }
 
@@ -162,6 +176,8 @@ class SellerTeamService
 
     public function deleteStaff(SellerStaff $staff): void
     {
+        $this->revokeKeysIssuedBy($staff);
+
         $this->audit->record(
             action: 'seller.staff_removed',
             subject: ['type' => 'seller_staff', 'id' => $staff->id],
@@ -187,6 +203,54 @@ class SellerTeamService
             subject: ['type' => 'seller_staff', 'id' => $staff->id],
             context: ['seller_id' => $staff->seller_id],
         );
+    }
+
+    /**
+     * Revoke the keys a departing employee issued.
+     *
+     * A key is a credential the shop owns, but it was created by a person, and the usual reason a
+     * person is deactivated is that they should no longer be able to act. Leaving their keys live
+     * — still carrying whatever scopes they were given — makes offboarding a half-measure, and the
+     * owner cannot even see which keys were theirs.
+     */
+    private function revokeKeysIssuedBy(SellerStaff $staff): void
+    {
+        if (!Schema::hasTable('seller_api_keys')) {
+            return;
+        }
+
+        $revoked = SellerApiKey::where('seller_id', $staff->seller_id)
+            ->where('created_by_staff_id', $staff->id)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
+
+        if ($revoked > 0) {
+            $this->audit->record(
+                action: 'seller.api_keys_revoked_with_staff',
+                subject: ['type' => 'seller_staff', 'id' => $staff->id],
+                context: ['seller_id' => $staff->seller_id, 'keys' => $revoked],
+            );
+        }
+    }
+
+    /**
+     * The permissions this principal is able to hand out.
+     *
+     * An owner may hand out anything in the catalogue — there is no authority above them to
+     * withhold it. Anybody else may hand out only what they themselves hold, which is what stops
+     * a `staff.manage` credential writing itself a role that can move money.
+     *
+     * @return array<int, string>
+     */
+    private function grantable(array $requested, ?SellerPrincipal $by): array
+    {
+        $valid = $this->permissions->sanitize($requested);
+
+        if ($by === null || $by->isOwner()) {
+            return $valid;
+        }
+
+        return array_values(array_filter($valid, fn (string $permission) => $by->can($permission)));
     }
 
     /**
