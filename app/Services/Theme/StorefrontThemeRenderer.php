@@ -131,6 +131,19 @@ class StorefrontThemeRenderer
             fn (array $section) => $this->visibility->passes($section, $viewer),
         ));
 
+        // Language is a per-request concern exactly as scheduling is: the cached structure keeps
+        // every language's text, and each request folds its own in. Done here, once, so no partial
+        // ever meets a `title_ar` key or needs to know the convention exists.
+        $runnable = array_map(function (array $section) use ($viewer) {
+            $section['settings'] = LocalisedSettings::collapse($section['settings'] ?? [], $viewer->locale);
+            $section['blocks'] = array_map(function (array $block) use ($viewer) {
+                $block['settings'] = LocalisedSettings::collapse($block['settings'] ?? [], $viewer->locale);
+                return $block;
+            }, $section['blocks'] ?? []);
+
+            return $section;
+        }, $runnable);
+
         // An empty result means the same thing as no theme: keep the storefront's own templates,
         // rather than publishing a page whose every section happens to be out of schedule.
         return $runnable === [] ? null : $runnable;

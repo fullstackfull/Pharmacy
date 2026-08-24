@@ -588,7 +588,7 @@ class SectionRegistry
                 'preview' => 'bar', 'label' => 'ship_today_countdown', 'pages' => ['home'],
                 'hint' => 'order_within_x_to_have_it_shipped_today_counts_down_to_your_cut_off_time',
                 'schema' => [
-                    'cutoff'   => ['type' => 'text',   'label' => 'cut_off_time_24h', 'default' => '16:00'],
+                    'cutoff'   => ['type' => 'text',   'label' => 'cut_off_time_24h', 'default' => '16:00', 'plain' => true],
                     'title'    => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle' => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'style'    => ['type' => 'select', 'label' => 'display_style', 'default' => 'strip',
@@ -920,7 +920,7 @@ class SectionRegistry
                     'title'   => ['type' => 'text',     'label' => 'branch_name', 'default' => ''],
                     'address' => ['type' => 'textarea', 'label' => 'address', 'default' => ''],
                     'hours'   => ['type' => 'text',     'label' => 'opening_hours', 'default' => ''],
-                    'phone'   => ['type' => 'text',     'label' => 'phone', 'default' => ''],
+                    'phone'   => ['type' => 'text',     'label' => 'phone', 'default' => '', 'plain' => true],
                     'link'    => ['type' => 'link',     'label' => 'map_link', 'default' => ''],
                 ],
             ],
@@ -981,8 +981,8 @@ class SectionRegistry
                 'schema' => [
                     'title'   => ['type' => 'text', 'label' => 'title', 'default' => ''],
                     'address' => ['type' => 'textarea', 'label' => 'address', 'default' => ''],
-                    'phone'   => ['type' => 'text', 'label' => 'phone', 'default' => ''],
-                    'email'   => ['type' => 'text', 'label' => 'email', 'default' => ''],
+                    'phone'   => ['type' => 'text', 'label' => 'phone', 'default' => '', 'plain' => true],
+                    'email'   => ['type' => 'text', 'label' => 'email', 'default' => '', 'plain' => true],
                 ],
             ],
             'social' => [
@@ -1050,6 +1050,7 @@ class SectionRegistry
 
         foreach ($schema as $key => $field) {
             $clean[$key] = $this->coerce($settings[$key] ?? $field['default'] ?? null, $field);
+            $this->keepLocaleOverrides($clean, $settings, $key, $field);
         }
 
         return $clean;
@@ -1183,9 +1184,38 @@ class SectionRegistry
                     $clean[$rKey] = $this->coerce($settings[$rKey], $field);
                 }
             }
+
+            $this->keepLocaleOverrides($clean, $settings, $key, $field);
         }
 
         return $clean;
+    }
+
+    /**
+     * Locale overrides ride beside the base value the way breakpoint overrides do: `title_ar`
+     * survives normalisation for a text field, with the same coercion as `title` — and only for a
+     * text field, because a translated number is not a thing and an unexpected key on a numeric
+     * setting is exactly the shape corruption normalisation exists to stop. Absent and blank both
+     * mean "inherit the base", so nothing is defaulted.
+     *
+     * @param array<string, mixed> $clean
+     * @param array<string, mixed> $settings
+     * @param array<string, mixed> $field
+     */
+    private function keepLocaleOverrides(array &$clean, array $settings, string $key, array $field): void
+    {
+        if (!in_array($field['type'] ?? '', ['text', 'textarea'], true) || !empty($field['plain'])) {
+            return;
+        }
+
+        foreach (LocalisedSettings::activeLocales() as $code) {
+            $lKey = $key . '_' . $code;
+            if (!array_key_exists($lKey, $settings)
+                || $settings[$lKey] === null || $settings[$lKey] === '') {
+                continue;
+            }
+            $clean[$lKey] = $this->coerce($settings[$lKey], $field);
+        }
     }
 
     /** Coerce one value to the type its schema field declares. */

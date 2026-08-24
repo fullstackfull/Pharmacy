@@ -336,6 +336,7 @@
              data-version="{{ $version->id }}"
              data-page="{{ $page }}"
              data-channel="{{ $channel }}"
+             data-locale-overrides="{{ json_encode($localeOverrides ?? []) }}"
              data-editable="{{ $editable ? 1 : 0 }}"
              data-url-add="{{ route('admin.theme.builder.section.add') }}"
              data-url-update="{{ route('admin.theme.builder.section.update') }}"
@@ -832,6 +833,17 @@
             var versionId = root.dataset.version;
             var page = root.dataset.page;
             var csrf = document.querySelector('meta[name="csrf-token"]');
+
+            // code => display name for every live language except the default. A text field
+            // renders one extra input per entry; empty list, no extra inputs, exactly as before.
+            var LOCALE_OVERRIDES = (function () {
+                try {
+                    var parsed = JSON.parse(root.dataset.localeOverrides || '{}');
+                    return Object.keys(parsed).map(function (code) {
+                        return {code: code, name: parsed[code]};
+                    });
+                } catch (parseError) { return []; }
+            })();
 
             var state = {
                 sectionId: null,
@@ -1519,6 +1531,29 @@
                             group.appendChild(column);
                         });
                         wrapper.appendChild(group);
+                    }
+
+                    // Per-language text, the way per-breakpoint values already work: one optional
+                    // input per extra live language, blank meaning "use the base text". Only for
+                    // fields that carry language at all — a phone number is the same in every one.
+                    if ((field.type === 'text' || field.type === 'textarea')
+                            && !field.plain && LOCALE_OVERRIDES.length) {
+                        var localeGroup = document.createElement('div');
+                        localeGroup.className = 'tb-sub';
+                        LOCALE_OVERRIDES.forEach(function (language) {
+                            var column = document.createElement('div');
+                            var subLabel = document.createElement('label');
+                            subLabel.textContent = language.name;
+                            column.appendChild(subLabel);
+
+                            var localeKey = key + '_' + language.code;
+                            var localeField = Object.assign({}, field, {default: null});
+                            var input = buildInput(localeField, localeKey, settings[localeKey], true);
+                            input.dataset.optional = '1';
+                            column.appendChild(input);
+                            localeGroup.appendChild(column);
+                        });
+                        wrapper.appendChild(localeGroup);
                     }
 
                     host.appendChild(wrapper);
