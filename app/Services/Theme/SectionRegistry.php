@@ -57,6 +57,8 @@ class SectionRegistry
                                  'options' => ['container', 'full']],
             'alignment'      => ['type' => 'select',  'label' => 'alignment',       'default' => 'start',
                                  'options' => ['start', 'center', 'end']],
+            'heading_style'  => ['type' => 'select',  'label' => 'heading_style',   'default' => 'standard',
+                                 'options' => ['standard', 'editorial', 'compact']],
             'visible'        => ['type' => 'boolean', 'label' => 'visible',         'default' => true, 'responsive' => true],
         ];
     }

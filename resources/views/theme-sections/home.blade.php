@@ -94,6 +94,15 @@
     .ml-sec-head .ml-rule{ display:none; }
     .ml-sec-head--center .ml-rule{ display:block; width:64px; height:3px; margin:.9rem auto 0; border-radius:99px; background:var(--ml-grad); }
     .ml-sec-head p{ color:var(--ml-muted); margin:.5rem 0 0; max-width:54ch; font-size:.85rem; }
+    /* heading_style: the same heading spoken three ways — one class on the wrapper, so every
+       partial's head obeys without twenty edits. */
+    .tbs-head-editorial .ml-sec-head{ display:block; text-align:center; margin-bottom:1.6rem; }
+    .tbs-head-editorial .ml-sec-head h2{ font-size:clamp(1.6rem,3vw,2.1rem); }
+    .tbs-head-editorial .ml-sec-head p{ margin-inline:auto; }
+    .tbs-head-editorial .ml-sec-head .ml-viewall{ display:inline-block; margin-top:.6rem; }
+    .tbs-head-compact .ml-sec-head{ margin-bottom:10px; align-items:center; }
+    .tbs-head-compact .ml-sec-head h2{ font-size:1.05rem; }
+    .tbs-head-compact .ml-eyebrow,.tbs-head-compact .ml-sec-head p{ display:none; }
 
     /* ---- buttons ---------------------------------------------------------------------- */
     .ml-btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
@@ -864,6 +873,8 @@
             $gap = (int) ($s['gap'] ?? 16);
             $cols = max(1, (int) ($s['columns'] ?? 4));
             $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
+            $headStyle = in_array($s['heading_style'] ?? 'standard', ['editorial', 'compact'], true)
+                ? $s['heading_style'] : 'standard';
             // Campaign overlays have no row id; their uuid keeps the DOM id and the breakpoint
             // CSS selector from colliding with a stored section that happens to share the index.
             $sectionKey = 'tbs-' . ($__section['id'] ?? $__section['uuid'] ?? $loop->index);
@@ -965,7 +976,7 @@
                     ? 'campaign-' . $__campaignMatch[1]
                     : null);
         @endphp
-        <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
+        <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }} tbs-head-{{ $headStyle }}" style="{{ $wrapStyle }}"
                  data-tb-section="{{ $__section['id'] ?? '' }}"
                  @if (!empty($__analyticsId))
                      data-analytics-view="section_viewed"
