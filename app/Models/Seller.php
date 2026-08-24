@@ -80,6 +80,11 @@ class Seller extends Authenticatable
 
     protected $hidden = [
         'password',
+        // A live bearer credential. `seller-info` returns this model whole, so
+        // every response to that endpoint carried a working session token —
+        // into logs, crash reports, proxies and any response cache along the
+        // way. The delivery-man model has always hidden its own.
+        'auth_token',
     ];
 
     public function scopeApproved($query)

@@ -248,8 +248,23 @@ class VisitorContext
         if (auth('customer')->check()) {
             return ['customer', auth('customer')->id()];
         }
-        if ($user = $request->user('api')) {
-            return ['customer', $user->id];
+        // Passport erases the Authorization header when the bearer it is handed
+        // is not one of its own (TokenGuard::getPsrRequestViaBearerToken). The
+        // seller API carries its own bearer and authenticates it in a later
+        // middleware, so asking the api guard here left that middleware with an
+        // empty header — a 401 on every authenticated seller request, from a
+        // healthy server holding a valid token. Instrumentation must never be
+        // able to change what the request means.
+        $authorization = $request->headers->get('Authorization');
+
+        try {
+            if ($user = $request->user('api')) {
+                return ['customer', $user->id];
+            }
+        } finally {
+            if ($authorization !== null) {
+                $request->headers->set('Authorization', $authorization, true);
+            }
         }
 
         return ['guest', null];
