@@ -24,6 +24,14 @@
            class="{{ ($current ?? '') === 'sections' ? 'is-active' : '' }}">
             <i class="fi fi-rr-apps"></i> {{ translate('sections') }}
         </a>
+        <a href="{{ route('admin.app-builder.media', ['channel' => $channel]) }}"
+           class="{{ ($current ?? '') === 'media' ? 'is-active' : '' }}">
+            <i class="fi fi-rr-picture"></i> {{ translate('media') }}
+        </a>
+        <a href="{{ route('admin.app-builder.templates', ['channel' => $channel]) }}"
+           class="{{ ($current ?? '') === 'templates' ? 'is-active' : '' }}">
+            <i class="fi fi-rr-magic-wand"></i> {{ translate('templates') }}
+        </a>
         <a href="{{ route('admin.theme.settings.index') }}">
             <i class="fi fi-rr-palette"></i> {{ translate('global_styles') }}
         </a>

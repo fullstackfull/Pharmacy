@@ -258,7 +258,14 @@ class ThemeDelivery
      */
     private function present(ThemeSection $row, ViewerContext $viewer): array
     {
-        $settings = $this->registry->normalizeSettings($row->type, $row->settings ?? []);
+        // Folded to the request's language before anything reads them: after this line, `title` IS
+        // the title for the `lang` header this client sent, and no override key survives to reach
+        // a payload. That is what keeps this invisible to installed builds — strings in, strings
+        // out, just the right ones.
+        $settings = LocalisedSettings::collapse(
+            $this->registry->normalizeSettings($row->type, $row->settings ?? []),
+            $viewer->locale,
+        );
 
         $blocks = $row->blocks
             ->where('is_visible', true)
@@ -266,7 +273,10 @@ class ThemeDelivery
                 'id'       => $block->id,
                 'type'     => $block->type,
                 'settings' => $this->shape(
-                    $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
+                    LocalisedSettings::collapse(
+                        $this->registry->normalizeBlockSettings($block->type, $block->settings ?? []),
+                        $viewer->locale,
+                    ),
                     $viewer,
                 ),
             ])
@@ -315,7 +325,10 @@ class ThemeDelivery
                     fn (array $card) => $this->actions->annotate($this->absolutize($card)),
                     $this->resolver->blockCards($row->blocks->where('is_visible', true)->map(fn ($b) => [
                         'type' => $b->type,
-                        'settings' => $b->settings ?? [],
+                        'settings' => LocalisedSettings::collapse(
+                            $this->registry->normalizeBlockSettings($b->type, $b->settings ?? []),
+                            $viewer->locale,
+                        ),
                     ])->values()->all()),
                 )
                 : null),
@@ -439,6 +452,10 @@ class ThemeDelivery
             $viewer->platform,
             $viewer->device,
             $viewer->audience(),
+            // Text is folded to the request's language before caching, so the language is part of
+            // what makes two deliveries the same delivery. Without it, the first shopper's locale
+            // would warm the cache for everybody's.
+            (string) $viewer->locale,
             $viewer->uiEngineVersion,
             implode(',', $components),
         ])), 0, 24);

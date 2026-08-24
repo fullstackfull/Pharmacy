@@ -527,3 +527,32 @@ fetch removed).
 * ~~Tablet layouts inherit mobile~~ — built: the app reports its real device class
   (600dp shortest-side, the same rule `ResponsiveHelper` applies) and the server resolves
   `*_tablet` overrides for it; per-device payloads are cached separately by the fingerprint.
+
+## 14. The vendor_app channel — decision record
+
+`Channel::VENDOR_APP` exists and is deliberately **targetable but not renderable**
+(`Channel::ALL` includes it; `Channel::RENDERABLE` does not). This is a recorded
+decision, not an omission:
+
+* A channel is only real if a client can draw it. The seller app has no
+  server-driven renderer today — no registry handshake, no section renderers, no
+  theme sync loop. Publishing a "vendor app experience" would produce
+  configuration nothing reads: a dead admin surface, which this codebase's rules
+  (and the Phase 3 spec's §75) prohibit.
+* Everything channel-shaped is already plumbed: pages carry a channel,
+  sections carry channel restrictions, `ViewerContext` carries `X-UI-Channel`,
+  and `Channel::forViewer()` maps an app that *names itself* `vendor_app` without
+  touching the customer-app default.
+
+**To make the vendor app renderable** (the full checklist — nothing else moves):
+
+1. Vendor app: implement the sync loop (`/api/v1/theme/version` +
+   `/api/v1/theme/home?page=…`) sending `X-UI-Channel: vendor_app` and its own
+   `X-UI-Components` list, and a renderer registry for the section types it draws.
+2. Backend: move `VENDOR_APP` from targetable-only into `Channel::RENDERABLE`.
+   That single change makes the App Builder's channel switch, the pages screen,
+   the publish gate and delivery all serve it — they all read `RENDERABLE`.
+3. Seed its system pages (`ExperiencePageService::ensureSystemPages` runs on
+   builder open; shared pages already belong to every channel).
+
+Until step 1 exists, step 2 must not happen.

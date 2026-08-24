@@ -6,14 +6,18 @@ use App\Http\Controllers\BaseController;
 use App\Models\ExperiencePage;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
+use App\Services\Theme\BuilderReadiness;
 use App\Services\Theme\Channel;
 use App\Services\Theme\ExperiencePageService;
 use App\Services\Theme\SectionRegistry;
+use App\Services\Theme\ThemeAssetService;
 use App\Services\Theme\ThemePermissionService;
+use App\Services\Theme\ThemePortabilityService;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The App Builder: the same engine, entered as the app rather than as the theme.
@@ -35,6 +39,8 @@ class AppBuilderController extends BaseController
         private readonly ExperiencePageService $pages,
         private readonly SectionRegistry $registry,
         private readonly ThemePermissionService $permissions,
+        private readonly BuilderReadiness $readiness,
+        private readonly ThemePortabilityService $portability,
     ) {
     }
 
@@ -52,6 +58,7 @@ class AppBuilderController extends BaseController
     {
         $channel = $this->channel($request);
         $theme = $this->activeTheme();
+        $health = $this->readiness->checks();
 
         return view('admin-views.app-builder.pages', [
             'channel' => $channel,
@@ -60,6 +67,10 @@ class AppBuilderController extends BaseController
             'ready'   => $this->pages->isReady(),
             'draft'   => $theme ? $this->latestDraft($theme) : null,
             'editable' => $this->permissions->canEdit(),
+            // What this server can and cannot do right now — the checks features run for
+            // themselves, gathered where the merchant will actually see them.
+            'health'   => $health,
+            'allGood'  => !in_array(false, array_column($health, 'ok'), true),
         ]);
     }
 
@@ -72,6 +83,55 @@ class AppBuilderController extends BaseController
             'channel'   => $channel,
             'catalogue' => $this->registry->catalogue(null),
             'channels'  => Channel::RENDERABLE,
+        ]);
+    }
+
+    /**
+     * The images a merchant composes with, scoped to the experience being composed.
+     *
+     * Uploading and deleting stay the theme's own actions — this screen renders the active
+     * theme's library where the composing happens, instead of asking a merchant to know that
+     * their app's images live under the website's Theme Management.
+     */
+    public function media(Request $request): View
+    {
+        $theme = $this->activeTheme();
+
+        return view('admin-views.app-builder.media', [
+            'channel'      => $this->channel($request),
+            'theme'        => $theme?->load('assets'),
+            'assetsReady'  => Schema::hasTable('theme_assets'),
+            'maxAssetSize' => ThemeAssetService::maxBytes(),
+            'editable'     => $this->permissions->canEdit(),
+        ]);
+    }
+
+    /**
+     * Ready-made starting points and the file form of a composed experience.
+     *
+     * All four actions already exist on Theme Management — presets, import, export, the annotated
+     * example — and stay there; this is the same catalogue shown where a merchant starting an app
+     * from nothing will actually look for it.
+     */
+    public function templates(Request $request): View
+    {
+        $theme = $this->activeTheme();
+        $exportable = null;
+
+        if ($theme !== null) {
+            $exportable = ThemeVersion::query()
+                ->where('theme_id', $theme->id)
+                ->where('status', ThemeVersion::STATUS_PUBLISHED)
+                ->orderByDesc('id')
+                ->first() ?? $this->latestDraft($theme);
+        }
+
+        return view('admin-views.app-builder.templates', [
+            'channel'    => $this->channel($request),
+            'theme'      => $theme,
+            'presets'    => $this->portability->presets(),
+            'exportable' => $exportable,
+            'editable'   => $this->permissions->canEdit(),
         ]);
     }
 

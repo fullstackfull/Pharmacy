@@ -6,6 +6,7 @@ use App\Contracts\Repositories\ThemeRepositoryInterface;
 use App\Http\Controllers\BaseController;
 use App\Models\Theme;
 use App\Models\ThemeVersion;
+use App\Services\Theme\BuilderReadiness;
 use App\Services\Theme\PublishValidator;
 use App\Services\Theme\ThemeManager;
 use App\Services\Theme\ThemePermissionService;
@@ -36,6 +37,7 @@ class ThemeManagementController extends BaseController
         private readonly ThemePermissionService   $permissions,
         private readonly ThemePortabilityService  $portability,
         private readonly ThemeAssetService         $assets,
+        private readonly BuilderReadiness          $readiness,
     )
     {
     }
@@ -79,7 +81,7 @@ class ThemeManagementController extends BaseController
             // A scheduled publish is only as good as the cron that fires it. Offering the control
             // while the scheduler is down would promise a merchant a midnight launch that never
             // happens — the same heartbeat the dashboard's health panel reads.
-            'schedulerOk'  => $this->schedulerIsRunning(),
+            'schedulerOk'  => $this->readiness->schedulerIsRunning(),
             'search'       => $request?->get('searchValue'),
             'presets'      => $this->portability->presets(),
             'assetsReady'  => Schema::hasTable('theme_assets'),
@@ -278,24 +280,6 @@ class ThemeManagementController extends BaseController
      * Ten minutes, matching the system health panel: the schedule pings every five, so one missed
      * beat is noise and two is a stopped cron.
      */
-    private function schedulerIsRunning(): bool
-    {
-        if (!Schema::hasTable('business_settings')) {
-            return false;
-        }
-
-        $heartbeat = \App\Models\BusinessSetting::where('type', 'scheduler_last_run_at')->value('value');
-
-        if (!$heartbeat) {
-            return false;
-        }
-
-        try {
-            return \Illuminate\Support\Carbon::parse($heartbeat)->greaterThan(now()->subMinutes(10));
-        } catch (\Throwable) {
-            return false;
-        }
-    }
 
     /** A future moment from the form, or null when it is unparseable or already past. */
     private function parseMoment(mixed $input): ?\Illuminate\Support\Carbon
