@@ -59,6 +59,41 @@ class CategoryService
         return $result;
     }
 
+    /**
+     * Every category, at every level, labelled with its ancestry.
+     *
+     * A banner belongs to the page a shopper is standing on, and that page can be
+     * a main category, a sub category or a sub-sub category. A flat list of names
+     * cannot say which "Cleansers" is meant, so each entry carries its parents:
+     * "Skin Care › Cleansers". Ordered by the tree, so the select reads as the
+     * catalogue does.
+     *
+     * @return array<int, array{id:int, label:string, position:int}>
+     */
+    public function getHierarchicalOptions(object $categories): array
+    {
+        $byParent = [];
+        foreach ($categories as $category) {
+            $byParent[(int)$category['parent_id']][] = $category;
+        }
+
+        $options = [];
+        $walk = function (int $parentId, string $prefix) use (&$walk, &$options, $byParent) {
+            foreach ($byParent[$parentId] ?? [] as $category) {
+                $label = $prefix === '' ? $category['name'] : $prefix . ' › ' . $category['name'];
+                $options[] = [
+                    'id' => (int)$category['id'],
+                    'label' => $label,
+                    'position' => (int)$category['position'],
+                ];
+                $walk((int)$category['id'], $label);
+            }
+        };
+        $walk(0, '');
+
+        return $options;
+    }
+
     public function getSelectOptionHtml(object $data): string
     {
         $output = '<option value="" disabled selected>' . (translate('select_sub_category')) . '</option>';
