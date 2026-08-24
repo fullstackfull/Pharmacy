@@ -95,6 +95,26 @@ final class SellerPrincipal
         return $this->isOwner() || in_array($permission, $this->permissions, true);
     }
 
+    /**
+     * The id to record against something this principal did, and what kind of id it is.
+     *
+     * The two belong together: read separately they were written as a seller id labelled as staff
+     * the moment a key did the work, because a key is neither the owner nor a person.
+     */
+    public function actorId(): int
+    {
+        return $this->apiKey?->id ?? $this->staff?->id ?? $this->sellerId();
+    }
+
+    public function actorType(): string
+    {
+        if ($this->apiKey !== null) {
+            return 'seller_api_key';
+        }
+
+        return $this->staff === null ? 'seller' : 'seller_staff';
+    }
+
     /** For an audit line: who did this, in whose shop. */
     public function actorLabel(): string
     {

@@ -36,6 +36,9 @@ class SellerAutomationRuleService
         $rule = SellerAutomationRule::create([
             'seller_id' => $principal->sellerId(),
             'created_by_staff_id' => $principal->staffId(),
+            // The key, when it was a key. Without this the rule re-resolves as the owner and
+            // outlives the credential that wrote it.
+            'created_by_api_key_id' => $principal->apiKeyId(),
             'name' => $data['name'],
             'trigger' => $data['trigger'],
             'action' => $data['action'],
@@ -67,7 +70,11 @@ class SellerAutomationRuleService
     public function update(SellerAutomationRule $rule, array $input, SellerPrincipal $principal): SellerAutomationRule
     {
         $before = $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'status']);
-        $data = $this->validate($input, $principal);
+        $data = $this->validate($input, $principal, $rule);
+
+        // A rule the marketplace stopped stays stopped while it is edited. The seller may fix it —
+        // that is what the edit is for — but the decision to let it run again is not theirs.
+        $heldByMarketplace = $rule->isSuspendedByMarketplace();
 
         $rule->forceFill([
             'name' => $data['name'],
@@ -75,15 +82,16 @@ class SellerAutomationRuleService
             'action' => $data['action'],
             'trigger_settings' => $data['trigger_settings'],
             'action_settings' => $data['action_settings'],
-            'status' => $data['status'],
+            'status' => $heldByMarketplace ? SellerAutomationRule::STATUS_SUSPENDED : $data['status'],
             'max_actions_per_run' => $data['max_actions_per_run'],
             'cooldown_minutes' => $data['cooldown_minutes'],
             // A rule that has been rewritten is a different rule. Whatever it did wrong before is
             // no longer evidence against it, and holding its old failures against it would leave a
             // seller unable to fix their own rule.
             'consecutive_failures' => 0,
-            'suspended_at' => null,
-            'suspension_reason' => null,
+            'suspended_at' => $heldByMarketplace ? $rule->suspended_at : null,
+            'suspension_reason' => $heldByMarketplace ? $rule->suspension_reason : null,
+            'suspended_by' => $heldByMarketplace ? $rule->suspended_by : null,
         ])->save();
 
         $this->audit->record(
@@ -102,7 +110,8 @@ class SellerAutomationRuleService
      *
      * Clearing a suspension is the same call as switching it on, deliberately: the seller sees why
      * it was stopped and turns it back on in one act, rather than acknowledging a warning and then
-     * forgetting the second step.
+     * forgetting the second step. That holds for the breaker only — a rule the marketplace stopped
+     * is not the seller's to restart, or stopping it would mean nothing.
      *
      * @return array{ok: bool, reason?: string}
      */
@@ -112,6 +121,10 @@ class SellerAutomationRuleService
             return ['ok' => false, 'reason' => 'automation_reason_status_not_settable'];
         }
 
+        if ($rule->isSuspendedByMarketplace()) {
+            return ['ok' => false, 'reason' => 'automation_reason_suspended_by_marketplace'];
+        }
+
         $was = $rule->status;
         $reason = $rule->suspension_reason;
 
@@ -119,6 +132,7 @@ class SellerAutomationRuleService
             'status' => $status,
             'suspended_at' => null,
             'suspension_reason' => null,
+            'suspended_by' => null,
             'consecutive_failures' => $status === SellerAutomationRule::STATUS_ACTIVE ? 0 : $rule->consecutive_failures,
         ])->save();
 
@@ -152,7 +166,7 @@ class SellerAutomationRuleService
      *
      * @throws ValidationException
      */
-    private function validate(array $input, SellerPrincipal $principal): array
+    private function validate(array $input, SellerPrincipal $principal, ?SellerAutomationRule $existing = null): array
     {
         $base = Validator::make($input, [
             'name' => 'required|string|max:160',
@@ -189,10 +203,29 @@ class SellerAutomationRuleService
             'action' => $action->key(),
             'trigger_settings' => $this->settings($input['trigger_settings'] ?? [], $trigger->rules(), 'trigger_settings'),
             'action_settings' => $this->settings($input['action_settings'] ?? [], $action->rules(), 'action_settings'),
-            'status' => $base['status'] ?? SellerAutomationRule::STATUS_ACTIVE,
-            'max_actions_per_run' => (int) ($base['max_actions_per_run'] ?? 50),
-            'cooldown_minutes' => (int) ($base['cooldown_minutes'] ?? 15),
+            // An edit that does not mention a field leaves that field alone. Falling back to the
+            // creation defaults would mean renaming a rule silently resumed it and reset the two
+            // limits that exist to stop it running away.
+            'status' => $base['status'] ?? $this->keptStatus($existing),
+            'max_actions_per_run' => (int) ($base['max_actions_per_run'] ?? $existing?->max_actions_per_run ?? 50),
+            'cooldown_minutes' => (int) ($base['cooldown_minutes'] ?? $existing?->cooldown_minutes ?? 15),
         ];
+    }
+
+    /**
+     * The status an edit that does not name one leaves behind.
+     *
+     * A seller who renames a rule they had switched off has not asked for it to start running, and
+     * a rule the platform suspended never comes back through an edit: clearing a suspension is a
+     * deliberate act made with the reason on screen.
+     */
+    private function keptStatus(?SellerAutomationRule $existing): string
+    {
+        if ($existing === null || $existing->status === SellerAutomationRule::STATUS_ACTIVE) {
+            return SellerAutomationRule::STATUS_ACTIVE;
+        }
+
+        return SellerAutomationRule::STATUS_PAUSED;
     }
 
     /**

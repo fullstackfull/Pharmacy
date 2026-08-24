@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\RefundRequest;
 use App\Models\VendorPayoutRequest;
+use App\Observers\AutomationClaimObserver;
 use App\Observers\ProductPriceObserver;
 use App\Observers\ProductSearchIndexObserver;
 use App\Observers\SellerWebhookEventObserver;
@@ -32,10 +33,13 @@ class ObserverServiceProvider extends ServiceProvider
         // Records every price change, whoever made it. Same reasoning as the index observer and
         // more pressing: a price moved at seven call sites in one service alone, and none of them
         // wrote down what it had been.
+        // And releases automation's claim on a listing the moment anybody else changes whether it
+        // is visible, so a rule cannot put back something the seller took down on purpose.
         Product::observe([
             ProductSearchIndexObserver::class,
             ProductPriceObserver::class,
             SellerWebhookEventObserver::class,
+            AutomationClaimObserver::class,
         ]);
 
         // A seller's webhooks are raised from the model rather than from the call sites, for the

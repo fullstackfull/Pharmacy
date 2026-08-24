@@ -6,6 +6,7 @@ use App\Jobs\DeliverSellerWebhook;
 use App\Models\SellerWebhook;
 use App\Models\SellerWebhookDelivery;
 use App\Services\AuditLogger;
+use App\Services\Security\OutboundUrlGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -48,8 +49,28 @@ class SellerWebhookDispatcher
 
     private const TIMEOUT_SECONDS = 8;
 
-    public function __construct(private readonly AuditLogger $audit)
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly OutboundUrlGuard $guard,
+    ) {
+    }
+
+    /**
+     * May the platform dial this URL at all?
+     *
+     * Any endpoint that fetches a caller-supplied URL is an SSRF primitive: the request leaves from
+     * inside the network, so it reaches cloud metadata, internal admin panels and databases that are
+     * firewalled off from the internet. This repo already learned that on `/image-proxy` and fixed
+     * it with the same guard; a seller-supplied webhook URL is the identical hazard.
+     *
+     * Checked at registration *and* again before every dial, because DNS can be re-pointed at a
+     * private address between the two.
+     *
+     * @return array{allowed: bool, reason: string|null, host: string|null, ip: string|null}
+     */
+    public function mayDial(?string $url): array
     {
+        return $this->guard->check($url);
     }
 
     /**
@@ -116,8 +137,18 @@ class SellerWebhookDispatcher
 
         $delivery->forceFill(['attempts' => $delivery->attempts + 1])->save();
 
+        // Re-checked here, not only when the endpoint was registered: a hostname that resolved to a
+        // public address then can be re-pointed at 169.254.169.254 afterwards.
+        $destination = $this->mayDial($webhook->url);
+
+        if (!$destination['allowed']) {
+            $this->recordFailure($webhook, $delivery, null, 'destination_refused:' . $destination['reason']);
+
+            return false;
+        }
+
         try {
-            $response = Http::withHeaders([
+            $response = Http::withoutRedirecting()->withHeaders([
                 'Content-Type' => 'application/json',
                 'X-Seller-Event' => $delivery->event,
                 'X-Seller-Delivery' => (string) $delivery->id,
@@ -126,18 +157,15 @@ class SellerWebhookDispatcher
                 'X-Seller-Signature' => hash_hmac('sha256', $body, $webhook->secret),
             ])->timeout(self::TIMEOUT_SECONDS)->withBody($body, 'application/json')->post($webhook->url);
         } catch (Throwable $exception) {
-            $this->recordFailure($webhook, $delivery, null, null, $exception->getMessage());
+            $this->recordFailure($webhook, $delivery, null, $exception->getMessage());
 
             return false;
         }
-
-        $excerpt = mb_substr((string) $response->body(), 0, SellerWebhookDelivery::RESPONSE_EXCERPT);
 
         if ($response->successful()) {
             $delivery->forceFill([
                 'status' => SellerWebhookDelivery::STATUS_DELIVERED,
                 'response_code' => $response->status(),
-                'response_body' => $excerpt,
                 'delivered_at' => now(),
                 'next_attempt_at' => null,
             ])->save();
@@ -149,7 +177,7 @@ class SellerWebhookDispatcher
             return true;
         }
 
-        $this->recordFailure($webhook, $delivery, $response->status(), $excerpt, null);
+        $this->recordFailure($webhook, $delivery, $response->status(), null);
 
         return false;
     }
@@ -158,7 +186,6 @@ class SellerWebhookDispatcher
         SellerWebhook $webhook,
         SellerWebhookDelivery $delivery,
         ?int $status,
-        ?string $body,
         ?string $error,
     ): void {
         $exhausted = $delivery->attempts >= self::MAX_ATTEMPTS;
@@ -166,7 +193,9 @@ class SellerWebhookDispatcher
         $delivery->forceFill([
             'status' => $exhausted ? SellerWebhookDelivery::STATUS_FAILED : SellerWebhookDelivery::STATUS_PENDING,
             'response_code' => $status,
-            'response_body' => $body,
+            // The status code, not the body. Persisting what answered would turn the delivery log
+            // into a read-back channel for anything the platform's network can reach.
+            'response_body' => null,
             'error' => $error === null ? null : mb_substr($error, 0, 500),
             // Backing off in powers of two: a server that is briefly overloaded should not be
             // hammered by the retry, and one that is down for an hour should still be reached when

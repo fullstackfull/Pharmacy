@@ -203,6 +203,14 @@ class SellerIntegrationController extends Controller
             return $this->refuse($validator->errors()->toArray());
         }
 
+        if ($refusal = $this->refuseDestination((string) $request['url'])) {
+            return $refusal;
+        }
+
+        if ($refusal = $this->refuseDestination((string) $request['url'])) {
+            return $refusal;
+        }
+
         $secret = Str::random(48);
 
         $webhook = SellerWebhook::create([
@@ -351,6 +359,12 @@ class SellerIntegrationController extends Controller
     )]
     public function testWebhook(Request $request, $id): JsonResponse
     {
+        // The only write on this controller that a key could still reach: it queues deliveries
+        // against an endpoint the key can neither create nor disable.
+        if ($refusal = $this->refuseIntegration($this->principal($request))) {
+            return $refusal;
+        }
+
         $webhook = $this->ownedWebhook($request, $id);
 
         if (!$webhook) {
@@ -416,6 +430,26 @@ class SellerIntegrationController extends Controller
                 'created_at' => $delivery->created_at,
             ])->all(),
         ], 200);
+    }
+
+    /**
+     * Refuse a destination the platform must not dial.
+     *
+     * Validation can only say the string looks like an https URL. Whether it points at the cloud
+     * metadata service or an internal admin panel is a question about the resolved address, and it
+     * belongs here rather than in a rule string.
+     */
+    private function refuseDestination(string $url): ?JsonResponse
+    {
+        $verdict = app(SellerWebhookDispatcher::class)->mayDial($url);
+
+        if ($verdict['allowed']) {
+            return null;
+        }
+
+        return response()->json(['errors' => [
+            ['code' => 'url', 'message' => translate('webhook_url_' . $verdict['reason'])],
+        ]], 403);
     }
 
     private function webhookRules(): array

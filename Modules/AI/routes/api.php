@@ -17,7 +17,10 @@ use Modules\AI\app\Http\Controllers\API\V3\AIProductController;
 */
 
 Route::group(['prefix' => 'v3/seller', 'as' => 'v3/seller.', 'middleware' => ['api_lang']], function () {
-    Route::group(['middleware' => ['seller_api_auth']], function () {
+    // Drafting product copy writes into the product form, so it needs the permission that lets
+    // a person change a product — and it declares that permission, which is also what keeps an
+    // issued API key out of it.
+    Route::group(['middleware' => ['seller_api_auth', 'seller_can:products.manage']], function () {
         Route::group(['prefix' => 'product', 'as' => 'product.'], function () {
             Route::post('title-auto-fill', [AIProductController::class, 'titleAutoFill'])->name('title-auto-fill');
             Route::post('description-auto-fill', [AIProductController::class, 'descriptionAutoFill'])->name('description-auto-fill');

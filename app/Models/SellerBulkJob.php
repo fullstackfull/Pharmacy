@@ -30,6 +30,7 @@ class SellerBulkJob extends Model
     protected $fillable = [
         'seller_id',
         'created_by_staff_id',
+        'created_by_api_key_id',
         'type',
         'status',
         'total',

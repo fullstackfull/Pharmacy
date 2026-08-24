@@ -92,6 +92,7 @@ class AutomationEngine
         $principal = $this->permissions->principalForSeller(
             sellerId: $rule->seller_id,
             staffId: $rule->created_by_staff_id,
+            apiKeyId: $rule->created_by_api_key_id,
         );
 
         $trigger = $this->registry->triggerFor($rule);
@@ -216,7 +217,8 @@ class AutomationEngine
             subject: ['type' => 'product', 'id' => $product->id],
             before: $record->after,
             after: $restore,
-            context: ['rule_id' => $record->rule_id, 'actor' => $principal->actorLabel()],
+            // The shop's id belongs on every line, or the seller's own history does not show it.
+            context: ['seller_id' => $principal->sellerId(), 'rule_id' => $record->rule_id, 'actor' => $principal->actorLabel()],
         );
 
         return ['ok' => true];
@@ -427,6 +429,7 @@ class AutomationEngine
             'status' => SellerAutomationRule::STATUS_SUSPENDED,
             'suspended_at' => now(),
             'suspension_reason' => $reason,
+            'suspended_by' => SellerAutomationRule::SUSPENDED_BY_PLATFORM,
         ])->save();
 
         $this->audit->record(

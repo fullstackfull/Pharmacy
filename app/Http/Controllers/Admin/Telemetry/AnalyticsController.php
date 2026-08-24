@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Telemetry;
 
+use App\Services\Marketplace\SellerOperationsOverview;
 use App\Http\Controllers\BaseController;
 use App\Models\Banner;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
@@ -265,7 +266,12 @@ class AnalyticsController extends BaseController
                 'terms' => $this->reporting->breakdown($window, 'search_term', 50),
                 'no_results' => $this->reporting->breakdown($window, 'search_no_results', 50),
             ],
-            'vendors' => ['shops' => $this->withNames($this->reporting->breakdown($window, 'vendor', 40), 'sellers')],
+            'vendors' => [
+                'shops' => $this->withNames($this->reporting->breakdown($window, 'vendor', 40), 'sellers'),
+                // Storefront numbers and operational state on one screen: a shop whose traffic is
+                // falling and whose automation has been suspended for a week is one story, not two.
+                'attention' => app(SellerOperationsOverview::class)->attentionBySeller(),
+            ],
             'funnel' => [
                 'funnel' => $this->reporting->funnel($window),
                 'gateways' => $this->reporting->breakdown($window, 'gateway', 10),

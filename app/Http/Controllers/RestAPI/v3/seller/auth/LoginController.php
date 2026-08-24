@@ -31,13 +31,19 @@ class LoginController extends Controller
             return null;
         }
 
-        $staff = SellerStaff::where(['email' => $email, 'status' => SellerStaff::STATUS_ACTIVE])->first();
+        // Staff emails are unique per shop, not per platform, so the same address may legitimately
+        // belong to two employers. Taking the first row locked one of them out of the app while the
+        // panel signed them in fine — and if both used the same password, minted a token on the
+        // wrong shop's row. Every candidate is checked, exactly as the vendor panel does it.
+        $candidates = SellerStaff::where(['email' => $email, 'status' => SellerStaff::STATUS_ACTIVE])->get();
 
-        if (!$staff || !$staff->password || !Hash::check($password, $staff->password)) {
-            return null;
-        }
+        $staff = $candidates->first(
+            fn (SellerStaff $candidate) => $candidate->password
+                && Hash::check($password, $candidate->password)
+                && Seller::approved()->whereKey($candidate->seller_id)->exists(),
+        );
 
-        if (!Seller::approved()->whereKey($staff->seller_id)->exists()) {
+        if (!$staff) {
             return null;
         }
 

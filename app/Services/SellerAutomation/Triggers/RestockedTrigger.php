@@ -69,9 +69,9 @@ class RestockedTrigger implements AutomationTrigger
     /**
      * Products whose most recent automated visibility change was a hide.
      *
-     * Read as "the last thing automation did to this listing" rather than "automation ever hid it",
-     * so a listing that was hidden, republished, and then hidden again by the seller's own hand is
-     * not claimed by a rule that had nothing to do with it.
+     * Read as "the last thing automation did to this listing, and nobody has touched it since",
+     * rather than "automation ever hid it": a listing that was hidden, republished, and then hidden
+     * again by the seller's own hand is not claimed by a rule that had nothing to do with it.
      *
      * @return array<int, int>
      */
@@ -94,6 +94,9 @@ class RestockedTrigger implements AutomationTrigger
         return DB::table('seller_automation_actions')
             ->whereIn('id', $latest->values()->all())
             ->where('action', HideListingAction::KEY)
+            // Not if somebody has decided this listing's visibility since. The seller republishing
+            // it by hand and hiding it again later is their decision, not a stockout.
+            ->whereNull('superseded_at')
             ->pluck('subject_id')
             ->map(fn ($id) => (int) $id)
             ->all();

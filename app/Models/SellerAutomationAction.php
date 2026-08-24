@@ -38,12 +38,16 @@ class SellerAutomationAction extends Model
         'before' => 'array',
         'after' => 'array',
         'reverted_at' => 'datetime',
+        'superseded_at' => 'datetime',
     ];
 
     public function isRevertible(): bool
     {
         return $this->status === self::STATUS_APPLIED
             && $this->reverted_at === null
+            // Somebody has changed this since. Putting back what the rule replaced would overwrite
+            // their decision with one taken before it.
+            && $this->superseded_at === null
             && !empty($this->before);
     }
 }

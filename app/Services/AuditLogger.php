@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Models\AuditLog;
+use App\Services\Marketplace\SellerPrincipal;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -82,19 +84,65 @@ class AuditLogger
     {
         // Checked in order of privilege so an admin acting is recorded as an admin even if another
         // guard also happens to resolve.
-        foreach (['admin', 'seller', 'customer'] as $guard) {
-            try {
-                $user = auth($guard)->user();
-            } catch (\Throwable) {
-                $user = null;
-            }
+        $admin = $this->fromGuard('admin');
+        if ($admin !== null) {
+            return $admin;
+        }
 
-            if ($user) {
-                return [$guard, (int) $user->getKey(), $this->nameOf($user)];
+        // The seller app does not log a guard in — it carries a token the middleware resolves to a
+        // principal. Without this every action taken from the app was recorded as the system doing
+        // it, which is the one thing an audit trail must never say.
+        $principal = $this->sellerPrincipal();
+        if ($principal !== null) {
+            return $this->fromPrincipal($principal);
+        }
+
+        foreach (['seller', 'customer'] as $guard) {
+            $actor = $this->fromGuard($guard);
+            if ($actor !== null) {
+                return $actor;
             }
         }
 
         return ['system', null, 'System'];
+    }
+
+    /**
+     * @return array{0: string, 1: ?int, 2: ?string}|null
+     */
+    private function fromGuard(string $guard): ?array
+    {
+        try {
+            $user = auth($guard)->user();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $user ? [$guard, (int) $user->getKey(), $this->nameOf($user)] : null;
+    }
+
+    private function sellerPrincipal(): ?SellerPrincipal
+    {
+        try {
+            $principal = request()->attributes->get(SellerApiAuthMiddleware::PRINCIPAL);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $principal instanceof SellerPrincipal ? $principal : null;
+    }
+
+    /**
+     * The credential, not the shop.
+     *
+     * A staff member and a key are recorded as themselves rather than as the owner, because "who
+     * could have done this" is the question the trail exists to answer.
+     *
+     * @return array{0: string, 1: ?int, 2: ?string}
+     */
+    private function fromPrincipal(SellerPrincipal $principal): array
+    {
+        return [$principal->actorType(), $principal->actorId(), $principal->actorLabel()];
     }
 
     private function nameOf(object $user): ?string

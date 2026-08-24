@@ -100,6 +100,8 @@ class SellerBulkOperationTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('seller_id');
             $table->unsignedBigInteger('created_by_staff_id')->nullable();
+            // Which credential queued it: a key-created job must not re-resolve as the owner.
+            $table->unsignedBigInteger('created_by_api_key_id')->nullable();
             $table->string('type', 60);
             $table->string('status', 20)->default('queued');
             $table->unsignedInteger('total')->default(0);

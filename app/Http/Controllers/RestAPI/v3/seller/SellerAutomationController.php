@@ -341,6 +341,9 @@ class SellerAutomationController extends Controller
             'last_fired_at' => $rule->last_fired_at,
             'suspended_at' => $rule->suspended_at,
             'suspension_reason' => $rule->suspension_reason,
+            // The console shows a stopped rule differently depending on who stopped it: one of the
+            // two the seller can clear themselves, the other they cannot.
+            'suspended_by' => $rule->suspended_by,
             'created_at' => $rule->created_at,
         ];
     }

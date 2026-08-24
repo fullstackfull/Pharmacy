@@ -5,6 +5,7 @@ namespace App\Services\SellerIntelligence;
 use App\Models\SellerInsight;
 use App\Services\Marketplace\SlaService;
 use App\Services\Marketplace\VendorLedger;
+use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -52,6 +53,9 @@ class DailyBriefingService
         ];
     }
 
+    /** How many of the waiting orders have their deadline worked out one by one. */
+    private const SLA_SCAN_LIMIT = 500;
+
     /**
      * What happened in a window.
      *
@@ -76,7 +80,9 @@ class DailyBriefingService
                 ->where('seller_id', $sellerId)
                 ->where('delivery_status', 'delivered')
                 ->whereBetween('created_at', [$from, $to])
-                ->selectRaw('SUM(price * qty) as revenue')
+                // Net of the line's discount, which is how reconciliation, the statement and the
+                // payout all read it. Four numbers for one question is worse than no number.
+                ->selectRaw('SUM(price * qty - discount) as revenue')
                 ->value('revenue')
             : 0;
 
@@ -103,14 +109,17 @@ class DailyBriefingService
         $atRisk = 0;
 
         if (Schema::hasTable('orders')) {
-            $orders = DB::table('orders')
+            $queue = DB::table('orders')
                 ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
-                ->whereIn('order_status', SlaService::AWAITING_SELLER_STATUSES)
-                ->orderBy('created_at')
-                ->limit(500)
-                ->get(['id', 'created_at']);
+                ->whereIn('order_status', SlaService::AWAITING_SELLER_STATUSES);
 
-            $awaiting = $orders->count();
+            // Counted in the database rather than from the rows read below: a seller with a
+            // thousand orders to ship must not be told they have five hundred.
+            $awaiting = (clone $queue)->count();
+
+            // The deadline is worked out per row, so that part is bounded. The oldest first, which
+            // is where the ones already past their deadline are.
+            $orders = $queue->orderBy('created_at')->limit(self::SLA_SCAN_LIMIT)->get(['id', 'created_at']);
 
             foreach ($orders as $order) {
                 $hoursLeft = $this->sla->hoursUntilDeadline(Carbon::parse($order->created_at));
@@ -153,9 +162,12 @@ class DailyBriefingService
 
         // From the issue store rather than a second stock query: the threshold that decides "low"
         // lives in the inventory detector, and asking here would mean a second definition of it.
+        //
+        // The producer, not the category: stale and overstocked lines are inventory issues too, and
+        // counting them here told a seller with fifty slow movers that fifty things were running out.
         return (int) SellerInsight::forSeller($sellerId)
             ->open()
-            ->where('category', SellerInsight::CATEGORY_INVENTORY)
+            ->where('type', InventoryRiskProducer::TYPE)
             ->sum('affected_count');
     }
 

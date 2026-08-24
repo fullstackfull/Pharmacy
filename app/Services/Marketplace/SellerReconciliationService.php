@@ -157,14 +157,23 @@ class SellerReconciliationService
             return ['entries' => 0, 'amount' => 0.0];
         }
 
+        // Two entries make one earning: the credit is the commissionable amount and the commission
+        // is a separate debit booked against the same line. Summing only the credit compares gross
+        // against `recorded['net']`, which differs by the whole commission on every order — so no
+        // shop could ever reconcile, and the screen showed two totals for the same sales.
         $row = DB::table('vendor_ledger_entries')
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
-            ->where('entry_type', VendorLedgerEntry::TYPE_ORDER_EARNING)
+            ->whereIn('entry_type', [VendorLedgerEntry::TYPE_ORDER_EARNING, VendorLedgerEntry::TYPE_COMMISSION_CHARGE])
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('COUNT(*) as entries, COALESCE(SUM(credit - debit), 0) as amount')
+            ->selectRaw(
+                'COALESCE(SUM(credit - debit), 0) as amount, '
+                . "COALESCE(SUM(CASE WHEN entry_type = ? THEN 1 ELSE 0 END), 0) as entries",
+                [VendorLedgerEntry::TYPE_ORDER_EARNING],
+            )
             ->first();
 
         return [
+            // Earnings, not entries: the commission debits are the other half of the same fact.
             'entries' => (int) ($row->entries ?? 0),
             'amount' => round((float) ($row->amount ?? 0), 2),
         ];
@@ -234,15 +243,32 @@ class SellerReconciliationService
             return ['count' => 0, 'amount' => 0.0, 'sample' => []];
         }
 
-        $creditedOrders = DB::table('vendor_ledger_entries')
+        // The ledger records one earning per order *line*, keyed on `order_details.id` — see
+        // OrderManager, which passes `referenceType: 'order_details'`. Looking for `'order'` and an
+        // order id found nothing, so the exclusion below never applied and every correctly credited
+        // order was reported to the seller as money they had not been paid. The id spaces differ as
+        // well as the type string, so the reference ids are mapped back through `order_details`.
+        $creditedLineIds = DB::table('vendor_ledger_entries')
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
             ->where('entry_type', VendorLedgerEntry::TYPE_ORDER_EARNING)
-            ->where('reference_type', 'order')
+            ->where('reference_type', 'order_details')
             ->pluck('reference_id')
             ->filter()
-            ->map(fn ($id) => (string) $id)
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+
+        $creditedOrders = collect();
+
+        if ($creditedLineIds->isNotEmpty() && Schema::hasTable('order_details')) {
+            $creditedOrders = DB::table('order_details')
+                ->whereIn('id', $creditedLineIds->all())
+                ->distinct()
+                ->pluck('order_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values();
+        }
 
         $query = DB::table('order_item_commissions')
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])

@@ -41,6 +41,7 @@ class SellerStaffController extends BaseController
 
     public function storeRole(Request $request): RedirectResponse
     {
+        // The panel is the owner's own door, so nothing is withheld here.
         $this->team->createRole(auth('seller')->id(), $request->validate([
             'name' => 'required|string|max:120',
             'permissions' => 'nullable|array',

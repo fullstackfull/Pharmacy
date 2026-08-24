@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\AuditLog;
+use App\Models\SellerApiKey;
 use App\Models\SellerStaff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * `audit_logs` is one table for the whole platform, so the hard part is deciding which of its rows
  * belong to one seller. Two things make a row theirs, and both are needed:
  *
- * The actor was them — the owner's own account, or one of their staff. Staff ids are read fresh
+ * The actor was them — the owner's own account, one of their staff, or a key they issued. Staff ids are read fresh
  * rather than stored on the row, so an employee who has since left still shows up in the history of
  * what they did, which is exactly when a seller most wants to look.
  *
@@ -41,7 +42,13 @@ class SellerAuditTrailService
             ? SellerStaff::where('seller_id', $sellerId)->pluck('id')->all()
             : [];
 
-        return AuditLog::query()->where(function (Builder $query) use ($sellerId, $staffIds) {
+        // Revoked keys included, for the same reason as departed staff: what a credential did is
+        // most worth looking at once it has been taken away.
+        $keyIds = Schema::hasTable('seller_api_keys')
+            ? SellerApiKey::where('seller_id', $sellerId)->pluck('id')->all()
+            : [];
+
+        return AuditLog::query()->where(function (Builder $query) use ($sellerId, $staffIds, $keyIds) {
             $query->where(function (Builder $actor) use ($sellerId) {
                 $actor->where('actor_type', 'seller')->where('actor_id', $sellerId);
             });
@@ -49,6 +56,12 @@ class SellerAuditTrailService
             if ($staffIds !== []) {
                 $query->orWhere(function (Builder $actor) use ($staffIds) {
                     $actor->where('actor_type', 'seller_staff')->whereIn('actor_id', $staffIds);
+                });
+            }
+
+            if ($keyIds !== []) {
+                $query->orWhere(function (Builder $actor) use ($keyIds) {
+                    $actor->where('actor_type', 'seller_api_key')->whereIn('actor_id', $keyIds);
                 });
             }
 

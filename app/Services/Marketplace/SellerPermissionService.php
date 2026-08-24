@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\Seller;
+use App\Models\SellerApiKey;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use Illuminate\Support\Facades\Schema;
@@ -127,12 +128,22 @@ class SellerPermissionService
      * a deactivated employee, a revoked role. Resolving it fresh at run time is what makes that
      * true, rather than trusting a decision made when the work was queued.
      */
-    public function principalForSeller(int|string $sellerId, int|string|null $staffId = null): ?SellerPrincipal
-    {
+    public function principalForSeller(
+        int|string $sellerId,
+        int|string|null $staffId = null,
+        int|string|null $apiKeyId = null,
+    ): ?SellerPrincipal {
         $seller = Seller::approved()->find($sellerId);
 
         if (!$seller) {
             return null;
+        }
+
+        // A key first, because a key principal has no staff id and "no staff id" used to mean
+        // "the owner" — which quietly promoted every rule and bulk job a key created to full
+        // owner authority, and kept it running after the key was revoked.
+        if ($apiKeyId !== null) {
+            return $this->principalForApiKey($seller, $apiKeyId);
         }
 
         if ($staffId === null) {
@@ -154,6 +165,28 @@ class SellerPermissionService
         }
 
         return SellerPrincipal::staff($seller, $staff, $this->permissionsOf($staff));
+    }
+
+    /**
+     * Rebuild an integration principal from the key that created some deferred work.
+     *
+     * Returns null when the key has been revoked or has expired, which is what makes revocation
+     * stop the work rather than merely stop the next request — the same property a deactivated
+     * staff member already had.
+     */
+    private function principalForApiKey(Seller $seller, int|string $apiKeyId): ?SellerPrincipal
+    {
+        if (!Schema::hasTable('seller_api_keys')) {
+            return null;
+        }
+
+        $key = SellerApiKey::where('id', $apiKeyId)->where('seller_id', $seller->id)->first();
+
+        if (!$key || !$key->isUsable()) {
+            return null;
+        }
+
+        return SellerPrincipal::integration($seller, $key, $this->sanitize($key->scopes ?? []));
     }
 
     /**

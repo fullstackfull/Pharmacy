@@ -15,7 +15,8 @@ use Modules\TaxModule\app\Http\Controllers\Api\v3\VendorTaxReportController;
 */
 
 Route::group(['prefix' => 'v3/seller'], function () {
-    Route::group(['middleware' => ['seller_api_auth', 'api_lang']], function () {
+    // A tax report is the shop's books.
+    Route::group(['middleware' => ['seller_api_auth', 'api_lang', 'seller_can:finance.view']], function () {
         Route::get('get-vat-tax-report-list', [VendorTaxReportController::class, 'vendorWiseTaxes']);
     });
 });

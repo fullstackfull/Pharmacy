@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace\Bulk;
 
 use App\Models\Product;
+use App\Services\Marketplace\PricingPolicyService;
 use App\Services\Marketplace\SellerPrincipal;
 
 /**
@@ -74,6 +75,15 @@ class BulkPriceOperation implements BulkOperation
         }
         if ($discountType === 'flat' && $discount >= $newPrice) {
             return ['ok' => false, 'reason' => 'bulk_reason_discount_not_below_price'];
+        }
+
+        // The seller's own floor, checked before the write rather than reported after it. Refused
+        // with the numbers on the row, so a seller reading the failure list can see which floor and
+        // by how much rather than being told "no".
+        $floorCheck = app(PricingPolicyService::class)->check($product, $newPrice, $discount, $discountType);
+
+        if (!$floorCheck['ok']) {
+            return $floorCheck;
         }
 
         $before = ['unit_price' => $currentPrice, 'discount' => (float) $product->discount, 'discount_type' => $product->discount_type];

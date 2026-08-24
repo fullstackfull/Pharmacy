@@ -4,6 +4,7 @@ namespace App\Services\SellerAutomation\Actions;
 
 use App\Models\Product;
 use App\Models\SellerAutomationAction as ActionRecord;
+use App\Services\Marketplace\PricingPolicyService;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\SellerAutomation\AutomationAction;
 
@@ -81,6 +82,17 @@ class SetDiscountAction implements AutomationAction
 
         if ($priceAfter < $floor) {
             return ['ok' => false, 'reason' => 'automation_reason_below_floor', 'label' => $subject->getRawOriginal('name')];
+        }
+
+        // The shop's own floor as well as this rule's. A rule written before the floor was set must
+        // not keep marking things down past it, and a seller who set one expects it to hold
+        // everywhere rather than only where they remembered to repeat it.
+        $policy = app(PricingPolicyService::class)->check($subject, $unitPrice, $value, $type);
+
+        if (!$policy['ok']) {
+            // array_merge, not `+`: `+` keeps the left operand for duplicate keys, which is how a
+            // computed value silently loses to whatever was already there.
+            return array_merge($policy, ['label' => $subject->getRawOriginal('name')]);
         }
 
         $before = ['discount' => (float) $subject->discount, 'discount_type' => (string) $subject->discount_type];

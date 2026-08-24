@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Models\Seller;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
+use App\Services\AuditLogger;
 use App\Services\Marketplace\SellerAuditTrailService;
+use App\Services\Marketplace\SellerPrincipal;
 use App\Services\Marketplace\SellerTeamService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -214,6 +217,43 @@ class SellerSecurityCentreTest extends TestCase
         $this->assertSame(2, $this->trail()->recent(self::SELLER)['total']);
     }
 
+    public function test_an_action_from_the_seller_app_is_attributed_to_whoever_took_it(): void
+    {
+        // The app carries a token rather than logging a guard in, so nothing here is authenticated
+        // in the sense the logger used to look for. Everything a seller did arrived as "System".
+        $staff = $this->staff();
+        $seller = Seller::find(self::SELLER);
+
+        request()->attributes->set(
+            SellerApiAuthMiddleware::PRINCIPAL,
+            SellerPrincipal::staff($seller, $staff, ['orders.manage']),
+        );
+
+        app(AuditLogger::class)->record(action: 'seller.order_status_changed');
+
+        $entry = DB::table('audit_logs')->latest('id')->first();
+        $this->assertSame('seller_staff', $entry->actor_type);
+        $this->assertSame($staff->id, (int) $entry->actor_id);
+        $this->assertStringContainsString('Clerk', (string) $entry->actor_name);
+
+        // And it reaches the shop's own history, which is the point of recording it.
+        $this->assertSame(1, $this->trail()->recent(self::SELLER)['total']);
+    }
+
+    public function test_an_action_taken_by_the_owners_token_is_attributed_to_the_owner(): void
+    {
+        request()->attributes->set(
+            SellerApiAuthMiddleware::PRINCIPAL,
+            SellerPrincipal::owner(Seller::find(self::SELLER)),
+        );
+
+        app(AuditLogger::class)->record(action: 'seller.shop_updated');
+
+        $entry = DB::table('audit_logs')->latest('id')->first();
+        $this->assertSame('seller', $entry->actor_type);
+        $this->assertSame(self::SELLER, (int) $entry->actor_id);
+    }
+
     public function test_the_trail_never_shows_another_shops_history(): void
     {
         $rivalStaff = $this->staff(['seller_id' => self::RIVAL, 'email' => 'theirs@example.com']);
@@ -325,17 +365,22 @@ class SellerSecurityCentreTest extends TestCase
         $this->assertSame(1, SellerRole::count());
     }
 
-    public function test_reading_the_team_does_not_need_staff_manage(): void
+    public function test_reading_the_team_needs_the_same_permission_as_changing_it(): void
     {
         $role = SellerRole::create(['seller_id' => self::SELLER, 'name' => 'Clerk', 'permissions' => ['orders.view']]);
         $this->staff(['seller_role_id' => $role->id, 'auth_token' => 'staff-token-long-enough-to-clear-the-gate']);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer staff-token-long-enough-to-clear-the-gate',
-            'Accept' => 'application/json',
-        ])->getJson('/api/v3/seller/seller-center/security/staff');
+        $headers = ['Authorization' => 'Bearer staff-token-long-enough-to-clear-the-gate', 'Accept' => 'application/json'];
 
-        $response->assertStatus(200);
-        $this->assertCount(1, $response->json('staff'));
+        // The audit trail carries the before and after of a bank-details change, and the team
+        // list carries every colleague's email and last login. Reading them was open while
+        // writing them was gated, which meant a role with no rights at all could read the shop's
+        // account number out of its own history.
+        foreach (['audit', 'staff', 'access', 'roles', 'permissions'] as $read) {
+            $response = $this->withHeaders($headers)->getJson("/api/v3/seller/seller-center/security/{$read}");
+
+            $response->assertStatus(403);
+            $this->assertSame('permission', data_get($response->json(), 'errors.0.code'), $read);
+        }
     }
 }
