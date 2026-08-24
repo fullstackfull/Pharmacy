@@ -224,7 +224,26 @@ class ExperiencePageService
             $page->is_enabled = $enabled;
         }
 
-        return $page->save();
+        $before = [
+            'title'      => $page->getOriginal('title'),
+            'is_enabled' => (bool) $page->getOriginal('is_enabled'),
+        ];
+
+        $saved = $page->save();
+
+        if ($saved) {
+            // Disabling a page removes it from every client that could reach it — a change worth
+            // the same trail its creation and deletion already leave.
+            $this->audit?->record(
+                action: 'experience.page_updated',
+                subject: $page,
+                before: $before,
+                after: ['title' => $page->title, 'is_enabled' => (bool) $page->is_enabled],
+                context: ['theme_id' => $page->theme_id],
+            );
+        }
+
+        return $saved;
     }
 
     /**

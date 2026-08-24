@@ -20,7 +20,8 @@ namespace App\Services\Theme;
  *   - a client that declares nothing gets everything this registry marks app-safe, because every
  *     build older than capability reporting would otherwise get an empty home page;
  *   - a component this registry does not list is never sent to the app at all, whatever a client
- *     claims to support — `custom_html` is arbitrary markup and has no place in a native renderer.
+ *     claims to support. (`custom_html` IS listed: the app draws it through a sandboxed HTML
+ *     widget — scripts never execute — and the web renders the same markup.)
  */
 class ComponentCapabilityRegistry
 {
@@ -197,8 +198,14 @@ class ComponentCapabilityRegistry
         }
 
         // A build that reports an engine older than the component needs cannot draw it, even if
-        // it lists the type: the type name says what it wants, the engine says what it has.
-        if ($viewer->uiEngineVersion > 0 && $viewer->uiEngineVersion < $requirement['engine']) {
+        // it lists the type. A build that declares COMPONENTS but no engine is a capability-era
+        // build with engine 1 — not one exempt from the gate; only the truly pre-capability build
+        // (no components either) keeps the everything-app-safe legacy path above.
+        $engine = $viewer->uiEngineVersion > 0
+            ? $viewer->uiEngineVersion
+            : ($viewer->supportedComponents !== [] ? 1 : 0);
+
+        if ($engine > 0 && $engine < $requirement['engine']) {
             return false;
         }
 

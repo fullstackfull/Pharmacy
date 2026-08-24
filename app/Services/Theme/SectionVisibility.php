@@ -137,8 +137,14 @@ class SectionVisibility
             return self::REASON_PLATFORM;
         }
 
+        // The audience list holds guest/customer AND segment keys (Phase 3.4), as one union:
+        // the section shows to anyone the list names. A segment key the viewer does not carry
+        // simply does not admit them — and a viewer whose segments could not be resolved carries
+        // none, which degrades to the base experience rather than an error (§44).
         $audience = $this->tokens($section['audience'] ?? null);
-        if ($audience !== [] && !in_array($viewer->audience(), $audience, true)) {
+        if ($audience !== []
+            && !in_array($viewer->audience(), $audience, true)
+            && array_intersect($audience, $viewer->segments) === []) {
             return self::REASON_AUDIENCE;
         }
 

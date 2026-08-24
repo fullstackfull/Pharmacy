@@ -168,6 +168,41 @@ class SectionLocalisationTest extends TestCase
             'two languages are two different pages to a syncing client');
     }
 
+    public function test_an_executable_scheme_never_survives_a_link_field(): void
+    {
+        $clean = app(SectionRegistry::class)->normalizeSettings('banner_strip', [
+            'link' => 'javascript:alert(1)',
+        ]);
+        $this->assertNull($clean['link'], 'javascript: in an href is stored XSS wearing a link');
+
+        $kept = app(SectionRegistry::class)->normalizeSettings('banner_strip', [
+            'link' => '/products?category_id=3',
+        ]);
+        $this->assertSame('/products?category_id=3', $kept['link']);
+
+        $https = app(SectionRegistry::class)->normalizeSettings('banner_strip', [
+            'link' => 'https://shop.example/page',
+        ]);
+        $this->assertSame('https://shop.example/page', $https['link']);
+    }
+
+    public function test_a_failed_language_read_is_never_memoised(): void
+    {
+        LocalisedSettings::forget();
+        \App\Models\BusinessSetting::query()->delete();
+        Cache::flush();
+
+        $this->assertSame([], LocalisedSettings::activeLocales(), 'nothing to read yet');
+
+        \App\Models\BusinessSetting::create(['type' => 'language', 'value' => json_encode([
+            ['id' => 1, 'name' => 'english', 'code' => 'en', 'status' => 1, 'default' => true],
+        ])]);
+        Cache::flush();
+
+        $this->assertSame(['en'], LocalisedSettings::activeLocales(),
+            'one transient empty read must not disable localisation for the life of the worker');
+    }
+
     public function test_the_storefront_renders_the_sessions_language(): void
     {
         ThemeSection::create([

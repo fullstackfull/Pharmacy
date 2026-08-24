@@ -300,7 +300,7 @@ class SectionRegistry
                     'title'       => ['type' => 'text',   'label' => 'title', 'default' => ''],
                     'subtitle'    => ['type' => 'text',   'label' => 'subtitle', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'featured',
-                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
+                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual', 'collection']],
                     // Which category / brand, picked by name. The picker follows the source above:
                     // choose "category" and it lists categories, "brand" and it lists brands.
                     'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
@@ -309,6 +309,10 @@ class SectionRegistry
                     'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
                                       'resource' => 'product', 'multiple' => true,
                                       'depends_on' => ['source' => ['manual']]],
+                    // Source "collection" means: whatever this dynamic collection currently ranks.
+                    'collection_id' => ['type' => 'resource', 'label' => 'choose_a_collection', 'default' => null,
+                                      'resource' => 'product_collection',
+                                      'depends_on' => ['source' => ['collection']]],
                     'style'       => ['type' => 'select', 'label' => 'display_style', 'default' => 'rail',
                                       'options' => ['rail', 'grid', 'carousel', 'spotlight', 'list']],
                     'limit'       => ['type' => 'number', 'label' => 'max_products', 'default' => 10],
@@ -945,12 +949,15 @@ class SectionRegistry
                 'schema' => [
                     'label'       => ['type' => 'text',   'label' => 'tab_label', 'default' => ''],
                     'source'      => ['type' => 'source', 'label' => 'product_source', 'default' => 'new_arrival',
-                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual']],
+                                      'options' => ['featured', 'best_selling', 'new_arrival', 'top_rated', 'category', 'brand', 'manual', 'collection']],
                     'source_id'   => ['type' => 'resource', 'label' => 'choose_category_or_brand', 'default' => null,
                                       'resource_from' => 'source', 'depends_on' => ['source' => ['category', 'brand']]],
                     'product_ids' => ['type' => 'resource', 'label' => 'choose_products', 'default' => null,
                                       'resource' => 'product', 'multiple' => true,
                                       'depends_on' => ['source' => ['manual']]],
+                    'collection_id' => ['type' => 'resource', 'label' => 'choose_a_collection', 'default' => null,
+                                      'resource' => 'product_collection',
+                                      'depends_on' => ['source' => ['collection']]],
                 ],
             ],
             'price_band' => [
@@ -1100,19 +1107,19 @@ class SectionRegistry
     public const FIELD_GROUPS = [
         // What the section shows, as opposed to how it shows it.
         'source' => [
-            'source', 'source_id', 'product_ids', 'category_id', 'category_ids', 'brand_id',
-            'shop_id', 'shop_ids', 'deal_id', 'banner_type', 'limit', 'days', 'min_rating',
-            'discount', 'cutoff',
+            'source', 'source_id', 'product_ids', 'collection_id', 'category_id', 'category_ids',
+            'brand_id', 'shop_id', 'shop_ids', 'deal_id', 'banner_type', 'limit', 'days',
+            'min_rating', 'discount', 'cutoff',
         ],
         // The arrangement, and the geometry of it.
         'layout' => [
             'style', 'layout', 'display', 'columns', 'gap', 'ratio', 'height', 'arrows',
             'pagination', 'autoplay', 'interval', 'view_all', 'sub_categories', 'banner', 'logo',
-            'overlay', 'add_to_cart', 'rotate', 'rotate_ms', 'animate', 'ken_burns', 'parallax',
+            'overlay', 'add_to_cart', 'rotate_ms', 'animate', 'ken_burns', 'parallax',
             'layout_lock', 'text_color', 'cover', 'countdown', 'dismissible', 'qr',
         ],
         // Where it leads.
-        'action' => ['link', 'button_text', 'cta_text', 'url'],
+        'action' => ['link', 'button_text'],
     ];
 
     /**
@@ -1202,6 +1209,44 @@ class SectionRegistry
      * @param array<string, mixed> $settings
      * @param array<string, mixed> $field
      */
+    /**
+     * The locale-override keys this type's schema can legitimately carry, mapped to what each
+     * folds into: ['title_ar' => ['title', 'ar'], ...]. This map is what makes the collapse
+     * schema-aware — without it, a shop adding a language whose code collides with a real
+     * settings suffix (Indonesian's `id` against `source_id`) would have genuine settings
+     * deleted from every payload as "someone else's override".
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public function localeOverrideKeys(string $type): array
+    {
+        return $this->overrideKeyMap($this->schemaFor($type));
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    public function blockLocaleOverrideKeys(string $blockType): array
+    {
+        return $this->overrideKeyMap($this->blockSchemaFor($blockType));
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    private function overrideKeyMap(array $schema): array
+    {
+        $map = [];
+
+        foreach ($schema as $key => $field) {
+            // Same rule keepLocaleOverrides applies at save time: plain fields carry no language.
+            if (!in_array($field['type'] ?? '', ['text', 'textarea'], true) || !empty($field['plain'])) {
+                continue;
+            }
+            foreach (LocalisedSettings::activeLocales() as $code) {
+                $map[$key . '_' . $code] = [$key, $code];
+            }
+        }
+
+        return $map;
+    }
+
     private function keepLocaleOverrides(array &$clean, array $settings, string $key, array $field): void
     {
         if (!in_array($field['type'] ?? '', ['text', 'textarea'], true) || !empty($field['plain'])) {
@@ -1227,8 +1272,46 @@ class SectionRegistry
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) ($field['default'] ?? false),
             'select', 'source' => in_array($value, $field['options'] ?? [], true) ? $value : ($field['default'] ?? null),
             'resource' => $this->coerceResource($value, !empty($field['multiple'])),
+            // A link or image lands in an href/src on the storefront and in the app. A value whose
+            // scheme is not a web one — javascript:, data:, vbscript: — is the classic stored-XSS
+            // shape, and nothing legitimate a merchant pastes ever carries one.
+            'link', 'image' => $this->safeUrl($value),
+            // A color lands in inline CSS on the storefront; anything that is not a plausible
+            // CSS color literal is dropped rather than echoed into a style attribute.
+            'color' => is_scalar($value)
+                && preg_match('/^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s\/]{1,40}\)|[a-z-]{1,30}|(linear|radial)-gradient\([^;{}<>]{1,200}\))$/i', trim((string) $value))
+                ? trim((string) $value) : ($field['default'] ?? null),
+            'text'     => is_scalar($value) ? mb_substr((string) $value, 0, 1000) : ($field['default'] ?? null),
+            'textarea' => is_scalar($value) ? mb_substr((string) $value, 0, 20000) : ($field['default'] ?? null),
             default   => is_scalar($value) ? (string) $value : ($field['default'] ?? null),
         };
+    }
+
+    /**
+     * A URL safe to place in an href/src: relative paths, anchors, and http(s)/mailto/tel
+     * absolute URLs. Anything else — above all executable schemes — becomes null, which every
+     * renderer already treats as "no link".
+     */
+    private function safeUrl(mixed $value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $url = trim((string) $value);
+        if ($url === '') {
+            return null;
+        }
+        if (mb_strlen($url) > 2000) {
+            return null;
+        }
+
+        // No scheme at all: a storefront path, an anchor, a query — all fine as-is.
+        if (!preg_match('/^[a-z][a-z0-9+.\-]*:/i', $url)) {
+            return $url;
+        }
+
+        return preg_match('#^(https?:|mailto:|tel:)#i', $url) ? $url : null;
     }
 
     /**

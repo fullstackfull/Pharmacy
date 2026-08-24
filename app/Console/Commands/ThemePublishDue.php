@@ -61,13 +61,36 @@ class ThemePublishDue extends Command
                 continue;
             }
 
-            // Clearing the schedule BEFORE publishing: publish() is the expensive, cache-flushing,
-            // beacon-announcing half, and a crash inside it must not leave a version that publishes
-            // again on the next run.
-            $version->forceFill(['publish_at' => null])->save();
-            $manager->publish($version, $version->change_note);
+            // The schedule is CLAIMED atomically before publishing: the conditional update makes
+            // two overlapping runners (cron plus a manual run) fight over the row, and exactly one
+            // wins — the loser sees zero affected rows and moves on. Clearing before publish()
+            // also means a crash inside it cannot re-publish on the next run.
+            $claimed = ThemeVersion::query()
+                ->whereKey($version->id)
+                ->whereNotNull('publish_at')
+                ->update(['publish_at' => null]);
 
-            $this->info("Published version #{$version->id} of theme #{$version->theme_id}.");
+            if ($claimed !== 1) {
+                continue; // another runner already took it
+            }
+
+            try {
+                $manager->publish($version->refresh(), $version->change_note);
+                $this->info("Published version #{$version->id} of theme #{$version->theme_id}.");
+            } catch (\Throwable $publishError) {
+                // The merchant promised shoppers a launch time; a silent failure breaks that
+                // promise invisibly. Recorded where the version history is read, and reported so
+                // the scheduler's log shows red.
+                report($publishError);
+                $audit->record(
+                    action: 'theme.scheduled_publish_failed',
+                    subject: $version,
+                    context: ['error' => substr($publishError->getMessage(), 0, 300)],
+                );
+                $this->error("Version #{$version->id} failed to publish: {$publishError->getMessage()}");
+
+                return self::FAILURE;
+            }
         }
 
         return self::SUCCESS;

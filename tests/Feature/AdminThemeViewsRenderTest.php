@@ -306,6 +306,145 @@ class AdminThemeViewsRenderTest extends TestCase
         $this->assertStringContainsString('admin/theme/import', $html, 'importing uses the existing action');
     }
 
+    public function test_the_collections_screen_renders_with_a_merchandised_collection(): void
+    {
+        Schema::dropIfExists('product_collections');
+        Schema::create('product_collections', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('slug', 60)->unique();
+            $table->boolean('status')->default(true); $table->json('rules')->nullable();
+            $table->string('sort_by', 40)->default('sales_30d');
+            $table->json('merchandising')->nullable(); $table->timestamps();
+        });
+        $collection = \App\Models\ProductCollection::create([
+            'name' => 'Winter picks', 'slug' => 'winter-picks', 'status' => true,
+            'rules' => [['field' => 'price', 'operator' => 'less_than', 'value' => 50]],
+            'sort_by' => 'sales_30d',
+            'merchandising' => ['pins' => [['id' => 3, 'position' => 1]], 'min_items' => 4,
+                                'fallback' => ['kind' => 'source', 'source' => 'featured']],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.collections', [
+            'ready' => true, 'enabled' => true,
+            'collections' => collect([$collection]),
+            'fields' => \App\Services\Commerce\CollectionRuleRegistry::FIELDS,
+            'sorts' => \App\Services\Commerce\CollectionRuleRegistry::SORTS,
+            'boostKinds' => \App\Services\Commerce\MerchandisingRules::BOOST_KINDS,
+            'fallbackSources' => \App\Services\Commerce\MerchandisingRules::FALLBACK_SOURCES,
+            'editable' => true, 'metricsAge' => now()->toDateTimeString(),
+        ]);
+
+        $this->assertStringContainsString('Winter picks', $html);
+        $this->assertStringContainsString('cx-edit', $html, 'a collection can be edited in place');
+        $this->assertStringContainsString('admin/commerce/collections/store', $html);
+    }
+
+    public function test_the_campaigns_screen_renders(): void
+    {
+        $this->commerceTables();
+        $campaign = \App\Models\ExperienceCampaign::create([
+            'name' => 'Ramadan Sale', 'status' => 'active', 'page' => 'home', 'priority' => 80,
+            'overrides' => [['slot' => 'hero', 'section' => ['type' => 'hero_banner', 'settings' => []]]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.campaigns', [
+            'ready' => true, 'enabled' => true,
+            'campaigns' => collect([$campaign]),
+            'reach' => app(\App\Services\Theme\SectionReach::class),
+            'pages' => ['home'], 'slots' => \App\Services\Commerce\CampaignRules::SLOTS,
+            'editable' => true, 'schedulerOk' => true,
+        ]);
+
+        $this->assertStringContainsString('Ramadan Sale', $html);
+    }
+
+    public function test_the_segments_screen_renders(): void
+    {
+        $this->commerceTables();
+        \App\Models\CustomerSegment::create([
+            'name' => 'Repeat buyer', 'key' => 'repeat-buyer', 'status' => true,
+            'rules' => [['field' => 'orders_count', 'operator' => 'greater_than_or_equal', 'value' => 2]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.segments', [
+            'ready' => true, 'enabled' => true,
+            'segments' => \App\Models\CustomerSegment::query()->get(),
+            'fields' => \App\Services\Commerce\SegmentRules::FIELDS,
+            'operators' => \App\Services\Commerce\SegmentRules::OPERATORS,
+            'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('Repeat buyer', $html);
+    }
+
+    public function test_the_experiments_screen_renders(): void
+    {
+        $this->commerceTables();
+        \App\Models\ExperienceExperiment::create([
+            'name' => 'Hero copy', 'key' => 'hero-copy', 'status' => 'running', 'page' => 'home',
+            'section_uuid' => 'u-1', 'variants' => [['key' => 'b', 'weight' => 50, 'settings' => []]],
+        ]);
+
+        $html = $this->renderBody('admin-views.commerce.experiments', [
+            'ready' => true, 'enabled' => true,
+            'experiments' => \App\Models\ExperienceExperiment::query()->get(),
+            'reach' => app(\App\Services\Commerce\ExperimentReach::class),
+            'sections' => [], 'editable' => true,
+        ]);
+
+        $this->assertStringContainsString('Hero copy', $html);
+    }
+
+    private function commerceTables(): void
+    {
+        foreach (['experience_campaigns', 'customer_segments', 'experience_experiments'] as $table) {
+            Schema::dropIfExists($table);
+        }
+        Schema::create('experience_campaigns', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('status', 20)->default('draft');
+            $table->string('page', 60)->default('home'); $table->unsignedInteger('priority')->default(30);
+            $table->timestamp('starts_at')->nullable(); $table->timestamp('ends_at')->nullable();
+            $table->json('overrides')->nullable(); $table->timestamps();
+        });
+        Schema::create('customer_segments', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('key', 60)->unique();
+            $table->boolean('status')->default(true); $table->json('rules')->nullable(); $table->timestamps();
+        });
+        Schema::create('experience_experiments', function (Blueprint $table) {
+            $table->id(); $table->string('name', 120); $table->string('key', 60)->unique();
+            $table->string('status', 20)->default('draft'); $table->string('page', 60)->default('home');
+            $table->uuid('section_uuid')->nullable(); $table->json('variants')->nullable(); $table->timestamps();
+        });
+    }
+
+    public function test_the_experience_health_screen_renders_findings_and_previews(): void
+    {
+        $html = $this->renderBody('admin-views.app-builder.health', [
+            'channel' => 'customer_app',
+            'findings' => [
+                ['key' => 'x', 'severity' => 'critical',
+                 'label' => 'a_live_section_is_sourced_from_a_collection_that_was_deleted_or_disabled',
+                 'detail' => 'home · product_slider · #2'],
+            ],
+            'infra' => [
+                ['key' => 'scheduler', 'ok' => false, 'label' => 'the_scheduler_is_running',
+                 'why' => 'x', 'fix' => '* * * * * php artisan schedule:run'],
+            ],
+            'overrides' => [
+                ['slot' => 'hero', 'section' => ['type' => 'hero_banner', 'settings' => []], 'campaign_id' => 7],
+            ],
+            'campaignNames' => [7 => 'Ramadan Sale'],
+            'at' => null,
+            'experiments' => collect(),
+            'segments' => ['repeat-buyer' => 'Repeat buyer'],
+            'asSegment' => '',
+            'segmentPreview' => null,
+        ]);
+
+        $this->assertStringContainsString('home · product_slider · #2', $html);
+        $this->assertStringContainsString('Ramadan Sale', $html, 'the decision trace names the campaign');
+        $this->assertStringContainsString('name="as_segment"', $html, 'segment preview is offered');
+    }
+
     private function renderBody(string $view, array $data): string
     {
         $source = File::get(resource_path('views/' . str_replace('.', '/', $view) . '.blade.php'));
@@ -320,9 +459,64 @@ class AdminThemeViewsRenderTest extends TestCase
         File::put($probe, $source);
 
         try {
-            return view('admin-views.theme.__render_probe', $data)->render();
+            $html = view('admin-views.theme.__render_probe', $data)->render();
         } finally {
             File::delete($probe);
+        }
+
+        $this->assertNothingRepeats($html, $view);
+
+        return $html;
+    }
+
+    /**
+     * No screen may offer the same choice twice or collect the same field twice.
+     *
+     * Run on EVERY render this suite performs, because duplication is exactly the class of bug
+     * that arrives through a merge: two branches add the same block at nearby lines, git keeps
+     * both, every test that checks "the option is there" still passes — and the merchant sees
+     * the option twice. Uniqueness has to be asserted, not implied.
+     */
+    private function assertNothingRepeats(string $html, string $view): void
+    {
+        $document = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="utf-8"?><body>' . $html . '</body>');
+        libxml_clear_errors();
+
+        foreach ($document->getElementsByTagName('select') as $select) {
+            $values = [];
+            foreach ($select->getElementsByTagName('option') as $option) {
+                $value = $option->getAttribute('value') !== '' ? $option->getAttribute('value') : trim($option->textContent);
+                if ($value !== '') {
+                    $values[] = $value;
+                }
+            }
+            $repeated = array_filter(array_count_values($values), fn (int $count) => $count > 1);
+            $this->assertSame([], $repeated,
+                $view . ': a select repeats these options: ' . implode(', ', array_keys($repeated)));
+        }
+
+        foreach ($document->getElementsByTagName('form') as $form) {
+            $names = [];
+            foreach (['input', 'select', 'textarea'] as $tag) {
+                foreach ($form->getElementsByTagName($tag) as $field) {
+                    $name = $field->getAttribute('name');
+                    // Array fields repeat by design; checkbox+hidden pairs are the Laravel idiom
+                    // for "unchecked still submits".
+                    if ($name === '' || $name === '_token' || str_ends_with($name, '[]')) {
+                        continue;
+                    }
+                    if ($field->getAttribute('type') === 'hidden'
+                        || ($tag === 'input' && $field->getAttribute('type') === 'checkbox')) {
+                        continue;
+                    }
+                    $names[] = $name;
+                }
+            }
+            $repeated = array_filter(array_count_values($names), fn (int $count) => $count > 1);
+            $this->assertSame([], $repeated,
+                $view . ': a form collects these fields twice: ' . implode(', ', array_keys($repeated)));
         }
     }
 }

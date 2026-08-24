@@ -176,6 +176,16 @@ class SectionDataResolver
             return $this->pickedProducts($source->ids, $limit);
         }
 
+        if ($source->kind === 'collection') {
+            // A merchant-defined dynamic collection. Empty — rules matching nothing, disabled,
+            // deleted, or the engine switched off — stays empty: SectionReadiness already hides a
+            // product section with nothing to show, and featured products under this section's
+            // own heading would be the wrong content wearing the right title. A configurable
+            // fallback source arrives with merchandising (Phase 3.2).
+            return app(\App\Services\Commerce\CollectionResolver::class)
+                ->resolve($source->id, $limit);
+        }
+
         return $this->safely(function () use ($limit, $source) {
             // The card shows the brand under the image; loading it here keeps a rail of ten
             // products at one query instead of eleven.
@@ -514,7 +524,6 @@ class SectionDataResolver
                     $settings['image_2'] ?? null,
                     $settings['image_3'] ?? null,
                 ], fn ($frame) => is_string($frame) && $frame !== '')),
-                'banner_id'    => $linkedId > 0 ? $linkedId : null,
                 // The Banner Setup form's own resource picker, carried raw; resolveTargets() below
                 // turns it (or, failing it, the link URL) into the card's structured target.
                 '_resource'    => $linked !== null

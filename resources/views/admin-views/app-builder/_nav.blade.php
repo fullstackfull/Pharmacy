@@ -32,6 +32,10 @@
            class="{{ ($current ?? '') === 'templates' ? 'is-active' : '' }}">
             <i class="fi fi-rr-magic-wand"></i> {{ translate('templates') }}
         </a>
+        <a href="{{ route('admin.app-builder.health', ['channel' => $channel]) }}"
+           class="{{ ($current ?? '') === 'health' ? 'is-active' : '' }}">
+            <i class="fi fi-rr-pulse"></i> {{ translate('experience_health') }}
+        </a>
         <a href="{{ route('admin.theme.settings.index') }}">
             <i class="fi fi-rr-palette"></i> {{ translate('global_styles') }}
         </a>

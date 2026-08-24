@@ -18,7 +18,12 @@ class APILocalizationMiddleware
      */
     public function handle(Request $request, Closure $next): mixed
     {
-        $local = ($request->hasHeader('lang')) ? (strlen($request->header('lang')) > 0 ? $request->header('lang') : Helpers::default_lang()) : Helpers::default_lang();
+        $requested = strtolower((string) $request->header('lang'));
+        // Customer-app builds in the field sent the COUNTRY code here ('sa'/'us'); everything
+        // localized keys on the language code, so those aliases are folded in rather than
+        // letting an installed app fall out of its own language.
+        $requested = ['sa' => 'ar', 'us' => 'en'][$requested] ?? $requested;
+        $local = $requested !== '' ? $requested : Helpers::default_lang();
         App::setLocale($local);
         return $next($request);
     }

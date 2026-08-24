@@ -67,7 +67,7 @@ class BrandController extends Controller
 
     public function get_brands(Request $request): array
     {
-        $shop = $request->has('shop_slug') && empty($request['shop_slug']) ? Shop::where('slug', $request['shop_slug'])->first() : null;
+        $shop = $request->has('shop_slug') && !empty($request['shop_slug']) ? Shop::where('slug', $request['shop_slug'])->first() : null;
 
         if ($shop) {
             $brand_ids = Product::active()

@@ -81,6 +81,10 @@ use App\Http\Controllers\Admin\Notification\NotificationController;
 use App\Http\Controllers\Admin\Settings\BusinessSettingsController;
 use App\Http\Controllers\Admin\Settings\RobotsMetaContentController;
 use App\Http\Controllers\Admin\Settings\RedirectController;
+use App\Http\Controllers\Admin\Commerce\CampaignController;
+use App\Http\Controllers\Admin\Commerce\SegmentController;
+use App\Http\Controllers\Admin\Commerce\CollectionController;
+use App\Http\Controllers\Admin\Commerce\ExperimentController;
 use App\Http\Controllers\Admin\Settings\AppBuilderController;
 use App\Http\Controllers\Admin\Settings\ThemeManagementController;
 use App\Http\Controllers\Admin\Settings\SeoTemplateController;
@@ -1424,6 +1428,39 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
      * the screens that already do the job (the composer, publishing, versions, global styles)
      * rather than growing a second copy of them.
      */
+    /*
+     * Commerce Experience (Phase 3) — configuration that changes what sections MAY show.
+     * Same module gate as the builder that consumes it; writes are further guarded by
+     * ThemePermissionService inside each controller.
+     */
+    Route::group(['prefix' => 'commerce', 'as' => 'commerce.', 'middleware' => ['module:themes_and_addons']], function () {
+        Route::controller(CollectionController::class)->group(function () {
+            Route::get('collections', 'index')->name('collections.index');
+            Route::post('collections/store', 'store')->name('collections.store');
+            Route::post('collections/update', 'update')->name('collections.update');
+            Route::post('collections/delete', 'delete')->name('collections.delete');
+            Route::get('collections/preview', 'preview')->name('collections.preview');
+        });
+        Route::controller(CampaignController::class)->group(function () {
+            Route::get('campaigns', 'index')->name('campaigns.index');
+            Route::post('campaigns/store', 'store')->name('campaigns.store');
+            Route::post('campaigns/update', 'update')->name('campaigns.update');
+            Route::post('campaigns/delete', 'delete')->name('campaigns.delete');
+        });
+        Route::controller(SegmentController::class)->group(function () {
+            Route::get('segments', 'index')->name('segments.index');
+            Route::post('segments/store', 'store')->name('segments.store');
+            Route::post('segments/update', 'update')->name('segments.update');
+            Route::post('segments/delete', 'delete')->name('segments.delete');
+        });
+        Route::controller(ExperimentController::class)->group(function () {
+            Route::get('experiments', 'index')->name('experiments.index');
+            Route::post('experiments/store', 'store')->name('experiments.store');
+            Route::post('experiments/update', 'update')->name('experiments.update');
+            Route::post('experiments/delete', 'delete')->name('experiments.delete');
+        });
+    });
+
     Route::group(['prefix' => 'app-builder', 'as' => 'app-builder.', 'middleware' => ['module:themes_and_addons']], function () {
         Route::controller(AppBuilderController::class)->group(function () {
             Route::get('', 'index')->name('index');
@@ -1431,6 +1468,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('sections', 'sections')->name('sections');
             Route::get('media', 'media')->name('media');
             Route::get('templates', 'templates')->name('templates');
+            Route::get('health', 'health')->name('health');
             Route::post('pages/store', 'storePage')->name('pages.store');
             Route::post('pages/update', 'updatePage')->name('pages.update');
             Route::post('pages/delete', 'deletePage')->name('pages.delete');

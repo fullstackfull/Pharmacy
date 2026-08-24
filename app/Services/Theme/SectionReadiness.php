@@ -50,6 +50,7 @@ class SectionReadiness
             'deal_of_the_day' => !empty($resolved['dealOfTheDay']),
             'featured_deal', 'clearance_sale' => !empty($resolved['offerProducts']),
             'coupon_strip' => !empty($resolved['coupons']),
+            'product_slider' => !empty($resolved['sliderProducts']),
             'bundle' => !empty($resolved['bundle']),
             'blog_posts' => !empty($resolved['posts']),
             'shipping_cutoff' => !empty($resolved['secondsLeft']),

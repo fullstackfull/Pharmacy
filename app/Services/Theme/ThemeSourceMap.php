@@ -60,13 +60,15 @@ class ThemeSourceMap
             ),
             'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
 
-            'flash_deal' => $this->api('/api/v1/flash-deals', [], 'Then /api/v1/flash-deals/products/{deal_id} for the products.'),
-            'deal_of_the_day' => $this->api('/api/v1/dealsoftheday/deal-of-the-day'),
+            'flash_deal' => $this->flashDealProductsHint($settings),
+            // The web counts this section down to midnight; the app ticks against the same
+            // moment, carried the same way the flash deal carries its end.
+            'deal_of_the_day' => $this->api('/api/v1/dealsoftheday/deal-of-the-day')
+                + ['deal_ends_at' => now()->endOfDay()->toIso8601String()],
             'featured_deal' => $this->api('/api/v1/deals/featured'),
             'clearance_sale' => $this->api('/api/v1/products/clearance-sale'),
 
-            'coupon_strip' => $this->api('/api/v1/coupon/list', [],
-                'Requires an authenticated customer; render the strip from `cards` for guests.'),
+            'coupon_strip' => $this->couponHint(),
 
             'recently_viewed' => ['kind' => 'none',
                 'note' => 'Backed by the web visitor cookie; no app equivalent yet. Hide this section in the app.'],
@@ -119,6 +121,11 @@ class ThemeSourceMap
 
             'manual' => $this->api('/api/v1/products/by-ids', ['ids' => implode(',', $source->ids)]),
 
+            // A dynamic collection (Phase 3.1). The endpoint answers in the same product-list
+            // dialect as every route above, which is what lets every installed build render a
+            // collection the day it is composed — the hint is new, the contract is not.
+            'collection' => $this->api('/api/v1/products/theme-collection', $paged + ['id' => (int) $source->id]),
+
             default => $this->api('/api/v1/products/featured', $paged),
         };
     }
@@ -135,11 +142,77 @@ class ThemeSourceMap
     }
 
     /**
+     * The live flash deal's PRODUCTS endpoint, deal id resolved now.
+     *
+     * The hint used to point at /flash-deals — the deal's METADATA — with a prose note about a
+     * second call no client ever made: the app fed the deal object to the product parser and
+     * drew one garbage card. A hint must be callable as given, so the server does the id lookup
+     * it alone can do; with no live deal the section is honestly 'none' and the app hides it.
+     *
+     * @return array<string, mixed>
+     */
+    private function flashDealProductsHint(array $settings): array
+    {
+        try {
+            $deal = \App\Models\FlashDeal::query()
+                ->where(['deal_type' => 'flash_deal', 'status' => 1])
+                ->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())
+                ->when((int) ($settings['deal_id'] ?? 0) > 0,
+                    fn ($query) => $query->whereKey((int) $settings['deal_id']))
+                ->first(['id', 'end_date']);
+        } catch (\Throwable) {
+            $deal = null;
+        }
+
+        if ($deal === null) {
+            return ['kind' => 'none', 'note' => 'No live flash deal. Hide this section.'];
+        }
+
+        $hint = $this->api('/api/v1/flash-deals/products/' . $deal->id, ['limit' => 24, 'offset' => 1]);
+        // When the urgency ends — the number the countdown on both clients ticks against. The
+        // deal's own products endpoint does not carry it, and a flash deal without a clock is
+        // just a product rail wearing the wrong name.
+        $hint['deal_ends_at'] = optional($deal->end_date)->toIso8601String()
+            ?? (is_string($deal->end_date) ? $deal->end_date : null);
+
+        return $hint;
+    }
+
+    /**
+     * Coupons are a signed-in feature: the route is auth:api, so a guest fetch can only 401.
+     * Saying 'none' to a guest is the truthful hint — the app hides the strip instead of
+     * logging an error for every guest who scrolls past it.
+     *
+     * @return array<string, mixed>
+     */
+    private function couponHint(): array
+    {
+        $signedIn = false;
+        try {
+            $signedIn = auth('api')->check() || auth('customer')->check();
+        } catch (\Throwable) {
+        }
+
+        if (!$signedIn) {
+            return ['kind' => 'none', 'note' => 'Coupons require a signed-in customer. Hide for guests.'];
+        }
+
+        return $this->api('/api/v1/coupon/list', [], 'Send the customer token.');
+    }
+
+    /**
      * @param  array<string, mixed>  $params
      * @return array<string, mixed>
      */
     private function api(string $endpoint, array $params = [], ?string $note = null): array
     {
+        // A hint must be callable AS GIVEN. The catalogue routes sit behind apiGuestCheck, which
+        // answers 401 unless the caller is a validated customer or names a guest — and a section
+        // fetch made with only limit/offset was refused, leaving every product rail empty in the
+        // app. guest_id=1 is the platform's own guest convention (the stock app hard-codes it in
+        // every catalogue URI); a signed-in shopper's token still wins in the middleware.
+        $params += ['guest_id' => 1];
+
         $source = ['kind' => 'api', 'endpoint' => $endpoint, 'params' => $params];
 
         if ($note !== null) {

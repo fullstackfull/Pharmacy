@@ -340,7 +340,8 @@ class CustomerController extends Controller
         ])->first();
 
         if (!$shippingAddress) {
-            return response()->json(['message' => translate('not_found')], 200);
+            // 200 here made the app read "not_found" as a successful update.
+            return response()->json(['message' => translate('not_found')], 404);
         }
 
         $zipRestrictStatus = getWebConfig(name: 'delivery_zip_code_area_restriction');

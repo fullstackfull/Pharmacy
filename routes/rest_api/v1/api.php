@@ -247,6 +247,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api_lang']], function () {
                 // Exactly these products in exactly this order — the endpoint behind a theme
                 // section whose product source is "manual".
                 Route::get('by-ids', 'getProductsByIds');
+                // A merchant-defined dynamic collection — the endpoint behind a theme section
+                // whose product source is "collection". Same response dialect as its siblings.
+                Route::get('theme-collection', 'getThemeCollectionProducts');
             });
         });
 

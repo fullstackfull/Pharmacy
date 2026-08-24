@@ -27,7 +27,7 @@ class ThemePortabilityService
 
     /** Hard caps so a malicious payload can't exhaust memory or create thousands of rows. */
     private const MAX_SECTIONS = 200;
-    private const MAX_BLOCKS_PER_SECTION = 100;
+    private const MAX_BLOCKS_PER_SECTION = SectionRegistry::MAX_BLOCKS_PER_SECTION;
 
     public function __construct(
         private readonly SectionRegistry $registry,
@@ -58,6 +58,15 @@ class ThemePortabilityService
                 'sort_order' => $s->sort_order,
                 'is_visible' => (bool) $s->is_visible,
                 'settings'   => $s->settings ?? [],
+                // Identity and delivery rules travel with the section: an export that dropped
+                // them silently un-scheduled every timed section and re-minted every uuid on
+                // import — per-section app state and analytics history broke with it.
+                'uuid'       => $s->uuid ?? null,
+                'starts_at'  => $s->starts_at?->toIso8601String(),
+                'ends_at'    => $s->ends_at?->toIso8601String(),
+                'platforms'  => $s->platforms ?? null,
+                'audience'   => $s->audience ?? null,
+                'channels'   => $s->channels ?? null,
                 'blocks'     => $s->blocks->map(fn (ThemeBlock $b) => [
                     'type'       => $b->type,
                     'sort_order' => $b->sort_order,
@@ -171,20 +180,53 @@ class ThemePortabilityService
                 if (!is_array($raw) || empty($raw['type']) || !$this->registry->has((string) $raw['type'])) {
                     continue;
                 }
-                $page = is_string($raw['page'] ?? null) ? $raw['page'] : 'home';
+                $page = is_string($raw['page'] ?? null) ? strtolower(trim($raw['page'])) : 'home';
+                if (!preg_match('/^[a-z0-9\-]{1,60}$/', $page)) {
+                    $page = 'home';
+                }
+                // A type may only land on a page its definition names — a file must not graft a
+                // footer column into the home page or invent pages a typo at a time.
+                $allowedPages = $this->registry->types()[(string) $raw['type']]['pages'] ?? ['home'];
+                if (!in_array($page, $allowedPages, true) && !in_array('home', $allowedPages, true)) {
+                    $page = $allowedPages[0] ?? 'home';
+                } elseif (!in_array($page, $allowedPages, true)) {
+                    // Custom pages are legal homes for home-capable types; anything else falls
+                    // back to the type's first legal page.
+                    $page = in_array('home', $allowedPages, true) ? $page : ($allowedPages[0] ?? 'home');
+                }
                 $order[$page] = ($order[$page] ?? 0) + 1;
 
-                $section = ThemeSection::create([
+                $uuid = is_string($raw['uuid'] ?? null)
+                    && preg_match('/^[0-9a-f\-]{36}$/i', $raw['uuid'])
+                    ? strtolower($raw['uuid']) : null;
+
+                $attributes = [
                     'theme_version_id' => $version->id,
                     'page'             => $page,
                     'type'             => (string) $raw['type'],
                     'sort_order'       => $order[$page],   // re-sequenced; the file's order is not trusted
                     'is_visible'       => (bool) ($raw['is_visible'] ?? true),
+                    'uuid'             => $uuid,
+                    'starts_at'        => $this->moment($raw['starts_at'] ?? null),
+                    'ends_at'          => $this->moment($raw['ends_at'] ?? null),
+                    'platforms'        => $this->tokenList($raw['platforms'] ?? null),
+                    'audience'         => $this->tokenList($raw['audience'] ?? null),
+                    'channels'         => $this->tokenList($raw['channels'] ?? null),
                     'settings'         => $this->registry->normalizeSettings(
                         (string) $raw['type'],
                         is_array($raw['settings'] ?? null) ? $raw['settings'] : []
                     ),
-                ]);
+                ];
+
+                // Identity and delivery-rule columns are additive migrations; an install that
+                // predates them must still import the parts its schema holds.
+                foreach (['uuid', 'starts_at', 'ends_at', 'platforms', 'audience', 'channels'] as $additive) {
+                    if (!$this->sectionColumn($additive)) {
+                        unset($attributes[$additive]);
+                    }
+                }
+
+                $section = ThemeSection::create($attributes);
 
                 $blocks = is_array($raw['blocks'] ?? null) ? array_slice($raw['blocks'], 0, self::MAX_BLOCKS_PER_SECTION) : [];
                 $blockOrder = 0;
@@ -218,6 +260,48 @@ class ThemePortabilityService
     }
 
     /** Built-in starting points a merchant can import in one click. */
+    /** @var array<string, bool> memo: which additive theme_sections columns this install has */
+    private array $sectionColumns = [];
+
+    private function sectionColumn(string $column): bool
+    {
+        return $this->sectionColumns[$column] ??= \Illuminate\Support\Facades\Schema::hasColumn('theme_sections', $column);
+    }
+
+    /** A moment from an untrusted file, or null. */
+    private function moment(mixed $value): ?\Illuminate\Support\Carbon
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * A list of short tokens from an untrusted file, or null. Values are strings the delivery
+     * rules read back (platform names, audience/segment keys, channels) — anything else is noise.
+     *
+     * @return array<int, string>|null
+     */
+    private function tokenList(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $tokens = array_values(array_filter(array_map(
+            static fn ($token) => is_string($token) ? substr(trim($token), 0, 40) : '',
+            $value,
+        ), static fn (string $token) => $token !== '' && preg_match('/^[a-z0-9_\-]+$/i', $token)));
+
+        return $tokens === [] ? null : array_slice($tokens, 0, 12);
+    }
+
     public function presets(): array
     {
         return [

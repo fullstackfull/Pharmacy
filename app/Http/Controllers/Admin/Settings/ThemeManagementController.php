@@ -170,8 +170,17 @@ class ThemeManagementController extends BaseController
         try {
             \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory('theme-assets/' . $theme->id);
         } catch (\Throwable) {
-            // missing files must not block removing the theme; versions/sections/assets rows cascade
+            // missing files must not block removing the theme
         }
+
+        // The pages table has no FK cascade (its migration is guarded/additive) — left alone,
+        // a deleted theme's pages linger and their slugs block re-use forever.
+        try {
+            \App\Models\ExperiencePage::query()->where('theme_id', $theme->id)->delete();
+        } catch (\Throwable) {
+            // unmigrated installs have no pages to remove
+        }
+
         $theme->delete();
         ToastMagic::success(translate('theme_deleted_successfully'));
 
@@ -239,6 +248,13 @@ class ThemeManagementController extends BaseController
             return $this->backToIndex();
         }
 
+        // Only a draft can go live later: scheduling an already-published or archived version
+        // stored a date the runner ignores forever — a promise the product quietly never kept.
+        if (!$request->boolean('cancel') && $version->status !== ThemeVersion::STATUS_DRAFT) {
+            ToastMagic::error(translate('only_a_draft_can_be_scheduled') . '!');
+            return $this->backToIndex();
+        }
+
         if ($request->boolean('cancel')) {
             $version->forceFill(['publish_at' => null])->save();
             ToastMagic::success(translate('scheduled_publish_cancelled'));
@@ -301,6 +317,11 @@ class ThemeManagementController extends BaseController
     public function duplicateVersion(Request $request): RedirectResponse
     {
         if ($this->blockedOnDemo()) {
+            return $this->backToIndex();
+        }
+
+        if (!$this->permissions->canEdit()) {
+            ToastMagic::error(translate('you_do_not_have_permission_to_edit_a_theme') . '!');
             return $this->backToIndex();
         }
 
@@ -408,7 +429,9 @@ class ThemeManagementController extends BaseController
         }
 
         foreach ($imported['result']['warnings'] as $warning) {
-            ToastMagic::warning(translate($warning));
+            // Shown raw: each warning carries payload-specific detail, and translate() on a
+            // dynamic string mints a new language key per import file.
+            ToastMagic::warning($warning);
         }
         ToastMagic::success(translate('theme_imported_successfully'));
 

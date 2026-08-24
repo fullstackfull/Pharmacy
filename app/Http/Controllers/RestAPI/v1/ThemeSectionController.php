@@ -43,7 +43,7 @@ class ThemeSectionController extends Controller
     private const GUARANTEED_PAGES = ['home', 'header', 'footer'];
 
     /** Settings keys whose value is an image path a phone must be able to fetch. */
-    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image'];
+    private const IMAGE_KEYS = ['image', 'image_2', 'image_3', 'image_mobile', 'background_image', 'logo', 'icon_image', 'after'];
 
     public function __construct(
         private readonly StorefrontThemeRenderer $renderer,
@@ -62,10 +62,21 @@ class ThemeSectionController extends Controller
      * or a typo must never be a 500. A page that exists but is turned off is unknown too — turning
      * one off is how a merchant takes it out of the app.
      */
-    private function servablePage(Request $request, ViewerContext $viewer): string
+    /**
+     * The page this channel may be served, or null when the request names one it may not.
+     *
+     * A malformed page parameter still falls back to home — `?page[]=x` is noise, not a request
+     * for a page. But a WELL-FORMED slug that is unknown, disabled, or another channel's is a
+     * page this client must not have, and answering it with the HOME payload put the home page
+     * inside the app's "Offers" screen. The honest answer is a 404 the client renders as such.
+     */
+    private function servablePage(Request $request, ViewerContext $viewer): ?string
     {
         $requested = $request->query('page', 'home');
-        $requested = is_string($requested) && $requested !== '' ? $requested : 'home';
+
+        if (!is_string($requested) || $requested === '') {
+            return 'home';
+        }
 
         $theme = \App\Models\Theme::query()->where('is_active', true)->value('id');
 
@@ -77,7 +88,7 @@ class ThemeSectionController extends Controller
             $allowed = self::GUARANTEED_PAGES;
         }
 
-        return in_array($requested, $allowed, true) ? $requested : 'home';
+        return in_array($requested, $allowed, true) ? $requested : null;
     }
 
     #[ApiDoc(
@@ -119,8 +130,13 @@ class ThemeSectionController extends Controller
     public function sections(Request $request): JsonResponse
     {
         // The house rule for request input: a value nobody can spell is not a filter. `?page[]=x`
-        // must fall back, never 500 a public endpoint.
+        // must fall back, never 500 a public endpoint — while a real slug this channel cannot be
+        // served is a 404, never somebody else's page.
         $page = $this->servablePage($request, ViewerContext::fromRequest($request));
+
+        if ($page === null) {
+            return response()->json(['errors' => [['code' => 'page', 'message' => 'page_not_found']]], 404);
+        }
 
         $type = $request->query('type');
         $type = is_string($type) && $type !== '' ? $type : null;
@@ -167,6 +183,10 @@ class ThemeSectionController extends Controller
         $viewer = ViewerContext::fromRequest($request);
         $page = $this->servablePage($request, $viewer);
 
+        if ($page === null) {
+            return response()->json(['errors' => [['code' => 'page', 'message' => 'page_not_found']]], 404);
+        }
+
         // A merchant checking a draft on a real phone before it is anyone else's home page. The
         // preview path shares no cache and no validator with the published one: a draft changes on
         // every save, and a 304 against a shopper's checksum would hand them the draft.
@@ -182,14 +202,19 @@ class ThemeSectionController extends Controller
 
         $etag = $payload['checksum'] !== null ? '"' . $payload['checksum'] . '"' : null;
 
+        // The payload varies by everything the fingerprint varies by; any shared HTTP cache in
+        // front of this endpoint must key on the same headers or one build's page becomes
+        // another's.
+        $vary = 'X-UI-Components, X-UI-Engine, X-UI-Schema, X-UI-Channel, X-Platform, lang, Authorization';
+
         // A client that already holds this exact page is told so and sent nothing. This is the
         // difference between a resume costing a header and costing the whole home page, on every
         // resume of every installed app.
         if ($etag !== null && $this->matchesEtag($request, $etag)) {
-            return response()->json(null, 304)->setEtag($payload['checksum']);
+            return response()->json(null, 304)->setEtag($payload['checksum'])->header('Vary', $vary);
         }
 
-        $response = response()->json($payload);
+        $response = response()->json($payload)->header('Vary', $vary);
 
         return $etag !== null ? $response->setEtag($payload['checksum']) : $response;
     }
@@ -255,11 +280,43 @@ class ThemeSectionController extends Controller
                 'type' => $block['type'],
                 'settings' => $this->absolutize($this->forPhone($block['settings'] ?? [])),
             ], $blocks),
-            'cards' => $bannerBacked
-                ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks, withTargets: true))
-                : null,
+            'cards' => $this->cardsFor($section, $blocks, $bannerBacked),
             'source' => $this->sources->for($section['type'], $section['settings'] ?? [], $blocks),
         ];
+    }
+
+    /**
+     * The same cards /theme/home serves: block-backed sections resolve their blocks; store_banner
+     * resolves its Banner Setup rows LIVE (its promise in the API doc, previously kept only by
+     * the home endpoint); banner_strip's single banner is its own settings.
+     *
+     * @param  array<string, mixed>  $section
+     * @param  array<int, array<string, mixed>>  $blocks
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function cardsFor(array $section, array $blocks, bool $bannerBacked): ?array
+    {
+        $settings = $section['settings'] ?? [];
+
+        if (($section['type'] ?? null) === 'store_banner') {
+            return array_map(fn (array $card) => $this->absolutize($card), $this->resolver->dashboardBanners(
+                (string) ($settings['banner_type'] ?? 'Main Banner'),
+                max(1, (int) ($settings['limit'] ?? 6)),
+            ));
+        }
+
+        if (($section['type'] ?? null) === 'banner_strip' && trim((string) ($settings['image'] ?? '')) !== '') {
+            return [$this->absolutize(array_filter([
+                'type' => 'banner', 'image' => $settings['image'],
+                'eyebrow' => $settings['eyebrow'] ?? null, 'title' => $settings['title'] ?? null,
+                'subtitle' => $settings['subtitle'] ?? null, 'link' => $settings['link'] ?? null,
+                'button_text' => $settings['button_text'] ?? null,
+            ], static fn ($value) => $value !== null && $value !== ''))];
+        }
+
+        return $bannerBacked
+            ? array_map(fn (array $card) => $this->absolutize($card), $this->resolver->blockCards($blocks, withTargets: true))
+            : null;
     }
 
     /**

@@ -864,7 +864,9 @@
             $gap = (int) ($s['gap'] ?? 16);
             $cols = max(1, (int) ($s['columns'] ?? 4));
             $align = in_array($s['alignment'] ?? 'start', ['center', 'end'], true) ? $s['alignment'] : 'start';
-            $sectionKey = 'tbs-' . ($__section['id'] ?? $loop->index);
+            // Campaign overlays have no row id; their uuid keeps the DOM id and the breakpoint
+            // CSS selector from colliding with a stored section that happens to share the index.
+            $sectionKey = 'tbs-' . ($__section['id'] ?? $__section['uuid'] ?? $loop->index);
             $height = isset($s['height']) && $s['height'] !== '' && $s['height'] !== null ? (int) $s['height'] : null;
             $wrapStyle = "padding-top:{$pt}px;padding-bottom:{$pb}px;--tb-cols:{$cols};--tb-gap:{$gap}px;"
                 . ($height !== null ? "--tb-h:{$height}px;" : '')
@@ -880,7 +882,6 @@
             $deal = $type === 'flash_deal'
                 ? $__resolver->flashDeal((int) ($s['deal_id'] ?? 0) ?: null, $__shownDeals)
                 : null;
-            if ($deal) { $__shownDeals[] = $deal['id']; }
             $showcase = $type === 'category_showcase' ? $__resolver->categoryShowcase($s) : null;
             $vendors = $type === 'vendor_slider'
                 ? $__resolver->vendors((int) ($s['limit'] ?? 8), $s['shop_ids'] ?? null)
@@ -893,6 +894,9 @@
                 default => collect(),
             };
             $coupons = $type === 'coupon_strip' ? $__resolver->coupons((int) ($s['limit'] ?? 4)) : collect();
+            // Resolved out here so the readiness gate can see it: a slider whose source yields
+            // nothing must not open a titled empty band on the page.
+            $sliderProducts = $type === 'product_slider' ? $__resolver->products($s) : collect();
             $set = $type === 'bundle' ? $__resolver->bundle($s) : null;
             $posts = $type === 'blog_posts' ? $__resolver->blogPosts((int) ($s['limit'] ?? 3)) : collect();
             $secondsLeft = $type === 'shipping_cutoff' ? $__resolver->shippingCutoff((string) ($s['cutoff'] ?? '16:00')) : null;
@@ -911,6 +915,9 @@
             // content yet would open a padded band with nothing inside it.
             $rawBlocks = match ($type) {
                 'stories' => $__resolver->blocksWithContent($__section['blocks'] ?? [], either: ['image', 'video']),
+                // A tab with no label is a button with no name; content-filtered here so a
+                // section whose every tab is blank never reaches the page as an empty band.
+                'product_tabs' => $__resolver->blocksWithContent($__section['blocks'] ?? [], required: ['label']),
                 'branches' => $__resolver->blocksWithContent($__section['blocks'] ?? [], required: ['title']),
                 'before_after' => $__resolver->blocksWithContent($__section['blocks'] ?? [], required: ['image', 'after']),
                 default => $__section['blocks'] ?? [],
@@ -938,17 +945,35 @@
             'searchTerms' => $searchTerms->all(),
             'seenProducts' => $seenProducts->all(),
             'appStores' => $appStores,
+            'sliderProducts' => $sliderProducts->all(),
         ]))
 
+        @php
+            // Recorded only for a section that will actually render: a HIDDEN flash-deal section
+            // consuming the running deal was blanking every visible one after it.
+            if ($deal) { $__shownDeals[] = $deal['id']; }
+        @endphp
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         {{-- The section reports itself when it comes into view. Whether anyone scrolled this far
              is the one thing the server cannot know and the one thing that decides an order. --}}
+        @php
+            // What this section reports itself as: stored sections by id, campaign overlays as
+            // campaign-{id} — one key per campaign, short enough for the beacon, so a campaign's
+            // reach lands in the same impression pipeline as everything else.
+            $__analyticsId = $__section['id']
+                ?? (preg_match('/^campaign-(\d+)-/', (string) ($__section['uuid'] ?? ''), $__campaignMatch)
+                    ? 'campaign-' . $__campaignMatch[1]
+                    : null);
+        @endphp
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
                  data-tb-section="{{ $__section['id'] ?? '' }}"
-                 @if (!empty($__section['id']))
+                 @if (!empty($__analyticsId))
                      data-analytics-view="section_viewed"
                      data-analytics-type="theme_section"
-                     data-analytics-id="{{ $__section['id'] }}"
+                     data-analytics-id="{{ $__analyticsId }}"
+                     @if (!empty($__section['experiment']['key']))
+                         data-analytics-experiment="{{ $__section['experiment']['key'] }}:{{ $__section['experiment']['variant'] }}"
+                     @endif
                  @endif>
             <div class="{{ $full ? 'container-fluid px-0' : 'container' }}">
                 {{-- One partial per section type, resolved by name.
@@ -1126,12 +1151,16 @@
                 }
                 railScroll(rail, 1);
             }
-            function play() { stop(); timer = setInterval(advance, every); }
+            // Why the visitor is paused matters: coming back to the tab must not restart a rail
+            // the visitor is still hovering or touching — only a pause the tab switch itself caused.
+            var held = false;
+            function play() { if (held) return; stop(); timer = setInterval(advance, every); }
             function stop() { if (timer) { clearInterval(timer); timer = null; } }
 
-            rail.addEventListener('mouseenter', stop);
-            rail.addEventListener('mouseleave', play);
-            rail.addEventListener('touchstart', stop, {passive: true});
+            rail.addEventListener('mouseenter', function () { held = true; stop(); });
+            rail.addEventListener('mouseleave', function () { held = false; play(); });
+            rail.addEventListener('touchstart', function () { held = true; stop(); }, {passive: true});
+            rail.addEventListener('touchend', function () { held = false; play(); }, {passive: true});
             document.addEventListener('visibilitychange', function () {
                 document.hidden ? stop() : play();
             });

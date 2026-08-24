@@ -74,7 +74,7 @@ class StorefrontThemeRenderer
         $previewVersionId = $this->activePreviewVersionId();
         if ($previewVersionId !== null) {
             try {
-                return $this->runnable($this->buildSections($previewVersionId, $page));
+                return $this->runnable($this->buildSections($previewVersionId, $page), $page);
             } catch (\Throwable) {
                 return null;
             }
@@ -95,7 +95,7 @@ class StorefrontThemeRenderer
             // the cache: a campaign that opens at 09:00 would otherwise open up to a TTL late, and
             // a guest and a signed-in customer would share whichever of them warmed the entry.
             // What is cached is the shape of the page; what varies per request is who may see it.
-            return $this->runnable($cached['sections'] ?? null);
+            return $this->runnable($cached['sections'] ?? null, $page);
         } catch (\Throwable) {
             // A theme problem must never take the storefront down.
             return null;
@@ -108,7 +108,7 @@ class StorefrontThemeRenderer
      * @param  array<int, array<string, mixed>>|null  $sections
      * @return array<int, array<string, mixed>>|null
      */
-    private function runnable(?array $sections): ?array
+    private function runnable(?array $sections, string $page = 'home'): ?array
     {
         if ($sections === null) {
             return null;
@@ -124,6 +124,7 @@ class StorefrontThemeRenderer
             // narrower audience and therefore the safe assumption.
             authenticated: $this->customerIsSignedIn(),
             locale: app()->getLocale(),
+            segments: $this->viewerSegments(),
         );
 
         $runnable = array_values(array_filter(
@@ -131,18 +132,82 @@ class StorefrontThemeRenderer
             fn (array $section) => $this->visibility->passes($section, $viewer),
         ));
 
-        // Language is a per-request concern exactly as scheduling is: the cached structure keeps
-        // every language's text, and each request folds its own in. Done here, once, so no partial
-        // ever meets a `title_ar` key or needs to know the convention exists.
-        $runnable = array_map(function (array $section) use ($viewer) {
-            $section['settings'] = LocalisedSettings::collapse($section['settings'] ?? [], $viewer->locale);
+        // Experiment assignments for this viewer (Phase 3.5) — empty means control everywhere,
+        // which is also the answer to every failure (§48).
+        try {
+            $assignments = app(\App\Services\Commerce\ExperimentResolver::class)
+                ->assignmentsFor($page, $this->webExperimentSubject());
+        } catch (\Throwable) {
+            $assignments = [];
+        }
+
+        // The experiment patch lands FIRST, then the language folds — a variant can carry its
+        // own per-locale text, and no override key can ride a patch past the collapse. Done here,
+        // once per request, so no partial ever meets a `title_ar` key.
+        $experiments = app(\App\Services\Commerce\ExperimentResolver::class);
+        $runnable = array_map(function (array $section) use ($viewer, $assignments, $experiments) {
+            [$section['settings'], $section['experiment']] = $experiments
+                ->patch($section['uuid'] ?? null, $section['settings'] ?? [], $assignments);
+
+            $section['settings'] = LocalisedSettings::collapse(
+                $section['settings'],
+                $viewer->locale,
+                $this->registry->localeOverrideKeys((string) ($section['type'] ?? '')),
+            );
             $section['blocks'] = array_map(function (array $block) use ($viewer) {
-                $block['settings'] = LocalisedSettings::collapse($block['settings'] ?? [], $viewer->locale);
+                $block['settings'] = LocalisedSettings::collapse(
+                    $block['settings'] ?? [],
+                    $viewer->locale,
+                    $this->registry->blockLocaleOverrideKeys((string) ($block['type'] ?? '')),
+                );
                 return $block;
             }, $section['blocks'] ?? []);
 
             return $section;
         }, $runnable);
+
+        // Campaign overlay (§33): live campaign overrides dress the page per request, on top of
+        // the cached base — so a campaign opens and closes on time, and the base page is never
+        // written. Any failure here serves the base page unchanged (§37).
+        try {
+            $campaigns = app(\App\Services\Commerce\CampaignResolver::class);
+            $overrides = $campaigns->overridesFor($page);
+
+            if ($overrides !== []) {
+                $registry = $this->registry;
+                $runnable = $campaigns->splice(
+                    $runnable,
+                    $overrides,
+                    fn (array $section, int $campaignId) => !isset($registry->types()[$section['type'] ?? ''])
+                        ? null
+                        : [
+                        'id'         => null,
+                        'uuid'       => 'campaign-' . $campaignId . '-' . $section['type'],
+                        'type'       => $section['type'],
+                        'is_visible' => true,
+                        'starts_at'  => null, 'ends_at' => null,
+                        'platforms'  => null, 'audience' => null,
+                        'settings'   => LocalisedSettings::collapse(
+                            $registry->normalizeSettings($section['type'], $section['settings'] ?? []),
+                            $viewer->locale,
+                            $registry->localeOverrideKeys($section['type']),
+                        ),
+                        'blocks'     => array_map(fn (array $block) => [
+                            'id'       => null,
+                            'type'     => $block['type'],
+                            'settings' => LocalisedSettings::collapse(
+                                $registry->normalizeBlockSettings($block['type'], $block['settings'] ?? []),
+                                $viewer->locale,
+                                $registry->blockLocaleOverrideKeys($block['type']),
+                            ),
+                        ], $section['blocks'] ?? []),
+                    ],
+                    fn (array $section) => $section['type'] ?? null,
+                );
+            }
+        } catch (\Throwable) {
+            // The base page is the answer whenever the overlay cannot be.
+        }
 
         // An empty result means the same thing as no theme: keep the storefront's own templates,
         // rather than publishing a page whose every section happens to be out of schedule.
@@ -151,10 +216,53 @@ class StorefrontThemeRenderer
 
     private function customerIsSignedIn(): bool
     {
+        // Both guards, because this renderer serves the storefront (session guard) AND the
+        // legacy /theme/sections API (token guard): checking only the session left signed-in
+        // app users looking like guests on that endpoint, hiding customer-only sections.
         try {
-            return auth('customer')->check();
+            return auth('customer')->check() || auth('api')->check();
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * The identity experiments bucket this web viewer by — the same rule ViewerContext applies
+     * for the API: customer id first, the analytics visitor cookie otherwise, control when
+     * neither resolves.
+     */
+    private function webExperimentSubject(): ?string
+    {
+        try {
+            $customerId = auth('customer')->id() ?: auth('api')->id();
+            if ($customerId) {
+                return 'c' . $customerId;
+            }
+
+            $visitorId = app(\App\Services\Analytics\VisitorContext::class)->visitorId(request());
+
+            return $visitorId !== null ? 'v' . $visitorId : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The signed-in customer's segments, or none — resolution failing costs the personalised
+     * sections, never the page (§44). Both guards, for the same reason as customerIsSignedIn().
+     *
+     * @return array<int, string>
+     */
+    private function viewerSegments(): array
+    {
+        try {
+            $customerId = auth('customer')->id() ?: auth('api')->id();
+
+            return $customerId
+                ? app(\App\Services\Commerce\SegmentResolver::class)->segmentsFor((int) $customerId)
+                : [];
+        } catch (\Throwable) {
+            return [];
         }
     }
 
@@ -255,6 +363,16 @@ class StorefrontThemeRenderer
     /** Drop the cached structure for every page — call after publishing. */
     public function flush(array $pages = ['home', 'header', 'footer']): void
     {
+        // Custom pages are cached under the same prefix by their own slugs; a publish that only
+        // flushed the three built-ins left every composed page stale for a full TTL.
+        try {
+            if (Schema::hasTable('experience_pages')) {
+                $pages = array_unique([...$pages, ...\App\Models\ExperiencePage::query()->pluck('slug')->all()]);
+            }
+        } catch (\Throwable) {
+            // The built-ins still flush.
+        }
+
         foreach ($pages as $page) {
             Cache::forget(self::CACHE_KEY_PREFIX . $page);
         }
@@ -288,6 +406,8 @@ class StorefrontThemeRenderer
             'ends_at'    => $section->ends_at,
             'platforms'  => $section->platforms,
             'audience'   => $section->audience,
+            // Without this key the channel rule was inert on this path too.
+            'channels'   => $section->channels ?? null,
             'settings' => $this->registry->normalizeSettings($section->type, $section->settings ?? []),
             'blocks'   => $section->blocks
                 ->where('is_visible', true)
