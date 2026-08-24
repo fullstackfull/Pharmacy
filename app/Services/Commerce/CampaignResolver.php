@@ -21,7 +21,7 @@ class CampaignResolver
      *
      * @return array<int, array{slot: string, section: array{type: string, settings: array<string, mixed>}, campaign_id: int}>
      */
-    public function overridesFor(string $page): array
+    public function overridesFor(string $page, ?\Illuminate\Support\Carbon $at = null): array
     {
         if (!$this->serving()) {
             return [];
@@ -34,7 +34,7 @@ class CampaignResolver
                 ->orderByDesc('priority')
                 ->orderBy('id')
                 ->get()
-                ->filter(fn (ExperienceCampaign $campaign) => $campaign->isLive());
+                ->filter(fn (ExperienceCampaign $campaign) => $campaign->isLive($at));
         } catch (\Throwable) {
             return [];
         }

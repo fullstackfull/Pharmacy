@@ -169,10 +169,17 @@
                     var element = entry.target;
                     seen.unobserve(element);
 
-                    push(element.getAttribute('data-analytics-view'), {
+                    var viewPayload = {
                         entityType: element.getAttribute('data-analytics-type'),
                         entityId: element.getAttribute('data-analytics-id')
-                    });
+                    };
+                    // A section under experiment says which variant was on screen, so exposure
+                    // per variant is measurable from the same impressions everything else uses.
+                    var experiment = element.getAttribute('data-analytics-experiment');
+                    if (experiment) {
+                        viewPayload.properties = {experiment: experiment};
+                    }
+                    push(element.getAttribute('data-analytics-view'), viewPayload);
 
                     // No dedupe_key on purpose. An explicit key is hashed without the visitor, so
                     // it is unique across the whole shop — right for an order, and for an

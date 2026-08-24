@@ -943,12 +943,24 @@
         @if ($breakpointCss)<style>{!! $breakpointCss !!}</style>@endif
         {{-- The section reports itself when it comes into view. Whether anyone scrolled this far
              is the one thing the server cannot know and the one thing that decides an order. --}}
+        @php
+            // What this section reports itself as: stored sections by id, campaign overlays as
+            // campaign-{id} — one key per campaign, short enough for the beacon, so a campaign's
+            // reach lands in the same impression pipeline as everything else.
+            $__analyticsId = $__section['id']
+                ?? (preg_match('/^campaign-(\d+)-/', (string) ($__section['uuid'] ?? ''), $__campaignMatch)
+                    ? 'campaign-' . $__campaignMatch[1]
+                    : null);
+        @endphp
         <section id="{{ $sectionKey }}" class="tbs tbs-{{ $type }} tbs-align-{{ $align }}" style="{{ $wrapStyle }}"
                  data-tb-section="{{ $__section['id'] ?? '' }}"
-                 @if (!empty($__section['id']))
+                 @if (!empty($__analyticsId))
                      data-analytics-view="section_viewed"
                      data-analytics-type="theme_section"
-                     data-analytics-id="{{ $__section['id'] }}"
+                     data-analytics-id="{{ $__analyticsId }}"
+                     @if (!empty($__section['experiment']['key']))
+                         data-analytics-experiment="{{ $__section['experiment']['key'] }}:{{ $__section['experiment']['variant'] }}"
+                     @endif
                  @endif>
             <div class="{{ $full ? 'container-fluid px-0' : 'container' }}">
                 {{-- One partial per section type, resolved by name.

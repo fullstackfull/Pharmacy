@@ -338,6 +338,35 @@ class AdminThemeViewsRenderTest extends TestCase
         $this->assertStringContainsString('admin/commerce/collections/store', $html);
     }
 
+    public function test_the_experience_health_screen_renders_findings_and_previews(): void
+    {
+        $html = $this->renderBody('admin-views.app-builder.health', [
+            'channel' => 'customer_app',
+            'findings' => [
+                ['key' => 'x', 'severity' => 'critical',
+                 'label' => 'a_live_section_is_sourced_from_a_collection_that_was_deleted_or_disabled',
+                 'detail' => 'home · product_slider · #2'],
+            ],
+            'infra' => [
+                ['key' => 'scheduler', 'ok' => false, 'label' => 'the_scheduler_is_running',
+                 'why' => 'x', 'fix' => '* * * * * php artisan schedule:run'],
+            ],
+            'overrides' => [
+                ['slot' => 'hero', 'section' => ['type' => 'hero_banner', 'settings' => []], 'campaign_id' => 7],
+            ],
+            'campaignNames' => [7 => 'Ramadan Sale'],
+            'at' => null,
+            'experiments' => collect(),
+            'segments' => ['repeat-buyer' => 'Repeat buyer'],
+            'asSegment' => '',
+            'segmentPreview' => null,
+        ]);
+
+        $this->assertStringContainsString('home · product_slider · #2', $html);
+        $this->assertStringContainsString('Ramadan Sale', $html, 'the decision trace names the campaign');
+        $this->assertStringContainsString('name="as_segment"', $html, 'segment preview is offered');
+    }
+
     private function renderBody(string $view, array $data): string
     {
         $source = File::get(resource_path('views/' . str_replace('.', '/', $view) . '.blade.php'));
