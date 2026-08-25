@@ -13,6 +13,7 @@ use App\Services\Marketplace\BatchService;
 use App\Services\Marketplace\InventoryService;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\Marketplace\WarehouseService;
+use App\Services\SellerCenter\ModuleFlags;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,9 +39,6 @@ use Illuminate\Support\Facades\Validator;
  */
 class SellerInventoryController extends Controller
 {
-    /** At or below this many units, a product is worth flagging. */
-    private const LOW_STOCK_THRESHOLD = 5;
-
     public function __construct(
         private readonly InventoryService $inventory,
         private readonly WarehouseService $warehouses,
@@ -65,12 +63,19 @@ class SellerInventoryController extends Controller
         $sellerId = $request->seller->id;
         $products = $this->ownedProducts($sellerId);
 
+        // The seller's own reorder level, or the marketplace's. Asked of the service every other
+        // surface asks — the panel, the reports, the low-stock detector and the webhook that fires
+        // when a product crosses it. This endpoint used to carry its own hardcoded five, so a
+        // seller whose reorder level was ten was told one number on their phone and another at
+        // their desk about the same shelf.
+        $threshold = max(1, $this->inventory->stockLimitFor($sellerId));
+
         return response()->json([
-            'low_stock_threshold' => self::LOW_STOCK_THRESHOLD,
+            'low_stock_threshold' => $threshold,
             'products' => (clone $products)->count(),
             'out_of_stock' => (clone $products)->where('current_stock', '<=', 0)->count(),
             'running_low' => (clone $products)->where('current_stock', '>', 0)
-                ->where('current_stock', '<=', self::LOW_STOCK_THRESHOLD)->count(),
+                ->where('current_stock', '<=', $threshold)->count(),
             'units_on_hand' => (int) (clone $products)->sum('current_stock'),
             'movements_recorded' => Schema::hasTable('stock_movements')
                 ? StockMovement::where('seller_id', $sellerId)->count()
@@ -82,8 +87,9 @@ class SellerInventoryController extends Controller
             ],
             // Architecturally present, operationally optional. A seller who has never been given a
             // warehouse should not be shown a warehouse screen.
-            'warehouses_enabled' => $this->warehouseCount($sellerId) > 0,
-            'batches_enabled' => $this->batchCount($sellerId) > 0,
+            // The same answer the panel's navigation reads, from the same service.
+            'warehouses_enabled' => ModuleFlags::hasWarehouses($sellerId),
+            'batches_enabled' => ModuleFlags::hasBatches($sellerId),
         ], 200);
     }
 
@@ -295,18 +301,6 @@ class SellerInventoryController extends Controller
     private function limit(Request $request): int
     {
         return max(1, min((int) $request->query('limit', 25), 100));
-    }
-
-    private function warehouseCount(int|string $sellerId): int
-    {
-        return Schema::hasTable('warehouses') ? Warehouse::where('seller_id', $sellerId)->count() : 0;
-    }
-
-    private function batchCount(int|string $sellerId): int
-    {
-        return Schema::hasTable('product_batches')
-            ? ProductBatch::where('seller_id', $sellerId)->where('quantity', '>', 0)->count()
-            : 0;
     }
 
     /** @return array<int, array<string, mixed>> */

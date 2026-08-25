@@ -5,10 +5,10 @@ namespace App\Http\View\Composers;
 use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\SellerCenter\Counts;
+use App\Services\SellerCenter\ModuleFlags;
 use App\Services\SellerCenter\Navigation;
 use App\Services\SellerCenter\Search;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 /**
@@ -38,7 +38,7 @@ class SellerCenterComposer
         }
 
         $counts = $this->counts->for($principal);
-        $navigation = Navigation::for($principal, $counts, $this->flags());
+        $navigation = Navigation::for($principal, $counts, $this->flags($principal->sellerId()));
 
         $view->with([
             'scPrincipal' => $principal,
@@ -57,13 +57,13 @@ class SellerCenterComposer
      * Module flags. An absent flag means off (handoff 07.8) — a warehouse tab that appears because
      * a setting row is missing is worse than one that never appears.
      *
+     * Answered by the same service the seller app's API answers with, so the two clients cannot
+     * disagree about whether a shop runs warehouses.
+     *
      * @return array<string, bool>
      */
-    private function flags(): array
+    private function flags(int|string|null $sellerId): array
     {
-        return [
-            'warehouses_enabled' => Schema::hasTable('warehouses') && (bool) getWebConfig(name: 'seller_warehouses_enabled'),
-            'batches_enabled' => (bool) getWebConfig(name: 'seller_batches_enabled'),
-        ];
+        return ModuleFlags::forSeller($sellerId);
     }
 }

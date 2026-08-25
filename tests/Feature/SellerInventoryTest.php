@@ -58,6 +58,8 @@ class SellerInventoryTest extends TestCase
             $table->string('l_name')->nullable();
             $table->string('status', 20)->default('approved');
             $table->string('auth_token')->nullable();
+            // The seller's own reorder level, which decides what "running low" means for them.
+            $table->integer('stock_limit')->nullable();
             $table->timestamps();
         });
         Schema::create('products', function (Blueprint $table) {
@@ -252,6 +254,10 @@ class SellerInventoryTest extends TestCase
 
     public function test_the_overview_counts_what_is_actually_there(): void
     {
+        // Stated rather than assumed: "running low" is the seller's reorder level, so a test about
+        // counting has to say which level it is counting against.
+        Seller::where('id', 1)->update(['stock_limit' => 5]);
+
         $this->product(stock: 0);
         $this->product(stock: 3);
         $this->product(stock: 100);
@@ -264,6 +270,37 @@ class SellerInventoryTest extends TestCase
         $this->assertSame(1, $overview['running_low']);
         $this->assertSame(103, $overview['units_on_hand']);
         $this->assertSame(StockMovement::REASONS, $overview['reasons']);
+    }
+
+    public function test_running_low_means_the_sellers_own_reorder_level_not_a_number_this_endpoint_invented(): void
+    {
+        // This endpoint used to call anything at or under five units low, while the panel, the
+        // reports, the low-stock detector and the stock webhook all read the seller's configured
+        // reorder level. A seller whose level was twenty was told one number on their phone and a
+        // different one at their desk, about the same shelf.
+        Seller::where('id', 1)->update(['stock_limit' => 20]);
+
+        $this->product(stock: 3);
+        $this->product(stock: 15);
+        $this->product(stock: 100);
+
+        $overview = $this->withHeaders($this->headers())->getJson($this->uri('overview'))->json();
+
+        $this->assertSame(20, $overview['low_stock_threshold']);
+        $this->assertSame(2, $overview['running_low'], 'the 15-unit product is low at a reorder level of 20');
+    }
+
+    public function test_a_seller_with_no_reorder_level_of_their_own_falls_back_to_the_marketplaces(): void
+    {
+        DB::table('business_settings')->updateOrInsert(['type' => 'stock_limit'], ['value' => '7']);
+
+        $this->product(stock: 6);
+        $this->product(stock: 9);
+
+        $overview = $this->withHeaders($this->headers())->getJson($this->uri('overview'))->json();
+
+        $this->assertSame(7, $overview['low_stock_threshold']);
+        $this->assertSame(1, $overview['running_low']);
     }
 
     public function test_a_seller_with_no_warehouses_is_told_there_are_none(): void

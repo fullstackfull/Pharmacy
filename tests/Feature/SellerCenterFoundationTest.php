@@ -6,6 +6,7 @@ use App\Models\Seller;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use App\Services\SellerCenter\Icons;
+use App\Services\SellerCenter\ModuleFlags;
 use App\Services\SellerCenter\Moment;
 use App\Services\SellerCenter\Navigation;
 use App\Services\SellerCenter\Shell;
@@ -326,6 +327,63 @@ class SellerCenterFoundationTest extends TestCase
 
         $this->assertNotContains('coupons', $keys);
         $this->assertContains('campaigns', $keys);
+    }
+
+    // ──────────────────────────────────────────────── module flags
+
+    public function test_an_optional_module_is_on_when_the_shop_actually_uses_it(): void
+    {
+        // The panel used to read a setting that nothing in the codebase could write, so the
+        // warehouse section could never appear however a marketplace configured itself — while the
+        // seller app answered the same question by counting the seller's warehouses and showed it.
+        // One service now answers both, from the data.
+        Schema::create('warehouses', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('seller_id')->nullable();
+            $table->timestamps();
+        });
+
+        $this->assertFalse(ModuleFlags::hasWarehouses(self::SELLER));
+
+        \Illuminate\Support\Facades\DB::table('warehouses')
+            ->insert(['seller_id' => self::SELLER, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->assertTrue(ModuleFlags::hasWarehouses(self::SELLER));
+        $this->assertFalse(ModuleFlags::hasWarehouses(self::RIVAL), 'one shop\'s warehouses are not another\'s');
+    }
+
+    public function test_a_module_whose_table_does_not_exist_is_simply_off(): void
+    {
+        Schema::dropIfExists('product_batches');
+
+        // An install that has never run batches has no table, and that is an answer rather than an
+        // error — an absent module is absent, not broken.
+        $this->assertFalse(ModuleFlags::hasBatches(self::SELLER));
+        $this->assertSame(
+            ['warehouses_enabled' => false, 'batches_enabled' => false],
+            ModuleFlags::forSeller(self::SELLER),
+        );
+    }
+
+    public function test_batches_stop_counting_once_nothing_is_left_in_them(): void
+    {
+        Schema::create('product_batches', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('seller_id')->nullable();
+            $table->integer('quantity')->default(0);
+            $table->timestamps();
+        });
+
+        \Illuminate\Support\Facades\DB::table('product_batches')
+            ->insert(['seller_id' => self::SELLER, 'quantity' => 0, 'created_at' => now(), 'updated_at' => now()]);
+
+        // A shop that once tracked expiry and has sold through every batch is not running the
+        // module today, and a section listing nothing expiring is a section about nothing.
+        $this->assertFalse(ModuleFlags::hasBatches(self::SELLER));
+
+        \Illuminate\Support\Facades\DB::table('product_batches')->update(['quantity' => 4]);
+
+        $this->assertTrue(ModuleFlags::hasBatches(self::SELLER));
     }
 
     // ─────────────────────────────────────────────── the filter panel
