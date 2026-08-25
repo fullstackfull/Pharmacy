@@ -2654,5 +2654,86 @@ class SellerCenterCopySeeder extends Seeder
             'Allowed',
             'المسموح',
         ],
+        // Telemetry feeds — the machine-readable surfaces the Developer Portal now documents.
+        'telemetry_feeds' => [
+            'Telemetry Feeds',
+            'تدفّقات القياس',
+        ],
+        'machine_readable_monitoring_metrics_and_traces' => [
+            'Machine-readable monitoring, metrics and traces',
+            'مراقبة ومقاييس وتتبّعات بصيغة تقرأها الأنظمة',
+        ],
+        'machine_readable_feeds' => [
+            'Machine-readable feeds',
+            'التدفّقات التي تقرأها الأنظمة',
+        ],
+        'endpoints_for_collectors_rather_than_for_people' => [
+            'Endpoints meant for collectors rather than for people. None of them sit under the api/ prefix, so no generated document finds them on its own.',
+            'نقاط نهاية مُعدّة للأنظمة الجامعة لا للبشر. لا يقع أي منها تحت البادئة api/، لذا لا يعثر عليها أي مستند مُولَّد تلقائيًا.',
+        ],
+        'monitoring_json' => [
+            'Monitoring sections as JSON',
+            'أقسام المراقبة بصيغة JSON',
+        ],
+        'the_same_payload_the_page_renders_so_the_two_can_never_disagree' => [
+            'The same payload the page renders, so the feed and the screen can never disagree.',
+            'نفس البيانات التي تعرضها الصفحة، فلا يمكن أن يختلف التدفّق عن الشاشة.',
+        ],
+        'admin_session_and_the_sections_own_permission' => [
+            'Admin session, plus the section\'s own permission',
+            'جلسة المشرف، إضافةً إلى صلاحية القسم نفسه',
+        ],
+        'prometheus' => [
+            'Prometheus scrape',
+            'استخلاص Prometheus',
+        ],
+        'bearer_token_from_monitoring_prometheus_token' => [
+            'Bearer token from MONITORING_PROMETHEUS_TOKEN',
+            'رمز Bearer من MONITORING_PROMETHEUS_TOKEN',
+        ],
+        'gauges_for_the_last_complete_minute_never_labelled_by_route_or_id' => [
+            'Gauges for the last complete minute, never labelled by route or id.',
+            'مؤشّرات للدقيقة المكتملة الأخيرة، دون أي وسم بالمسار أو المعرّف.',
+        ],
+        'set_monitoring_prometheus_true_and_a_monitoring_prometheus_token' => [
+            'Set MONITORING_PROMETHEUS=true and a MONITORING_PROMETHEUS_TOKEN to switch it on.',
+            'اضبط MONITORING_PROMETHEUS=true مع MONITORING_PROMETHEUS_TOKEN لتشغيله.',
+        ],
+        'otlp_traces' => [
+            'OTLP trace export',
+            'تصدير التتبّعات بصيغة OTLP',
+        ],
+        'whatever_otel_exporter_otlp_headers_carries' => [
+            'Whatever OTEL_EXPORTER_OTLP_HEADERS carries',
+            'ما يحمله OTEL_EXPORTER_OTLP_HEADERS',
+        ],
+        'outbound_this_shop_posts_finished_traces_to_your_collector' => [
+            'Outbound: this shop posts finished traces to your collector.',
+            'صادر: يُرسل هذا المتجر التتبّعات المنتهية إلى نظامك الجامع.',
+        ],
+        'set_otel_exporter_otlp_endpoint_to_your_collector' => [
+            'Set OTEL_EXPORTER_OTLP_ENDPOINT to your collector to switch it on.',
+            'اضبط OTEL_EXPORTER_OTLP_ENDPOINT على نظامك الجامع لتشغيله.',
+        ],
+        'monitoring_sections_available_as_json' => [
+            'Monitoring sections available as JSON',
+            'أقسام المراقبة المتاحة بصيغة JSON',
+        ],
+        'append_json_1_to_any_monitoring_section_url' => [
+            'Append ?json=1 to any monitoring section URL, or send Accept: application/json.',
+            'أضف ‎?json=1‎ إلى رابط أي قسم مراقبة، أو أرسل Accept: application/json.',
+        ],
+        'feed' => [
+            'Feed',
+            'التدفّق',
+        ],
+        'format' => [
+            'Format',
+            'الصيغة',
+        ],
+        'preview_the_test_mail' => [
+            'Preview the test mail',
+            'معاينة بريد الاختبار',
+        ],
     ];
 }

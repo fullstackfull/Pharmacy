@@ -2,9 +2,12 @@
 
 namespace App\Services\DeveloperPortal;
 
+use App\Jobs\ExportTraceToOtlp;
 use App\Models\SellerWebhook;
 use App\Models\VendorPayoutRequest;
 use App\Services\Marketplace\SellerWebhookDispatcher;
+use App\Services\Monitoring\Export\PrometheusExporter;
+use App\Services\Monitoring\MonitoringNavigation;
 use App\Services\Payments\GatewayReadiness;
 use Illuminate\Support\Facades\Route;
 
@@ -112,6 +115,57 @@ class PortalReference
             'outbound' => [
                 'payment_gateways' => $this->gateways->all(),
                 'webhook_events' => SellerWebhookDispatcher::EVENTS,
+            ],
+        ];
+    }
+
+    /**
+     * The machine-readable telemetry surfaces, which existed and were documented nowhere.
+     *
+     * Three feeds, all of them real and none of them in the explorer, the OpenAPI export or the
+     * Postman collection: every monitoring section answers its full payload as JSON on its own URL,
+     * a Prometheus exposition is served to a scraper, and finished traces are shipped to an OTLP
+     * collector. They sit outside `api/`, so the generators that read the route table skip them —
+     * which is exactly why they have to be written down somewhere a developer will look.
+     *
+     * Each one reports whether it is switched ON HERE rather than whether the code exists, because
+     * "the endpoint is available" and "the endpoint answers on this installation" are different
+     * facts and only the second one is useful.
+     *
+     * @return array<string, mixed>
+     */
+    public function feeds(): array
+    {
+        $exporter = app(PrometheusExporter::class);
+        $otlpEndpoint = ExportTraceToOtlp::endpoint();
+
+        return [
+            'monitoring_json' => [
+                'url' => url('admin/monitoring/{section}') . '?json=1',
+                'method' => 'GET',
+                'auth' => 'admin_session_and_the_sections_own_permission',
+                'enabled' => true,
+                'format' => 'application/json',
+                'note' => 'the_same_payload_the_page_renders_so_the_two_can_never_disagree',
+                'sections' => array_keys(MonitoringNavigation::sections()),
+            ],
+            'prometheus' => [
+                'url' => route('monitoring.metrics'),
+                'method' => 'GET',
+                'auth' => 'bearer_token_from_monitoring_prometheus_token',
+                'enabled' => $exporter->enabled(),
+                'format' => 'text/plain; version=0.0.4',
+                'note' => 'gauges_for_the_last_complete_minute_never_labelled_by_route_or_id',
+                'disabled_hint' => 'set_monitoring_prometheus_true_and_a_monitoring_prometheus_token',
+            ],
+            'otlp_traces' => [
+                'url' => $otlpEndpoint === null ? null : $otlpEndpoint . '/v1/traces',
+                'method' => 'POST',
+                'auth' => 'whatever_otel_exporter_otlp_headers_carries',
+                'enabled' => $otlpEndpoint !== null,
+                'format' => 'OTLP/HTTP JSON',
+                'note' => 'outbound_this_shop_posts_finished_traces_to_your_collector',
+                'disabled_hint' => 'set_otel_exporter_otlp_endpoint_to_your_collector',
             ],
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Ingest;
 
+use App\Jobs\ExportTraceToOtlp;
 use Illuminate\Http\Request;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Facades\DB;
@@ -92,6 +93,13 @@ class TraceRecorder
 
             foreach (array_chunk($spans, 100) as $chunk) {
                 $this->connection()->table('monitoring_spans')->insert($chunk);
+            }
+
+            // Ship it onward only when a collector is configured. Dispatched after the rows are
+            // written because the job reads the trace back by id rather than carrying it, and
+            // queued because an unreachable collector must cost a worker, never this request.
+            if (ExportTraceToOtlp::endpoint() !== null) {
+                ExportTraceToOtlp::dispatch($traceId);
             }
         } catch (\Throwable) {
             // A trace that cannot be written is a trace that does not exist, nothing more.

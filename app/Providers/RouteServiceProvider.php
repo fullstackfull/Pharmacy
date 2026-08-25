@@ -55,6 +55,7 @@ class RouteServiceProvider extends ServiceProvider
         //$this->mapInstallRoutes();
         //$this->mapUpdateRoutes();
 
+        $this->mapTelemetryRoutes();
         $this->mapBetaAdminRoutes();
         $this->mapBetaVendorRoutes();
         $this->mapSellerCenterRoutes();
@@ -126,6 +127,19 @@ class RouteServiceProvider extends ServiceProvider
             ->middleware('api')
             ->namespace($this->namespace)
             ->group(base_path('routes/rest_api/delivery_syria.php'));
+    }
+
+    /**
+     * The Prometheus scrape target, outside every middleware group.
+     *
+     * config/monitoring.php has always declared `GET /monitoring/metrics`, and two panels showed it
+     * as a live setting — while no such route existed, so an operator who pointed Prometheus at it
+     * got a 404 and an empty dashboard. Registered before the storefront so a catch-all cannot
+     * swallow it, and with no group middleware because a collector has no session to start.
+     */
+    protected function mapTelemetryRoutes(): void
+    {
+        Route::namespace($this->namespace)->group(base_path('routes/telemetry.php'));
     }
 
     /**

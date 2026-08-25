@@ -20,7 +20,7 @@ says so and why.
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 54 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 34 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 28 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
 ## CONNECTED TO ADMIN (350)
 
@@ -979,7 +979,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (34)
+## ORPHAN (28)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -1121,24 +1121,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Seller Web, Dev Portal
 - Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at.
 
-**Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved**  
-`monitoring` · owner: Developer  
-- Backend — Tables exist: database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:110 (monitoring_error_groups) and :143 (monitoring_errors). Read by ErrorsPanel.php:175, SecurityPanel.php:1073, AndroidPanel.php:145, IosPanel.php:151, ApisPanel.php:808, DeploymentsPanel.php:553, HealthScoreService.php:370, DeveloperPortal/EndpointHealthService.php:287. Pruned by MonitoringRollup.php:307,337.; app/Services/Monitoring/Panels/ErrorsPanel.php:34 reading monitoring_error_groups and monitoring_errors; GET /admin/monitoring/errors; view resources/views/admin-views/monitoring/sections/errors.blade.php; Columns status/resolved_at/resolved_by on monitoring_error_groups (database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:123-132); filtered by ErrorsPanel.php:55,:117; the capability is described as 'resolve or ignore them' at MonitoringPermissionService.php:38-41
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer, and it is the single largest hole in the platform. monitoring_error_groups and monitoring_errors are created, read by eight panels and two services and pruned by the rollup, and verified here: the only reference to the table outside readers is the migration itself, because bootstrap/app.php:249 withExceptions() is empty. The Errors page is permanently blank, the health score's error signal permanently unmeasured, and Security's authorisation-failure card, both crash-free cards, the portal's endpoint error lookup and the deploy before/after comparison are all structurally zero — the only error visibility left in the product is the HTTP 5xx rate.
-
-**Machine-readable JSON feed of every monitoring section**  
-`monitoring` · owner: Developer  
-- Backend — app/Http/Controllers/Admin/Telemetry/MonitoringController.php:61 (wantsJson or ?json=1 on the same section URL)
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs in the Developer Portal. Every section returns its full payload as JSON on the same URL with ?json=1 — a complete monitoring API behind admin session auth — and it appears in no portal screen, no OpenAPI export and no Postman collection.
-
-**Prometheus scrape endpoint and OTLP trace export**  
-`monitoring` · owner: Developer  
-- Backend — config/monitoring.php:132-135 declares 'GET /monitoring/metrics returns the text exposition format' with MONITORING_PROMETHEUS and MONITORING_PROMETHEUS_TOKEN; reported as a live setting by SettingsPanel.php:535-552 and ApplicationPanel.php:639-650; config/monitoring.php:100-107 (otlp_endpoint, otlp_headers, service_name) declaring 'finished traces are POSTed as OTLP/HTTP JSON by a queued job'
-- No surface on — Admin, Seller Web, Monitor, Dev Portal
-- Ruled: belongs to Developer to build or to delete the config. Verified: no route matching monitoring/metrics exists anywhere in routes/, and no OTLP exporter or job exists, yet config/monitoring.php documents both and two panels display the Prometheus endpoint as a live setting complete with a security warning about an exposure that cannot happen.
-
 **Blast radius — how many sellers a failure is affecting**  
 `monitoring` · owner: Admin  
 - Backend — No seller/vendor/shop_id dimension exists in any monitoring table or panel; the only 'vendor' in the model is a traffic channel label (RequestsPanel.php:36) and a user_type on traces (TracesPanel.php:74)
@@ -1151,29 +1133,11 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Flutter App, Analytics, Monitor
 - Ruled: belongs to the Flutter app. POST api/v1/app-health exists, is rate-limited, is documented and writes the app.health.* series the Android and iOS panels read — and a grep of the entire seller app finds no caller, so both mobile sections report crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer.
 
-**Seeing which scheduled tasks are defined, and when each runs next**  
-`monitoring` · owner: Admin  
-- Backend — app/Services/Monitoring/Collectors/SchedulerCollector.php:104-125 reads app(Schedule::class); Laravel registers it via Artisan::starting() (vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php:362-367), so a web request sees an empty Schedule. Admitted in app/Services/Monitoring/Panels/SchedulerPanel.php:397-424.
-- No surface on — Seller Web, Analytics
-- Ruled: belongs on the Admin Scheduler page, which cannot serve it as built. Laravel registers the schedule through Artisan::starting(), so a web request resolves an empty Schedule; the page therefore cannot name the tasks that should run, withholds next-due times and the healthy/late/missed counts, and tells the operator to run php artisan schedule:list — i.e. SSH — instead.
-
-**Retrying, forgetting or flushing a failed queue job**  
-`monitoring` · owner: Admin  
-- Backend — Laravel's failed_jobs table, read by app/Services/Monitoring/Collectors/QueueCollector.php:856,897,922; there is no write route - routes/admin/routes.php:227-236 registers Monitoring as GET-only
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring → Queues, which already reads failed_jobs and shows the ten most recent failures. Monitoring is registered GET-only, so a day of undelivered order confirmations, seller webhooks or bulk price changes can only be re-driven with php artisan queue:retry over SSH.
-
 **Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push**  
 `notifications` · owner: Admin  
 - Backend — app/Listeners/AddFundToWalletListener.php:17, handle(AddFundToWalletEvent) at line 37; queued (ShouldQueue + QueuedMailDelivery: tries 2, timeout 30, backoff 60); app/Listeners/CashCollectListener.php:9, handle(CashCollectEvent) at line 24; NOT queued - runs inline in the admin request (dispatched app/Http/Controllers/Admin/Deliveryman/DeliveryManCashCollectController.php:68); app/Listeners/ChattingListener.php:9, handle(ChattingEvent) at line 24; NOT queued; app/Listeners/CustomerRegistrationListener.php:18, handle(CustomerRegistrationEvent) at line 32; queued with QueuedMailDelivery; app/Listeners/CustomerStatusUpdateListener.php:23, handle(CustomerStatusUpdateEvent) at line 31; queued; app/Listeners/DeliverymanPasswordResetListener.php:18, handle(DeliverymanPasswordResetEvent) at line 32; app/Listeners/DigitalProductDownloadListener.php:18, handle(DigitalProductDownloadEvent) at line
 - No surface on — Seller Web, Analytics
 - Ruled: belongs in Admin as a delivery log with a resend action, and it is the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one records whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware entirely, and FCM push goes through a trait — so a shop whose SMS credentials expired sends no OTP, no customer can sign in, and every screen in the monitoring console stays green. Queued listeners at least land in failed_jobs; the eight that are not queued (chat, order status, cash collect, referral, delivery-man withdraw, refund) run inline and leave nothing at all. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly.
-
-**Email template mail tester**  
-`notifications` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/EmailTemplatesController.php:31 index() -> view('email-templates.mail-tester'); routes/admin/routes.php:1172 admin.system-setup.email-templates.index — referenced by no menu and no view
-- No surface on — Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs in the Admin sidebar, one link away. The page renders and works; the sidebar points at the /{type}/{tab} view route instead, so the only way to test transactional mail is to type the URL.
 
 **Paid advertising and sponsored placement — ad slots, budgets, billing**  
 `platform` · owner: Admin  

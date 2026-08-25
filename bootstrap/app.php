@@ -13,6 +13,7 @@ use App\Http\Middleware\MaintenanceModeMiddleware;
 use App\Http\Middleware\ModulePermissionMiddleware;
 use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Http\Middleware\SellerMiddleware;
+use App\Services\Monitoring\Ingest\ExceptionRecorder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -137,6 +138,21 @@ return Application::configure(basePath: dirname(__DIR__))
     // `Artisan::starting`, which a web request never reaches.
     ->withSchedule(fn (\Illuminate\Console\Scheduling\Schedule $schedule) => \App\Console\ScheduleDefinition::define($schedule))
     ->withExceptions(function (Exceptions $exceptions) {
-        // You can customize exception handling here if needed
+        /*
+         | Errors reach the console because of this one line.
+         |
+         | `monitoring_error_groups` and `monitoring_errors` shipped with the migration, are read by
+         | eight panels and pruned by the rollup, and nothing anywhere wrote to them — so every error
+         | screen was permanently empty on every installation and the health score counted zero new
+         | error groups forever. This is the seam that was missing.
+         |
+         | Registered as a reportable that falls through (no `->stop()`), so the log channel, Sentry
+         | and anything else in the reporting chain still run exactly as before. Queued jobs and
+         | scheduled commands report through the same handler, which is why there is no second
+         | registration for them.
+        */
+        $exceptions->report(function (Throwable $exception) {
+            app(ExceptionRecorder::class)->record($exception);
+        });
     })
     ->create();

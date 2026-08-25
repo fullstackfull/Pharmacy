@@ -140,23 +140,19 @@ Incomplete — the owner cannot reach it (2):
 ## MONITORING
 
 Backend: 93 capabilities
-Admin: 87 of 93 covered
+Admin: 88 of 93 covered
 Seller Web: 4 of 93 covered
 Flutter App: 4 of 12 covered
 Analytics: 5 of 40 covered
-Monitor: 57 of 91 covered
-Dev Portal: 14 of 51 covered
+Monitor: 59 of 91 covered
+Dev Portal: 16 of 51 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (9):
+Incomplete — the owner cannot reach it (5):
 
-- **Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved** — assigned to Developer, no surface yet. Ruled: belongs to Developer, and it is the single largest hole in the platform. monitoring_error_groups and monitoring_errors are created, read by eight panels and two services and pruned by the rollup, and verified here: the only reference to the table outside readers is the migration itself, because bootstrap/app.php:249 withExceptions() is empty. The Errors page is permanently blank, the health score's error signal permanently unmeasured, and Security's authorisation-failure card, both crash-free cards, the portal's endpoint error lookup and the deploy before/after comparison are all structurally zero — the only error visibility left in the product is the HTTP 5xx rate.
-- **Machine-readable JSON feed of every monitoring section** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal. Every section returns its full payload as JSON on the same URL with ?json=1 — a complete monitoring API behind admin session auth — and it appears in no portal screen, no OpenAPI export and no Postman collection.
-- **Prometheus scrape endpoint and OTLP trace export** — assigned to Developer, no surface yet. Ruled: belongs to Developer to build or to delete the config. Verified: no route matching monitoring/metrics exists anywhere in routes/, and no OTLP exporter or job exists, yet config/monitoring.php documents both and two panels display the Prometheus endpoint as a live setting complete with a security warning about an exposure that cannot happen.
+- **Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved** — owned by an integrator, with nothing in the Developer Portal. Ruled: belongs to Developer, and it was the single largest hole in the platform — two tables with eight readers and no writer, because bootstrap/app.php's withExceptions() was an empty stub. Closed by ExceptionRecorder on the framework's own reporting chain, so HTTP requests, queued jobs and scheduled commands all feed it from one registration. Grouped by exception class + message with its variable parts normalised + topmost application frame, so one bug is one group however many customers hit it; a group marked resolved that fires again re-opens and its resolved_at is cleared, because a regression that stays silent is exactly what the table exists to prevent; affected_users counts a signed-in person once. Ordinary traffic — a login prompt, a validation failure, a 404, any deliberate 4xx — is not recorded as a fault. Messages, traces, URLs and IPs pass the Redactor before storage, and the request payload is stored as key names only. The whole recorder is inside a catch that gives up silently: an error the console did not see is a bad day, an error handler that throws is an outage. Held by tests/Feature/Monitoring/ExceptionCaptureTest.php, including a case that goes through the application's exception handler so deleting the bootstrap registration fails the suite.
 - **Blast radius — how many sellers a failure is affecting** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring as a dimension on every signal. No monitoring table or panel carries a seller, vendor or shop_id — 'vendor' exists only as a request-channel label — so the console can say the queue is backed up or orders are stuck and never whether that is one seller or all of them, which on a marketplace is the first question asked and turns every triage into a manual SQL session.
 - **Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps** — assigned to Developer, no surface yet. Ruled: belongs to the Flutter app. POST api/v1/app-health exists, is rate-limited, is documented and writes the app.health.* series the Android and iOS panels read — and a grep of the entire seller app finds no caller, so both mobile sections report crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer.
-- **Seeing which scheduled tasks are defined, and when each runs next** — assigned to Admin, no surface yet. Ruled: belongs on the Admin Scheduler page, which cannot serve it as built. Laravel registers the schedule through Artisan::starting(), so a web request resolves an empty Schedule; the page therefore cannot name the tasks that should run, withholds next-due times and the healthy/late/missed counts, and tells the operator to run php artisan schedule:list — i.e. SSH — instead.
-- **Retrying, forgetting or flushing a failed queue job** — assigned to Admin, no surface yet. Ruled: belongs in Admin → Monitoring → Queues, which already reads failed_jobs and shows the ten most recent failures. Monitoring is registered GET-only, so a day of undelivered order confirmations, seller webhooks or bulk price changes can only be re-driven with php artisan queue:retry over SSH.
 - **Request debugger — look up an X-Request-Id and see what happened** — owned by Admin, with no admin surface. Ruled: belongs in the Developer Portal or Monitoring, and the advice already points at it: the Errors section tells developers to keep the X-Request-Id because it is what makes a failure findable, Monitoring records request_id in its errors and logs panels, and there is no lookup-by-id screen anywhere. RESOLVED. The lookup is exact on purpose — a debugger that widened to 'around that time' would return another request's stack trace with the confidence of an exact match — and an id with no rows says which of the two reasons applies rather than 'not found'.
 - **Traces — where one slow request's time actually went, as a span waterfall** — owned by an integrator, with nothing in the Developer Portal. The by-kind split is read from the request's own counters rather than summed from nested spans, so the bar cannot claim more milliseconds than the request took.
 
@@ -171,10 +167,9 @@ Monitor: 7 of 18 covered
 Dev Portal: 10 of 13 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (2):
+Incomplete — the owner cannot reach it (1):
 
 - **Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push** — assigned to Admin, no surface yet. Ruled: belongs in Admin as a delivery log with a resend action, and it is the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one records whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware entirely, and FCM push goes through a trait — so a shop whose SMS credentials expired sends no OTP, no customer can sign in, and every screen in the monitoring console stays green. Queued listeners at least land in failed_jobs; the eight that are not queued (chat, order status, cash collect, referral, delivery-man withdraw, refund) run inline and leave nothing at all. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly.
-- **Email template mail tester** — assigned to Admin, no surface yet. Ruled: belongs in the Admin sidebar, one link away. The page renders and works; the sidebar points at the /{type}/{tab} view route instead, so the only way to test transactional mail is to type the URL.
 
 ## ORDERS
 

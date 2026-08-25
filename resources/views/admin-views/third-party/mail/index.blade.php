@@ -529,6 +529,13 @@
                         <div>
                             <h3 class="text-capitalize">{{ translate('send_test_mail') }}</h3>
                             <p class="fs-12 mb-0">{{ translate('insert_a_valid_email_addresser_to_get_mail') }}</p>
+                            {{-- The test mail is rendered from a template an operator could not see before sending it,
+                                 which made "did the mail look right" a question only the recipient could answer. --}}
+                            <a class="fs-12 d-inline-flex align-items-center gap-1 mt-1"
+                               href="{{ route('admin.system-setup.email-templates.index') }}" target="_blank">
+                                <i class="fi fi-rr-eye"></i>
+                                {{ translate('preview_the_test_mail') }}
+                            </a>
                         </div>
                         <div class="bg-info bg-opacity-10 fs-12 px-12 py-10 text-dark rounded d-flex gap-2 align-items-center">
                             <i class="fi fi-sr-lightbulb-on text-info"></i>

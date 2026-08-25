@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 500 |
+| Fully connected to a surface | 506 |
 | Internal by design | 54 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **34** |
+| **Orphaned — no owner, no surface** | **28** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -332,21 +332,21 @@ the whole point of the document, so it is never blurred.
 | Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | Manage | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO ADMIN |
 | Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | Manage | **None** | N/A | N/A | Alerts | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Queue job outcomes measured at the worker — processed count, runtime and failures per queue | View | **None** | N/A | N/A | Alerts | N/A | No | System | CONNECTED TO MONITOR |
-| Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved | View | **None** | N/A | **None** | Full | **None** | No | Developer | FIXED |
 | Defining the customer journeys the synthetic prober fetches | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it | Manage | **None** | N/A | N/A | **None** | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Writing a human note onto the monitoring timeline | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Recording that a backup ran and that a restore was tested | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Recording a deployment, and comparing performance either side of it | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Changing a monitoring threshold, retention window, sampling rate or SLA target | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
-| Machine-readable JSON feed of every monitoring section | View | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
-| Prometheus scrape endpoint and OTLP trace export | **None** | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
+| Machine-readable JSON feed of every monitoring section | View | **None** | N/A | N/A | **None** | Full | No | Developer | FIXED |
+| Prometheus scrape endpoint and OTLP trace export | Configure | **None** | N/A | N/A | Full | Full | No | Developer | FIXED |
 | The Integrations page's statement about what outbound instrumentation exists | View | **None** | N/A | N/A | **None** | N/A | No | Developer | DEPRECATED |
 | Legacy single-page monitoring dashboard | **None** | **None** | N/A | N/A | N/A | N/A | No | Developer | DEPRECATED |
 | Blast radius — how many sellers a failure is affecting | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps | View | **None** | **None** | **None** | **None** | Documented | No | Developer | ORPHAN |
-| Seeing which scheduled tasks are defined, and when each runs next | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
-| Retrying, forgetting or flushing a failed queue job | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
+| Seeing which scheduled tasks are defined, and when each runs next | View | **None** | N/A | **None** | Failures | N/A | No | Admin | FIXED |
+| Retrying, forgetting or flushing a failed queue job | View | **None** | N/A | **None** | Failures | N/A | Yes | Admin | FIXED |
 | Request debugger — look up an X-Request-Id and see what happened | **None** | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO DEVELOPER |
 | Marketplace incidents: acknowledge, assign and resolve an operational incident | View | **None** | **None** | **None** | Alerts | Partial | No | System | CONNECTED TO MONITOR |
 | Seller-facing issue register (Control Tower issues seen from the marketplace side) | Oversight | View | View | **None** | **None** | Partial | Partial | Admin | CONNECTED TO ADMIN |
@@ -430,7 +430,7 @@ the whole point of the document, so it is never blurred.
 | Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push | Configure | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
 | Email the seller that an order arrived for them | **None** | **None** | N/A | **None** | **None** | N/A | No | Developer | DEPRECATED |
 | SendEmailJob — a queued mail job nothing dispatches | **None** | **None** | N/A | **None** | Failures | N/A | No | Developer | DEPRECATED |
-| Email template mail tester | View | **None** | **None** | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Email template mail tester | View | **None** | **None** | **None** | **None** | Partial | No | Admin | FIXED |
 | Newsletter subscribers | View | **None** | **None** | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Send a push notification to customers | Oversight | **None** | **None** | Events | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Push notification message templates and Firebase setup | Configure | **None** | View | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
