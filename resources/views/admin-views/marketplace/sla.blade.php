@@ -2,21 +2,7 @@
 
 @section('title', translate('seller_sla'))
 
-@php
-    $pct = fn ($v) => rtrim(rtrim(number_format(((float) $v) * 100, 1), '0'), '.') . '%';
-
-    $operationLabels = [
-        'ops_stuck_order_hours' => 'hours_without_movement_before_an_order_is_raised_as_stuck',
-        'ops_stuck_stop_after_days' => 'stop_raising_a_stuck_order_after_days',
-        'ops_sla_urgent_fraction' => 'call_an_order_urgent_when_this_share_of_its_window_is_left',
-        'ops_sla_closing_minutes' => 'minutes_left_when_the_countdown_turns_red',
-        'ops_sla_soon_minutes' => 'minutes_left_when_the_countdown_turns_amber',
-        'ops_returns_response_hours' => 'hours_to_answer_a_refund_request',
-        'ops_returns_processing_hours' => 'hours_to_process_an_authorised_return',
-        'ops_finance_grace_hours' => 'hours_after_delivery_before_a_missing_earning_is_raised',
-        'ops_batch_expiry_days' => 'days_ahead_expiring_stock_is_surfaced',
-    ];
-@endphp
+@php $pct = fn ($v) => rtrim(rtrim(number_format(((float) $v) * 100, 1), '0'), '.') . '%'; @endphp
 
 @section('content')
     <div class="content container-fluid">
@@ -59,13 +45,10 @@
                         <small class="text-muted d-block">{{ translate('these_windows_are_what_the_action_center_raises_by_and_what_the_countdown_colours_by') }}.</small>
                     </div>
 
-                    @foreach ($operations as $key => $value)
-                        @php($limits = $operationLimits[$key])
+                    @foreach ($operationFields as $key => $field)
                         <div class="col-sm-3">
-                            <label class="form-label fs-12" for="{{ $key }}">{{ translate($operationLabels[$key]) }}</label>
-                            <input type="number" id="{{ $key }}" name="{{ $key }}" value="{{ $value }}" class="form-control"
-                                   step="{{ is_float($value) ? '0.01' : '1' }}"
-                                   min="{{ $limits['min'] }}" max="{{ $limits['max'] }}" required>
+                            <label class="form-label fs-12" for="{{ $key }}">{{ translate($field['label']) }}</label>
+                            @include('admin-views.settings.partials._policy-field', ['key' => $key, 'field' => $field, 'value' => $operations[$key]])
                         </div>
                     @endforeach
 

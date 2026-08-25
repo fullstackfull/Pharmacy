@@ -168,6 +168,23 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         return view('admin-views.settings.index', ['groups' => $groups, 'total' => $settings->count($groups)]);
     })->name('settings.index');
 
+    /*
+    | Platform policies: every rule the platform applies to itself, in one place.
+    |
+    | The control-surface audit found ninety hard-coded thresholds that a marketplace would want to
+    | set — what counts as low stock, how long a courier may go quiet, how short a password may be.
+    | They are declared in PolicyRegistry and edited here; the page is generated from the
+    | declarations, so a new rule needs no route, controller or template of its own.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Settings\PlatformPolicyController::class)
+        ->prefix('settings/policies')->name('settings.policies.')->middleware('module:system_settings')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('{group}', 'update')->name('update');
+            // Last, so it cannot swallow the named routes above.
+            Route::get('{group}', 'index')->name('group');
+        });
+
     // Kohl design-system gallery. Every primitive on one page, so a change to the
     // system is reviewable in the real admin shell — in light/dark and LTR/RTL —
     // rather than discovered later on a production screen.
