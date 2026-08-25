@@ -176,10 +176,22 @@ $out[] = 'background without a documented owner and a place a person can see it.
 $out[] = 'deliberately invisible is recorded as `INTERNAL BY DESIGN` with the reason no screen is';
 $out[] = 'appropriate — silence is not the same as a decision.';
 $out[] = '';
-$out[] = 'Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a';
-$out[] = 'surface**: these stay orphans until the screen, the setting or the documentation exists, and this';
-$out[] = 'register is the backlog for building them. Where the reconciliation overruled a sweep, the note';
-$out[] = 'says so and why.';
+// The ORPHAN count is the acceptance criterion, so the sentence beneath the table is written from
+// the data rather than left as a standing description of a backlog that may since have emptied.
+$orphanCount = count(array_filter($records, static fn (array $record) => ($record['verdict'] ?? '') === 'ORPHAN'));
+
+if ($orphanCount === 0) {
+    $out[] = '**There are no orphans left.** Every capability the sweep found now has a documented owner';
+    $out[] = 'and a surface: a screen, a setting, a document, or an explicit `INTERNAL BY DESIGN` ruling with';
+    $out[] = 'the reason no screen is appropriate. The `FIXED` rows below are the ones that were orphans and';
+    $out[] = 'say what was built to close them. Where the reconciliation overruled a sweep, the note says so';
+    $out[] = 'and why.';
+} else {
+    $out[] = 'Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a';
+    $out[] = 'surface**: these stay orphans until the screen, the setting or the documentation exists, and this';
+    $out[] = 'register is the backlog for building them. Where the reconciliation overruled a sweep, the note';
+    $out[] = 'says so and why.';
+}
 $out[] = '';
 $out[] = '| Verdict | Capabilities | Meaning |';
 $out[] = '|---|---:|---|';

@@ -10,6 +10,7 @@ use App\Services\Analytics\Reporting\AnalyticsNavigation;
 use App\Services\Analytics\AnalyticsPermissionService;
 use App\Services\Analytics\CampaignService;
 use App\Services\Analytics\Reporting\AnalyticsReporting;
+use App\Services\Analytics\Reporting\FulfilmentAnalytics;
 use App\Services\Analytics\Reporting\Window;
 use App\Services\BannerService;
 use Illuminate\Contracts\View\View;
@@ -32,6 +33,7 @@ class AnalyticsController extends BaseController
         private readonly AnalyticsReporting $reporting,
         private readonly CampaignService $campaigns,
         private readonly AnalyticsPermissionService $permissions,
+        private readonly FulfilmentAnalytics $fulfilment,
     ) {
     }
 
@@ -296,6 +298,16 @@ class AnalyticsController extends BaseController
             'timing' => [
                 'hours' => $this->reporting->breakdown($window, 'hour', 24),
                 'weekdays' => $this->reporting->breakdown($window, 'weekday', 7),
+            ],
+            // How long things took. Every timestamp behind this screen has been written since the
+            // first order and nothing ever subtracted two of them, so a marketplace that suspends
+            // sellers for breaching an SLA could not measure how late anything actually was.
+            'fulfilment' => [
+                'dispatch' => $this->fulfilment->dispatch($window),
+                'delivery' => $this->fulfilment->delivery($window),
+                'shipping' => $this->fulfilment->shipping($window),
+                'returns' => $this->fulfilment->returns($window),
+                'refunds' => $this->fulfilment->refunds($window),
             ],
             'events' => ['events' => $this->reporting->breakdown($window, 'event', 60)],
             'journeys' => $this->journeyData($request),

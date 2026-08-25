@@ -7,10 +7,11 @@ background without a documented owner and a place a person can see it. A capabil
 deliberately invisible is recorded as `INTERNAL BY DESIGN` with the reason no screen is
 appropriate — silence is not the same as a decision.
 
-Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a
-surface**: these stay orphans until the screen, the setting or the documentation exists, and this
-register is the backlog for building them. Where the reconciliation overruled a sweep, the note
-says so and why.
+**There are no orphans left.** Every capability the sweep found now has a documented owner
+and a surface: a screen, a setting, a document, or an explicit `INTERNAL BY DESIGN` ruling with
+the reason no screen is appropriate. The `FIXED` rows below are the ones that were orphans and
+say what was built to close them. Where the reconciliation overruled a sweep, the note says so
+and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
@@ -19,11 +20,10 @@ says so and why.
 | CONNECTED TO DEVELOPER | 4 | Owned by whoever maintains the code; no product surface is appropriate. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 28 | Its health and its failures are visible to an operator. |
-| FIXED | 34 | Was an orphan. The surface, the writer or the fix now exists, and the record says what was built. |
+| FIXED | 36 | Was an orphan. The surface, the writer or the fix now exists, and the record says what was built. |
 | INTERNAL BY DESIGN | 54 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | NOT BUILT | 6 | No backend exists to be orphaned. A product gap with a named owner, not a missing screen. |
 | DEPRECATED | 20 | Present in code, no longer part of the product. |
-| ORPHAN | 2 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
 ## CONNECTED TO ADMIN (350)
 
@@ -551,7 +551,7 @@ Its health and its failures are visible to an operator.
 | Synthetic journey probe — fetch a real storefront page and assert its status and content | monitoring | Admin | app/Services/Monitoring/Checks/SyntheticCheck.php:25 reading the `synthetics` key of monitoring_settings; results into monitoring_check_results (kind=synthetic) |
 | Alert rule evaluation — compare every enabled rule against the last minute, once a minute | monitoring | System | app/Services/Monitoring/Alerting/AlertEvaluator.php:43; app/Console/Commands/MonitoringEvaluate.php:16; scheduled bootstrap/app.php:216 everyMinute |
 
-## FIXED (34)
+## FIXED (36)
 
 Was an orphan. The surface, the writer or the fix now exists, and the record says what was built.
 
@@ -639,11 +639,23 @@ Was an orphan. The surface, the writer or the fix now exists, and the record say
 - No surface on — Seller Web, Analytics, Monitor
 - Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It was seeded at install, read in exactly one place, shipped to all three mobile apps and written by nothing — so the apps enforced a checkout rule the operator could neither see nor change. Now settable there, clamped on the way in (a negative floor is not a rule and a floor in the thousands is a shop nobody can buy from). The field states on the screen that the limit is enforced by the mobile apps and that the web checkout does not read it: the asymmetry is real, and naming it is better than a control that appears to govern a checkout it never touches.
 
+**Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle**  
+`returns` · owner: Admin  
+- Backend — app/Services/Analytics/Reporting/FulfilmentAnalytics.php returns() and refunds(), drawn on Admin -> Analytics -> Fulfilment and returns; app/Listeners/Analytics/RecordRefundOutcome.php raises refund_settled from RefundEvent, and ReturnLogisticsService raises return_authorized and return_received where the RMA actually moves
+- No surface on — Monitor, Dev Portal
+- Fixed. Two half-measurements that could not be joined are now one report and four honest events. Returns are counted from return_shipments - opened, arrived, restocked, time to arrive and a breakdown by the reason the customer gave - and refunds from refund_requests, with the value counting what was approved rather than what was asked for. Two rules the tests hold: the restock rate is of what ARRIVED, never of what was opened, because a return still in the post has not failed to be restocked and counting it so would make the rate fall every busy week; and a period with no returns reports no rate rather than zero, because zero percent restocked is a finding and nothing came back is a different one. The event stream was also lying: refund_requested fired on an order being marked returned or failed and never on a refund request, so the platform had an event named after a thing it did not count. RefundEvent is the seam every decision path already passes through - customer, seller panel, admin panel, v1 and v3 APIs - so one listener replaced what would have been five call sites and a forgotten sixth.
+
 **Approve or reject a customer refund**  
 `returns` · owner: Admin  
 - Backend — app/Http/Controllers/Admin/Order/RefundController::updateRefundStatus() now records refund.{status} through App\Services\AuditLogger with the order, order line, amount and seller; wallet debit and ledger reversal unchanged
 - No surface on — Monitor
 - Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and it wrote only to its own refund_status history — so the audit centre could not answer who approved any refund ever processed. The line carries the amount, the order, the order line and the seller, because 'a refund was approved' without the money on it is not an answer to the question anybody asks of this trail.
+
+**Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness**  
+`shipping` · owner: Admin  
+- Backend — app/Services/Analytics/Reporting/FulfilmentAnalytics.php dispatch(), delivery() and shipping(), drawn on Admin -> Analytics -> Fulfilment and returns; FulfillmentService raises order_dispatched carrying the hours it took
+- No surface on — Monitor, Dev Portal
+- Fixed, and it was the measurement gap with the sharpest consequence: FulfillmentService stamped picked_at, packed_at and shipped_at on every fulfilment and nothing anywhere subtracted two of them, so a marketplace that enforces a dispatch SLA, opens audited breaches against it and suspends sellers for breaching it could not measure how late anything actually was. Dispatch time is now median and p90 with the three stage medians beneath it, lateness is counted against shipping_silent_hours from the policy registry - the same key the shipping exception detector and the seller's own screen read, so the report, the issue and the screen cannot disagree - and delivery time is read from the status history rather than the current status, because an order delivered twice has two rows there and one status here. Shipping cost is grouped only by delivery types that actually carried an order: a configured zone with nothing in it is a setting, not a measurement. Medians rather than means throughout, and the percentile is nearest-rank rather than interpolated, because one in ten takes longer than this must name a duration a real order took.
 
 **Inbound courier status webhook — POST /api/delivery-syria/orders/update-status**  
 `integrations` · owner: Developer  
@@ -1249,20 +1261,4 @@ Present in code, no longer part of the product.
 - Backend — app/Console/Commands/SessionFlush.php:16 `session:flush` (description is the unedited stub 'Command description'); not scheduled, not called from anywhere
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
-
-## ORPHAN (2)
-
-Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
-
-**Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle**  
-`returns` · owner: Admin  
-- Backend — Partially. AnalyticsEvent::REFUND_REQUESTED is raised only as an order-status side effect (Analytics.php:214 maps 'returned'/'failed'); the RMA state machine at app/Services/Marketplace/ReturnLogisticsService.php writes no event, and admin/marketplace/returns (routes/admin/routes.php:706) is a queue, not a report. A return_rate ratio exists in SellerScorecardService.php:56 and SellerCenter/Lists/HomeMetrics.php:79.; None in analytics — no event is raised when a refund_request is created or approved (searched app/Services/RefundStatusService.php, RefundRequestService.php, Marketplace/RefundReversalService.php: no Analytics reference). Row-level surfaces: admin/report/transaction/refund-transaction-list (routes/admin/routes.php:801) and refund_rate on SellerScorecardService.php.
-- No surface on — Monitor, Dev Portal
-- Ruled: belongs to Analytics. No event is raised when a refund request is created or approved, and the RMA state machine writes nothing at all, so the platform has two half-measurements that cannot be joined: a rate derived from order_status on the scorecard, and an event named refund_requested that actually fires on an order status change.
-
-**Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness**  
-`shipping` · owner: Admin  
-- Backend — Effectively none. checkout_shipping_set is recorded from the payment page alongside address and payment in one breath (Web/WebController.php:404-406), so it measures reaching checkout, not choosing a shipping method; the only shipping figure recorded anywhere is shipping_cost inside the order_placed properties JSON (OrderManager.php:1652), which no rollup reads. Shipping zones (routes/admin/routes.php:759) and rates are configured but never counted.; None. app/Services/Marketplace/FulfillmentService.php stamps packed/shipped timestamps on an overlay record and admin/marketplace/fulfillments (routes/admin/routes.php:742) lists them; AnalyticsEvent::ORDER_DELIVERED exists (Analytics.php:213) but only reaches the 'event' dimension — no delivery-time or dispatch-time metric is computed anywhere, and SLA metrics are cancellation/return/refund/rating only (SlaService.php:24).
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
 

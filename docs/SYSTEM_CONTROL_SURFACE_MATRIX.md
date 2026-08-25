@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 525 |
+| Fully connected to a surface | 527 |
 | Internal by design | 54 |
 | Deprecated | 20 |
-| **Orphaned — no owner, no surface** | **2** |
+| **Orphaned — no owner, no surface** | **0** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -628,7 +628,7 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle | Oversight | View | View | Events | **None** | **None** | Partial | Admin | ORPHAN |
+| Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle | Oversight | View | View | Metrics | **None** | **None** | Partial | Admin | FIXED |
 | Approve or reject a customer refund | Approve | Manage | Manage | Events | **None** | Partial | Yes | Admin | FIXED |
 | The returns response promise — 48 hours to answer a return request, 72 hours to process it | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Global return / refund policy (refund day limit, wallet refunds) | Configure | View | View | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -693,7 +693,7 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Registering a second courier — credentials, rates, labels and tracking per carrier | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | NOT BUILT |
-| Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness | Oversight | Manage | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
+| Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness | Oversight | Manage | View | Metrics | **None** | **None** | Partial | Admin | FIXED |
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Shipping zones — destination-based rate rules that override the flat shipping cost | Configure | **None** | **None** | **None** | **None** | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Carrier configuration for Delivery Syria — base URL, hub, pickup point, secret and webhook tokens | Configure | **None** | **None** | **None** | Failures | **None** | No | Admin | CONNECTED TO ADMIN |

@@ -5358,5 +5358,177 @@ class SellerCenterCopySeeder extends Seeder
             'A generated file left on the server is a copy of your commercial data sitting where nobody is watching. These stream and are gone.',
             'الملف المُولَّد المتروك على الخادم نسخة من بياناتك التجارية في مكان لا يراقبه أحد. هذه تُبَثّ ثم تزول.',
         ],
+
+        // ── Fulfilment and returns as measured quantities (control-surface orphans 43 and 47).
+        // These sit on the admin analytics screen rather than in the Seller Center, and the wording
+        // is careful about one thing throughout: which figures are measured and which are absent.
+        'fulfilment_and_returns' => [
+            'Fulfilment and returns',
+            'التنفيذ والمرتجعات',
+        ],
+        'how_long_shipping_takes_what_comes_back_and_what_is_refunded' => [
+            'How long shipping takes, what comes back, and what is refunded',
+            'كم يستغرق الشحن، وما الذي يعود، وما الذي يُستردّ',
+        ],
+        'from_order_to_carrier' => [
+            'From order to carrier',
+            'من الطلب إلى شركة الشحن',
+        ],
+        'no_fulfilments_in_this_period' => [
+            'No fulfilments in this period',
+            'لا عمليات تنفيذ في هذه الفترة',
+        ],
+        'a_fulfilment_opens_when_a_seller_starts_picking_an_order' => [
+            'A fulfilment opens when a seller starts picking an order.',
+            'تُفتح عملية التنفيذ عندما يبدأ البائع بتجهيز الطلب.',
+        ],
+        'median_dispatch_time' => [
+            'Median dispatch time',
+            'وسيط زمن التسليم للشحن',
+        ],
+        'measured_on_n_dispatched_fulfilments' => [
+            'Measured on :count dispatched fulfilments',
+            'مقيس على :count عملية تنفيذ مُشحَنة',
+        ],
+        'slowest_one_in_ten' => [
+            'Slowest one in ten',
+            'الأبطأ واحد من كل عشرة',
+        ],
+        'the_ninetieth_percentile_is_what_an_operator_acts_on' => [
+            'The ninetieth percentile is what an operator acts on: an average is a sentence about nobody.',
+            'المئين التسعون هو ما يتصرّف بناءً عليه المشغّل: المتوسّط جملة لا تصف أحدًا.',
+        ],
+        'past_the_marketplaces_own_limit' => [
+            'Past the marketplace\'s own limit',
+            'تجاوزت حدّ السوق نفسه',
+        ],
+        'the_limit_is_n_hours' => [
+            'The limit is :count hours',
+            'الحدّ :count ساعة',
+        ],
+        'still_open' => [
+            'Still open',
+            'ما زالت مفتوحة',
+        ],
+        'not_yet_dispatched_so_not_yet_measured' => [
+            'Not yet dispatched, so not yet measured — open is not the same as slow.',
+            'لم تُشحن بعد، فلم تُقَس بعد — المفتوحة ليست بطيئة.',
+        ],
+        'opened_to_picked' => [
+            'Opened to picked',
+            'من الفتح إلى التجهيز',
+        ],
+        'picked_to_packed' => [
+            'Picked to packed',
+            'من التجهيز إلى التغليف',
+        ],
+        'packed_to_shipped' => [
+            'Packed to shipped',
+            'من التغليف إلى الشحن',
+        ],
+        'hours_short' => [
+            'h',
+            'س',
+        ],
+        'from_order_to_customer' => [
+            'From order to customer',
+            'من الطلب إلى الزبون',
+        ],
+        'nothing_was_delivered_in_this_period' => [
+            'Nothing was delivered in this period',
+            'لم يُسلَّم شيء في هذه الفترة',
+        ],
+        'delivery_time_is_read_from_the_status_history_not_from_the_current_status' => [
+            'Delivery time is read from the status history, not from the current status: an order delivered twice has two rows there and one status here.',
+            'يُقرأ زمن التسليم من سجلّ الحالات لا من الحالة الحالية: الطلب المُسلَّم مرتين له سطران هناك وحالة واحدة هنا.',
+        ],
+        'median_delivery_time' => [
+            'Median delivery time',
+            'وسيط زمن التسليم',
+        ],
+        'deliveries_measured' => [
+            'Deliveries measured',
+            'عمليات التسليم المقيسة',
+        ],
+        'what_shipping_cost' => [
+            'What shipping cost',
+            'كم كلّف الشحن',
+        ],
+        'shipping_is_counted_from_the_orders_that_were_placed' => [
+            'Shipping is counted from the orders that were placed.',
+            'يُحسب الشحن من الطلبات التي وُضعت فعلًا.',
+        ],
+        'total_shipping' => [
+            'Total shipping',
+            'إجمالي الشحن',
+        ],
+        'average_per_order' => [
+            'Average per order',
+            'المتوسّط لكل طلب',
+        ],
+        'shipped_free' => [
+            'Shipped free',
+            'شُحنت مجانًا',
+        ],
+        'delivery_type' => [
+            'Delivery type',
+            'نوع التوصيل',
+        ],
+        'what_came_back' => [
+            'What came back',
+            'ما الذي عاد',
+        ],
+        'nothing_came_back_in_this_period' => [
+            'Nothing came back in this period',
+            'لم يعُد شيء في هذه الفترة',
+        ],
+        'a_return_opens_when_a_refund_is_authorised_and_the_units_are_expected_back' => [
+            'A return opens when a refund is authorised and the units are expected back.',
+            'يُفتح المرتجع عند اعتماد الاسترداد وتوقّع عودة الوحدات.',
+        ],
+        'returns_opened' => [
+            'Returns opened',
+            'مرتجعات فُتحت',
+        ],
+        'arrived' => [
+            'Arrived',
+            'وصلت',
+        ],
+        'back_on_the_shelf' => [
+            'Back on the shelf',
+            'عادت إلى الرف',
+        ],
+        'of_what_arrived' => [
+            'Of what arrived — a return still in the post has not failed to be restocked.',
+            'من الذي وصل — المرتجع الذي ما زال في الطريق لم يفشل في العودة إلى المخزون.',
+        ],
+        'median_time_to_arrive' => [
+            'Median time to arrive',
+            'وسيط زمن الوصول',
+        ],
+        'what_was_refunded' => [
+            'What was refunded',
+            'ما الذي استُرِدّ',
+        ],
+        'nothing_was_refunded_in_this_period' => [
+            'Nothing was refunded in this period',
+            'لم يُستردّ شيء في هذه الفترة',
+        ],
+        'a_refund_request_is_raised_by_a_customer_against_one_order_line' => [
+            'A refund request is raised by a customer against one order line.',
+            'يقدّم الزبون طلب الاسترداد على سطر طلب واحد.',
+        ],
+        'refunded_value' => [
+            'Refunded value',
+            'قيمة المستردّ',
+        ],
+        'median_time_to_settle' => [
+            'Median time to settle',
+            'وسيط زمن الحسم',
+        ],
+        'an_upper_bound_measured_to_the_rows_last_change' => [
+            'An upper bound: there is no settled-at column, so this measures to the row\'s last change.',
+            'حدّ أعلى: لا يوجد عمود لتاريخ الحسم، لذا يُقاس حتى آخر تغيير على السطر.',
+        ],
     ];
 }

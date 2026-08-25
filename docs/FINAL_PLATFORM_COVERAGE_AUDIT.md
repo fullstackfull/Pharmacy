@@ -205,9 +205,7 @@ Monitor: 0 of 7 covered
 Dev Portal: 6 of 7 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (1):
-
-- **Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle** — assigned to Admin, no surface yet. Ruled: belongs to Analytics. No event is raised when a refund request is created or approved, and the RMA state machine writes nothing at all, so the platform has two half-measurements that cannot be joined: a rate derived from order_status on the scorecard, and an event named refund_requested that actually fires on an order status change.
+Every capability in this domain is reachable by the surface that owns it.
 
 ## SECURITY
 
@@ -228,12 +226,10 @@ Backend: 17 capabilities
 Admin: 15 of 17 covered
 Seller Web: 9 of 17 covered
 Flutter App: 9 of 16 covered
-Analytics: 0 of 17 covered
+Analytics: 1 of 17 covered
 Monitor: 4 of 17 covered
 Dev Portal: 11 of 17 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (1):
-
-- **Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness** — assigned to Admin, no surface yet. Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
+Every capability in this domain is reachable by the surface that owns it.
 

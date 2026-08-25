@@ -48,6 +48,10 @@ final class AnalyticsEvent
     public const ORDER_CANCELLED = 'order_cancelled';
     public const ORDER_DELIVERED = 'order_delivered';
     public const REFUND_REQUESTED = 'refund_requested';
+    public const REFUND_SETTLED = 'refund_settled';
+    public const RETURN_AUTHORIZED = 'return_authorized';
+    public const RETURN_RECEIVED = 'return_received';
+    public const ORDER_DISPATCHED = 'order_dispatched';
 
     // Account.
     public const SIGNED_UP = 'signed_up';
@@ -103,6 +107,10 @@ final class AnalyticsEvent
         self::ORDER_CANCELLED => 'order',
         self::ORDER_DELIVERED => 'order',
         self::REFUND_REQUESTED => 'order',
+        self::REFUND_SETTLED => 'order',
+        self::RETURN_AUTHORIZED => 'order',
+        self::RETURN_RECEIVED => 'order',
+        self::ORDER_DISPATCHED => 'order',
         self::SIGNED_UP => 'account',
         self::SIGNED_IN => 'account',
         self::REVIEW_SUBMITTED => 'account',

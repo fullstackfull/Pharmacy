@@ -647,17 +647,17 @@
     {
         "capability": "Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle",
         "area": "returns",
-        "backend": "Partially. AnalyticsEvent::REFUND_REQUESTED is raised only as an order-status side effect (Analytics.php:214 maps 'returned'/'failed'); the RMA state machine at app/Services/Marketplace/ReturnLogisticsService.php writes no event, and admin/marketplace/returns (routes/admin/routes.php:706) is a queue, not a report. A return_rate ratio exists in SellerScorecardService.php:56 and SellerCenter/Lists/HomeMetrics.php:79.; None in analytics — no event is raised when a refund_request is created or approved (searched app/Services/RefundStatusService.php, RefundRequestService.php, Marketplace/RefundReversalService.php: no Analytics reference). Row-level surfaces: admin/report/transaction/refund-transaction-list (routes/admin/routes.php:801) and refund_rate on SellerScorecardService.php.",
+        "backend": "app/Services/Analytics/Reporting/FulfilmentAnalytics.php returns() and refunds(), drawn on Admin -> Analytics -> Fulfilment and returns; app/Listeners/Analytics/RecordRefundOutcome.php raises refund_settled from RefundEvent, and ReturnLogisticsService raises return_authorized and return_received where the RMA actually moves",
         "admin": "Oversight",
         "seller_web": "View",
         "flutter": "View",
-        "analytics": "Events",
+        "analytics": "Metrics",
         "monitor": "None",
         "dev_portal": "None",
         "audit": "Partial",
         "owner": "Admin",
-        "verdict": "ORPHAN",
-        "note": "Ruled: belongs to Analytics. No event is raised when a refund request is created or approved, and the RMA state machine writes nothing at all, so the platform has two half-measurements that cannot be joined: a rate derived from order_status on the scorecard, and an event named refund_requested that actually fires on an order status change."
+        "verdict": "FIXED",
+        "note": "Fixed. Two half-measurements that could not be joined are now one report and four honest events. Returns are counted from return_shipments - opened, arrived, restocked, time to arrive and a breakdown by the reason the customer gave - and refunds from refund_requests, with the value counting what was approved rather than what was asked for. Two rules the tests hold: the restock rate is of what ARRIVED, never of what was opened, because a return still in the post has not failed to be restocked and counting it so would make the rate fall every busy week; and a period with no returns reports no rate rather than zero, because zero percent restocked is a finding and nothing came back is a different one. The event stream was also lying: refund_requested fired on an order being marked returned or failed and never on a refund request, so the platform had an event named after a thing it did not count. RefundEvent is the seam every decision path already passes through - customer, seller panel, admin panel, v1 and v3 APIs - so one listener replaced what would have been five call sites and a forgotten sixth."
     },
     {
         "capability": "Approve or reject a customer refund",
@@ -707,17 +707,17 @@
     {
         "capability": "Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness",
         "area": "shipping",
-        "backend": "Effectively none. checkout_shipping_set is recorded from the payment page alongside address and payment in one breath (Web/WebController.php:404-406), so it measures reaching checkout, not choosing a shipping method; the only shipping figure recorded anywhere is shipping_cost inside the order_placed properties JSON (OrderManager.php:1652), which no rollup reads. Shipping zones (routes/admin/routes.php:759) and rates are configured but never counted.; None. app/Services/Marketplace/FulfillmentService.php stamps packed/shipped timestamps on an overlay record and admin/marketplace/fulfillments (routes/admin/routes.php:742) lists them; AnalyticsEvent::ORDER_DELIVERED exists (Analytics.php:213) but only reaches the 'event' dimension — no delivery-time or dispatch-time metric is computed anywhere, and SLA metrics are cancellation/return/refund/rating only (SlaService.php:24).",
+        "backend": "app/Services/Analytics/Reporting/FulfilmentAnalytics.php dispatch(), delivery() and shipping(), drawn on Admin -> Analytics -> Fulfilment and returns; FulfillmentService raises order_dispatched carrying the hours it took",
         "admin": "Oversight",
         "seller_web": "Manage",
         "flutter": "View",
-        "analytics": "None",
+        "analytics": "Metrics",
         "monitor": "None",
         "dev_portal": "None",
         "audit": "Partial",
         "owner": "Admin",
-        "verdict": "ORPHAN",
-        "note": "Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads."
+        "verdict": "FIXED",
+        "note": "Fixed, and it was the measurement gap with the sharpest consequence: FulfillmentService stamped picked_at, packed_at and shipped_at on every fulfilment and nothing anywhere subtracted two of them, so a marketplace that enforces a dispatch SLA, opens audited breaches against it and suspends sellers for breaching it could not measure how late anything actually was. Dispatch time is now median and p90 with the three stage medians beneath it, lateness is counted against shipping_silent_hours from the policy registry - the same key the shipping exception detector and the seller's own screen read, so the report, the issue and the screen cannot disagree - and delivery time is read from the status history rather than the current status, because an order delivered twice has two rows there and one status here. Shipping cost is grouped only by delivery types that actually carried an order: a configured zone with nothing in it is a setting, not a measurement. Medians rather than means throughout, and the percentile is nearest-rank rather than interpolated, because one in ten takes longer than this must name a duration a real order took."
     },
     {
         "capability": "How long a shipment may go without courier movement before it is raised as an exception (72 hours)",
