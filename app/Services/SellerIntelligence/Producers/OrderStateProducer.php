@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -53,7 +54,10 @@ class OrderStateProducer implements InsightProducer
                 type: self::TYPE,
                 severity: SellerInsight::SEVERITY_HIGH,
                 title: 'insight_order_state_' . $kind,
-                body: null,
+                body: Copy::choice('insight_body_order_state_one', 'insight_body_order_state', $orders->count(), [
+                    'state' => translate('order_state_' . $kind),
+                    'value' => $value,
+                ]),
                 // The kind, not an order: forty orders in one broken state are one problem.
                 entityType: 'order_state',
                 entityId: $kind,

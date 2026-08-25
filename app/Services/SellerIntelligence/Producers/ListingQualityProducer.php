@@ -7,6 +7,7 @@ use App\Models\ProductModerationEvent;
 use App\Services\Marketplace\ProductModerationService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use Illuminate\Support\Facades\Schema;
@@ -76,7 +77,12 @@ class ListingQualityProducer implements InsightProducer
                     type: self::TYPE,
                     severity: 'critical',
                     title: 'insight_product_rejected',
-                    body: $product->name,
+                    // The moderator's own words where there are any: a rejection with no stated
+                    // reason is a dead end, which is the whole complaint this producer answers.
+                    body: Copy::line('insight_body_product_rejected', [
+                        'product' => $product->getRawOriginal('name'),
+                        'reason' => $rejection['note'] ?? translate('no_reason_was_recorded'),
+                    ]),
                     entityType: 'product',
                     entityId: $product->id,
                     actionKey: 'open_product',
@@ -112,7 +118,14 @@ class ListingQualityProducer implements InsightProducer
                 type: self::TYPE,
                 severity: $score < 40 ? 'high' : 'medium',
                 title: 'insight_listing_incomplete',
-                body: $product->name,
+                // Names the fields, so the seller knows what to fix before opening the editor.
+                // Reported as distinct fields: `description` and `details` are two thresholds on
+                // the same box, and telling a seller both is telling them the same thing twice.
+                body: Copy::line('insight_body_listing_incomplete', [
+                    'product' => $product->getRawOriginal('name'),
+                    'score' => $score,
+                    'missing' => implode(', ', $this->missingLabels($missing)),
+                ]),
                 entityType: 'product',
                 entityId: $product->id,
                 metric: $score,
@@ -195,6 +208,22 @@ class ListingQualityProducer implements InsightProducer
         }
 
         return [max(0, $score), $missing];
+    }
+
+    /**
+     * The field names a seller reads, deduplicated.
+     *
+     * @param  array<int, string>  $missing
+     * @return array<int, string>
+     */
+    private function missingLabels(array $missing): array
+    {
+        $labels = array_map(
+            static fn (string $field) => translate($field === 'details' ? 'description' : $field),
+            $missing,
+        );
+
+        return array_values(array_unique($labels));
     }
 
     /** Images are stored as a JSON list; an empty list and a null column mean the same thing here. */

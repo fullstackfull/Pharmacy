@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Models\VendorLedgerEntry;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -79,7 +80,12 @@ class FinanceIntegrityProducer implements InsightProducer
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_HIGH,
             title: 'insight_delivered_without_earning',
-            body: null,
+            body: Copy::choice(
+                'insight_body_delivered_without_earning_one',
+                'insight_body_delivered_without_earning',
+                $missing->count(),
+                ['value' => $uncredited],
+            ),
             entityType: 'finance_check',
             entityId: 'missing_earning',
             metric: $missing->count(),

@@ -56,6 +56,7 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->mapBetaAdminRoutes();
         $this->mapBetaVendorRoutes();
+        $this->mapSellerCenterRoutes();
         $this->mapBetaWebRoutes();
     }
 
@@ -133,6 +134,20 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @return void
      */
+
+    /**
+     * The Seller Center (`/seller`), the panel the seller operates the shop from.
+     *
+     * Loaded before the web routes so its own prefix wins over any catch-all the storefront
+     * declares, and separate from the classic vendor panel so that panel keeps working untouched
+     * while the redesign lands wave by wave.
+     */
+    protected function mapSellerCenterRoutes(): void
+    {
+        Route::middleware('web')
+            ->namespace($this->namespace)
+            ->group(base_path('routes/seller/routes.php'));
+    }
 
     protected function mapBetaAdminRoutes(): void
     {

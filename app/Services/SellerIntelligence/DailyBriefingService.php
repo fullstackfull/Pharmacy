@@ -5,6 +5,7 @@ namespace App\Services\SellerIntelligence;
 use App\Models\SellerInsight;
 use App\Services\Marketplace\SlaService;
 use App\Services\Marketplace\VendorLedger;
+use App\Services\SellerCenter\Revenue;
 use App\Services\SellerIntelligence\Producers\InventoryRiskProducer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -75,20 +76,13 @@ class DailyBriefingService
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
             ->whereBetween('created_at', [$from, $to]);
 
-        $revenue = Schema::hasTable('order_details')
-            ? DB::table('order_details')
-                ->where('seller_id', $sellerId)
-                ->where('delivery_status', 'delivered')
-                ->whereBetween('created_at', [$from, $to])
-                // Net of the line's discount, which is how reconciliation, the statement and the
-                // payout all read it. Four numbers for one question is worse than no number.
-                ->selectRaw('SUM(price * qty - discount) as revenue')
-                ->value('revenue')
-            : 0;
+        // One definition of revenue for the whole platform: delivered lines, net of the line's own
+        // discount. The briefing, the home KPIs, reconciliation and the payout all read it here.
+        $revenue = Revenue::total($sellerId, $from, $to);
 
         return [
             'orders' => (clone $orders)->count(),
-            'revenue' => round((float) ($revenue ?? 0), 2),
+            'revenue' => round($revenue, 2),
             'cancelled' => (clone $orders)->where('order_status', 'canceled')->count(),
             'returned' => (clone $orders)->where('order_status', 'returned')->count(),
         ];

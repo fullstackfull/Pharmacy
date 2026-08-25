@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Services\Marketplace\InventoryService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use Illuminate\Support\Facades\DB;
@@ -74,7 +75,17 @@ class InventoryRiskProducer implements InsightProducer
                 // different event from a rare item's.
                 severity: $this->severityFor($stock, $sold),
                 title: $stock <= 0 ? 'insight_out_of_stock' : 'insight_running_out',
-                body: $product->name,
+                body: $stock <= 0
+                    ? Copy::line('insight_body_out_of_stock', [
+                        'product' => $product->getRawOriginal('name'),
+                        'sold' => $sold,
+                        'days' => self::LOOKBACK_DAYS,
+                    ])
+                    : Copy::line('insight_body_running_out', [
+                        'product' => $product->getRawOriginal('name'),
+                        'stock' => $stock,
+                        'cover' => $daysLeft === null ? '—' : round($daysLeft, 1),
+                    ]),
                 entityType: 'product',
                 entityId: $product->id,
                 metric: $stock,

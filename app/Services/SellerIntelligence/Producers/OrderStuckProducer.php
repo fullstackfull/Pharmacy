@@ -3,6 +3,8 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use Illuminate\Support\Carbon;
+use App\Services\SellerCenter\Copy;
 use App\Services\Marketplace\SlaService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -77,14 +79,24 @@ class OrderStuckProducer implements InsightProducer
                 continue;
             }
 
-            $stillHours = round(now()->diffInMinutes($movedAt) / 60, 1);
+            // Elapsed, not signed: Carbon returns a negative difference when the earlier moment
+            // is the argument, which turned "sat for 42 hours" into "sat for −42 hours". Parsed
+            // rather than assumed to be a Carbon — `$lastMoved` comes from a raw query.
+            $stillHours = round(Carbon::parse($movedAt)->diffInMinutes(now()) / 60, 1);
 
             yield new InsightDraft(
                 sellerId: $sellerId,
                 type: self::TYPE,
                 severity: SellerInsight::SEVERITY_HIGH,
                 title: 'insight_order_stuck',
-                body: "#{$order->id}",
+                // The sentence with the number and the cause, not just the reference: the card is
+                // read by somebody deciding what to do next (handoff 04 §25).
+                body: Copy::line('insight_body_order_stuck', [
+                    'order' => '#' . $order->id,
+                    'status' => translate((string) $order->order_status),
+                    // Days once it passes a day: "1042.8 hours" is a number nobody converts.
+                    'elapsed' => Copy::duration((int) round($stillHours * 60)),
+                ]),
                 entityType: 'order',
                 entityId: $order->id,
                 metric: $stillHours,

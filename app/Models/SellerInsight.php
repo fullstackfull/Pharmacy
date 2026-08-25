@@ -117,6 +117,25 @@ class SellerInsight extends Model
      * replaced by it. They are the same fact written twice — the backfill made sure of that — and a
      * row written by an older deployment mid-rollout would otherwise read as open.
      */
+    /**
+     * Worst first, everywhere (handoff 06 §1).
+     *
+     * A CASE rather than MySQL's `FIELD()`: the ordering is domain logic, and a list that only
+     * sorts correctly on one database engine is a list that sorts wrongly in every test.
+     */
+    public function scopeOrderBySeverity(Builder $query, string $direction = 'asc'): Builder
+    {
+        $case = 'CASE severity';
+        $bindings = [];
+        foreach (self::SEVERITY_ORDER as $severity => $rank) {
+            $case .= ' WHEN ? THEN ' . (int) $rank;
+            $bindings[] = $severity;
+        }
+        $case .= ' ELSE 99 END ' . ($direction === 'desc' ? 'DESC' : 'ASC');
+
+        return $query->orderByRaw($case, $bindings);
+    }
+
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereIn('status', self::LIVE_STATUSES)

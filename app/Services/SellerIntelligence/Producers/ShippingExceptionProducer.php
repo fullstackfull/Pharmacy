@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\DeliverySyria\DeliverySyriaStatus;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -78,14 +79,17 @@ class ShippingExceptionProducer implements InsightProducer
         $value = round((float) $silent->sum('order_amount'), 2);
         $oldest = $silent->first();
         $silentSince = $oldest->status_updated_at ?? $oldest->created_at;
-        $silentHours = round(now()->diffInMinutes($silentSince) / 60, 1);
+        $silentHours = round(\Illuminate\Support\Carbon::parse($silentSince)->diffInMinutes(now()) / 60, 1);
 
         yield new InsightDraft(
             sellerId: $sellerId,
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_HIGH,
             title: 'insight_shipments_not_moving',
-            body: null,
+            body: Copy::choice('insight_body_shipments_silent_one', 'insight_body_shipments_silent', $silent->count(), [
+                'elapsed' => Copy::duration((int) round($silentHours * 60)),
+                'value' => $value,
+            ]),
             entityType: 'shipment_group',
             entityId: 'not_moving',
             metric: $silent->count(),
