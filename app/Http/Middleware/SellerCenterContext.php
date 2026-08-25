@@ -35,10 +35,7 @@ class SellerCenterContext
             return redirect()->route('vendor.auth.login');
         }
 
-        $principal = $this->permissions->principalForSeller(
-            sellerId: $sellerId,
-            staffId: session('seller_staff_id'),
-        );
+        $principal = $this->principal();
 
         // An approved shop that stops being approved, or a staff row that was deactivated mid
         // session, loses the panel on its very next request rather than at its next login.
@@ -52,5 +49,26 @@ class SellerCenterContext
         $request->attributes->set(SellerApiAuthMiddleware::PRINCIPAL, $principal);
 
         return $next($request);
+    }
+
+    /**
+     * Who the web session is acting as, without the redirecting.
+     *
+     * The classic panel's pages do not run this middleware, but they render the Seller Center's
+     * navigation, which has to be filtered by the same permissions as the Seller Center's own rail.
+     * Exposing the resolution rather than repeating it is what keeps one answer to "who is acting".
+     */
+    public function principal(): ?SellerPrincipal
+    {
+        $sellerId = Auth::guard('seller')->id();
+
+        if (!$sellerId) {
+            return null;
+        }
+
+        return $this->permissions->principalForSeller(
+            sellerId: $sellerId,
+            staffId: session('seller_staff_id'),
+        );
     }
 }

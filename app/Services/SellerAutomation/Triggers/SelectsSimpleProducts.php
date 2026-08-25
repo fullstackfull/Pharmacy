@@ -3,6 +3,7 @@
 namespace App\Services\SellerAutomation\Triggers;
 
 use App\Models\Product;
+use App\Services\SellerAutomation\RuleScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -22,13 +23,18 @@ use Illuminate\Support\Collection;
  */
 trait SelectsSimpleProducts
 {
-    private function sellerProducts(int $sellerId): Builder
+    /**
+     * @param  array<string, array<int, int>>  $scope  the part of the catalogue the rule may touch
+     */
+    private function sellerProducts(int $sellerId, array $scope = []): Builder
     {
-        return Product::withoutGlobalScope('translate')
+        $query = Product::withoutGlobalScope('translate')
             ->where(['added_by' => 'seller', 'user_id' => $sellerId, 'product_type' => 'physical'])
             ->where(function (Builder $query) {
                 $query->whereNull('variation')->orWhereIn('variation', ['', '[]']);
             });
+
+        return RuleScope::apply($query, $scope);
     }
 
     /** @param Collection<int, Product> $products */

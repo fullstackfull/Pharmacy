@@ -36,7 +36,7 @@ class StaleStockTrigger implements AutomationTrigger
         return ['days' => 'required|integer|min:7|max:365'];
     }
 
-    public function match(int $sellerId, array $settings, int $limit): Collection
+    public function match(int $sellerId, array $settings, int $limit, array $scope = []): Collection
     {
         if (!Schema::hasTable('products') || !Schema::hasTable('order_details')) {
             return collect();
@@ -44,7 +44,7 @@ class StaleStockTrigger implements AutomationTrigger
 
         $since = now()->subDays((int) ($settings['days'] ?? 60));
 
-        $products = $this->sellerProducts($sellerId)
+        $products = $this->sellerProducts($sellerId, $scope)
             ->where('status', 1)
             ->where('current_stock', '>', 0)
             // A listing younger than the window has not had the chance to be stale.

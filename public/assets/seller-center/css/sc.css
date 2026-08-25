@@ -1144,6 +1144,11 @@
 .sc-grid-tower { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
 .sc-grid-detail { display: grid; grid-template-columns: minmax(0, 1fr) var(--shell-context-w); gap: 16px; align-items: start; }
 .sc-grid-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+/* A builder is a form on the left and what it would do on the right (handoff 08 A2). */
+.sc-grid-builder { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.sc-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+/* Cards laid out by their own minimum width, never a fixed column count (handoff 08 A5). */
+.sc-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
 .sc-stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .sc-stack--tight { gap: 8px; }
 .sc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -1151,6 +1156,25 @@
 .sc-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .sc-info__label { font-size: 11px; color: var(--sc-muted); }
 .sc-info__value { font-size: 12.5px; }
+/* One record inside a drawer or a side panel: text on the left, its one action on the right. */
+.sc-panel-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+}
+/* A form's actions stay reachable without scrolling back up a long builder. */
+.sc-form-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    padding: 10px var(--shell-gutter);
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-divider);
+}
 
 /* =========================================================================
    16 · RESPONSIVE (handoff 10 A)
@@ -1161,7 +1185,7 @@
 @media (max-width: 1199px) {
     .sc-col--lg { display: none; }
     .sc-panel { display: none; }
-    .sc-grid-home, .sc-grid-tower, .sc-grid-detail { grid-template-columns: minmax(0, 1fr); }
+    .sc-grid-home, .sc-grid-tower, .sc-grid-detail, .sc-grid-builder { grid-template-columns: minmax(0, 1fr); }
     .sc-context { position: static; }
 }
 @media (max-width: 1099px) {

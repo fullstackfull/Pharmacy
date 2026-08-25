@@ -67,6 +67,8 @@
                 </a>
             @endif
         </div>
+
+        @include('layouts.vendor.partials.v2._seller-center-links')
     </div>
 
     {{-- ================= ORDERS (Orders + Refund Requests) ================= --}}

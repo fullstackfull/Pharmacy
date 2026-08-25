@@ -39,6 +39,21 @@ class Copy
     }
 
     /**
+     * A clause meant to sit inside a larger sentence.
+     *
+     * `translate()` upper-cases the first letter of every English string it returns, which is
+     * correct when the string starts a sentence and wrong when it is the second half of one — it
+     * produced "When stock runs out, Hide the listing." Only an ASCII capital is undone, so Arabic,
+     * which has no case, is returned exactly as the translator wrote it.
+     *
+     * @param  array<string, string|int|float|null>  $replace
+     */
+    public static function clause(string $key, array $replace = []): string
+    {
+        return lcfirst(self::line($key, $replace));
+    }
+
+    /**
      * Singular or plural, chosen by the count and translated as two separate whole sentences.
      *
      * Arabic has more plural forms than English, so this deliberately does not try to be a general

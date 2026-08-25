@@ -44,6 +44,7 @@ class SellerAutomationRuleService
             'action' => $data['action'],
             'trigger_settings' => $data['trigger_settings'],
             'action_settings' => $data['action_settings'],
+            'scope' => $data['scope'],
             'status' => $data['status'],
             'max_actions_per_run' => $data['max_actions_per_run'],
             'cooldown_minutes' => $data['cooldown_minutes'],
@@ -57,7 +58,7 @@ class SellerAutomationRuleService
         $this->audit->record(
             action: 'seller.automation_rule_created',
             subject: ['type' => 'seller_automation_rule', 'id' => $rule->id],
-            after: $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'status']),
+            after: $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'scope', 'status']),
             context: ['seller_id' => $principal->sellerId(), 'actor' => $principal->actorLabel()],
         );
 
@@ -69,7 +70,7 @@ class SellerAutomationRuleService
      */
     public function update(SellerAutomationRule $rule, array $input, SellerPrincipal $principal): SellerAutomationRule
     {
-        $before = $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'status']);
+        $before = $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'scope', 'status']);
         $data = $this->validate($input, $principal, $rule);
 
         // A rule the marketplace stopped stays stopped while it is edited. The seller may fix it —
@@ -82,6 +83,7 @@ class SellerAutomationRuleService
             'action' => $data['action'],
             'trigger_settings' => $data['trigger_settings'],
             'action_settings' => $data['action_settings'],
+            'scope' => $data['scope'],
             'status' => $heldByMarketplace ? SellerAutomationRule::STATUS_SUSPENDED : $data['status'],
             'max_actions_per_run' => $data['max_actions_per_run'],
             'cooldown_minutes' => $data['cooldown_minutes'],
@@ -98,7 +100,7 @@ class SellerAutomationRuleService
             action: 'seller.automation_rule_updated',
             subject: ['type' => 'seller_automation_rule', 'id' => $rule->id],
             before: $before,
-            after: $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'status']),
+            after: $rule->only(['name', 'trigger', 'action', 'trigger_settings', 'action_settings', 'scope', 'status']),
             context: ['seller_id' => $principal->sellerId(), 'actor' => $principal->actorLabel()],
         );
 
@@ -177,6 +179,7 @@ class SellerAutomationRuleService
             'cooldown_minutes' => 'nullable|integer|min:5|max:10080',
             'trigger_settings' => 'nullable|array',
             'action_settings' => 'nullable|array',
+            'scope' => 'nullable|array',
         ])->validate();
 
         $trigger = $this->registry->trigger($base['trigger']);
@@ -203,6 +206,9 @@ class SellerAutomationRuleService
             'action' => $action->key(),
             'trigger_settings' => $this->settings($input['trigger_settings'] ?? [], $trigger->rules(), 'trigger_settings'),
             'action_settings' => $this->settings($input['action_settings'] ?? [], $action->rules(), 'action_settings'),
+            // Cleaned rather than stored as given, so a scope naming nothing is stored as nothing
+            // and cannot later read as "this rule is narrowed" on a screen.
+            'scope' => RuleScope::clean($this->settings($input['scope'] ?? [], RuleScope::rules(), 'scope')),
             // An edit that does not mention a field leaves that field alone. Falling back to the
             // creation defaults would mean renaming a rule silently resumed it and reset the two
             // limits that exist to stop it running away.

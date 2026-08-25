@@ -34,13 +34,13 @@ class OutOfStockTrigger implements AutomationTrigger
         return ['threshold' => 'nullable|integer|min:0|max:1000'];
     }
 
-    public function match(int $sellerId, array $settings, int $limit): Collection
+    public function match(int $sellerId, array $settings, int $limit, array $scope = []): Collection
     {
         if (!Schema::hasTable('products')) {
             return collect();
         }
 
-        $products = $this->sellerProducts($sellerId)
+        $products = $this->sellerProducts($sellerId, $scope)
             ->where('status', 1)
             ->where('current_stock', '<=', (int) ($settings['threshold'] ?? 0))
             ->orderByDesc('id')

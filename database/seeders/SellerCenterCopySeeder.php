@@ -715,5 +715,262 @@ class SellerCenterCopySeeder extends Seeder
         'any' => ['Any', 'أي'],
         'all' => ['All', 'الكل'],
         'access_denied' => ['Access denied', 'الوصول مرفوض'],
+
+        // ── wave 3 · automation (handoff 08 A1–A5, 12) ────────────────────
+        'rule' => ['Rule', 'القاعدة'],
+        'rules' => ['Rules', 'القواعد'],
+        'trigger' => ['Trigger', 'المُشغِّل'],
+        'action' => ['Action', 'الإجراء'],
+        'scope' => ['Scope', 'النطاق'],
+        'limits' => ['Limits', 'الحدود'],
+        'when' => ['When', 'عندما'],
+        'then' => ['Then', 'عندها'],
+        'runs' => ['Runs', 'مرات التشغيل'],
+        'applied' => ['Applied', 'طُبِّق'],
+        'matched' => ['Matched', 'مطابق'],
+        'skipped' => ['Skipped', 'مُتخطّى'],
+        'failed' => ['Failed', 'فشل'],
+        'result' => ['Result', 'النتيجة'],
+        'duration' => ['Duration', 'المدة'],
+        'time' => ['Time', 'الوقت'],
+        'automation' => ['Automation', 'الأتمتة'],
+        'last_run' => ['Last run', 'آخر تشغيل'],
+        'success_rate' => ['Success rate', 'نسبة النجاح'],
+        'pause' => ['Pause', 'إيقاف مؤقت'],
+        'resume' => ['Resume', 'استئناف'],
+        'activate' => ['Activate', 'تفعيل'],
+        'undo' => ['Undo', 'تراجع'],
+        'undone' => ['Undone', 'تم التراجع'],
+        'run_now' => ['Run now', 'شغّل الآن'],
+        'run_preview' => ['Preview', 'معاينة'],
+        'preview_matches' => ['Preview matches', 'معاينة المطابقات'],
+        'would_match' => ['Would match', 'سيطابق'],
+        'would_apply' => ['Would apply', 'سيُطبَّق'],
+        'before' => ['Before', 'قبل'],
+        'after' => ['After', 'بعد'],
+        'save' => ['Save', 'حفظ'],
+        'save_and_activate' => ['Save and activate', 'حفظ وتفعيل'],
+        'save_paused' => ['Save paused', 'حفظ موقوفاً'],
+        'delete_rule' => ['Delete rule', 'حذف القاعدة'],
+        'edit_automation' => ['Edit automation', 'تعديل الأتمتة'],
+        'create_automation' => ['Create automation', 'إنشاء أتمتة'],
+        'rule_name' => ['Rule name', 'اسم القاعدة'],
+        'the_rule' => ['The rule', 'القاعدة'],
+        'in_plain_words' => ['In plain words', 'بالكلمات الواضحة'],
+        'what_it_has_done' => ['What it has done', 'ما الذي فعلته'],
+        'whole_catalogue' => ['Whole catalogue', 'كامل الكتالوج'],
+        'contact_support' => ['Contact support', 'تواصل مع الدعم'],
+        'stopped_by_the_marketplace' => ['Stopped by the marketplace', 'أوقفها السوق'],
+        'a_deleted_rule' => ['A deleted rule', 'قاعدة محذوفة'],
+        'back_to_the_rule' => ['Back to the rule', 'العودة إلى القاعدة'],
+        'max_actions_per_run' => ['Most changes per run', 'أقصى عدد تغييرات في التشغيلة'],
+        'cooldown_minutes' => ['Wait between runs (minutes)', 'الانتظار بين التشغيلات (بالدقائق)'],
+        'comma_separated_ids' => ['Ids separated by commas', 'معرّفات مفصولة بفواصل'],
+        'what_this_rule_is_for' => ['What this rule is for', 'ما الغرض من هذه القاعدة'],
+
+        // Rule sentence, assembled from whole sentences rather than words.
+        'automation_rule_sentence' => [
+            ':when, :then. At most :cap per run, waiting :cooldown between runs.',
+            ':when، :then. بحدّ أقصى :cap في التشغيلة الواحدة، مع انتظار :cooldown بين التشغيلات.',
+        ],
+        'automation_when_low_stock' => [
+            'When available stock falls to :threshold or fewer',
+            'عندما ينخفض المخزون المتاح إلى :threshold أو أقل',
+        ],
+        'automation_when_out_of_stock' => [
+            'When a product runs out of stock',
+            'عندما ينفد مخزون المنتج',
+        ],
+        'automation_when_restocked_after_automation_hid_it' => [
+            'When a product automation hid is back in stock',
+            'عندما يعود إلى المخزون منتج أخفته الأتمتة',
+        ],
+        'automation_when_stale_stock' => [
+            'When a product has not sold for :days days',
+            'عندما لا يُباع المنتج مدة :days يوماً',
+        ],
+        'automation_then_hide_listing' => ['hide the listing', 'أخفِ العرض'],
+        'automation_then_publish_listing' => ['publish the listing again', 'أعِد نشر العرض'],
+        'automation_then_set_discount' => [
+            'mark it down by :discount_value :discount_type, never below :min_price_after_discount',
+            'خفّض سعره بمقدار :discount_value :discount_type، دون النزول تحت :min_price_after_discount',
+        ],
+
+        // Trigger and action names, as a person reads them.
+        'automation_trigger_low_stock' => ['Stock running low', 'المخزون على وشك النفاد'],
+        'automation_trigger_out_of_stock' => ['Out of stock', 'نفد المخزون'],
+        'automation_trigger_restocked_after_automation_hid_it' => ['Back in stock', 'عاد إلى المخزون'],
+        'automation_trigger_stale_stock' => ['Not selling', 'لا يُباع'],
+        'automation_action_hide_listing' => ['Hide the listing', 'إخفاء العرض'],
+        'automation_action_publish_listing' => ['Publish the listing', 'نشر العرض'],
+        'automation_action_set_discount' => ['Set a discount', 'تطبيق خصم'],
+
+        // Settings, named by the field they configure.
+        'automation_field_threshold' => ['Stock threshold', 'حدّ المخزون'],
+        'automation_field_days' => ['Days without a sale', 'أيام بلا بيع'],
+        'automation_field_discount_type' => ['Discount type', 'نوع الخصم'],
+        'automation_field_discount_value' => ['Discount amount', 'قيمة الخصم'],
+        'automation_field_min_price_after_discount' => ['Never price below', 'لا تُنزل السعر تحت'],
+        'automation_field_brand_ids' => ['Brands', 'العلامات التجارية'],
+        'automation_field_category_ids' => ['Categories', 'الفئات'],
+        'automation_field_product_ids' => ['Products', 'المنتجات'],
+        'automation_option_percent' => ['Percent', 'نسبة مئوية'],
+        'automation_option_flat' => ['Fixed amount', 'مبلغ ثابت'],
+        'automation_discount_percent' => ['percent', 'بالمئة'],
+        'automation_discount_flat' => ['off the price', 'من السعر'],
+
+        // The safety class the server decides, never the screen.
+        'automation_class_safe' => ['Runs automatically', 'يعمل تلقائياً'],
+        'automation_class_restricted' => ['Cannot be automated', 'لا يمكن أتمتته'],
+        'automation_class_restricted_reason' => [
+            'Your role does not allow this action, so it cannot be run unattended on your behalf.',
+            'دورك لا يسمح بهذا الإجراء، لذا لا يمكن تنفيذه نيابةً عنك دون إشراف.',
+        ],
+        'automation_class_not_revertible_reason' => [
+            'This action cannot be put back, so it is not offered unattended.',
+            'لا يمكن التراجع عن هذا الإجراء، لذلك لا يُتاح دون إشراف.',
+        ],
+
+        // Run outcomes. `matched` is never called `applied`.
+        'automation_outcome_applied' => ['Applied', 'طُبِّق'],
+        'automation_outcome_no_match' => ['Nothing matched', 'لا مطابقات'],
+        'automation_outcome_capped' => ['Capped', 'تجاوز الحدّ'],
+        'automation_outcome_failed' => ['Failed', 'فشل'],
+        'automation_run_applied_one' => [
+            'Changed 1 of :matched matched, skipping :skipped.',
+            'غيّر 1 من :matched مطابقاً، وتخطّى :skipped.',
+        ],
+        'automation_run_applied_many' => [
+            'Changed :count of :matched matched, skipping :skipped.',
+            'غيّر :count من :matched مطابقاً، وتخطّى :skipped.',
+        ],
+        'automation_run_no_match_body' => [
+            'The rule ran and found nothing to act on.',
+            'عملت القاعدة ولم تجد ما تتصرف حياله.',
+        ],
+        'automation_run_capped_body' => [
+            'This would have changed :matched products, more than the rule allows in one run, so nothing was changed.',
+            'كان هذا سيغيّر :matched منتجاً، وهو أكثر مما تسمح به القاعدة في تشغيلة واحدة، فلم يُغيَّر شيء.',
+        ],
+        'automation_run_failed_body' => [
+            'The run stopped before finishing.',
+            'توقفت التشغيلة قبل أن تكتمل.',
+        ],
+        'automation_reason_skipped' => ['Skipped', 'مُتخطّى'],
+        'ran_once_no_matches_yet' => ['Ran once · no matches yet', 'عملت مرة · لا مطابقات بعد'],
+        'ran_n_times_no_matches_yet' => ['Ran :count times · no matches yet', 'عملت :count مرات · لا مطابقات بعد'],
+        'n_seconds' => [':count seconds', ':count ثانية'],
+        'n_selected' => [':count selected', ':count محدد'],
+        'and_n_more' => ['and :count more', 'و:count أخرى'],
+        'automation_scope_brands' => ['Brands: :names :more', 'العلامات: :names :more'],
+        'automation_scope_categories' => ['Categories: :names :more', 'الفئات: :names :more'],
+        'automation_scope_products' => ['Products: :names :more', 'المنتجات: :names :more'],
+
+        // Screen copy.
+        'rules_you_write_the_marketplace_runs_every_change_is_recorded_and_most_can_be_undone' => [
+            'Rules you write, the marketplace runs. Every change is recorded, and most can be undone.',
+            'قواعد تكتبها أنت وينفّذها السوق. كل تغيير مُسجَّل، ومعظمها قابل للتراجع.',
+        ],
+        'no_automations' => ['No automations', 'لا توجد أتمتة'],
+        'create_rules_to_handle_repetitive_operational_tasks_automatically' => [
+            'Create rules to handle repetitive operational tasks automatically.',
+            'أنشئ قواعد لتتولّى المهام التشغيلية المتكررة تلقائياً.',
+        ],
+        'a_rule_watches_for_one_thing_and_does_one_thing_the_preview_shows_exactly_what_it_would_touch' => [
+            'A rule watches for one thing and does one thing. The preview shows exactly what it would touch.',
+            'القاعدة تراقب شيئاً واحداً وتفعل شيئاً واحداً. المعاينة تُظهر بالضبط ما ستمسّه.',
+        ],
+        'this_rule_was_not_saved' => ['This rule was not saved', 'لم تُحفظ هذه القاعدة'],
+        'a_run_that_would_touch_more_than_the_cap_does_nothing_at_all_and_asks_for_a_person' => [
+            'A run that would touch more than the cap does nothing at all, and asks for a person.',
+            'التشغيلة التي ستمسّ أكثر من الحدّ لا تفعل شيئاً إطلاقاً، وتطلب تدخّل شخص.',
+        ],
+        'leave_empty_and_the_rule_applies_to_the_whole_catalogue' => [
+            'Leave empty and the rule applies to the whole catalogue.',
+            'اترك الحقل فارغاً وستُطبَّق القاعدة على كامل الكتالوج.',
+        ],
+        'choose_a_trigger_and_an_action_to_see_what_this_rule_would_do' => [
+            'Choose a trigger and an action to see what this rule would do.',
+            'اختر مُشغِّلاً وإجراءً لترى ما ستفعله هذه القاعدة.',
+        ],
+        'runs_the_rule_without_changing_anything_and_lists_what_it_would_touch' => [
+            'Runs the rule without changing anything, and lists what it would touch.',
+            'تُشغّل القاعدة دون تغيير أي شيء، وتسرد ما ستمسّه.',
+        ],
+        'delete_this_rule_the_record_of_what_it_did_stays' => [
+            'Delete this rule? The record of what it did stays.',
+            'هل تحذف هذه القاعدة؟ سجلّ ما فعلته يبقى.',
+        ],
+        'nothing_on_this_page_has_been_changed_this_is_what_the_rule_would_do_if_it_ran_now' => [
+            'Nothing on this page has been changed. This is what the rule would do if it ran now.',
+            'لم يُغيَّر أي شيء في هذه الصفحة. هذا ما ستفعله القاعدة لو عملت الآن.',
+        ],
+        'nothing_would_be_applied' => ['Nothing would be applied', 'لن يُطبَّق أي شيء'],
+        'this_would_match_n_products_more_than_the_n_allowed_per_run' => [
+            'This would match :matched products, more than the :cap allowed per run — nothing would be applied.',
+            'سيطابق هذا :matched منتجاً، وهو أكثر من :cap المسموح بها في التشغيلة — لن يُطبَّق أي شيء.',
+        ],
+        'at_most_n_per_run' => ['At most :count per run', ':count كحدّ أقصى في التشغيلة'],
+        'nothing_matches_right_now' => ['Nothing matches right now', 'لا مطابقات في هذه اللحظة'],
+        'the_rule_is_written_correctly_it_simply_has_nothing_to_act_on_at_this_moment' => [
+            'The rule is written correctly. It simply has nothing to act on at this moment.',
+            'القاعدة مكتوبة بشكل صحيح، لكن لا يوجد ما تتصرف حياله في هذه اللحظة.',
+        ],
+        'every_run_of_every_rule_including_the_ones_that_matched_nothing' => [
+            'Every run of every rule, including the ones that matched nothing.',
+            'كل تشغيلة لكل قاعدة، بما فيها التي لم تطابق شيئاً.',
+        ],
+        'nothing_has_run_yet' => ['Nothing has run yet', 'لم يعمل شيء بعد'],
+        'once_a_rule_is_active_every_run_it_makes_appears_here_with_what_it_touched' => [
+            'Once a rule is active, every run it makes appears here with what it touched.',
+            'بمجرد تفعيل قاعدة، تظهر هنا كل تشغيلة تقوم بها مع ما مسّته.',
+        ],
+        'no_runs_match_these_filters' => ['No runs match these filters', 'لا تشغيلات تطابق هذه المرشحات'],
+        'this_run_touched_nothing' => ['This run touched nothing', 'لم تمسّ هذه التشغيلة شيئاً'],
+        'the_rule_ran_and_found_nothing_to_act_on' => [
+            'The rule ran and found nothing to act on.',
+            'عملت القاعدة ولم تجد ما تتصرف حياله.',
+        ],
+
+        // ── wave 3 · opportunities (handoff 08 A5) ────────────────────────
+        'opportunity_fast_sellers_at_stock_risk' => [
+            'Fast-selling products at stock risk',
+            'منتجات سريعة البيع مهدّدة بنفاد المخزون',
+        ],
+        'opportunity_high_traffic_low_conversion' => [
+            'High traffic, low conversion',
+            'زيارات كثيرة، مبيعات قليلة',
+        ],
+        'opportunity_priced_below_category_median' => [
+            'Priced below the category median',
+            'مُسعَّرة تحت وسيط فئتها',
+        ],
+        'opportunity_stock_risk_evidence' => [
+            'From :days days of sales — less than :cover days of cover left at the current rate.',
+            'من مبيعات :days يوماً — يتبقى أقل من :cover يوماً من التغطية بالمعدل الحالي.',
+        ],
+        'opportunity_conversion_evidence' => [
+            'From :days days of product views against orders.',
+            'من :days يوماً من مشاهدات المنتجات مقابل الطلبات.',
+        ],
+        'opportunity_price_evidence' => [
+            'Compared against active listings in the same category.',
+            'بالمقارنة مع العروض الفعّالة في الفئة نفسها.',
+        ],
+        'detected_from_the_last_n_days_of_your_own_shop_data' => [
+            'Detected from the last :days days of your own shop data.',
+            'مُكتشَفة من بيانات متجرك خلال آخر :days يوماً.',
+        ],
+        'no_opportunities_detected' => ['No opportunities detected', 'لا فرص مُكتشَفة'],
+        'nothing_in_the_last_n_days_of_views_sales_and_prices_suggests_a_change_worth_making' => [
+            'Nothing in the last :days days of views, sales and prices suggests a change worth making.',
+            'لا شيء في آخر :days يوماً من المشاهدات والمبيعات والأسعار يشير إلى تغيير يستحق.',
+        ],
+        'review_stock' => ['Review stock', 'مراجعة المخزون'],
+        'review_products' => ['Review products', 'مراجعة المنتجات'],
+        'review_prices' => ['Review prices', 'مراجعة الأسعار'],
+        'one_product' => ['1 product', 'منتج واحد'],
+        'n_products' => [':count products', ':count منتجاً'],
+        'nav_classic_dashboard' => ['Classic dashboard', 'اللوحة الكلاسيكية'],
     ];
 }

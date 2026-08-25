@@ -73,6 +73,7 @@ class SellerOperationsAdminTest extends TestCase
         (require base_path('database/migrations/2026_09_16_000001_record_who_created_deferred_seller_work.php'))->up();
         (require base_path('database/migrations/2026_09_16_000002_record_who_suspended_an_automation_rule.php'))->up();
         (require base_path('database/migrations/2026_09_16_000003_note_when_something_else_changed_what_a_rule_touched.php'))->up();
+        (require base_path('database/migrations/2026_09_17_000001_let_a_rule_be_pointed_at_part_of_the_catalogue.php'))->up();
     }
 
     private function installIntegrations(): void
