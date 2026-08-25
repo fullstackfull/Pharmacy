@@ -32,21 +32,17 @@ Incomplete — the owner cannot reach it (4):
 ## AUTOMATION
 
 Backend: 24 capabilities
-Admin: 20 of 24 covered
+Admin: 21 of 24 covered
 Seller Web: 14 of 24 covered
 Flutter App: 14 of 17 covered
 Analytics: 6 of 24 covered
-Monitor: 7 of 24 covered
+Monitor: 8 of 24 covered
 Dev Portal: 13 of 19 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (5):
+Incomplete — the owner cannot reach it (1):
 
-- **Commerce campaigns, segments and experiments are absent from the admin sidebar** — assigned to Admin, no surface yet. Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem.
-- **Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings as a policy page, with the notification half exposed to the seller. Thirteen severity constants decide what every seller sees first, an escalation ladder decides the marketplace's enforcement posture toward slow sellers, and a 12-hour window plus a critical/high floor decides what reaches their phone — none of it is settable by anyone, so the only way to stop the noise is to turn notifications off entirely.
 - **Scheduled operations — timed price changes, timed activations, campaign starts** — assigned to Seller, no surface yet. Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command; two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail.
-- **Whether a seller's automation rules and bulk jobs are actually succeeding** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. The sweep is recorded only as a scheduled-task row, so a run that exits 0 while every rule inside it fails is filed as a success; every run and every action already records an outcome and nothing aggregates them into a success rate or a trend.
-- **Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings. Four admin screens display the flag's state and none writes it, so the documented rollback path for the whole personalisation engine is one env line and a deploy.
 
 ## BRANDS
 
@@ -205,18 +201,14 @@ Seller Web: 20 of 122 covered
 Flutter App: 24 of 66 covered
 Analytics: 17 of 119 covered
 Monitor: 19 of 122 covered
-Dev Portal: 80 of 108 covered
+Dev Portal: 83 of 108 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (8):
+Incomplete — the owner cannot reach it (4):
 
 - **Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail** — assigned to Seller, no surface yet. Ruled: belongs to the Seller Center web panel. The registry is the design of record and the route table is one fifth of it, so a seller sees a menu that silently omits every capability the phone app already has; the drop is invisible from inside the product because a missing route removes the item rather than erroring.
-- **Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering** — assigned to Developer, no surface yet. Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed.
-- **Installer and software updater — the first-run wizard and the file-based update flow** — assigned to Developer, no surface yet. Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together.
-- **Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix** — assigned to Developer, no surface yet. Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation.
 - **Paid advertising and sponsored placement — ad slots, budgets, billing** — assigned to Admin, no surface yet. Ruled: belongs in Admin and has no backend at all. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it, and the Seller Center advertises a destination for it that does not resolve.
 - **Feature flags and gradual rollout** — assigned to Admin, no surface yet. Ruled: belongs in Admin. No flag table, no config, no per-seller or per-percentage switch anywhere; the only lever is publishing or unpublishing an entire addon module, so every change to the marketplace is all-or-nothing for everyone at once.
-- **Duplicate addon manager mounted at /admin/addon** — assigned to Admin, no surface yet. Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it.
 - **Deployments — which build started running when, with migrations run and errors before and after** — owned by an integrator, with nothing in the Developer Portal. Empty until the deploy script calls the command — deploy.sh does not — and its error comparison reads monitoring_errors, which has no writer, so the before/after error counts are structurally zero.
 
 ## PRICING

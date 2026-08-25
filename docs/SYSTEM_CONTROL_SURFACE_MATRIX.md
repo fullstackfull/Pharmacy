@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 493 |
-| Internal by design | 53 |
+| Fully connected to a surface | 500 |
+| Internal by design | 54 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **42** |
+| **Orphaned — no owner, no surface** | **34** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -79,12 +79,12 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Commerce campaigns, segments and experiments are absent from the admin sidebar | Configure | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | ORPHAN |
+| Commerce campaigns, segments and experiments are absent from the admin sidebar | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | How many variants a storefront experiment may run, and how many rules a segment or campaign may carry | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
-| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | **None** | View | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
+| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | Manage | View | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Scheduled operations — timed price changes, timed activations, campaign starts | **None** | **None** | **None** | **None** | **None** | **None** | No | Seller | ORPHAN |
-| Whether a seller's automation rules and bulk jobs are actually succeeding | Oversight | View | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
-| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | View | **None** | N/A | Events | **None** | N/A | Partial | Admin | ORPHAN |
+| Whether a seller's automation rules and bulk jobs are actually succeeding | Oversight | View | View | **None** | Full | **None** | Partial | Admin | CONNECTED TO ADMIN |
+| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | Manage | **None** | N/A | Events | **None** | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Seller automation oversight: stop a rule that is damaging a catalogue | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Abandoned cart recovery settings and reminder emails | Configure | **None** | **None** | Events | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
 | AI drafting of product copy — title, description, general setup, pricing, variations, SEO, image analysis | Configure | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
@@ -482,17 +482,17 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail | **None** | **None** | Manage | **None** | **None** | Full | No | Seller | ORPHAN |
-| Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering | View | View | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
-| Installer and software updater — the first-run wizard and the file-based update flow | **None** | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering | View | View | N/A | **None** | **None** | Full | No | Developer | FIXED |
+| Installer and software updater — the first-run wizard and the file-based update flow | **None** | **None** | N/A | **None** | **None** | Documented | No | Developer | INTERNAL BY DESIGN |
 | routes/shared.php and routes/test.php — route files no provider ever loads | **None** | **None** | N/A | **None** | **None** | N/A | No | Developer | DEPRECATED |
-| Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix | View | **None** | N/A | **None** | **None** | Documented | No | Developer | FIXED |
 | Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard) | **None** | View | N/A | Metrics | **None** | **None** | No | System | INTERNAL BY DESIGN |
 | Request-shaping guards — ingest rate limits, list page sizes, per-screen bulk-action caps, the report date-range ceiling and the automation rule-scope limit | View | View | View | Metrics | Alerts | Documented | No | System | INTERNAL BY DESIGN |
 | Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Storefront theme preview link lifetime (60 minutes, never more than 24 hours) | Configure | **None** | N/A | **None** | **None** | **None** | Yes | System | INTERNAL BY DESIGN |
 | Paid advertising and sponsored placement — ad slots, budgets, billing | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Feature flags and gradual rollout | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Duplicate addon manager mounted at /admin/addon | Configure | **None** | **None** | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Duplicate addon manager mounted at /admin/addon | Manage | **None** | **None** | **None** | **None** | Partial | No | Admin | FIXED |
 | Legacy v1 advanced search | **None** | **None** | **None** | **None** | **None** | Partial | No | Admin | DEPRECATED |
 | Retired theme-installer URL | **None** | **None** | **None** | **None** | **None** | Partial | No | Admin | INTERNAL BY DESIGN |
 | Auction feature — master switch, commission, entry fee, claim window, visibility durations and the per-seller permission | Configure | **None** | View | **None** | **None** | Partial | No | Admin | DEPRECATED |

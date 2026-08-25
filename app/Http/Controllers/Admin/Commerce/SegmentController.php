@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Commerce;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Commerce\CommerceExperience;
 use App\Models\CustomerSegment;
 use App\Services\AuditLogger;
 use App\Services\Commerce\SegmentRules;
@@ -31,7 +32,7 @@ class SegmentController extends BaseController
 
         return view('admin-views.commerce.segments', [
             'ready'     => $ready,
-            'enabled'   => (bool) config('commerce.enabled', true),
+            'enabled'   => app(CommerceExperience::class)->enabled(),
             'segments'  => $ready ? CustomerSegment::query()->orderBy('name')->get() : collect(),
             'fields'    => SegmentRules::FIELDS,
             'operators' => SegmentRules::OPERATORS,

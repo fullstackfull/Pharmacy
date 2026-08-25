@@ -465,3 +465,35 @@
     {{ translate('runs_durations_and_outcomes_are_read_from') }} <code>monitoring_scheduled_runs</code>,
     {{ translate('written_by_the_task_listeners_in') }} <code>MonitoringServiceProvider</code>.
 </p>
+
+{{-- What the seller sweeps actually did.
+
+     `seller:run-automation` and `seller:run-stuck-bulk-jobs` were visible only as scheduled-task
+     rows, so a run in which every rule failed looked exactly like one in which every rule applied —
+     the exit code was the only thing recorded anywhere in monitoring. --}}
+@php($work = $panel['seller_work'] ?? ['state' => 'not_installed'])
+
+@if (($work['state'] ?? '') === 'ok')
+    <x-k.card :title="translate('what_the_seller_sweeps_did')">
+        <div class="k-stats">
+            <x-k.stat :label="translate('automation_runs')" :value="number_format($work['runs'])" icon="settings" />
+            <x-k.stat :label="translate('runs_that_failed')" :value="number_format($work['runs_failed'])"
+                      icon="{{ $work['runs_failed'] > 0 ? 'alert' : 'check' }}"
+                      :caption="$work['run_failure_share'] === null ? null : $work['run_failure_share'] . '%'" />
+            @if ($work['jobs'] !== null)
+                <x-k.stat :label="translate('bulk_jobs')" :value="number_format($work['jobs'])" icon="reports" />
+                <x-k.stat :label="translate('jobs_that_failed')" :value="number_format($work['jobs_failed'])"
+                          icon="{{ $work['jobs_failed'] > 0 ? 'alert' : 'check' }}" />
+                <x-k.stat :label="translate('jobs_stuck_over_an_hour')" :value="number_format($work['jobs_stuck'])"
+                          icon="{{ $work['jobs_stuck'] > 0 ? 'warning-octagon' : 'clock' }}" />
+            @endif
+        </div>
+        <p class="mon-note">
+            {{ $work['note'] }} <code>{{ $work['source'] }}</code>
+        </p>
+    </x-k.card>
+@elseif (($work['state'] ?? '') === 'failed')
+    <x-k.card :title="translate('what_the_seller_sweeps_did')">
+        <x-k.empty icon="alert" :title="translate('the_seller_work_ledgers_could_not_be_read')" :text="$work['note'] ?? ''" />
+    </x-k.card>
+@endif

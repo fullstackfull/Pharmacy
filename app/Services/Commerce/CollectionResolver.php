@@ -39,7 +39,7 @@ class CollectionResolver
 
     public function enabled(): bool
     {
-        return (bool) config('commerce.enabled', true);
+        return app(CommerceExperience::class)->enabled();
     }
 
     /** The collection an id names, if it is live and this installation can serve it. */

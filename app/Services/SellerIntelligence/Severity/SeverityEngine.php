@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Severity;
 
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 
 /**
  * How much a problem matters to this particular seller.
@@ -83,9 +84,31 @@ class SeverityEngine
     /** Ten sightings is as recurrent as this component measures. */
     private const RECURRENCE_SATURATION = 10;
 
+    /**
+     * The shipped score bands.
+     *
+     * They decide what every seller sees first, and they were constants — so a marketplace whose
+     * catalogue makes "critical" mean something different from a general store had no way to say so.
+     * The weights above are NOT settings: they total 100 by construction, and a form that let them
+     * drift off 100 would silently change what a score means rather than where the lines fall.
+     */
     public const BAND_CRITICAL = 75;
     public const BAND_HIGH = 40;
     public const BAND_MEDIUM = 20;
+
+    /** @return array{critical: int, high: int, medium: int} the bands in force, ordered. */
+    public static function bands(): array
+    {
+        $policy = app(Policy::class);
+
+        $critical = $policy->int('issue_band_critical');
+        $high = min($policy->int('issue_band_high'), $critical);
+
+        // Ordered whatever the settings say: a "high" band above "critical" would make critical
+        // unreachable rather than strict, which is the opposite of what an operator setting it
+        // higher intends.
+        return ['critical' => $critical, 'high' => $high, 'medium' => min($policy->int('issue_band_medium'), $high)];
+    }
 
     /**
      * The score, 0–100.
@@ -107,11 +130,12 @@ class SeverityEngine
     public function severity(ImpactSignals $signals, ?int $score = null): string
     {
         $score ??= $this->score($signals);
+        $bands = self::bands();
 
         $derived = match (true) {
-            $score >= self::BAND_CRITICAL => SellerInsight::SEVERITY_CRITICAL,
-            $score >= self::BAND_HIGH => SellerInsight::SEVERITY_HIGH,
-            $score >= self::BAND_MEDIUM => SellerInsight::SEVERITY_MEDIUM,
+            $score >= $bands['critical'] => SellerInsight::SEVERITY_CRITICAL,
+            $score >= $bands['high'] => SellerInsight::SEVERITY_HIGH,
+            $score >= $bands['medium'] => SellerInsight::SEVERITY_MEDIUM,
             default => SellerInsight::SEVERITY_LOW,
         };
 

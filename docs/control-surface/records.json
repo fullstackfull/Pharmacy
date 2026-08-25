@@ -17,32 +17,32 @@
  {
   "capability": "Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering",
   "area": "platform",
-  "backend": "resources/views/payment/paystack.blade.php:8 route('paystack.payment') — the real name is paystack.pay, so Paystack checkout is dead; resources/views/admin-views/transaction/list.blade.php:93 route('admin.transaction.transaction-export'); resources/views/admin-views/pages-and-media/page.blade.php:22 route('admin.pages-and-media.page-update'); resources/views/admin-views/third-party/payment-method/payment-option.blade.php:20 route('admin.business-settings.payment-method.payment-option'); resources/views/vendor-views/product/barcode.blade.php:53 route('vendor.products.edit') — all five verified absent from php artisan route:list",
+  "backend": "resources/views/payment/paystack.blade.php uses paystack.pay; admin.transaction.list and admin.transaction.transaction-export are registered; two dead views deleted",
   "admin": "View",
   "seller_web": "View",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed. RESOLVED, and the shape of each was different. The Paystack one was a live payment method calling a route name that does not exist. The transaction export pointed at a controller that had a view and no route at all — a screen that was built, paid for and unreachable, which is the ZERO ORPHAN case in its purest form; it is routed now. The other two lived in views nothing renders, so they are deleted rather than repaired: a route call in a page no one can open is not a defect worth fixing, it is dead code."
  },
  {
   "capability": "Installer and software updater — the first-run wizard and the file-based update flow",
   "area": "platform",
-  "backend": "routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 has //$this->mapInstallRoutes(); and //$this->mapUpdateRoutes(); commented out, so app/Http/Controllers/InstallController.php (11 methods) and UpdateController.php are unreachable and the installer views' route('purchase.code') / route('install.db') names do not resolve",
+  "backend": "routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 leaves mapInstallRoutes() and mapUpdateRoutes() commented out",
   "admin": "None",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Documented",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together."
+  "verdict": "INTERNAL BY DESIGN",
+  "note": "Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together. RULED INTERNAL BY DESIGN, deliberately left disabled. This is a CodeCanyon product whose installer writes .env and runs migrations from a browser, and whose updater unpacks an archive over the running application — both are the highest-value targets on any deployment, and this platform is already installed. Restoring the mapping would put an unauthenticated install wizard back on a live shop. They stay unmapped, and this row is the record of why rather than an omission somebody re-enables next year. Deleting the files is a separate call for the vendor, not an operational fix."
  },
  {
   "capability": "routes/shared.php and routes/test.php — route files no provider ever loads",
@@ -62,17 +62,17 @@
  {
   "capability": "Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix",
   "area": "platform",
-  "backend": "routes/admin/routes.php:174 Route::view('design-system','admin-views.kohl.gallery')->name('design-system'); :138 GET admin/component and :141 GET admin/component-snippets, both closures with no route name at all; referenced by no menu, blade or JS",
+  "backend": "routes/admin/routes.php registers the Kohl gallery and both component galleries only when config('app.debug') is true",
   "admin": "View",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Documented",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation. RESOLVED. They are development surfaces — every primitive on one page so a design-system change is reviewable in the real shell — and two of them had no route name at all. Harmless to look at, and exactly the kind of thing that has no owner and no reason to be reachable on a shop taking orders."
  },
  {
   "capability": "vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls",
@@ -92,8 +92,8 @@
  {
   "capability": "Commerce campaigns, segments and experiments are absent from the admin sidebar",
   "area": "automation",
-  "backend": "routes/admin/routes.php:1445-1463 registers 12 admin.commerce.{campaign,segment,experiment}.* routes; resources/views/admin-views/commerce/_nav.blade.php:12-24 is the only link path, reachable only after opening Collections",
-  "admin": "Configure",
+  "backend": "resources/views/layouts/admin/partials/v2/_side-bar.blade.php links collections, campaigns, segments and experiments individually",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Metrics",
@@ -101,8 +101,8 @@
   "dev_portal": "None",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem. RESOLVED. Three complete, audited features an operator found only by opening a fourth and noticing its tab strip."
  },
  {
   "capability": "44 AI auto-fill routes serving the Auction module, which is not installed",
@@ -842,8 +842,8 @@
  {
   "capability": "Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone",
   "area": "automation",
-  "backend": "app/Services/SellerIntelligence/Severity/SeverityEngine.php:65-69 (weights), :72-84 (saturations: revenue 0.25, volume 0.10, urgency 6h, duration 168h, recurrence 10), :86-88 (BAND_CRITICAL 75, BAND_HIGH 40, BAND_MEDIUM 20); baseline window app/Services/SellerIntelligence/Severity/SellerBaselineProvider.php:23 (LOOKBACK_DAYS = 30); app/Services/SellerIntelligence/IssueEscalationService.php:41-45 (PROMOTE_AFTER_HOURS low 336 / medium 168 / high 48), :48 (PROMOTE_ON_OVERDUE = true), :51 (MAX_ESCALATION_LEVEL = 3); swept by bootstrap/app.php:170 every four hours; app/Services/SellerIntelligence/SellerNotifier.php:46 (WINDOW_HOURS = 12), :49 (PUSH_FROM_SEVERITY = ['critical','high']); driven by app/Console/Commands/RefreshSellerInsights.php scheduled hourly at bootstrap/app.php:160; None — no notification-preference route, table, model or setting key exists; searched routes/vendor, routes/se",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php issues group, read by SeverityEngine::bands(), IssueEscalationService::promoteAfterHours()/maxEscalationLevel() and SellerNotifier",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -851,8 +851,8 @@
   "dev_portal": "Documented",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings as a policy page, with the notification half exposed to the seller. Thirteen severity constants decide what every seller sees first, an escalation ladder decides the marketplace's enforcement posture toward slow sellers, and a 12-hour window plus a critical/high floor decides what reaches their phone — none of it is settable by anyone, so the only way to stop the noise is to turn notifications off entirely."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings as a policy page, with the notification half exposed to the seller. Thirteen severity constants decide what every seller sees first, an escalation ladder decides the marketplace's enforcement posture toward slow sellers, and a 12-hour window plus a critical/high floor decides what reaches their phone — none of it is settable by anyone, so the only way to stop the noise is to turn notifications off entirely. RESOLVED. The three score bands decide what every seller sees first; the ladder is the marketplace's enforcement posture toward its sellers; the notification window is the difference between a useful alert and the reason somebody switches notifications off. The component WEIGHTS are deliberately NOT settings and are documented INTERNAL BY DESIGN: they total 100 by construction, and a form that let them drift off 100 would silently change what a score means rather than where the lines fall."
  },
  {
   "capability": "Scheduled operations — timed price changes, timed activations, campaign starts",
@@ -872,32 +872,32 @@
  {
   "capability": "Whether a seller's automation rules and bulk jobs are actually succeeding",
   "area": "automation",
-  "backend": "app/Services/SellerAutomation/AutomationEngine.php driven by seller:run-automation (bootstrap/app.php:176) and seller:run-stuck-bulk-jobs (:188); no reference to automation or bulk jobs anywhere in app/Services/Monitoring",
+  "backend": "app/Services/Monitoring/Panels/SchedulerPanel.php::sellerWork(), drawn on Monitoring → Scheduler",
   "admin": "Oversight",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
-  "monitor": "None",
+  "monitor": "Full",
   "dev_portal": "None",
   "audit": "Partial",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Monitoring. The sweep is recorded only as a scheduled-task row, so a run that exits 0 while every rule inside it fails is filed as a success; every run and every action already records an outcome and nothing aggregates them into a success rate or a trend."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs to Monitoring. The sweep is recorded only as a scheduled-task row, so a run that exits 0 while every rule inside it fails is filed as a success; every run and every action already records an outcome and nothing aggregates them into a success rate or a trend. RESOLVED. The sweeps were visible only as scheduled-task rows, so a run in which every rule failed looked exactly like one in which every rule applied — the exit code was the only thing monitoring recorded. Failed runs, failed bulk jobs and jobs stuck over an hour, read live from the two ledgers with the page saying so."
  },
  {
   "capability": "Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off",
   "area": "automation",
-  "backend": "config/commerce.php:12 `'enabled' => env('COMMERCE_EXPERIENCE_ENABLED', true)`; read at app/Services/Commerce/CollectionResolver.php:42, ExperimentResolver.php:92, CampaignResolver.php:206, SegmentResolver.php:168",
-  "admin": "View",
+  "backend": "app/Services/Commerce/CommerceExperience.php over the commerce_experience_enabled policy, read by all four resolvers and all four admin screens",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Events",
   "monitor": "None",
   "dev_portal": "N/A",
-  "audit": "Partial",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. Four admin screens display the flag's state and none writes it, so the documented rollback path for the whole personalisation engine is one env line and a deploy."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. Four admin screens display the flag's state and none writes it, so the documented rollback path for the whole personalisation engine is one env line and a deploy. RESOLVED. Four admin screens displayed the flag's state and none could change it, so the documented rollback path for the whole personalisation engine — the one an operator most needs at 2am — was one env line and a release. Precedence is stored, then environment, then default, so an install with COMMERCE_EXPERIENCE_ENABLED=false stays off."
  },
  {
   "capability": "Seller report builder, saved report definitions and an exports centre",
@@ -1802,8 +1802,8 @@
  {
   "capability": "Duplicate addon manager mounted at /admin/addon",
   "area": "platform",
-  "backend": "routes/admin/routes.php:1063-1071 admin.addon.* — the same AddonController and the same five actions already registered at :1081 under system-setup, outside the themes_and_addons module gate",
-  "admin": "Configure",
+  "backend": "the duplicate group at /admin/addon is removed; the gated twin under system-setup is canonical",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "None",
   "analytics": "None",
@@ -1811,8 +1811,8 @@
   "dev_portal": "Partial",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it. RESOLVED. Same controller, same five actions including upload and delete, and this copy sat OUTSIDE the themes_and_addons module gate — so a role denied addon management could still upload or remove one. Linked from no view and no menu."
  },
  {
   "capability": "Legacy v1 advanced search",

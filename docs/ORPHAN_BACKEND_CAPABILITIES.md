@@ -14,20 +14,21 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 346 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 350 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 79 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
-| INTERNAL BY DESIGN | 53 | Infrastructure. No screen is appropriate, and the reason is stated. |
+| INTERNAL BY DESIGN | 54 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 42 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 34 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (346)
+## CONNECTED TO ADMIN (350)
 
 The marketplace operator manages or oversees it.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| Commerce campaigns, segments and experiments are absent from the admin sidebar | automation | Admin | resources/views/layouts/admin/partials/v2/_side-bar.blade.php links collections, campaigns, segments and experiments individually |
 | Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | finance | Admin | payout_dual_control_amount in app/Services/Platform/PolicyRegistry.php, read by app/Services/Marketplace/PayoutService.php::dualControlAmount() and applied by openApprovalIfLarge(); edited on Admin → Marketplace → Settlements under Payment terms |
 | 24-hour payout freeze after a seller changes their bank details | finance | Admin | payout_bank_change_freeze_hours in app/Services/Platform/PolicyRegistry.php, read by PayoutService::bankChangeFreezeHours() and applied in recordBankChange() |
 | Mark a payout failed, or retry one a bank bounced | finance | Admin | app/Services/Marketplace/PayoutService.php markFailed() and reissue(), on Admin → Marketplace → Payouts |
@@ -51,6 +52,9 @@ The marketplace operator manages or oversees it.
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | shipping | Admin | app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48 |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | compliance | Admin | app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137 |
 | Reporting how much traffic went unmeasured because of Do Not Track or missing consent | analytics | Admin | app/Http/Middleware/RecordAnalytics.php calls PrivacyGate::reason() and EventRecorder::recordPrivacyRefusal(); shown on Analytics → Data quality |
+| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | automation | Admin | app/Services/Platform/PolicyRegistry.php issues group, read by SeverityEngine::bands(), IssueEscalationService::promoteAfterHours()/maxEscalationLevel() and SellerNotifier |
+| Whether a seller's automation rules and bulk jobs are actually succeeding | automation | Admin | app/Services/Monitoring/Panels/SchedulerPanel.php::sellerWork(), drawn on Monitoring → Scheduler |
+| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | automation | Admin | app/Services/Commerce/CommerceExperience.php over the commerce_experience_enabled policy, read by all four resolvers and all four admin screens |
 | Pipeline health counters — events written, and events dropped because a request overflowed the buffer | analytics | Admin | app/Services/Analytics/Reporting/AnalyticsReporting.php::pipelineHealth(), drawn on Analytics → Data quality |
 | Per-day performance of each campaign short link | analytics | Admin | the campaign_link dimension is read on Analytics → Campaigns |
 | Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | analytics | Admin | app/Services/Analytics/Support/AnalyticsPolicy.php over the analytics group in PolicyRegistry, read by the recorder, the visitor context, the privacy gate, the reporting layer and the rollup's pruner; edited on Analytics → Settings |
@@ -530,9 +534,15 @@ Its health and its failures are visible to an operator.
 | Synthetic journey probe — fetch a real storefront page and assert its status and content | monitoring | Admin | app/Services/Monitoring/Checks/SyntheticCheck.php:25 reading the `synthetics` key of monitoring_settings; results into monitoring_check_results (kind=synthetic) |
 | Alert rule evaluation — compare every enabled rule against the last minute, once a minute | monitoring | System | app/Services/Monitoring/Alerting/AlertEvaluator.php:43; app/Console/Commands/MonitoringEvaluate.php:16; scheduled bootstrap/app.php:216 everyMinute |
 
-## INTERNAL BY DESIGN (53)
+## INTERNAL BY DESIGN (54)
 
 Infrastructure. No screen is appropriate, and the reason is stated.
+
+**Installer and software updater — the first-run wizard and the file-based update flow**  
+`platform` · owner: Developer  
+- Backend — routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 leaves mapInstallRoutes() and mapUpdateRoutes() commented out
+- No surface on — Admin, Seller Web, Analytics, Monitor
+- Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together. RULED INTERNAL BY DESIGN, deliberately left disabled. This is a CodeCanyon product whose installer writes .env and runs migrations from a browser, and whose updater unpacks an archive over the running application — both are the highest-value targets on any deployment, and this platform is already installed. Restoring the mapping would put an unauthenticated install wizard back on a live shop. They stay unmapped, and this row is the record of why rather than an omission somebody re-enables next year. Deleting the files is a separate call for the vendor, not an operational fix.
 
 **Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard)**  
 `platform` · owner: System  
@@ -969,7 +979,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (42)
+## ORPHAN (34)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -979,35 +989,11 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Ruled: belongs to the Seller Center web panel. The registry is the design of record and the route table is one fifth of it, so a seller sees a menu that silently omits every capability the phone app already has; the drop is invisible from inside the product because a missing route removes the item rather than erroring.
 
-**Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering**  
-`platform` · owner: Developer  
-- Backend — resources/views/payment/paystack.blade.php:8 route('paystack.payment') — the real name is paystack.pay, so Paystack checkout is dead; resources/views/admin-views/transaction/list.blade.php:93 route('admin.transaction.transaction-export'); resources/views/admin-views/pages-and-media/page.blade.php:22 route('admin.pages-and-media.page-update'); resources/views/admin-views/third-party/payment-method/payment-option.blade.php:20 route('admin.business-settings.payment-method.payment-option'); resources/views/vendor-views/product/barcode.blade.php:53 route('vendor.products.edit') — all five verified absent from php artisan route:list
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed.
-
-**Installer and software updater — the first-run wizard and the file-based update flow**  
-`platform` · owner: Developer  
-- Backend — routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 has //$this->mapInstallRoutes(); and //$this->mapUpdateRoutes(); commented out, so app/Http/Controllers/InstallController.php (11 methods) and UpdateController.php are unreachable and the installer views' route('purchase.code') / route('install.db') names do not resolve
-- No surface on — Admin, Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together.
-
-**Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix**  
-`platform` · owner: Developer  
-- Backend — routes/admin/routes.php:174 Route::view('design-system','admin-views.kohl.gallery')->name('design-system'); :138 GET admin/component and :141 GET admin/component-snippets, both closures with no route name at all; referenced by no menu, blade or JS
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation.
-
 **vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls**  
 `orders` · owner: Developer  
 - Backend — routes/vendor/routes.php GET/POST vendor/get-order-data; the only other reference in the repo is the staff permission map at app/Http/Middleware/SellerStaffAccessMiddleware.php:107, i.e. no route() call, fetch or link anywhere
 - No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs to Developer to delete or document. It is either dead code or an undocumented integration point on order data, and the difference matters because it is reachable with a seller session.
-
-**Commerce campaigns, segments and experiments are absent from the admin sidebar**  
-`automation` · owner: Admin  
-- Backend — routes/admin/routes.php:1445-1463 registers 12 admin.commerce.{campaign,segment,experiment}.* routes; resources/views/admin-views/commerce/_nav.blade.php:12-24 is the only link path, reachable only after opening Collections
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem.
 
 **Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived**  
 `finance` · owner: Admin  
@@ -1111,29 +1097,11 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
 
-**Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone**  
-`automation` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Severity/SeverityEngine.php:65-69 (weights), :72-84 (saturations: revenue 0.25, volume 0.10, urgency 6h, duration 168h, recurrence 10), :86-88 (BAND_CRITICAL 75, BAND_HIGH 40, BAND_MEDIUM 20); baseline window app/Services/SellerIntelligence/Severity/SellerBaselineProvider.php:23 (LOOKBACK_DAYS = 30); app/Services/SellerIntelligence/IssueEscalationService.php:41-45 (PROMOTE_AFTER_HOURS low 336 / medium 168 / high 48), :48 (PROMOTE_ON_OVERDUE = true), :51 (MAX_ESCALATION_LEVEL = 3); swept by bootstrap/app.php:170 every four hours; app/Services/SellerIntelligence/SellerNotifier.php:46 (WINDOW_HOURS = 12), :49 (PUSH_FROM_SEVERITY = ['critical','high']); driven by app/Console/Commands/RefreshSellerInsights.php scheduled hourly at bootstrap/app.php:160; None — no notification-preference route, table, model or setting key exists; searched routes/vendor, routes/se
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings as a policy page, with the notification half exposed to the seller. Thirteen severity constants decide what every seller sees first, an escalation ladder decides the marketplace's enforcement posture toward slow sellers, and a 12-hour window plus a critical/high floor decides what reaches their phone — none of it is settable by anyone, so the only way to stop the noise is to turn notifications off entirely.
-
 **Scheduled operations — timed price changes, timed activations, campaign starts**  
 `automation` · owner: Seller  
 - Backend — None — no route, controller, table or command; the nav entries seller.pricing.scheduled and seller.automation.scheduled at app/Services/SellerCenter/Navigation.php:98,139 resolve to nothing
 - No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command; two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail.
-
-**Whether a seller's automation rules and bulk jobs are actually succeeding**  
-`automation` · owner: Admin  
-- Backend — app/Services/SellerAutomation/AutomationEngine.php driven by seller:run-automation (bootstrap/app.php:176) and seller:run-stuck-bulk-jobs (:188); no reference to automation or bulk jobs anywhere in app/Services/Monitoring
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Monitoring. The sweep is recorded only as a scheduled-task row, so a run that exits 0 while every rule inside it fails is filed as a success; every run and every action already records an outcome and nothing aggregates them into a success rate or a trend.
-
-**Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off**  
-`automation` · owner: Admin  
-- Backend — config/commerce.php:12 `'enabled' => env('COMMERCE_EXPERIENCE_ENABLED', true)`; read at app/Services/Commerce/CollectionResolver.php:42, ExperimentResolver.php:92, CampaignResolver.php:206, SegmentResolver.php:168
-- No surface on — Seller Web, Monitor
-- Ruled: belongs in Admin Settings. Four admin screens display the flag's state and none writes it, so the documented rollback path for the whole personalisation engine is one env line and a deploy.
 
 **Seller report builder, saved report definitions and an exports centre**  
 `analytics` · owner: Seller  
@@ -1218,10 +1186,4 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — None found. Searched app/, config/, routes/ and database/migrations for FeatureFlag, feature_flag, flag tables — nothing. Closest surfaces: addon publish/unpublish (routes/admin/routes.php:1081-1089), addon licence activation (:1091-1097) and modules_statuses.json
 - No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs in Admin. No flag table, no config, no per-seller or per-percentage switch anywhere; the only lever is publishing or unpublishing an entire addon module, so every change to the marketplace is all-or-nothing for everyone at once.
-
-**Duplicate addon manager mounted at /admin/addon**  
-`platform` · owner: Admin  
-- Backend — routes/admin/routes.php:1063-1071 admin.addon.* — the same AddonController and the same five actions already registered at :1081 under system-setup, outside the themes_and_addons module gate
-- No surface on — Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it.
 

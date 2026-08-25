@@ -121,6 +121,51 @@ class PolicyRegistry
             ],
         ],
 
+        'issues' => [
+            'title' => 'seller_issue_policy',
+            'help' => 'how_a_problem_is_scored_when_it_is_escalated_and_how_often_a_seller_may_be_interrupted',
+            'icon' => 'warning',
+            'policies' => [
+                // The three score bands. They decide what every seller sees first on the Action
+                // Center, and they were constants — a marketplace could not decide that "critical"
+                // on its catalogue means something different from the shipped default.
+                'issue_band_critical' => [
+                    'type' => 'int', 'default' => 75, 'min' => 1, 'max' => 100,
+                    'label' => 'score_at_which_an_issue_is_critical',
+                ],
+                'issue_band_high' => [
+                    'type' => 'int', 'default' => 40, 'min' => 1, 'max' => 100,
+                    'label' => 'score_at_which_an_issue_is_high',
+                ],
+                'issue_band_medium' => [
+                    'type' => 'int', 'default' => 20, 'min' => 1, 'max' => 100,
+                    'label' => 'score_at_which_an_issue_is_medium',
+                ],
+                // The escalation ladder: the marketplace's enforcement posture toward its sellers.
+                'issue_promote_low_hours' => [
+                    'type' => 'int', 'default' => 336, 'min' => 1, 'max' => 8760,
+                    'label' => 'hours_a_low_issue_may_stand_before_it_is_promoted',
+                ],
+                'issue_promote_medium_hours' => [
+                    'type' => 'int', 'default' => 168, 'min' => 1, 'max' => 8760,
+                    'label' => 'hours_a_medium_issue_may_stand_before_it_is_promoted',
+                ],
+                'issue_promote_high_hours' => [
+                    'type' => 'int', 'default' => 48, 'min' => 1, 'max' => 8760,
+                    'label' => 'hours_a_high_issue_may_stand_before_it_is_promoted',
+                ],
+                'issue_max_escalation_level' => [
+                    'type' => 'int', 'default' => 3, 'min' => 1, 'max' => 10,
+                    'label' => 'how_many_times_one_issue_may_be_promoted',
+                ],
+                'issue_notify_window_hours' => [
+                    'type' => 'int', 'default' => 12, 'min' => 1, 'max' => 720,
+                    'label' => 'hours_between_interruptions_of_the_same_seller',
+                    'help' => 'the_difference_between_a_useful_alert_and_the_reason_a_seller_switches_notifications_off',
+                ],
+            ],
+        ],
+
         'catalog' => [
             'title' => 'catalogue_policy',
             'help' => 'the_quality_bar_a_listing_must_clear_and_the_limits_a_merchandiser_works_within',
@@ -177,6 +222,11 @@ class PolicyRegistry
                 'commerce_max_campaign_overrides' => [
                     'type' => 'int', 'default' => 8, 'min' => 1, 'max' => 100,
                     'label' => 'overrides_per_campaign',
+                ],
+                'commerce_experience_enabled' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'the_storefront_personalisation_engine_is_running',
+                    'help' => 'off_means_collections_fall_back_to_their_catalogue_ordering_and_no_campaign_segment_or_experiment_logic_runs',
                 ],
                 'commerce_max_variants' => [
                     'type' => 'int', 'default' => 4, 'min' => 2, 'max' => 20,

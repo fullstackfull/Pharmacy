@@ -5,7 +5,7 @@
         <h1 class="text-center">{{ "Please do not refresh this page..." }}</h1>
     </div>
 
-    <form method="POST" action="{!! route('paystack.payment',['token'=>$data->id]) !!}" accept-charset="UTF-8"
+    <form method="POST" action="{!! route('paystack.pay', ['token' => $data->id]) !!}" accept-charset="UTF-8"
           class="form-horizontal" role="form">
         @csrf
         <div class="row">

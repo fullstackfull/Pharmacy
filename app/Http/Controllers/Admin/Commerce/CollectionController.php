@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Commerce;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Commerce\CommerceExperience;
 use App\Models\ProductCollection;
 use App\Models\ProductMetric;
 use App\Services\AuditLogger;
@@ -41,7 +42,7 @@ class CollectionController extends BaseController
 
         return view('admin-views.commerce.collections', [
             'ready'       => $ready,
-            'enabled'     => (bool) config('commerce.enabled', true),
+            'enabled'     => app(CommerceExperience::class)->enabled(),
             'collections' => $ready
                 ? ProductCollection::query()->orderBy('name')->get()
                 : collect(),

@@ -1029,6 +1029,104 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── platform · issue policy, commerce switch and sweep health ──────
+        'seller_issue_policy' => [
+            'Seller issue policy',
+            'سياسة مشكلات البائعين',
+        ],
+        'how_a_problem_is_scored_when_it_is_escalated_and_how_often_a_seller_may_be_interrupted' => [
+            'How a problem is scored, when it is escalated, and how often a seller may be interrupted',
+            'كيف تُسجَّل درجة المشكلة، ومتى تُصعَّد، وكم مرة يُقاطَع البائع',
+        ],
+        'score_at_which_an_issue_is_critical' => [
+            'Score at which an issue is critical',
+            'الدرجة التي تصبح عندها المشكلة حرجة',
+        ],
+        'score_at_which_an_issue_is_high' => [
+            'Score at which an issue is high',
+            'الدرجة التي تصبح عندها المشكلة مرتفعة',
+        ],
+        'score_at_which_an_issue_is_medium' => [
+            'Score at which an issue is medium',
+            'الدرجة التي تصبح عندها المشكلة متوسطة',
+        ],
+        'hours_a_low_issue_may_stand_before_it_is_promoted' => [
+            'Hours a low issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المنخفضة قبل تصعيدها',
+        ],
+        'hours_a_medium_issue_may_stand_before_it_is_promoted' => [
+            'Hours a medium issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المتوسطة قبل تصعيدها',
+        ],
+        'hours_a_high_issue_may_stand_before_it_is_promoted' => [
+            'Hours a high issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المرتفعة قبل تصعيدها',
+        ],
+        'how_many_times_one_issue_may_be_promoted' => [
+            'How many times one issue may be promoted',
+            'كم مرة يمكن تصعيد المشكلة الواحدة',
+        ],
+        'hours_between_interruptions_of_the_same_seller' => [
+            'Hours between interruptions of the same seller',
+            'الساعات بين مقاطعة وأخرى للبائع نفسه',
+        ],
+        'the_difference_between_a_useful_alert_and_the_reason_a_seller_switches_notifications_off' => [
+            'The difference between a useful alert and the reason a seller switches notifications off',
+            'الفرق بين تنبيه مفيد وسبب إيقاف البائع للإشعارات',
+        ],
+        'the_storefront_personalisation_engine_is_running' => [
+            'The storefront personalisation engine is running',
+            'محرّك تخصيص الواجهة يعمل',
+        ],
+        'off_means_collections_fall_back_to_their_catalogue_ordering_and_no_campaign_segment_or_experiment_logic_runs' => [
+            'Off means collections fall back to their catalogue ordering, and no campaign, segment or experiment logic runs',
+            'الإيقاف يعني عودة المجموعات إلى ترتيب الكتالوج، وتوقّف منطق الحملات والشرائح والتجارب',
+        ],
+        'what_the_seller_sweeps_did' => [
+            'What the seller sweeps did',
+            'ما فعلته جولات البائعين',
+        ],
+        'automation_runs' => [
+            'Automation runs',
+            'جولات الأتمتة',
+        ],
+        'runs_that_failed' => [
+            'Runs that failed',
+            'الجولات الفاشلة',
+        ],
+        'bulk_jobs' => [
+            'Bulk jobs',
+            'المهام الجماعية',
+        ],
+        'jobs_that_failed' => [
+            'Jobs that failed',
+            'المهام الفاشلة',
+        ],
+        'jobs_stuck_over_an_hour' => [
+            'Jobs stuck over an hour',
+            'مهام عالقة أكثر من ساعة',
+        ],
+        'the_seller_work_ledgers_could_not_be_read' => [
+            'The seller work ledgers could not be read',
+            'تعذّرت قراءة سجلات عمل البائعين',
+        ],
+        'Collections' => [
+            'Collections',
+            'المجموعات',
+        ],
+        'Campaigns' => [
+            'Campaigns',
+            'الحملات',
+        ],
+        'Segments' => [
+            'Segments',
+            'الشرائح',
+        ],
+        'Experiments' => [
+            'Experiments',
+            'التجارب',
+        ],
+
         // ── analytics · privacy settings, data quality and the fold ────────
         'analytics_and_privacy' => [
             'Analytics and privacy',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Commerce;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Commerce\CommerceExperience;
 use App\Models\ExperienceExperiment;
 use App\Models\Theme;
 use App\Models\ThemeSection;
@@ -36,7 +37,7 @@ class ExperimentController extends BaseController
 
         return view('admin-views.commerce.experiments', [
             'ready'       => $ready,
-            'enabled'     => (bool) config('commerce.enabled', true),
+            'enabled'     => app(CommerceExperience::class)->enabled(),
             // Who saw which variant: the number that makes an experiment an experiment rather
             // than a coin flip nobody watched.
             'reach'       => app(\App\Services\Commerce\ExperimentReach::class),
