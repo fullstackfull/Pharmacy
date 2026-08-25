@@ -431,8 +431,23 @@ class StorefrontThemeRenderer
     private function activePreviewVersionId(): ?int
     {
         try {
-            if (auth('admin')->check() && session(self::PREVIEW_SESSION_KEY)) {
-                return (int) session(self::PREVIEW_SESSION_KEY);
+            // Being signed in as an admin is not the same as being allowed to see an unpublished
+            // version. The link endpoint already asks this question; asking it here instead of in
+            // each controller makes it the answer for every way the key can be set — the builder
+            // opening, the explicit Preview button, and whatever sets it next.
+            $sessionVersionId = app(ThemePermissionService::class)->canView()
+                ? (int) session(self::PREVIEW_SESSION_KEY)
+                : 0;
+            if ($sessionVersionId > 0) {
+                // The id is taken on faith nowhere else: a merchant who discards the draft in
+                // another tab leaves this key pointing at nothing, and an unchecked id turns the
+                // builder frame into an empty page rather than the shop. Forgetting it here is what
+                // ends the preview the moment there is nothing left to preview.
+                if (ThemeVersion::query()->whereKey($sessionVersionId)->exists()) {
+                    return $sessionVersionId;
+                }
+
+                session()->forget(self::PREVIEW_SESSION_KEY);
             }
 
             $token = request()?->query(self::PREVIEW_TOKEN_KEY);
