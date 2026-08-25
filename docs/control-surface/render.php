@@ -43,6 +43,41 @@ const VERDICTS = [
 
 $cell = static fn (?string $text): string => str_replace(['|', "\n"], ['\\|', ' '], trim((string) ($text ?: '—')));
 
+/**
+ * Why this capability is incomplete, or null when the surface that owns it can reach it.
+ *
+ * The only question that matters per capability: can the person responsible for it actually do
+ * anything about it? A seller-owned action needs a seller client — either one. An admin-owned
+ * policy needs an admin screen. Anything still unowned is incomplete whatever its columns say.
+ */
+function ownerCannotReachIt(array $record, callable $isGap): ?string
+{
+    if (($record['verdict'] ?? '') === 'ORPHAN') {
+        $owner = trim((string) ($record['owner'] ?? ''));
+
+        // Every orphan here was ruled to an owner during reconciliation. Assigned is not built:
+        // it stays an orphan until the surface exists, and saying "no owner" would contradict the
+        // ruling printed on the next line.
+        return $owner === '' ? 'no owner and no surface' : 'assigned to ' . $owner . ', no surface yet';
+    }
+
+    $owner = strtolower(trim((string) ($record['owner'] ?? '')));
+
+    if (str_contains($owner, 'admin') && $isGap($record['admin'] ?? null)) {
+        return 'owned by Admin, with no admin surface';
+    }
+
+    if (str_contains($owner, 'seller') && $isGap($record['seller_web'] ?? null) && $isGap($record['flutter'] ?? null)) {
+        return 'owned by the seller, who cannot reach it from either client';
+    }
+
+    if (str_contains($owner, 'developer') && $isGap($record['dev_portal'] ?? null)) {
+        return 'owned by an integrator, with nothing in the Developer Portal';
+    }
+
+    return null;
+}
+
 /** A surface that answers "None" is a gap; one that answers "N/A" is not. */
 $isGap = static fn (?string $value): bool => strcasecmp(trim((string) $value), 'none') === 0;
 
@@ -127,6 +162,11 @@ $out[] = 'background without a documented owner and a place a person can see it.
 $out[] = 'deliberately invisible is recorded as `INTERNAL BY DESIGN` with the reason no screen is';
 $out[] = 'appropriate — silence is not the same as a decision.';
 $out[] = '';
+$out[] = 'Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a';
+$out[] = 'surface**: these stay orphans until the screen, the setting or the documentation exists, and this';
+$out[] = 'register is the backlog for building them. Where the reconciliation overruled a sweep, the note';
+$out[] = 'says so and why.';
+$out[] = '';
 $out[] = '| Verdict | Capabilities | Meaning |';
 $out[] = '|---|---:|---|';
 
@@ -137,7 +177,8 @@ $meaning = [
     'CONNECTED TO MONITOR' => 'Its health and its failures are visible to an operator.',
     'INTERNAL BY DESIGN' => 'Infrastructure. No screen is appropriate, and the reason is stated.',
     'DEPRECATED' => 'Present in code, no longer part of the product.',
-    'ORPHAN' => 'No owner and no surface. This is the list that must reach zero.',
+    'ORPHAN' => 'Found with no surface. Each has been ruled to an owner; the ruling is not the surface, '
+        . 'so the list reaches zero only when the screen exists.',
 ];
 
 foreach (VERDICTS as $verdict) {
@@ -149,6 +190,11 @@ foreach (VERDICTS as $verdict) {
 }
 $out[] = '';
 
+/* The verdicts that still ask something of a reader get the full record; the ones that are
+   settled get a row. Both are here, because the rule is that every capability is accounted for —
+   but a resolved capability does not need a paragraph to say so. */
+const NEEDS_A_DECISION = ['ORPHAN', 'INTERNAL BY DESIGN', 'DEPRECATED'];
+
 foreach (VERDICTS as $verdict) {
     $items = $byVerdict[$verdict] ?? [];
     if ($items === []) {
@@ -159,6 +205,20 @@ foreach (VERDICTS as $verdict) {
     $out[] = '';
     $out[] = $meaning[$verdict];
     $out[] = '';
+
+    if (!in_array($verdict, NEEDS_A_DECISION, true)) {
+        $out[] = '| Capability | Area | Owner | Where it lives |';
+        $out[] = '|---|---|---|---|';
+        foreach ($items as $record) {
+            $out[] = '| ' . $cell($record['capability'] ?? null)
+                . ' | ' . ($record['area'] ?? 'platform')
+                . ' | ' . $cell($record['owner'] ?? null)
+                . ' | ' . $cell($record['backend'] ?? null) . ' |';
+        }
+        $out[] = '';
+
+        continue;
+    }
 
     foreach ($items as $record) {
         $out[] = '**' . trim((string) ($record['capability'] ?? '')) . '**  ';
@@ -189,8 +249,14 @@ $out[] = '# Final Platform Coverage Audit';
 $out[] = '';
 $out[] = '> Domain by domain: what is complete, and what is explicitly not.';
 $out[] = '';
-$out[] = 'A domain is complete when every capability in it has a management surface, a status surface,';
-$out[] = 'somewhere its failures show, and an audit trail — not when its screens exist.';
+$out[] = 'A domain is complete when every capability in it is owned by a surface that can actually manage it.';
+$out[] = '';
+$out[] = 'The per-surface lines below count how many capabilities that surface could hold and does not — useful';
+$out[] = 'for seeing where a surface is thin. But a capability is only **incomplete** when the surface that owns';
+$out[] = 'it cannot reach it: an admin-owned policy with no admin screen, a seller-owned action the seller cannot';
+$out[] = 'perform from either client, or anything still unowned. A missing analytics dimension on a well-managed';
+$out[] = 'capability is a gap worth knowing about; it is not the same failure, and collapsing the two would make';
+$out[] = 'this document say that almost everything is broken.';
 $out[] = '';
 
 foreach ($areas as $area => $items) {
@@ -198,6 +264,11 @@ foreach ($areas as $area => $items) {
     $out[] = '';
 
     foreach (SURFACES as $key => $label) {
+        if ($key === 'backend') {
+            $out[] = 'Backend: ' . count($items) . ' capabilities';
+            continue;
+        }
+
         $applicable = array_filter($items, fn ($r) => strcasecmp(trim((string) ($r[$key] ?? '')), 'n/a') !== 0);
         $gaps = array_filter($applicable, fn ($r) => $isGap($r[$key] ?? null));
 
@@ -208,27 +279,30 @@ foreach ($areas as $area => $items) {
 
         $out[] = $gaps === []
             ? $label . ': Complete'
-            : $label . ': **' . count($gaps) . ' of ' . count($applicable) . ' without a surface**';
+            : $label . ': ' . (count($applicable) - count($gaps)) . ' of ' . count($applicable) . ' covered';
     }
 
     $out[] = '';
 
     $incomplete = [];
     foreach ($items as $record) {
-        $gaps = [];
-        foreach (SURFACES as $key => $label) {
-            if ($key !== 'backend' && $isGap($record[$key] ?? null)) {
-                $gaps[] = $label;
-            }
+        if (($record['verdict'] ?? '') === 'INTERNAL BY DESIGN' || ($record['verdict'] ?? '') === 'DEPRECATED') {
+            continue;
         }
-        if ($gaps !== [] && ($record['verdict'] ?? '') !== 'INTERNAL BY DESIGN') {
-            $incomplete[] = '- **' . trim((string) $record['capability']) . '** — no ' . implode(', ', $gaps)
+
+        $reason = ownerCannotReachIt($record, $isGap);
+
+        if ($reason !== null) {
+            $incomplete[] = '- **' . trim((string) $record['capability']) . '** — ' . $reason
                 . (!empty($record['note']) ? '. ' . trim((string) $record['note']) : '');
         }
     }
 
-    if ($incomplete !== []) {
-        $out[] = 'Incomplete in this domain:';
+    if ($incomplete === []) {
+        $out[] = 'Every capability in this domain is reachable by the surface that owns it.';
+        $out[] = '';
+    } else {
+        $out[] = 'Incomplete — the owner cannot reach it (' . count($incomplete) . '):';
         $out[] = '';
         foreach ($incomplete as $line) {
             $out[] = $line;
