@@ -122,6 +122,44 @@ class SellerCenterRouteCollisionTest extends TestCase
         $this->assertLessThan($positions['seller_center'], $positions['classic']);
     }
 
+    public function test_every_seller_center_screen_is_reachable_by_staff_not_just_by_the_owner(): void
+    {
+        // The staff gate reads the second URL segment and is deny-by-default, which is right — a gap
+        // fails closed. But both panels live on `/vendor`, so a Seller Center screen whose segment is
+        // absent from that map is not "gated", it is unreachable: every staff member gets a 403 on a
+        // screen the route itself would have let them open. Three waves of screens were behind that.
+        $mapped = $this->staffMappedSegments();
+
+        foreach (array_keys(self::SELLER_CENTER) as $path) {
+            $segment = explode('/', trim($path, '/'))[1] ?? '';
+
+            $this->assertContains(
+                $segment,
+                $mapped,
+                "the Seller Center screen at {$path} is refused to every staff member: '{$segment}' is "
+                . 'not in SellerStaffAccessMiddleware, which denies by default',
+            );
+        }
+    }
+
+    /**
+     * The URL segments the staff gate knows about, read out of the middleware's own match arms.
+     *
+     * Read rather than duplicated: a copy of the list here would pass while the real map was wrong.
+     *
+     * @return array<int, string>
+     */
+    private function staffMappedSegments(): array
+    {
+        $source = file_get_contents(base_path('app/Http/Middleware/SellerStaffAccessMiddleware.php'));
+        $body = substr($source, strpos($source, 'return match ($area) {'));
+        $body = substr($body, 0, strpos($body, 'default =>'));
+
+        preg_match_all("/'([a-z0-9\-]+)'\s*(?:,|=>)/", $body, $found);
+
+        return array_values(array_unique($found[1] ?? []));
+    }
+
     /** Which controller the router would hand this URL to, or null when nothing would. */
     private function controllerFor(string $path): ?string
     {

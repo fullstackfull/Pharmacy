@@ -100,11 +100,29 @@ class TableFilters
                 'key' => $key,
                 'label' => translate($field['label'] ?? $key),
                 'type' => $field['type'] ?? 'text',
-                'options' => $field['options'] ?? [],
+                // Each choice carries the URL that applies it. Without this the panel renders the
+                // options and every one of them is a link to nowhere — the product bans dead
+                // controls, and an option that cannot be chosen is the plainest kind.
+                'options' => $this->linked($key, $field['options'] ?? []),
             ];
         }
 
         return $groups;
+    }
+
+    /**
+     * A field's choices, each with the URL that applies it.
+     *
+     * @param  array<int, array<string, mixed>>  $options
+     * @return array<int, array<string, mixed>>
+     */
+    private function linked(string $key, array $options): array
+    {
+        return array_map(function (array $option) use ($key) {
+            $option['href'] ??= $this->urlWith($key, $option['value'] ?? '');
+
+            return $option;
+        }, $options);
     }
 
     /** The URL with one filter set, resetting the page — a new filter always starts at page 1. */

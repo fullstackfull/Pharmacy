@@ -81,6 +81,25 @@ class SellerStaffAccessMiddleware
             'auth', 'staff-auth', 'dashboard', 'profile', 'notification', 'messages', 'v2', 'system', 'shop', 'seller-center'
                 => self::ALLOW,
 
+            // The Seller Center's own screens. They sit on the same `/vendor` prefix as the classic
+            // panel, so this map decides whether a staff member reaches them at all — and being
+            // deny-by-default, every segment absent from here was a staff member locked out of the
+            // whole redesign.
+            //
+            // The cockpit is allowed to any active staff for the same reason the dashboard is: it
+            // shows them what is already theirs to see. Each screen behind it still declares its own
+            // `seller_can:` gate on the route, which is the real enforcement — this is the coarse
+            // pre-filter, not the decision.
+            'overview', 'control-tower', 'issues', 'opportunities', 'search', 'help', 'preferences', 'foundation'
+                => self::ALLOW,
+
+            // Stock is catalogue work, and the routes gate it as products.view / products.manage.
+            'inventory' => $isWrite ? 'products.manage' : 'products.view',
+
+            // Reading a rule and the record of what it did is catalogue history; writing one changes
+            // the catalogue. The same split the routes declare.
+            'automation' => $isWrite ? 'products.manage' : 'products.view',
+
             // Catalogue.
             'products', 'product' => $isWrite ? 'products.manage' : 'products.view',
 

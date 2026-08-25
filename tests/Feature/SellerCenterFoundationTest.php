@@ -10,6 +10,7 @@ use App\Services\SellerCenter\Moment;
 use App\Services\SellerCenter\Navigation;
 use App\Services\SellerCenter\Shell;
 use App\Services\SellerCenter\Status;
+use App\Services\SellerCenter\TableFilters;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -325,6 +326,53 @@ class SellerCenterFoundationTest extends TestCase
 
         $this->assertNotContains('coupons', $keys);
         $this->assertContains('campaigns', $keys);
+    }
+
+    // ─────────────────────────────────────────────── the filter panel
+
+    public function test_every_choice_in_the_filter_panel_can_actually_be_chosen(): void
+    {
+        // The panel rendered its options and gave each one `href="#"`, because the service handed
+        // over the raw choices and the component expected a URL. Every enum filter on every list
+        // screen was a menu of links to nowhere.
+        $filters = new TableFilters(
+            request()->merge([]),
+            [
+                'status' => ['label' => 'status', 'type' => 'enum', 'group' => 'orders', 'options' => [
+                    ['value' => 'pending', 'label' => 'Pending'],
+                    ['value' => 'delivered', 'label' => 'Delivered'],
+                ]],
+            ],
+            '/vendor/orders',
+        );
+
+        $options = collect($filters->available())->flatten(1)->firstWhere('key', 'status')['options'];
+
+        $this->assertCount(2, $options);
+
+        foreach ($options as $option) {
+            $this->assertArrayHasKey('href', $option);
+            $this->assertNotSame('#', $option['href']);
+            $this->assertStringContainsString('status=' . $option['value'], urldecode($option['href']));
+        }
+    }
+
+    public function test_a_filter_choice_that_already_names_its_own_destination_keeps_it(): void
+    {
+        $filters = new TableFilters(
+            request()->merge([]),
+            [
+                'view' => ['label' => 'view', 'type' => 'enum', 'group' => 'orders', 'options' => [
+                    ['value' => 'sla_risk', 'label' => 'At risk', 'href' => '/vendor/orders?view=sla_risk&sort=sla'],
+                ]],
+            ],
+            '/vendor/orders',
+        );
+
+        $option = collect($filters->available())->flatten(1)->firstWhere('key', 'view')['options'][0];
+
+        // A saved view can point somewhere more specific than "set this one parameter".
+        $this->assertSame('/vendor/orders?view=sla_risk&sort=sla', $option['href']);
     }
 
     // ────────────────────────────────────────────── moments in time
