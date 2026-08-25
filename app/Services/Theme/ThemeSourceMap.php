@@ -80,6 +80,11 @@ class ThemeSourceMap
                 'note' => 'The Blog module exposes no public API. Hide this section in the app.'],
             'trending_searches' => ['kind' => 'none',
                 'note' => 'Search-term aggregation has no public endpoint. Hide this section in the app.'],
+            // The storefront's own newsletter form submits nowhere — there is no
+            // subscribe endpoint on either surface. An app screen that collected
+            // an address and dropped it would be worse than no section at all.
+            'newsletter' => ['kind' => 'none',
+                'note' => 'No subscribe endpoint exists. Hide this section in the app.'],
 
             // Everything else renders entirely from its own payload.
             default => ['kind' => 'inline'],
