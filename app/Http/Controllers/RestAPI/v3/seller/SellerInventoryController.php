@@ -13,6 +13,7 @@ use App\Services\Marketplace\BatchService;
 use App\Services\Marketplace\InventoryService;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\Marketplace\WarehouseService;
+use App\Services\SellerCenter\ModuleFlags;
 use App\Utils\Helpers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,8 +87,9 @@ class SellerInventoryController extends Controller
             ],
             // Architecturally present, operationally optional. A seller who has never been given a
             // warehouse should not be shown a warehouse screen.
-            'warehouses_enabled' => $this->warehouseCount($sellerId) > 0,
-            'batches_enabled' => $this->batchCount($sellerId) > 0,
+            // The same answer the panel's navigation reads, from the same service.
+            'warehouses_enabled' => ModuleFlags::hasWarehouses($sellerId),
+            'batches_enabled' => ModuleFlags::hasBatches($sellerId),
         ], 200);
     }
 
@@ -299,18 +301,6 @@ class SellerInventoryController extends Controller
     private function limit(Request $request): int
     {
         return max(1, min((int) $request->query('limit', 25), 100));
-    }
-
-    private function warehouseCount(int|string $sellerId): int
-    {
-        return Schema::hasTable('warehouses') ? Warehouse::where('seller_id', $sellerId)->count() : 0;
-    }
-
-    private function batchCount(int|string $sellerId): int
-    {
-        return Schema::hasTable('product_batches')
-            ? ProductBatch::where('seller_id', $sellerId)->where('quantity', '>', 0)->count()
-            : 0;
     }
 
     /** @return array<int, array<string, mixed>> */
