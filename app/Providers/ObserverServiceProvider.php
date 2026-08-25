@@ -2,10 +2,22 @@
 
 namespace App\Providers;
 
+use App\Models\Admin;
+use App\Models\AdminRole;
+use App\Models\Banner;
+use App\Models\Coupon;
+use App\Models\DealOfTheDay;
+use App\Models\FeatureDeal;
+use App\Models\FlashDeal;
+use App\Models\MostDemanded;
+use App\Models\OfflinePaymentMethod;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\RefundRequest;
+use App\Models\StockClearanceSetup;
 use App\Models\VendorPayoutRequest;
+use App\Models\WithdrawalMethod;
+use App\Observers\AuditTrailObserver;
 use App\Observers\AutomationClaimObserver;
 use App\Observers\ProductPriceObserver;
 use App\Observers\ProductSearchIndexObserver;
@@ -49,5 +61,19 @@ class ObserverServiceProvider extends ServiceProvider
         Order::observe(SellerWebhookEventObserver::class);
         RefundRequest::observe(SellerWebhookEventObserver::class);
         VendorPayoutRequest::observe(SellerWebhookEventObserver::class);
+
+        // Who changed what a customer pays, which gateway takes the money, and who may sign in to
+        // the panel. Same argument as the two above: a coupon is edited from the admin panel and
+        // the vendor panel, an employee's role from three screens, and a list of call sites goes
+        // stale the moment somebody adds a fourth. The settings tables are not here — they are
+        // written with mass updates that raise no event, and are caught by AuditedBuilder instead.
+        foreach ([
+            Coupon::class, FlashDeal::class, DealOfTheDay::class, FeatureDeal::class,
+            Banner::class, MostDemanded::class, StockClearanceSetup::class,
+            OfflinePaymentMethod::class, WithdrawalMethod::class,
+            AdminRole::class, Admin::class,
+        ] as $audited) {
+            $audited::observe(AuditTrailObserver::class);
+        }
     }
 }
