@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogger;
 use App\Http\Middleware\SellerApiAuthMiddleware;
 use App\Jobs\DeliverSellerWebhook;
 use App\Models\SellerApiKey;
@@ -207,10 +208,6 @@ class SellerIntegrationController extends Controller
             return $refusal;
         }
 
-        if ($refusal = $this->refuseDestination((string) $request['url'])) {
-            return $refusal;
-        }
-
         $secret = Str::random(48);
 
         $webhook = SellerWebhook::create([
@@ -221,6 +218,12 @@ class SellerIntegrationController extends Controller
             'secret' => $secret,
             'status' => SellerWebhook::STATUS_ACTIVE,
         ]);
+
+        // Where a shop's order and payout events are sent. Only the two paths that switch an
+        // endpoint OFF were audited — the dispatcher's auto-disable and the admin kill switch — so
+        // creating one, or repointing a live one at a new destination, wrote nothing at all. That
+        // is the shape an exfiltration of a shop's event stream would take.
+        $this->recordWebhookChange('created', $webhook, after: ['url' => $webhook->url, 'events' => $webhook->events]);
 
         return response()->json([
             'message' => translate('webhook_created'),
@@ -259,6 +262,8 @@ class SellerIntegrationController extends Controller
             return $this->refuse($validator->errors()->toArray());
         }
 
+        $before = ['url' => $webhook->url, 'events' => $webhook->events, 'status' => $webhook->status];
+
         $webhook->forceFill([
             'name' => $request['name'],
             'url' => $request['url'],
@@ -268,6 +273,8 @@ class SellerIntegrationController extends Controller
             'disabled_at' => null,
             'disabled_reason' => null,
         ])->save();
+
+        $this->recordWebhookChange('repointed', $webhook, $before, ['url' => $webhook->url, 'events' => $webhook->events]);
 
         return response()->json([
             'message' => translate('webhook_updated'),
@@ -305,12 +312,16 @@ class SellerIntegrationController extends Controller
             return $this->refuse(['status' => translate('webhook_status_not_settable')]);
         }
 
+        $before = ['status' => $webhook->status];
+
         $webhook->forceFill([
             'status' => $status,
             'consecutive_failures' => $status === SellerWebhook::STATUS_ACTIVE ? 0 : $webhook->consecutive_failures,
             'disabled_at' => null,
             'disabled_reason' => null,
         ])->save();
+
+        $this->recordWebhookChange('status_changed', $webhook, $before, ['status' => $status]);
 
         return response()->json([
             'message' => translate('webhook_updated'),
@@ -340,6 +351,8 @@ class SellerIntegrationController extends Controller
         if (!$webhook) {
             return $this->notFound('webhook_not_found');
         }
+
+        $this->recordWebhookChange('deleted', $webhook, ['url' => $webhook->url, 'events' => $webhook->events]);
 
         $webhook->delete();
 
@@ -542,4 +555,24 @@ class SellerIntegrationController extends Controller
 
         return $principal instanceof SellerPrincipal ? $principal : SellerPrincipal::owner($request->seller);
     }
+    /**
+     * One line per change to where a shop's events are sent.
+     *
+     * The URL is recorded in full on both sides. A repoint is the one webhook change that matters
+     * to a fraud review, and "the endpoint changed" without the two addresses is not a finding.
+     *
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
+    private function recordWebhookChange(string $event, SellerWebhook $webhook, ?array $before = null, ?array $after = null): void
+    {
+        app(AuditLogger::class)->record(
+            action: 'integration.webhook_' . $event,
+            subject: $webhook,
+            before: $before,
+            after: $after,
+            context: ['seller_id' => $webhook->seller_id, 'name' => $webhook->name],
+        );
+    }
+
 }

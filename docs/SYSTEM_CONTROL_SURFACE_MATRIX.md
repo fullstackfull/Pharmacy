@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 478 |
-| Internal by design | 52 |
+| Fully connected to a surface | 487 |
+| Internal by design | 53 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **58** |
+| **Orphaned — no owner, no surface** | **48** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -249,18 +249,18 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | **None** | No | Developer | ORPHAN |
-| Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Partial | No | Developer | ORPHAN |
-| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | **None** | Full | Partial | Admin | ORPHAN |
-| Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Partial | No | Developer | ORPHAN |
+| Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
+| Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
+| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
+| Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Full | No | Developer | INTERNAL BY DESIGN |
 | Seller mobile API v2 — the previous seller app's entire surface, still routed | **None** | **None** | **None** | **None** | Health | Partial | No | Developer | DEPRECATED |
-| API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Partial | No | Admin | ORPHAN |
-| Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | Oversight | **None** | Manage | **None** | **None** | **None** | Partial | Developer | ORPHAN |
-| Portal sections that render a placeholder — models and enums, integrations, and portal settings | **None** | **None** | N/A | **None** | Health | **None** | No | Developer | ORPHAN |
-| Creating, editing, repointing or deleting a seller's outbound webhook | Oversight | **None** | Manage | **None** | Failures | Full | Partial | Seller | ORPHAN |
+| API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Full | No | Admin | CONNECTED TO DEVELOPER |
+| Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | Oversight | **None** | Manage | **None** | **None** | Full | Partial | Developer | CONNECTED TO DEVELOPER |
+| Portal sections that render a placeholder — models and enums, integrations, and portal settings | **None** | **None** | N/A | **None** | Health | Full | No | Developer | CONNECTED TO DEVELOPER |
+| Creating, editing, repointing or deleting a seller's outbound webhook | Oversight | Manage | Manage | **None** | Failures | Full | Yes | Seller | CONNECTED TO SELLER |
 | Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | Manage | View | View | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
-| Which AI model writes seller content, and how creative it is allowed to be | Configure | Submit | Submit | **None** | **None** | **None** | No | Admin | ORPHAN |
-| AI provider credentials — the API key and organisation id the AI module runs on | Configure | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Which AI model writes seller content, and how creative it is allowed to be | Manage | Submit | Submit | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| AI provider credentials — the API key and organisation id the AI module runs on | Manage | **None** | **None** | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | ShareThis social sharing on the product detail page | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | DEPRECATED |
 | Legacy per-gateway SMS credential editor (Nexmo and friends) | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
 | Seller webhook oversight: disable an endpoint being hammered | Oversight | **None** | Manage | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |

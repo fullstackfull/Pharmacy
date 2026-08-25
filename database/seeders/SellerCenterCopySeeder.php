@@ -1029,6 +1029,324 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── integrations · the portal's reference sections and webhooks ────
+        'developer_portal' => [
+            'Developer portal',
+            'بوابة المطوّرين',
+        ],
+        'what_the_api_console_may_do_and_whether_response_shapes_are_learned_from_traffic' => [
+            'What the API console may do, and whether response shapes are learned from traffic',
+            'ما يُسمح لوحدة تجربة الواجهة بفعله، وهل تُستنتج أشكال الاستجابات من حركة المرور الفعلية',
+        ],
+        'the_api_console_is_available' => [
+            'The API console is available',
+            'وحدة تجربة الواجهة متاحة',
+        ],
+        'the_console_may_send_writes' => [
+            'The console may send writes',
+            'يمكن للوحدة إرسال طلبات كتابة',
+        ],
+        'off_by_default_everywhere_a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders' => [
+            'Off by default everywhere — a console on an admin panel sends real requests at the shop that takes the orders',
+            'معطّل افتراضياً في كل مكان — الوحدة في لوحة الإدارة ترسل طلبات حقيقية إلى المتجر الذي يستقبل الطلبات',
+        ],
+        'console_requests_per_minute_per_administrator' => [
+            'Console requests per minute, per administrator',
+            'عدد طلبات الوحدة في الدقيقة لكل مسؤول',
+        ],
+        'learn_response_shapes_from_real_traffic' => [
+            'Learn response shapes from real traffic',
+            'استنتاج أشكال الاستجابات من حركة المرور الفعلية',
+        ],
+        'only_keys_and_types_are_stored_never_a_value_from_any_response' => [
+            'Only keys and types are stored — never a value from any response',
+            'تُخزَّن المفاتيح والأنواع فقط — ولا تُخزَّن أي قيمة من أي استجابة',
+        ],
+        'a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders' => [
+            'A console on an admin panel sends real requests at the shop that takes the orders',
+            'الوحدة في لوحة الإدارة ترسل طلبات حقيقية إلى المتجر الذي يستقبل الطلبات',
+        ],
+        'some_endpoints_are_never_sent_at_any_setting_money_identity_removal_and_that_list_is_deliberately_not_configurable' => [
+            'Some endpoints are never sent at any setting — money, identity, removal — and that list is deliberately not configurable',
+            'بعض النقاط لا تُرسَل مهما كانت الإعدادات — المال والهوية والحذف — وهذه القائمة غير قابلة للضبط عمداً',
+        ],
+        'api_snapshots' => [
+            'API snapshots',
+            'لقطات الواجهة البرمجية',
+        ],
+        'snapshots_are_being_taken_so_the_change_log_and_the_breaking_change_detection_have_something_to_compare_against' => [
+            'Snapshots are being taken, so the change log and the breaking-change detection have something to compare against',
+            'تُلتقط اللقطات، فيصبح لسجل التغييرات وكشف التغييرات الكاسرة ما يُقارَن به',
+        ],
+        'no_snapshot_has_been_stored_yet_so_the_change_log_has_nothing_to_compare_against' => [
+            'No snapshot has been stored yet, so the change log has nothing to compare against',
+            'لم تُخزَّن أي لقطة بعد، فليس لدى سجل التغييرات ما يُقارن به',
+        ],
+        'take_a_snapshot_now' => [
+            'Take a snapshot now',
+            'التقط لقطة الآن',
+        ],
+        'the_events_you_can_subscribe_to' => [
+            'The events you can subscribe to',
+            'الأحداث التي يمكنك الاشتراك بها',
+        ],
+        'sent_when' => [
+            'Sent when',
+            'تُرسَل عندما',
+        ],
+        'a_customer_placed_an_order_containing_at_least_one_of_your_products' => [
+            'A customer placed an order containing at least one of your products',
+            'قدّم عميل طلباً يحوي منتجاً واحداً على الأقل من منتجاتك',
+        ],
+        'an_order_of_yours_moved_to_a_new_status' => [
+            'An order of yours moved to a new status',
+            'انتقل أحد طلباتك إلى حالة جديدة',
+        ],
+        'a_customer_asked_for_a_refund_on_one_of_your_lines' => [
+            'A customer asked for a refund on one of your lines',
+            'طلب عميل استرداداً على أحد بنودك',
+        ],
+        'one_of_your_products_fell_under_the_low_stock_threshold' => [
+            'One of your products fell under the low-stock threshold',
+            'انخفض أحد منتجاتك دون عتبة المخزون المنخفض',
+        ],
+        'one_of_your_automation_rules_hid_a_listing' => [
+            'One of your automation rules hid a listing',
+            'أخفت إحدى قواعد الأتمتة لديك إدراجاً',
+        ],
+        'a_payout_of_yours_moved_to_a_new_status' => [
+            'A payout of yours moved to a new status',
+            'انتقلت إحدى دفعاتك إلى حالة جديدة',
+        ],
+        'verifying_a_delivery' => [
+            'Verifying a delivery',
+            'التحقق من التسليم',
+        ],
+        'every_delivery_is_signed_without_a_signature_a_webhook_endpoint_is_a_url_that_does_something_when_anybody_posts_to_it' => [
+            'Every delivery is signed. Without a signature, a webhook endpoint is a URL that does something when anybody posts to it',
+            'كل تسليم موقّع. بلا توقيع، تصبح نقطة الويب هوك رابطاً يفعل شيئاً عندما يرسل إليه أي أحد',
+        ],
+        'header' => [
+            'Header',
+            'الترويسة',
+        ],
+        'algorithm' => [
+            'Algorithm',
+            'الخوارزمية',
+        ],
+        'signed_over' => [
+            'Signed over',
+            'التوقيع على',
+        ],
+        'the_exact_request_body_as_bytes_not_a_reserialisation_of_it' => [
+            'The exact request body as bytes, not a re-serialisation of it',
+            'جسم الطلب بالضبط كبايتات، لا إعادة تسلسل له',
+        ],
+        'the_secret' => [
+            'The secret',
+            'السر',
+        ],
+        'once_when_the_endpoint_is_created_and_never_again' => [
+            'Shown once when the endpoint is created, and never again',
+            'يُعرض مرة عند إنشاء النقطة، ولا يُعرض بعدها',
+        ],
+        'other_headers' => [
+            'Other headers',
+            'ترويسات أخرى',
+        ],
+        'what_happens_when_your_endpoint_is_down' => [
+            'What happens when your endpoint is down',
+            'ما يحدث عندما تكون نقطتك متوقفة',
+        ],
+        'attempts' => [
+            'Attempts',
+            'المحاولات',
+        ],
+        'first_retry' => [
+            'First retry',
+            'أول إعادة محاولة',
+        ],
+        'doubling_each_attempt' => [
+            'Doubling each attempt',
+            'تتضاعف مع كل محاولة',
+        ],
+        'total_window' => [
+            'Total window',
+            'النافذة الكلية',
+        ],
+        'plan_your_outage_window_against_this' => [
+            'Plan your outage window against this',
+            'خطّط لفترة انقطاعك بناءً على هذا',
+        ],
+        'timeout' => [
+            'Timeout',
+            'المهلة',
+        ],
+        'switched_off_after' => [
+            'Switched off after',
+            'يُطفأ بعد',
+        ],
+        'consecutive_failures' => [
+            'Consecutive failures',
+            'إخفاقات متتالية',
+        ],
+        'a_switched_off_endpoint_is_cleared_by' => [
+            'A switched-off endpoint is cleared by',
+            'تُستعاد النقطة المطفأة عبر',
+        ],
+        're_saving_the_endpoint_which_resets_its_failure_run' => [
+            'Re-saving the endpoint, which resets its failure run',
+            'إعادة حفظ النقطة، ما يصفّر سلسلة إخفاقاتها',
+        ],
+        'the_retry_sweep_is' => [
+            'The retry sweep is',
+            'جولة إعادة المحاولة هي',
+        ],
+        'where_we_will_and_will_not_deliver' => [
+            'Where we will and will not deliver',
+            'إلى أين نُسلّم وإلى أين لا نُسلّم',
+        ],
+        'https_only' => [
+            'HTTPS only',
+            'HTTPS فقط',
+        ],
+        'refused' => [
+            'Refused',
+            'مرفوض',
+        ],
+        'private_addresses_loopback_and_cloud_metadata_endpoints' => [
+            'Private addresses, loopback, and cloud metadata endpoints',
+            'العناوين الخاصة والاسترجاع ونقاط بيانات السحابة الوصفية',
+        ],
+        'redirects_are_not_followed' => [
+            'Redirects are not followed',
+            'لا تُتبع عمليات إعادة التوجيه',
+        ],
+        'delivery_on_this_deployment' => [
+            'Delivery on this deployment',
+            'التسليم في هذا التثبيت',
+        ],
+        'endpoints' => [
+            'Endpoints',
+            'النقاط',
+        ],
+        'active' => [
+            'Active',
+            'نشط',
+        ],
+        'switched_off_by_us' => [
+            'Switched off by us',
+            'أطفأناها',
+        ],
+        'waiting_to_retry' => [
+            'Waiting to retry',
+            'بانتظار إعادة المحاولة',
+        ],
+        'given_up_on' => [
+            'Given up on',
+            'تم التخلي عنها',
+        ],
+        'delivered_today' => [
+            'Delivered today',
+            'سُلّمت اليوم',
+        ],
+        'this_enumeration_could_not_be_read' => [
+            'This enumeration could not be read',
+            'تعذّرت قراءة هذا التعداد',
+        ],
+        'the_constant_it_is_declared_in_has_been_renamed_or_removed' => [
+            'The constant it is declared in has been renamed or removed',
+            'الثابت المُعلَن فيه أُعيدت تسميته أو حُذف',
+        ],
+        'where_a_sellers_withdrawal_has_got_to' => [
+            'Where a seller’s withdrawal has got to',
+            'إلى أين وصل طلب سحب البائع',
+        ],
+        'the_events_an_endpoint_may_subscribe_to' => [
+            'The events an endpoint may subscribe to',
+            'الأحداث التي يمكن للنقطة الاشتراك بها',
+        ],
+        'the_states_a_seller_may_put_their_own_endpoint_into' => [
+            'The states a seller may put their own endpoint into',
+            'الحالات التي يمكن للبائع وضع نقطته فيها',
+        ],
+        'endpoints_other_systems_post_into' => [
+            'Endpoints other systems post into',
+            'النقاط التي ترسل إليها أنظمة أخرى',
+        ],
+        'nothing_posts_into_this_shop' => [
+            'Nothing posts into this shop',
+            'لا شيء يرسل إلى هذا المتجر',
+        ],
+        'endpoint' => [
+            'Endpoint',
+            'النقطة',
+        ],
+        'method' => [
+            'Method',
+            'الطريقة',
+        ],
+        'authentication' => [
+            'Authentication',
+            'المصادقة',
+        ],
+        'guarded' => [
+            'Guarded',
+            'محمية',
+        ],
+        'unauthenticated' => [
+            'Unauthenticated',
+            'غير مُصادَق عليها',
+        ],
+        'payment_gateways_this_shop_calls_out_to' => [
+            'Payment gateways this shop calls out to',
+            'بوابات الدفع التي يتصل بها هذا المتجر',
+        ],
+        'no_payment_gateway_is_configured' => [
+            'No payment gateway is configured',
+            'لا توجد بوابة دفع مضبوطة',
+        ],
+        'gateway' => [
+            'Gateway',
+            'البوابة',
+        ],
+        'switched' => [
+            'Switched',
+            'الحالة',
+        ],
+        'ready' => [
+            'Ready',
+            'جاهزة',
+        ],
+        'test_mode_no_money_moves' => [
+            'Test mode — no money moves',
+            'وضع الاختبار — لا ينتقل أي مال',
+        ],
+        'outbound_webhooks_to_sellers' => [
+            'Outbound webhooks to sellers',
+            'الويب هوك الصادر إلى البائعين',
+        ],
+        'sellers_affected' => [
+            'sellers affected',
+            'بائعين متأثرين',
+        ],
+        'seller_webhook_delivery_could_not_be_read' => [
+            'Seller webhook delivery could not be read',
+            'تعذّرت قراءة تسليم ويب هوك البائعين',
+        ],
+        'temperature' => [
+            'Temperature',
+            'درجة الإبداع',
+        ],
+        'left_empty_the_shipped_default_is_used' => [
+            'Left empty, the shipped default is used',
+            'إن تُرك فارغاً، يُستخدَم الافتراضي المرفق',
+        ],
+        'lower_is_more_literal_higher_is_more_inventive' => [
+            'Lower is more literal, higher is more inventive',
+            'الأقل أكثر حرفية، والأعلى أكثر ابتكاراً',
+        ],
+
         // ── finance · payout terms, failed transfers and gateway readiness ─
         'the_platforms_anti_account_takeover_hold_the_length_is_what_a_risk_team_retunes_after_an_incident' => [
             'The platform\'s anti-account-takeover hold — the length is what a risk team retunes after an incident',

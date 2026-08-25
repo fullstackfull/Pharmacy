@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Services\DeveloperPortal\PortalReference;
+use App\Services\DeveloperPortal\WebhookContract;
+use App\Services\Platform\Policy;
 use App\Services\DeveloperPortal\RequestDebugger;
 use App\Services\DeveloperPortal\ApiConsole;
 use App\Services\DeveloperPortal\ApiManifest;
@@ -232,7 +235,12 @@ class DeveloperPortalController extends BaseController
             ], 422);
         }
 
-        $perMinute = max(1, (int) config('developer_portal.console.rate_limit_per_minute', 20));
+        // Stored, then environment, then the shipped default — the same precedence the two console
+        // switches use, so all four portal settings behave alike.
+        $policy = app(Policy::class);
+        $perMinute = $policy->isSet('developer_console_rate_limit')
+            ? $policy->int('developer_console_rate_limit')
+            : max(1, (int) config('developer_portal.console.rate_limit_per_minute', 20));
         $key = 'developer-console:' . (auth('admin')->id() ?: 'unknown');
 
         if (RateLimiter::tooManyAttempts($key, $perMinute)) {
@@ -297,6 +305,17 @@ class DeveloperPortalController extends BaseController
             // The section the navigation has always declared. It answers "what happened to THIS
             // request", which is what the Errors advice tells developers to keep the id for.
             'debugger' => ['lookup' => app(RequestDebugger::class)->lookup($this->stringOr($request->query('request_id')))],
+            // The three sections the navigation has always declared and that opened onto an empty
+            // card. A placeholder is worse than an unlisted section: a developer who clicks
+            // "Models and enums" and finds nothing concludes the API has no documented shapes.
+            'webhooks' => ['contract' => app(WebhookContract::class)->describe()],
+            'models' => app(PortalReference::class)->models(),
+            'integrations' => app(PortalReference::class)->integrations(),
+            'settings' => [
+                'portal' => app(Policy::class)->all('developer'),
+                'fields' => \App\Services\Platform\PolicyRegistry::GROUPS['developer']['policies'],
+                'snapshots' => $this->portal->capabilities()['snapshots'] ?? false,
+            ],
             default => [],
         };
     }

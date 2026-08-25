@@ -18,7 +18,7 @@ class PaypalPaymentController extends Controller
 {
     use Processor;
 
-    private mixed $config_values;
+    private mixed $config_values = null;
     private string $base_url;
 
     private PaymentRequest $payment;
@@ -32,7 +32,13 @@ class PaypalPaymentController extends Controller
             $this->config_values = json_decode($config->test_values);
         }
 
-        if ($config) {
+        // A configuration row whose mode is neither "live" nor "test" leaves the credential blob
+        // unread, and reading a property off it then throws — in the CONSTRUCTOR, which Laravel runs
+        // whenever it gathers this route's middleware. So one malformed settings row took down
+        // `route:list`, every page that enumerates routes, and this gateway's own endpoints. Guarded
+        // rather than assumed: an unusable configuration is a gateway that cannot take a payment,
+        // which is what the readiness check reports, not a fatal error.
+        if ($config && $this->config_values) {
             $this->base_url = ($config->mode == 'test') ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
         }
         $this->payment = $payment;

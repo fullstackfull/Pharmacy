@@ -45,6 +45,21 @@ class Policy
         return $this->resolved[$key] = $this->cast($this->stored($key), $definition);
     }
 
+    /**
+     * Whether an operator has actually set this, as opposed to it falling back to the default.
+     *
+     * The distinction matters wherever a setting has a second source. The developer-portal switches
+     * are configurable by environment as well as here, and precedence has to be stored-then-env-
+     * then-default — without this, an install that turns the console off in .env would have it
+     * turned back on by a default nobody chose.
+     */
+    public function isSet(string $key): bool
+    {
+        $stored = $this->stored($key);
+
+        return $stored !== null && $stored !== '';
+    }
+
     public function int(string $key): int
     {
         return (int) $this->get($key);

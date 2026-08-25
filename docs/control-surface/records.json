@@ -332,17 +332,17 @@
  {
   "capability": "Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)",
   "area": "integrations",
-  "backend": "Twelve routes under /payment/*/callback registered at routes/web/routes.php:499-584 (RazorPay :499, SenangPay :522, Paytm :528, Flutterwave :535, Paystack :541, bKash :549, LiqPay :555, MercadoPago :562, PayMob :568, PayTabs :574, Paymera :584) — all outside the api/ prefix so ApiManifest classifies them surface=panel (app/Services/DeveloperPortal/Support/EndpointClassifier.php:94)",
+  "backend": "app/Services/DeveloperPortal/Support/EndpointClassifier.php classifies a route carrying callback/webhook/ipn/update-status as surface=api; listed with their guard state on the portal's Integrations section",
   "admin": "Configure",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "Failures",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them. RESOLVED. Matched on the path rather than declared per route, because the list is the gateway vendors' to grow — a thirteenth gateway added next year would otherwise be silently undocumented again. The page also names which inbound endpoints nothing guards."
  },
  {
   "capability": "Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts)",
@@ -737,17 +737,17 @@
  {
   "capability": "Inbound courier status webhook — POST /api/delivery-syria/orders/update-status",
   "area": "integrations",
-  "backend": "POST /api/delivery-syria/orders/update-status — routes/rest_api/delivery_syria.php:16; app/Http/Controllers/Api/DeliverySyriaWebhookController.php; authenticated by app/Http/Middleware/DeliverySyriaWebhookAuthMiddleware (X-Platform + bearer webhook token); settings at routes/admin/routes.php:1272",
+  "backend": "listed on the portal's Integrations section with its guard state; app/Services/DeveloperPortal/PortalReference.php",
   "admin": "Configure",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "Failures",
-  "dev_portal": "Partial",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary. RESOLVED alongside the payment callbacks — it is classified as part of the API surface and appears with the other inbound endpoints."
  },
  {
   "capability": "Create, rename or delete a brand in the catalogue",
@@ -1247,17 +1247,17 @@
  {
   "capability": "Seller webhook delivery failure visibility",
   "area": "integrations",
-  "backend": "app/Services/Marketplace/SellerWebhookDispatcher.php:121 (attempt), :194/:231 (failed), app/Jobs/DeliverSellerWebhook.php:35, retried by app/Console/Commands/RetrySellerWebhooks.php scheduled at bootstrap/app.php:182; counted only by app/Services/Marketplace/SellerOperationsOverview.php:325-338",
+  "backend": "app/Services/Monitoring/Panels/IntegrationsPanel.php::sellerWebhooks(), drawn on Monitoring → Integrations",
   "admin": "Oversight",
   "seller_web": "None",
   "flutter": "View",
   "analytics": "None",
-  "monitor": "None",
+  "monitor": "Full",
   "dev_portal": "Full",
   "audit": "Partial",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see. RESOLVED. Endpoints, active, auto-disabled (with the number of sellers affected), waiting-to-retry and given-up-on. Read live from the delivery ledger and the page says so — reporting them as a windowed rate would be a number that looks measured and is not."
  },
  {
   "capability": "Blast radius — how many sellers a failure is affecting",
@@ -1592,17 +1592,17 @@
  {
   "capability": "Documented intent for the API — 438 of 537 endpoints carry no declared contract",
   "area": "integrations",
-  "backend": "routes/rest_api/v1/api.php:52 onward; app/Http/Controllers/RestAPI/v1/ProductController.php:59 (1 of 31 documented), CustomerController.php:42 (0 of 23), OrderController.php:48 (0 of 15), CartController.php:43 (0 of 9); routes/rest_api/v1/api.php:103 (throttle:20,1 group); app/Http/Controllers/RestAPI/v1/auth/CustomerAPIAuthController.php:44 (0 of 12), SocialAuthController.php:32 (0 of 5), PassportAuthController.php:203, PhoneVerificationController.php:55, EmailVerificationController.php:79, ForgotPasswordController.php:140; routes/rest_api/v2/api.php:132 / :144 (delivery_man_auth + actch:deliveryman_app); app/Http/Controllers/RestAPI/v2/delivery_man/DeliveryManController.php:45 (0 of 30), ChatController.php:21, WithdrawController.php:18, auth/LoginController.php:21; routes/rest_api/v3/seller.php:72 onward; app/Http/Controllers/RestAPI/v3/seller/ProductController.php:81 (0 of 30), Seller",
+  "backend": "app/Services/DeveloperPortal/ApiManifest.php describes all 537 endpoints mechanically; 99 carry a declared #[ApiDoc] contract, 86 of them the v3 Seller Center",
   "admin": "None",
   "seller_web": "None",
   "flutter": "Manage",
   "analytics": "None",
   "monitor": "Health",
-  "dev_portal": "Partial",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed."
+  "verdict": "INTERNAL BY DESIGN",
+  "note": "Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed. RULED INTERNAL BY DESIGN for the undocumented remainder, with the reason stated rather than the gap quietly closed: v1 and v2 are the CodeCanyon product's own mobile-app APIs, consumed by first-party apps shipped from this repository and by nobody else. They are described mechanically — path, method, auth, parameters, observed response shape — and the missing piece is declared INTENT, which for an endpoint with exactly one first-party caller adds nothing a reader cannot see. What was genuinely missing and is now fixed: the inbound callbacks are part of the surface, seller_can scopes resolve, and the v2 seller API is no longer reported as public. New external surface (v3 seller) is 86/86 documented and stays that way."
  },
  {
   "capability": "Seller mobile API v2 — the previous seller app's entire surface, still routed",
@@ -1622,47 +1622,47 @@
  {
   "capability": "API deprecation lifecycle and the change/breaking-change log",
   "area": "integrations",
-  "backend": "Declared only in code by ApiDoc(stability/deprecatedSince/sunsetAt/replacedBy) — app/Services/DeveloperPortal/ApiDoc.php:53,81-83; surfaced by DeveloperPortalService::deprecations() (:364), OpenApiGenerator.php:201, PostmanGenerator.php:267 and ApisPanel.php:743; app/Console/Commands/ApiSnapshotCommand.php:16 (signature `api:snapshot`)",
+  "backend": "app/Console/ScheduleDefinition.php schedules `api:snapshot` weekly; the portal's Settings section offers a snapshot on demand",
   "admin": "View",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "Failures",
-  "dev_portal": "Partial",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Developer Portal and is fully built and never run. Four surfaces are wired to render deprecations (portal screen, OpenAPI flag, Postman annotation, Monitoring panel) and zero endpoints declare one; the snapshot service, diff engine and severity classification exist, api_snapshots holds no rows, and verified here — api:snapshot is absent from a scheduler that runs 20 other commands. Three live API versions and no retirement machinery in use."
+  "verdict": "CONNECTED TO DEVELOPER",
+  "note": "Ruled: belongs in the Developer Portal and is fully built and never run. Four surfaces are wired to render deprecations (portal screen, OpenAPI flag, Postman annotation, Monitoring panel) and zero endpoints declare one; the snapshot service, diff engine and severity classification exist, api_snapshots holds no rows, and verified here — api:snapshot is absent from a scheduler that runs 20 other commands. Three live API versions and no retirement machinery in use. RESOLVED. Four surfaces were wired to render deprecations and a change log — the portal screen, the OpenAPI flag, the Postman annotation and the Monitoring panel — and the snapshot service, diff engine and breaking-change classifier were built and never run, so all four had nothing to compare against on every install. A snapshot nobody takes is a change log that can never exist."
  },
  {
   "capability": "Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour",
   "area": "integrations",
-  "backend": "Declared at app/Services/DeveloperPortal/PortalNavigation.php:55 with requires:'webhooks'; the capability probe returns true (app/Services/Telemetry/DeveloperPortalService.php:588 hasInboundWebhooks()); no branch in DeveloperPortalController::dataFor() (:236); no view; Declared at app/Services/DeveloperPortal/ApiDoc.php:87 and :88; carried into the manifest at app/Services/DeveloperPortal/ApiManifest.php:262-263",
+  "backend": "app/Services/DeveloperPortal/WebhookContract.php on the portal's Webhooks section: the six events with their meaning, the HMAC signature, the retry policy with its computed total window, the auto-disable rule, the destination rules and this deployment's own delivery health",
   "admin": "Oversight",
   "seller_web": "None",
   "flutter": "Manage",
   "analytics": "None",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "Partial",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Developer Portal's webhooks section, which is the worst of the placeholders: the capability probe returns true so the entry renders enabled and opens onto an empty card, while a complete signed-delivery system with six events, SSRF-guarded dialling and a retry sweep sits beside it. ApiDoc carries emits and dependsOn into every manifest entry and no view renders either — and the only two endpoints that declare emits name events that do not exist in the real webhook vocabulary."
+  "verdict": "CONNECTED TO DEVELOPER",
+  "note": "Ruled: belongs in the Developer Portal's webhooks section, which is the worst of the placeholders: the capability probe returns true so the entry renders enabled and opens onto an empty card, while a complete signed-delivery system with six events, SSRF-guarded dialling and a retry sweep sits beside it. ApiDoc carries emits and dependsOn into every manifest entry and no view renders either — and the only two endpoints that declare emits name events that do not exist in the real webhook vocabulary. RESOLVED — this was the worst of the placeholders, because the capability probe returned true so the entry rendered enabled and opened onto an empty card. Every number is read from the running system (the dispatcher's event constant, the live retry policy, the model's failure limit), so the page cannot describe a delivery guarantee the platform does not make."
  },
  {
   "capability": "Portal sections that render a placeholder — models and enums, integrations, and portal settings",
   "area": "integrations",
-  "backend": "Declared at app/Services/DeveloperPortal/PortalNavigation.php:33; no branch in app/Http/Controllers/Admin/Telemetry/DeveloperPortalController.php:236 dataFor(); no view under resources/views/admin-views/telemetry/developer/; Declared at app/Services/DeveloperPortal/PortalNavigation.php:56; no branch in DeveloperPortalController::dataFor() (:236); no view. Monitoring already ships the equivalent at resources/views/admin-views/monitoring/sections/integrations.blade.php; Declared at app/Services/DeveloperPortal/PortalNavigation.php:58; no view. The real switches are env-only in config/developer_portal.php:22,46,47,49",
+  "backend": "Models and enums read the classes' own constants (app/Services/DeveloperPortal/PortalReference.php); Integrations lists every inbound endpoint with its guard state and every gateway with its readiness; Portal settings edits the four console/recording switches through the platform policy registry",
   "admin": "None",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "Health",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link."
+  "verdict": "CONNECTED TO DEVELOPER",
+  "note": "Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link. RESOLVED. Portal settings was the costliest: console enable, console writes, console rate limit and response-shape recording were environment-only, so turning writes off during an incident meant editing .env and clearing caches. Precedence is stored, then environment, then the shipped default, so an install configured by environment is unchanged."
  },
  {
   "capability": "Request debugger — look up an X-Request-Id and see what happened",
@@ -1682,17 +1682,17 @@
  {
   "capability": "Creating, editing, repointing or deleting a seller's outbound webhook",
   "area": "integrations",
-  "backend": "app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php:192 storeWebhook, :242 updateWebhook, :288 setWebhookStatus, :330 destroyWebhook; routes routes/rest_api/v3/seller.php:524-527; the file contains zero audit references",
+  "backend": "app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs",
   "admin": "Oversight",
-  "seller_web": "None",
+  "seller_web": "Manage",
   "flutter": "Manage",
   "analytics": "None",
   "monitor": "Failures",
   "dev_portal": "Full",
-  "audit": "Partial",
+  "audit": "Yes",
   "owner": "Seller",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing."
+  "verdict": "CONNECTED TO SELLER",
+  "note": "Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing. RESOLVED. Only the two paths that switched an endpoint OFF were audited, so repointing a live webhook at a new destination — the shape an exfiltration of a shop's event stream would take — wrote nothing at all. Also removed a duplicated destination guard in the create path."
  },
  {
   "capability": "Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout",
@@ -1712,32 +1712,32 @@
  {
   "capability": "Which AI model writes seller content, and how creative it is allowed to be",
   "area": "integrations",
-  "backend": "Modules/AI/AIProviders/OpenAIProvider.php:39 ('model' => 'gpt-4o') and :46 ('temperature' => 0.3); provider selection is DB-driven via Modules/AI/AIProviders/AIProviderManager.php",
-  "admin": "Configure",
+  "backend": "ai_settings.model and ai_settings.temperature, edited on the AI module's settings screen and read by Modules/AI/AIProviders/OpenAIProvider.php with the old constants as defaults",
+  "admin": "Manage",
   "seller_web": "Submit",
   "flutter": "Submit",
   "analytics": "None",
   "monitor": "None",
   "dev_portal": "None",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the AI module's admin settings, which already choose the provider from the database. Because the model name and temperature are hardcoded in the provider class, an operator can switch vendors but cannot change model or cost per call."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the AI module's admin settings, which already choose the provider from the database. Because the model name and temperature are hardcoded in the provider class, an operator can switch vendors but cannot change model or cost per call. RESOLVED. An operator could switch AI vendors from the admin screen and could not change the model or what a call costs — the one dial that decides the bill was the one they could not reach."
  },
  {
   "capability": "AI provider credentials — the API key and organisation id the AI module runs on",
   "area": "integrations",
-  "backend": "Modules/AI/app/Http/Controllers/Admin/AISettingController.php:37 store(), writing api_key at :45 and the enable flag at :47; no AuditLogger reference anywhere under Modules/ (grep of Modules/ for AuditLogger and audit_logs returns nothing)",
-  "admin": "Configure",
+  "backend": "Modules/AI/app/Http/Controllers/Admin/AISettingController.php records settings.ai_provider_updated",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "None",
   "analytics": "None",
   "monitor": "None",
   "dev_portal": "None",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the audit trail. Verified by grep: no module — AI, Blog or TaxModule — writes a single audit row, so replacing the credential the whole AI module spends money through is one unrecorded form post."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the audit trail. Verified by grep: no module — AI, Blog or TaxModule — writes a single audit row, so replacing the credential the whole AI module spends money through is one unrecorded form post. RESOLVED — the first audit row any module writes. The key itself is never recorded; whether one is set, and what model it runs, are what a reviewer needs."
  },
  {
   "capability": "ShareThis social sharing on the product detail page",

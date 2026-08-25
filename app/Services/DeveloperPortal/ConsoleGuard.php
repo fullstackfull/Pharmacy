@@ -2,6 +2,9 @@
 
 namespace App\Services\DeveloperPortal;
 
+use App\Services\Platform\Policy;
+use App\Services\Platform\PolicyRegistry;
+
 /**
  * Whether the portal may actually send a request, and what it has to be told first.
  *
@@ -67,7 +70,7 @@ class ConsoleGuard
     {
         $method = strtoupper($method);
 
-        if (!config('developer_portal.console.enabled', true)) {
+        if (!$this->settingEnabled('developer_console_enabled', 'console.enabled')) {
             return $this->refuse('the_api_console_is_switched_off_on_this_installation', 'DEVELOPER_CONSOLE_ENABLED=true');
         }
 
@@ -102,7 +105,7 @@ class ConsoleGuard
             return $this->refuse('this_endpoint_touches_money_identity_or_removal_so_the_console_never_sends_it', null);
         }
 
-        if (!config('developer_portal.console.allow_writes', false)) {
+        if (!$this->settingEnabled('developer_console_allow_writes', 'console.allow_writes')) {
             return $this->refuse(
                 'this_endpoint_writes_and_writes_are_switched_off_for_the_console',
                 'DEVELOPER_CONSOLE_ALLOW_WRITES=true',
@@ -157,4 +160,28 @@ class ConsoleGuard
             'remedy' => $remedy,
         ];
     }
+    /**
+     * A portal switch, from the settings page, falling back to configuration.
+     *
+     * These were environment-only, so an operator could not see whether the console was enabled and
+     * turning writes off during an incident meant editing .env and clearing caches. The config
+     * value stays the fallback, so an install that sets them by environment is unchanged.
+     */
+    private function settingEnabled(string $policy, string $configKey): bool
+    {
+        try {
+            $settings = app(Policy::class);
+
+            // Stored, then environment, then the shipped default. An install that turns the console
+            // off in .env must not have it turned back on by a default nobody chose.
+            if ($settings->isSet($policy)) {
+                return (bool) $settings->get($policy);
+            }
+        } catch (\Throwable) {
+            // No settings table yet — fall through to configuration.
+        }
+
+        return (bool) config('developer_portal.' . $configKey, PolicyRegistry::definition($policy)['default']);
+    }
+
 }

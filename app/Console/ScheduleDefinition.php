@@ -132,5 +132,16 @@ class ScheduleDefinition
         // every day missing, permanently, once the raw rows aged out.
         $schedule->command('telemetry:rollup --date=yesterday')->dailyAt('00:20')->withoutOverlapping();
         $schedule->command('telemetry:rollup --prune')->dailyAt('01:30')->withoutOverlapping();
+
+        /*
+        | An API surface snapshot, weekly.
+        |
+        | Four surfaces are wired to render deprecations and a change log — the portal screen, the
+        | OpenAPI flag, the Postman annotation and the Monitoring panel — and the snapshot service,
+        | diff engine and breaking-change classifier were all built and never run, so all four had
+        | nothing to compare against and showed nothing on every install. A snapshot nobody takes is
+        | a change log that can never exist.
+        */
+        $schedule->command('api:snapshot')->weeklyOn(1, '04:10')->withoutOverlapping();
     }
 }

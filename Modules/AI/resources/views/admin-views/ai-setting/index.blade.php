@@ -83,6 +83,31 @@
                                                placeholder="{{ translate('Type_Organization_Id') }}" required>
                                     </div>
                                 </div>
+
+                                {{-- Which model writes seller content, and how creative it may be.
+                                     Both were hardcoded in the provider class, so an operator could
+                                     switch AI vendors and could not change the model or what a
+                                     call costs — the one dial that decides the bill was the one
+                                     they could not reach. --}}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label" for="ai_model">{{ translate('model') }}</label>
+                                        <input type="text" id="ai_model" name="model" class="form-control" maxlength="96"
+                                               value="{{ $AiSetting->model ?? '' }}"
+                                               placeholder="{{ \Modules\AI\AIProviders\OpenAIProvider::DEFAULT_MODEL }}">
+                                        <small class="text-muted">{{ translate('left_empty_the_shipped_default_is_used') }}.</small>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label" for="ai_temperature">{{ translate('temperature') }} (0–2)</label>
+                                        <input type="number" step="0.1" min="0" max="2" id="ai_temperature" name="temperature"
+                                               class="form-control" value="{{ $AiSetting->temperature ?? '' }}"
+                                               placeholder="{{ \Modules\AI\AIProviders\OpenAIProvider::DEFAULT_TEMPERATURE }}">
+                                        <small class="text-muted">{{ translate('lower_is_more_literal_higher_is_more_inventive') }}.</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="d-flex justify-content-end flex-wrap gap-3 mt-4">

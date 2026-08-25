@@ -27,13 +27,20 @@ class SslCommerzPaymentController extends Controller
     public function __construct(PaymentRequest $payment, User $user)
     {
         $config = $this->payment_config('ssl_commerz', 'payment_config');
+        $values = null;
         if (!is_null($config) && $config->mode == 'live') {
             $values = json_decode($config->live_values);
         } elseif (!is_null($config) && $config->mode == 'test') {
             $values = json_decode($config->test_values);
         }
 
-        if ($config) {
+        // A configuration row whose mode is neither "live" nor "test" leaves the credential blob
+        // unread, and reading a property off it then throws — in the CONSTRUCTOR, which Laravel runs
+        // whenever it gathers this route's middleware. So one malformed settings row took down
+        // `route:list`, every page that enumerates routes, and this gateway's own endpoints. Guarded
+        // rather than assumed: an unusable configuration is a gateway that cannot take a payment,
+        // which is what the readiness check reports, not a fatal error.
+        if ($config && $values) {
             $this->store_id = $values->store_id;
             $this->store_password = $values->store_password;
 

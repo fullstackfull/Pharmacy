@@ -13,7 +13,7 @@ class Paytabs
 {
     use Processor;
 
-    private $config_values;
+    private $config_values = null;
 
     public function __construct()
     {

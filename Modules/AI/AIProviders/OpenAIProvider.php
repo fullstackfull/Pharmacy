@@ -3,10 +3,21 @@
 namespace Modules\AI\AIProviders;
 
 use Modules\AI\app\Contracts\AIProviderInterface;
+use Modules\AI\app\Models\AISetting;
 use OpenAI;
 
 class OpenAIProvider implements AIProviderInterface
 {
+    /**
+     * What this provider runs on when nothing has been chosen.
+     *
+     * Both were hardcoded here, which meant an operator could switch AI vendors from the admin
+     * screen and could not change the model or what a call costs — the one dial that decides the
+     * bill was the one they could not reach.
+     */
+    public const DEFAULT_MODEL = 'gpt-4o';
+    public const DEFAULT_TEMPERATURE = 0.3;
+
     protected string $apiKey;
     protected ?string $organization;
 
@@ -35,15 +46,17 @@ class OpenAIProvider implements AIProviderInterface
                 'image_url' => ['url' => $imageUrl],
             ];
         }
+        $settings = AISetting::first();
+
         $response = $client->chat()->create([
-            'model' => 'gpt-4o',
+            'model' => $settings?->model ?: self::DEFAULT_MODEL,
             'messages' => [
                 [
                     'role' => 'user',
                     'content' => $content,
                 ],
             ],
-            'temperature' => 0.3,
+            'temperature' => $settings?->temperature !== null ? (float) $settings->temperature : self::DEFAULT_TEMPERATURE,
         ]);
         return $response->choices[0]->message->content;
     }

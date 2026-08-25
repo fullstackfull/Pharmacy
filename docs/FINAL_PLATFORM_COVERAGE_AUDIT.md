@@ -122,25 +122,14 @@ Incomplete — the owner cannot reach it (2):
 
 Backend: 46 capabilities
 Admin: 39 of 46 covered
-Seller Web: 4 of 46 covered
+Seller Web: 5 of 46 covered
 Flutter App: 16 of 31 covered
 Analytics: 3 of 44 covered
-Monitor: 20 of 46 covered
-Dev Portal: 33 of 42 covered
+Monitor: 21 of 46 covered
+Dev Portal: 36 of 42 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (10):
-
-- **Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them.
-- **Inbound courier status webhook — POST /api/delivery-syria/orders/update-status** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary.
-- **Seller webhook delivery failure visibility** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see.
-- **Documented intent for the API — 438 of 537 endpoints carry no declared contract** — assigned to Developer, no surface yet. Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed.
-- **API deprecation lifecycle and the change/breaking-change log** — assigned to Admin, no surface yet. Ruled: belongs in the Developer Portal and is fully built and never run. Four surfaces are wired to render deprecations (portal screen, OpenAPI flag, Postman annotation, Monitoring panel) and zero endpoints declare one; the snapshot service, diff engine and severity classification exist, api_snapshots holds no rows, and verified here — api:snapshot is absent from a scheduler that runs 20 other commands. Three live API versions and no retirement machinery in use.
-- **Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal's webhooks section, which is the worst of the placeholders: the capability probe returns true so the entry renders enabled and opens onto an empty card, while a complete signed-delivery system with six events, SSRF-guarded dialling and a retry sweep sits beside it. ApiDoc carries emits and dependsOn into every manifest entry and no view renders either — and the only two endpoints that declare emits name events that do not exist in the real webhook vocabulary.
-- **Portal sections that render a placeholder — models and enums, integrations, and portal settings** — assigned to Developer, no surface yet. Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link.
-- **Creating, editing, repointing or deleting a seller's outbound webhook** — assigned to Seller, no surface yet. Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing.
-- **Which AI model writes seller content, and how creative it is allowed to be** — assigned to Admin, no surface yet. Ruled: belongs in the AI module's admin settings, which already choose the provider from the database. Because the model name and temperature are hardcoded in the provider class, an operator can switch vendors but cannot change model or cost per call.
-- **AI provider credentials — the API key and organisation id the AI module runs on** — assigned to Admin, no surface yet. Ruled: belongs on the audit trail. Verified by grep: no module — AI, Blog or TaxModule — writes a single audit row, so replacing the credential the whole AI module spends money through is one unrecorded form post.
+Every capability in this domain is reachable by the surface that owns it.
 
 ## INVENTORY
 

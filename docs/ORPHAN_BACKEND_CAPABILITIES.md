@@ -14,15 +14,15 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 339 | The marketplace operator manages or oversees it. |
-| CONNECTED TO SELLER | 78 | The seller manages it, in the panel or the app. |
+| CONNECTED TO ADMIN | 342 | The marketplace operator manages or oversees it. |
+| CONNECTED TO SELLER | 79 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
-| INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
+| INTERNAL BY DESIGN | 53 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 58 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 48 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (339)
+## CONNECTED TO ADMIN (342)
 
 The marketplace operator manages or oversees it.
 
@@ -58,6 +58,7 @@ The marketplace operator manages or oversees it.
 | Recording that a backup ran and that a restore was tested | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordBackup() and recordRestoreTest(), on Monitoring → Backups |
 | Recording a deployment, and comparing performance either side of it | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordDeployment(), on Monitoring → Deployments |
 | Changing a monitoring threshold, retention window, sampling rate or SLA target | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringConfiguration.php save(), on Monitoring → Settings; SettingsPanel marks each row editable or not by whether the running code reads that key back |
+| Seller webhook delivery failure visibility | integrations | Admin | app/Services/Monitoring/Panels/IntegrationsPanel.php::sellerWebhooks(), drawn on Monitoring → Integrations |
 | Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | security | Admin | app/Listeners/Security/RecordAuthenticationEvents.php subscribes to Laravel's Login, Failed, Lockout and Logout events (registered in AppServiceProvider::boot, because App\Providers\EventServiceProvider is not in bootstrap/providers.php and listener auto-discovery only finds handle/__invoke); rows appear on the Admin audit page and in Monitoring → Security |
 | The before/after values and actor context on every audited change | security | Admin | rendered field-by-field at resources/views/admin-views/marketplace/audit-log.blade.php and resources/views/seller-views/audit/index.blade.php; ip_address and user_agent shown on the admin row |
 | Who may read the audit trail | security | Admin | routes/admin/routes.php — its own group under module:system_settings, at the same URL and route name |
@@ -68,6 +69,8 @@ The marketplace operator manages or oversees it.
 | Minimum password length — 6 characters on some surfaces and 8 on others | security | Admin | app/Services/Platform/PasswordPolicy.php over the password_minimum_length policy, used by every validator where a password is CHOSEN (registration, reset, staff and deliveryman creation, on web and API); sign-in validators are deliberately excluded so raising the minimum cannot lock out an existing account |
 | Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | security | Admin | app/Providers/RouteServiceProvider.php:182 defines the `auth` and `global` limiters from the auth_attempts_per_minute and api_requests_per_minute policies; the six route files now use `throttle:auth` rather than a repeated literal |
 | Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | integrations | Admin | app/Services/Platform/PolicyRegistry.php (webhook_max_attempts, webhook_timeout_seconds, webhook_backoff_minutes) read at app/Services/Marketplace/SellerWebhookDispatcher.php |
+| Which AI model writes seller content, and how creative it is allowed to be | integrations | Admin | ai_settings.model and ai_settings.temperature, edited on the AI module's settings screen and read by Modules/AI/AIProviders/OpenAIProvider.php with the old constants as defaults |
+| AI provider credentials — the API key and organisation id the AI module runs on | integrations | Admin | Modules/AI/app/Http/Controllers/Admin/AISettingController.php records settings.ai_provider_updated |
 | Approve, reject or suspend a seller account (single and bulk) | platform | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:210 updateStatus + :167 bulkUpdateStatus; routes/admin/routes.php:498 admin.vendors.updateStatus, :501 admin.vendors.bulk-status; nav resources/views/layouts/admin/partials/v2/_side-bar.blade.php:493; routes routes/admin/routes.php:947 admin.vendors.update-vendor-status; the file contains zero AuditLogger references |
 | Commission rules — the rate the marketplace charges, by global, category, vendor or product scope | finance | Admin | app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php; app/Services/Marketplace/CommissionEngine.php; routes/admin/routes.php:768-776 admin.marketplace.commission-rules.*; nav _side-bar.blade.php:659; app/Services/Marketplace/CommissionEngine.php:46 (const DEFAULT_PRIORITY = [product 400, vendor 300, category 200, global 100]); legacy fallback at app/Utils/Helpers.php:633 seller_sales_commission() reading seller.sales_commission_percentage then setting 'sales_commission'; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php (routes/admin/routes.php:768-776), evaluated by app/Services/Marketplace/CommissionEngine.php; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php:60 store (audited 'commission.rule_created' at :63), :73 update, :81 toggle, :90 destroy (all three unaudited); routes under routes/admin/routes.php:549 marketplace group |
 | Per-seller commission override on the vendor record | finance | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:314 updateSalesCommission, :591 updateSetting; routes/admin/routes.php:505 admin.vendors.sales-commission-update, :508 admin.vendors.update-setting; no AuditLogger in the file |
@@ -368,13 +371,14 @@ The marketplace operator manages or oversees it.
 | Storefront content blocks — announcement bar, features section, company reliability badges, social media links | platform | Admin | `announcement` at app/Http/Controllers/Admin/Settings/BusinessSettingsController.php:476 (routes/admin/routes.php:1681); `company_reliability` at routes/admin/routes.php:1634; features section at :1672; social media at app/Http/Controllers/Admin/Settings/SocialMediaSettingsController.php |
 | Stock clearance sale setup — the platform's own clearance campaign and whether vendor clearance offers appear on the homepage | pricing | Admin | app/Repositories/StockClearanceSetupRepository.php with business_settings `stock_clearance_vendor_offer_in_homepage` written at app/Http/Controllers/Admin/Promotion/ClearanceSaleVendorOfferController.php:102 and priority keys at ClearanceSalePrioritySetupController.php:51-55 |
 
-## CONNECTED TO SELLER (78)
+## CONNECTED TO SELLER (79)
 
 The seller manages it, in the panel or the app.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
 | The seller's web view of their own audit trail | security | Seller | app/Http/Controllers/Seller/AuditController.php on route seller.audit.index (the name the navigation registry has reserved since Wave 1), scoped by app/Services/Marketplace/SellerAuditTrailService.php |
+| Creating, editing, repointing or deleting a seller's outbound webhook | integrations | Seller | app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | catalog | Seller | app/Http/Controllers/Admin/Marketplace/SellerOperationsController.php bulkJobs; app/Services/Marketplace/Bulk/SellerBulkJobService.php; routes/admin/routes.php:648; cron seller:run-stuck-bulk-jobs bootstrap/app.php:188; app/Services/Marketplace/Bulk/SellerBulkJobService.php:106 'seller.bulk_job_queued', :238 'seller.bulk_job_finished'; per-item price writes go through a model save at app/Services/Marketplace/Bulk/BulkPriceOperation.php:101 (so the price observer fires) and stock through app/Services/Marketplace/Bulk/BulkStockOperation.php:77; routes routes/rest_api/v3/seller.php:677-678; app/Console/Commands/RunStuckSellerBulkJobs.php:25 `seller:run-stuck-bulk-jobs`; scheduled bootstrap/app.php:188 every minute; app/Jobs/RunSellerBulkJob.php:25 (tries=1, timeout=900, failed() writes status=failed at lines 49-59); dispatched from app/Services/Marketplace/Bulk/SellerBulkJobService.php:112; |
 | Order-wise and expense-wise transaction reports with PDF and Excel export | finance | Seller | routes/vendor/routes.php:463-474 — vendor/transaction/*; app-side equivalent is routes/rest_api/v3/seller.php:115 — GET transactions; app/Http/Controllers/Admin/TransactionReportController.php, ExpenseTransactionReportController.php, Report/RefundTransactionController.php; routes/admin/routes.php:800-808, :837-852; nav _side-bar.blade.php:611 |
 | Order, product and stock reports with Excel and PDF export | analytics | Seller | routes/vendor/routes.php:447-461 — vendor/report/*; routes/rest_api/v3/seller.php:598-615 — seller-center/reports/orders\|products\|stock (+/export); app/Http/Controllers/Admin/ProductReportController.php, OrderReportController.php, ProductStockReportController.php, ProductWishlistReportController.php; routes/admin/routes.php:820-829, :854-866; nav _side-bar.blade.php:620/624 |
@@ -522,7 +526,7 @@ Its health and its failures are visible to an operator.
 | Synthetic journey probe — fetch a real storefront page and assert its status and content | monitoring | Admin | app/Services/Monitoring/Checks/SyntheticCheck.php:25 reading the `synthetics` key of monitoring_settings; results into monitoring_check_results (kind=synthetic) |
 | Alert rule evaluation — compare every enabled rule against the last minute, once a minute | monitoring | System | app/Services/Monitoring/Alerting/AlertEvaluator.php:43; app/Console/Commands/MonitoringEvaluate.php:16; scheduled bootstrap/app.php:216 everyMinute |
 
-## INTERNAL BY DESIGN (52)
+## INTERNAL BY DESIGN (53)
 
 Infrastructure. No screen is appropriate, and the reason is stated.
 
@@ -542,6 +546,12 @@ Infrastructure. No screen is appropriate, and the reason is stated.
 - Backend — app/Services/Theme/ThemePreviewToken.php:27 (DEFAULT_MINUTES = 60), :30 (MAX_MINUTES = 1440); scheduled publishes at bootstrap/app.php:165 (theme:publish-due everyFiveMinutes)
 - No surface on — Seller Web, Analytics, Monitor, Dev Portal
 - Internal: a signed-token lifetime is a security bound rather than a merchandising setting, and a preview link that outlives a working session is the thing the ceiling exists to prevent. Worth noting only that an agency review longer than a day needs a fresh link.
+
+**Documented intent for the API — 438 of 537 endpoints carry no declared contract**  
+`integrations` · owner: Developer  
+- Backend — app/Services/DeveloperPortal/ApiManifest.php describes all 537 endpoints mechanically; 99 carry a declared #[ApiDoc] contract, 86 of them the v3 Seller Center
+- No surface on — Admin, Seller Web, Analytics
+- Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed. RULED INTERNAL BY DESIGN for the undocumented remainder, with the reason stated rather than the gap quietly closed: v1 and v2 are the CodeCanyon product's own mobile-app APIs, consumed by first-party apps shipped from this repository and by nobody else. They are described mechanically — path, method, auth, parameters, observed response shape — and the missing piece is declared INTENT, which for an endpoint with exactly one first-party caller adds nothing a reader cannot see. What was genuinely missing and is now fixed: the inbound callbacks are part of the surface, seller_can scopes resolve, and the v2 seller API is no longer reported as public. New external surface (v3 seller) is 86/86 documented and stays that way.
 
 **Retired theme-installer URL**  
 `platform` · owner: Admin  
@@ -955,7 +965,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (58)
+## ORPHAN (48)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -1012,12 +1022,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Services/Analytics/Analytics.php:363 payoutRequested, called from app/Services/Marketplace/PayoutService.php:128 (event payout_requested, dedupe payout:{reference}); app/Services/Analytics/Analytics.php:378 kycSubmitted, called from app/Services/Marketplace/SellerVerificationService.php:205 (event kyc_submitted)
 - No surface on — Admin, Flutter App, Monitor, Dev Portal
 - Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable.
-
-**Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)**  
-`integrations` · owner: Developer  
-- Backend — Twelve routes under /payment/*/callback registered at routes/web/routes.php:499-584 (RazorPay :499, SenangPay :522, Paytm :528, Flutterwave :535, Paystack :541, bKash :549, LiqPay :555, MercadoPago :562, PayMob :568, PayTabs :574, Paymera :584) — all outside the api/ prefix so ApiManifest classifies them surface=panel (app/Services/DeveloperPortal/Support/EndpointClassifier.php:94)
-- No surface on — Seller Web, Analytics, Dev Portal
-- Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them.
 
 **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
 `analytics` · owner: Admin  
@@ -1084,12 +1088,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Effectively none. checkout_shipping_set is recorded from the payment page alongside address and payment in one breath (Web/WebController.php:404-406), so it measures reaching checkout, not choosing a shipping method; the only shipping figure recorded anywhere is shipping_cost inside the order_placed properties JSON (OrderManager.php:1652), which no rollup reads. Shipping zones (routes/admin/routes.php:759) and rates are configured but never counted.; None. app/Services/Marketplace/FulfillmentService.php stamps packed/shipped timestamps on an overlay record and admin/marketplace/fulfillments (routes/admin/routes.php:742) lists them; AnalyticsEvent::ORDER_DELIVERED exists (Analytics.php:213) but only reaches the 'event' dimension — no delivery-time or dispatch-time metric is computed anywhere, and SLA metrics are cancellation/return/refund/rating only (SlaService.php:24).
 - No surface on — Analytics, Monitor, Dev Portal
 - Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
-
-**Inbound courier status webhook — POST /api/delivery-syria/orders/update-status**  
-`integrations` · owner: Developer  
-- Backend — POST /api/delivery-syria/orders/update-status — routes/rest_api/delivery_syria.php:16; app/Http/Controllers/Api/DeliverySyriaWebhookController.php; authenticated by app/Http/Middleware/DeliverySyriaWebhookAuthMiddleware (X-Platform + bearer webhook token); settings at routes/admin/routes.php:1272
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary.
 
 **Create, rename or delete a brand in the catalogue**  
 `brands` · owner: Admin  
@@ -1205,12 +1203,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Seller Web, Monitor, Dev Portal
 - Ruled: belongs to Developer to build or to delete the config. Verified: no route matching monitoring/metrics exists anywhere in routes/, and no OTLP exporter or job exists, yet config/monitoring.php documents both and two panels display the Prometheus endpoint as a live setting complete with a security warning about an exposure that cannot happen.
 
-**Seller webhook delivery failure visibility**  
-`integrations` · owner: Admin  
-- Backend — app/Services/Marketplace/SellerWebhookDispatcher.php:121 (attempt), :194/:231 (failed), app/Jobs/DeliverSellerWebhook.php:35, retried by app/Console/Commands/RetrySellerWebhooks.php scheduled at bootstrap/app.php:182; counted only by app/Services/Marketplace/SellerOperationsOverview.php:325-338
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see.
-
 **Blast radius — how many sellers a failure is affecting**  
 `monitoring` · owner: Admin  
 - Backend — No seller/vendor/shop_id dimension exists in any monitoring table or panel; the only 'vendor' in the model is a traffic channel label (RequestsPanel.php:36) and a user_type on traces (TracesPanel.php:74)
@@ -1246,48 +1238,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Http/Controllers/Admin/EmailTemplatesController.php:31 index() -> view('email-templates.mail-tester'); routes/admin/routes.php:1172 admin.system-setup.email-templates.index — referenced by no menu and no view
 - No surface on — Seller Web, Flutter App, Analytics, Monitor
 - Ruled: belongs in the Admin sidebar, one link away. The page renders and works; the sidebar points at the /{type}/{tab} view route instead, so the only way to test transactional mail is to type the URL.
-
-**Documented intent for the API — 438 of 537 endpoints carry no declared contract**  
-`integrations` · owner: Developer  
-- Backend — routes/rest_api/v1/api.php:52 onward; app/Http/Controllers/RestAPI/v1/ProductController.php:59 (1 of 31 documented), CustomerController.php:42 (0 of 23), OrderController.php:48 (0 of 15), CartController.php:43 (0 of 9); routes/rest_api/v1/api.php:103 (throttle:20,1 group); app/Http/Controllers/RestAPI/v1/auth/CustomerAPIAuthController.php:44 (0 of 12), SocialAuthController.php:32 (0 of 5), PassportAuthController.php:203, PhoneVerificationController.php:55, EmailVerificationController.php:79, ForgotPasswordController.php:140; routes/rest_api/v2/api.php:132 / :144 (delivery_man_auth + actch:deliveryman_app); app/Http/Controllers/RestAPI/v2/delivery_man/DeliveryManController.php:45 (0 of 30), ChatController.php:21, WithdrawController.php:18, auth/LoginController.php:21; routes/rest_api/v3/seller.php:72 onward; app/Http/Controllers/RestAPI/v3/seller/ProductController.php:81 (0 of 30), Seller
-- No surface on — Admin, Seller Web, Analytics
-- Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed.
-
-**API deprecation lifecycle and the change/breaking-change log**  
-`integrations` · owner: Admin  
-- Backend — Declared only in code by ApiDoc(stability/deprecatedSince/sunsetAt/replacedBy) — app/Services/DeveloperPortal/ApiDoc.php:53,81-83; surfaced by DeveloperPortalService::deprecations() (:364), OpenApiGenerator.php:201, PostmanGenerator.php:267 and ApisPanel.php:743; app/Console/Commands/ApiSnapshotCommand.php:16 (signature `api:snapshot`)
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in the Developer Portal and is fully built and never run. Four surfaces are wired to render deprecations (portal screen, OpenAPI flag, Postman annotation, Monitoring panel) and zero endpoints declare one; the snapshot service, diff engine and severity classification exist, api_snapshots holds no rows, and verified here — api:snapshot is absent from a scheduler that runs 20 other commands. Three live API versions and no retirement machinery in use.
-
-**Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour**  
-`integrations` · owner: Developer  
-- Backend — Declared at app/Services/DeveloperPortal/PortalNavigation.php:55 with requires:'webhooks'; the capability probe returns true (app/Services/Telemetry/DeveloperPortalService.php:588 hasInboundWebhooks()); no branch in DeveloperPortalController::dataFor() (:236); no view; Declared at app/Services/DeveloperPortal/ApiDoc.php:87 and :88; carried into the manifest at app/Services/DeveloperPortal/ApiManifest.php:262-263
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs in the Developer Portal's webhooks section, which is the worst of the placeholders: the capability probe returns true so the entry renders enabled and opens onto an empty card, while a complete signed-delivery system with six events, SSRF-guarded dialling and a retry sweep sits beside it. ApiDoc carries emits and dependsOn into every manifest entry and no view renders either — and the only two endpoints that declare emits name events that do not exist in the real webhook vocabulary.
-
-**Portal sections that render a placeholder — models and enums, integrations, and portal settings**  
-`integrations` · owner: Developer  
-- Backend — Declared at app/Services/DeveloperPortal/PortalNavigation.php:33; no branch in app/Http/Controllers/Admin/Telemetry/DeveloperPortalController.php:236 dataFor(); no view under resources/views/admin-views/telemetry/developer/; Declared at app/Services/DeveloperPortal/PortalNavigation.php:56; no branch in DeveloperPortalController::dataFor() (:236); no view. Monitoring already ships the equivalent at resources/views/admin-views/monitoring/sections/integrations.blade.php; Declared at app/Services/DeveloperPortal/PortalNavigation.php:58; no view. The real switches are env-only in config/developer_portal.php:22,46,47,49
-- No surface on — Admin, Seller Web, Analytics, Dev Portal
-- Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link.
-
-**Creating, editing, repointing or deleting a seller's outbound webhook**  
-`integrations` · owner: Seller  
-- Backend — app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php:192 storeWebhook, :242 updateWebhook, :288 setWebhookStatus, :330 destroyWebhook; routes routes/rest_api/v3/seller.php:524-527; the file contains zero audit references
-- No surface on — Seller Web, Analytics
-- Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing.
-
-**Which AI model writes seller content, and how creative it is allowed to be**  
-`integrations` · owner: Admin  
-- Backend — Modules/AI/AIProviders/OpenAIProvider.php:39 ('model' => 'gpt-4o') and :46 ('temperature' => 0.3); provider selection is DB-driven via Modules/AI/AIProviders/AIProviderManager.php
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs in the AI module's admin settings, which already choose the provider from the database. Because the model name and temperature are hardcoded in the provider class, an operator can switch vendors but cannot change model or cost per call.
-
-**AI provider credentials — the API key and organisation id the AI module runs on**  
-`integrations` · owner: Admin  
-- Backend — Modules/AI/app/Http/Controllers/Admin/AISettingController.php:37 store(), writing api_key at :45 and the enable flag at :47; no AuditLogger reference anywhere under Modules/ (grep of Modules/ for AuditLogger and audit_logs returns nothing)
-- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the audit trail. Verified by grep: no module — AI, Blog or TaxModule — writes a single audit row, so replacing the credential the whole AI module spends money through is one unrecorded form post.
 
 **Paid advertising and sponsored placement — ad slots, budgets, billing**  
 `platform` · owner: Admin  

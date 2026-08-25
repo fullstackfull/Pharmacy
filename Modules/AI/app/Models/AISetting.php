@@ -49,6 +49,8 @@ class AISetting extends Model
         'customer_generate_limit',
         'customer_image_upload_limit',
         'settings',
+        'model',
+        'temperature',
         'status',
     ];
 }

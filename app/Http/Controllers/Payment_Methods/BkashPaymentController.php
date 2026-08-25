@@ -14,7 +14,7 @@ class BkashPaymentController extends Controller
 {
     use Processor;
 
-    private $config_values;
+    private $config_values = null;
     private $base_url;
     private $app_key;
     private $app_secret;
@@ -32,7 +32,13 @@ class BkashPaymentController extends Controller
             $this->config_values = json_decode($config->test_values);
         }
 
-        if ($config) {
+        // A configuration row whose mode is neither "live" nor "test" leaves the credential blob
+        // unread, and reading a property off it then throws — in the CONSTRUCTOR, which Laravel runs
+        // whenever it gathers this route's middleware. So one malformed settings row took down
+        // `route:list`, every page that enumerates routes, and this gateway's own endpoints. Guarded
+        // rather than assumed: an unusable configuration is a gateway that cannot take a payment,
+        // which is what the readiness check reports, not a fatal error.
+        if ($config && $this->config_values) {
             $this->app_key = $this->config_values->app_key;
             $this->app_secret = $this->config_values->app_secret;
             $this->username = $this->config_values->username;

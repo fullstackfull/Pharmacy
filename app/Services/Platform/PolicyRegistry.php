@@ -279,6 +279,32 @@ class PolicyRegistry
             ],
         ],
 
+        'developer' => [
+            'title' => 'developer_portal',
+            'help' => 'what_the_api_console_may_do_and_whether_response_shapes_are_learned_from_traffic',
+            'icon' => 'code',
+            'policies' => [
+                'developer_console_enabled' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'the_api_console_is_available',
+                ],
+                'developer_console_allow_writes' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'the_console_may_send_writes',
+                    'help' => 'off_by_default_everywhere_a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders',
+                ],
+                'developer_console_rate_limit' => [
+                    'type' => 'int', 'default' => 20, 'min' => 1, 'max' => 600,
+                    'label' => 'console_requests_per_minute_per_administrator',
+                ],
+                'developer_record_response_shapes' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'learn_response_shapes_from_real_traffic',
+                    'help' => 'only_keys_and_types_are_stored_never_a_value_from_any_response',
+                ],
+            ],
+        ],
+
         'integrations' => [
             'title' => 'webhook_delivery',
             'help' => 'how_hard_the_platform_tries_before_a_sellers_event_is_lost',

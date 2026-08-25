@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Metric;
+use Illuminate\Support\Facades\Schema;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Histogram;
 use App\Services\Monitoring\Support\Redactor;
@@ -301,6 +302,12 @@ class IntegrationsPanel implements Panel
             'timeline' => $this->timeline($range, $window),
             'catalogue' => $catalogue,
             'probes' => $this->probes($range),
+            // The one outbound integration this shop OWNS rather than merely calls, and the only
+            // one with a retry ledger behind it. It had no panel, no check, no series and no rule
+            // anywhere under app/Services/Monitoring — so a seller whose ERP had been unreachable
+            // for a day, and whose endpoint the platform had then switched off, was visible only if
+            // an admin happened to open the seller operations page.
+            'seller_webhooks' => $this->sellerWebhooks(),
             'unmeasured' => $this->unmeasured(),
         ];
     }
@@ -1757,4 +1764,42 @@ class IntegrationsPanel implements Panel
 
         return $current === null ? (int) $candidate : max($current, (int) $candidate);
     }
+    /**
+     * Outbound webhook delivery to sellers' own systems.
+     *
+     * Read live rather than from a series, and it says so: these are counts of rows in the delivery
+     * ledger, not a measured rate over the selected window. Reporting them as a window figure would
+     * be the one thing this console must not do — a number that looks measured and is not.
+     *
+     * @return array<string, mixed>
+     */
+    private function sellerWebhooks(): array
+    {
+        if (!Schema::hasTable('seller_webhooks') || !Schema::hasTable('seller_webhook_deliveries')) {
+            return ['state' => 'not_installed', 'note' => 'The seller webhook tables are not installed on this deployment.'];
+        }
+
+        try {
+            $endpoints = DB::table('seller_webhooks');
+            $deliveries = DB::table('seller_webhook_deliveries');
+
+            return [
+                'state' => 'ok',
+                'source' => 'seller_webhooks, seller_webhook_deliveries',
+                'note' => 'Counted from the delivery ledger as it stands, not measured over the selected window.',
+                'endpoints' => (int) $endpoints->count(),
+                'active' => (int) (clone $endpoints)->where('status', 'active')->count(),
+                // The finding that matters: the platform gave up on these endpoints, and the seller
+                // may not know their event stream stopped.
+                'auto_disabled' => (int) (clone $endpoints)->where('status', 'disabled')->count(),
+                'waiting_to_retry' => (int) $deliveries->whereNotNull('next_attempt_at')->count(),
+                'failed' => (int) (clone $deliveries)->where('status', 'failed')->count(),
+                'sellers_affected' => (int) (clone $endpoints)->where('status', 'disabled')->distinct()->count('seller_id'),
+                'retry_sweep' => 'seller:retry-webhooks, every five minutes',
+            ];
+        } catch (\Throwable $exception) {
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception)];
+        }
+    }
+
 }
