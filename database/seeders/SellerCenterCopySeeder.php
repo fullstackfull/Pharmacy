@@ -1029,6 +1029,120 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── security · the audit trail, sign-in events and bot defence ────
+        'what_changed' => [
+            'What changed',
+            'ما الذي تغيّر',
+        ],
+        'who' => [
+            'Who',
+            'مَن',
+        ],
+        'field' => [
+            'Field',
+            'الحقل',
+        ],
+        'no_field_changed' => [
+            'No field changed',
+            'لم يتغيّر أي حقل',
+        ],
+        'everything_you_your_staff_and_your_api_keys_did_and_everything_the_platform_recorded_about_your_shop' => [
+            'Everything you, your staff and your API keys did — and everything the platform recorded about your shop',
+            'كل ما فعلته أنت وموظفوك ومفاتيح الواجهة البرمجية — وكل ما سجّلته المنصة عن متجرك',
+        ],
+        'actions_appear_here_as_they_happen_there_is_nothing_to_switch_on' => [
+            'Actions appear here as they happen; there is nothing to switch on.',
+            'تظهر الإجراءات هنا فور حدوثها؛ لا شيء بحاجة إلى تفعيل.',
+        ],
+        'showing_n_of_m_recorded_actions' => [
+            'Showing :shown of :total recorded actions.',
+            'عرض :shown من أصل :total إجراء مُسجَّل.',
+        ],
+        'authentication_security' => [
+            'Authentication security',
+            'أمن تسجيل الدخول',
+        ],
+        'Authentication_Security' => [
+            'Authentication Security',
+            'أمن تسجيل الدخول',
+        ],
+        'the_bot_defence_on_your_sign_in_forms_and_how_a_customer_recovers_their_account' => [
+            'The bot defence on your sign-in forms, and how a customer recovers their account',
+            'دفاع النماذج ضد الروبوتات، وكيفية استعادة العميل لحسابه',
+        ],
+        'recaptcha' => [
+            'reCAPTCHA',
+            'reCAPTCHA',
+        ],
+        'applies_to_every_sign_in_and_password_reset_form_admin_vendor_and_customer' => [
+            'Applies to every sign-in and password-reset form — admin, vendor and customer',
+            'يُطبَّق على كل نماذج تسجيل الدخول واستعادة كلمة المرور — الإدارة والبائع والعميل',
+        ],
+        'enforced' => [
+            'Enforced',
+            'مُطبَّق',
+        ],
+        'not_enforced' => [
+            'Not enforced',
+            'غير مُطبَّق',
+        ],
+        'while_this_is_off_the_sign_in_forms_are_protected_by_rate_limiting_alone' => [
+            'While this is off, the sign-in forms are protected by rate limiting alone',
+            'ما دام هذا معطّلاً، فنماذج الدخول محميّة بتحديد المعدّل وحده',
+        ],
+        'the_limit_is_on_the_platform_policies_page_under_access_policy' => [
+            'The limit is on the Platform Policies page, under Access policy',
+            'الحد موجود في صفحة سياسات المنصة ضمن سياسة الوصول',
+        ],
+        'site_key' => [
+            'Site key',
+            'مفتاح الموقع',
+        ],
+        'secret_key' => [
+            'Secret key',
+            'المفتاح السري',
+        ],
+        'lowest_score_let_through' => [
+            'Lowest score let through',
+            'أدنى درجة مسموح بمرورها',
+        ],
+        'lowest_recaptcha_score_a_visitor_may_have_and_still_be_let_through' => [
+            'Lowest reCAPTCHA score a visitor may have and still be let through',
+            'أدنى درجة reCAPTCHA يمكن للزائر أن يحملها ويُسمح له بالمرور',
+        ],
+        'higher_turns_away_more_bots_and_more_people' => [
+            'Higher turns away more bots, and more people',
+            'الأعلى يمنع روبوتات أكثر، وأشخاصاً أكثر',
+        ],
+        'recaptcha_needs_both_a_site_key_and_a_secret_key_before_it_can_be_switched_on' => [
+            'reCAPTCHA needs both a site key and a secret key before it can be switched on.',
+            'يحتاج reCAPTCHA إلى مفتاح موقع ومفتاح سري قبل تفعيله.',
+        ],
+        'the_authentication_settings_were_saved' => [
+            'The authentication settings were saved.',
+            'تم حفظ إعدادات تسجيل الدخول.',
+        ],
+        'customer_password_recovery' => [
+            'Customer password recovery',
+            'استعادة كلمة مرور العميل',
+        ],
+        'the_vendor_and_delivery_man_equivalents_are_on_their_own_settings_pages' => [
+            'The vendor and delivery-man equivalents are on their own settings pages',
+            'ما يقابلها للبائع ومندوب التوصيل موجود في صفحات إعداداتهما',
+        ],
+        'send_the_reset_through' => [
+            'Send the reset through',
+            'أرسل الاستعادة عبر',
+        ],
+        'sms_otp' => [
+            'SMS OTP',
+            'رمز عبر رسالة نصية',
+        ],
+        'this_value_is_also_shipped_to_the_mobile_apps_in_the_config_payload_so_they_ask_for_the_same_thing_the_website_does' => [
+            'This value is also shipped to the mobile apps in the config payload, so they ask for the same thing the website does',
+            'تُرسَل هذه القيمة أيضاً إلى تطبيقات الجوال ضمن حزمة الضبط، فتطلب ما يطلبه الموقع نفسه',
+        ],
+
         // ── admin · the monitoring console's write actions ────────────────
         'a_note_needs_something_to_say' => [
             'A note needs something to say.',

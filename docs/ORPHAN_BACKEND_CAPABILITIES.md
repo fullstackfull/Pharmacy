@@ -14,15 +14,15 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 326 | The marketplace operator manages or oversees it. |
-| CONNECTED TO SELLER | 77 | The seller manages it, in the panel or the app. |
+| CONNECTED TO ADMIN | 333 | The marketplace operator manages or oversees it. |
+| CONNECTED TO SELLER | 78 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 77 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 66 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (326)
+## CONNECTED TO ADMIN (333)
 
 The marketplace operator manages or oversees it.
 
@@ -52,6 +52,13 @@ The marketplace operator manages or oversees it.
 | Recording that a backup ran and that a restore was tested | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordBackup() and recordRestoreTest(), on Monitoring → Backups |
 | Recording a deployment, and comparing performance either side of it | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordDeployment(), on Monitoring → Deployments |
 | Changing a monitoring threshold, retention window, sampling rate or SLA target | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringConfiguration.php save(), on Monitoring → Settings; SettingsPanel marks each row editable or not by whether the running code reads that key back |
+| Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | security | Admin | app/Listeners/Security/RecordAuthenticationEvents.php subscribes to Laravel's Login, Failed, Lockout and Logout events (registered in AppServiceProvider::boot, because App\Providers\EventServiceProvider is not in bootstrap/providers.php and listener auto-discovery only finds handle/__invoke); rows appear on the Admin audit page and in Monitoring → Security |
+| The before/after values and actor context on every audited change | security | Admin | rendered field-by-field at resources/views/admin-views/marketplace/audit-log.blade.php and resources/views/seller-views/audit/index.blade.php; ip_address and user_agent shown on the admin row |
+| Who may read the audit trail | security | Admin | routes/admin/routes.php — its own group under module:system_settings, at the same URL and route name |
+| Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch | security | Admin | app/Services/AuditTrail.php SUBJECTS maps App\Models\Admin => access.employee_* and App\Models\AdminRole => access.role_*, written by the audited builder and observer on the model layer rather than by the controllers |
+| Business settings — the several hundred DB-driven switches the whole platform boots from | security | Admin | app/Models/Builders/AuditedBuilder.php on BusinessSetting and Setting records settings.business_* and settings.integration_* with before/after, including the mass-update path the UpdateClass trait uses |
+| reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | security | Admin | app/Http/Controllers/Admin/Settings/AuthenticationSecurityController.php on Admin → Settings → Authentication security; enforcement decided by RecaptchaService::isEnforced(); the bot score is the recaptcha_minimum_score policy |
+| Which channel a customer password reset is sent through — email or SMS OTP | security | Admin | app/Http/Controllers/Admin/Settings/AuthenticationSecurityController.php writes forgot_password_verification, beside the vendor and delivery-man equivalents that already had screens |
 | Minimum password length — 6 characters on some surfaces and 8 on others | security | Admin | app/Services/Platform/PasswordPolicy.php over the password_minimum_length policy, used by every validator where a password is CHOSEN (registration, reset, staff and deliveryman creation, on web and API); sign-in validators are deliberately excluded so raising the minimum cannot lock out an existing account |
 | Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | security | Admin | app/Providers/RouteServiceProvider.php:182 defines the `auth` and `global` limiters from the auth_attempts_per_minute and api_requests_per_minute policies; the six route files now use `throttle:auth` rather than a repeated literal |
 | Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | integrations | Admin | app/Services/Platform/PolicyRegistry.php (webhook_max_attempts, webhook_timeout_seconds, webhook_backoff_minutes) read at app/Services/Marketplace/SellerWebhookDispatcher.php |
@@ -355,12 +362,13 @@ The marketplace operator manages or oversees it.
 | Storefront content blocks — announcement bar, features section, company reliability badges, social media links | platform | Admin | `announcement` at app/Http/Controllers/Admin/Settings/BusinessSettingsController.php:476 (routes/admin/routes.php:1681); `company_reliability` at routes/admin/routes.php:1634; features section at :1672; social media at app/Http/Controllers/Admin/Settings/SocialMediaSettingsController.php |
 | Stock clearance sale setup — the platform's own clearance campaign and whether vendor clearance offers appear on the homepage | pricing | Admin | app/Repositories/StockClearanceSetupRepository.php with business_settings `stock_clearance_vendor_offer_in_homepage` written at app/Http/Controllers/Admin/Promotion/ClearanceSaleVendorOfferController.php:102 and priority keys at ClearanceSalePrioritySetupController.php:51-55 |
 
-## CONNECTED TO SELLER (77)
+## CONNECTED TO SELLER (78)
 
 The seller manages it, in the panel or the app.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| The seller's web view of their own audit trail | security | Seller | app/Http/Controllers/Seller/AuditController.php on route seller.audit.index (the name the navigation registry has reserved since Wave 1), scoped by app/Services/Marketplace/SellerAuditTrailService.php |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | catalog | Seller | app/Http/Controllers/Admin/Marketplace/SellerOperationsController.php bulkJobs; app/Services/Marketplace/Bulk/SellerBulkJobService.php; routes/admin/routes.php:648; cron seller:run-stuck-bulk-jobs bootstrap/app.php:188; app/Services/Marketplace/Bulk/SellerBulkJobService.php:106 'seller.bulk_job_queued', :238 'seller.bulk_job_finished'; per-item price writes go through a model save at app/Services/Marketplace/Bulk/BulkPriceOperation.php:101 (so the price observer fires) and stock through app/Services/Marketplace/Bulk/BulkStockOperation.php:77; routes routes/rest_api/v3/seller.php:677-678; app/Console/Commands/RunStuckSellerBulkJobs.php:25 `seller:run-stuck-bulk-jobs`; scheduled bootstrap/app.php:188 every minute; app/Jobs/RunSellerBulkJob.php:25 (tries=1, timeout=900, failed() writes status=failed at lines 49-59); dispatched from app/Services/Marketplace/Bulk/SellerBulkJobService.php:112; |
 | Order-wise and expense-wise transaction reports with PDF and Excel export | finance | Seller | routes/vendor/routes.php:463-474 — vendor/transaction/*; app-side equivalent is routes/rest_api/v3/seller.php:115 — GET transactions; app/Http/Controllers/Admin/TransactionReportController.php, ExpenseTransactionReportController.php, Report/RefundTransactionController.php; routes/admin/routes.php:800-808, :837-852; nav _side-bar.blade.php:611 |
 | Order, product and stock reports with Excel and PDF export | analytics | Seller | routes/vendor/routes.php:447-461 — vendor/report/*; routes/rest_api/v3/seller.php:598-615 — seller-center/reports/orders\|products\|stock (+/export); app/Http/Controllers/Admin/ProductReportController.php, OrderReportController.php, ProductStockReportController.php, ProductWishlistReportController.php; routes/admin/routes.php:820-829, :854-866; nav _side-bar.blade.php:620/624 |
@@ -941,7 +949,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (77)
+## ORPHAN (66)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -1280,72 +1288,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Http/Controllers/Admin/EmailTemplatesController.php:31 index() -> view('email-templates.mail-tester'); routes/admin/routes.php:1172 admin.system-setup.email-templates.index — referenced by no menu and no view
 - No surface on — Seller Web, Flutter App, Analytics, Monitor
 - Ruled: belongs in the Admin sidebar, one link away. The page renders and works; the sidebar points at the /{type}/{tab} view route instead, so the only way to test transactional mail is to type the URL.
-
-**Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff**  
-`security` · owner: Admin  
-- Backend — No auth.* action is recorded anywhere: grep of app/ and Modules/ finds no AuditLogger call in app/Http/Controllers/Admin/Auth/ or app/Http/Controllers/Vendor/Auth/; the gap is stated as a remedy in app/Services/Monitoring/Panels/SecurityPanel.php:714 and detected at :711 credentials()
-- No surface on — Admin, Seller Web, Flutter App, Dev Portal
-- Ruled: belongs on the audit trail, and the monitoring panel already prints the fix. A rejected password leaves no trace anywhere in the application: no auth.* action exists in app/ or Modules/, and the Admin and Vendor auth controllers contain zero AuditLogger calls, so a credential-stuffing run against the seller panel is indistinguishable from silence and monitoring can only count 401 responses, which measures refusal by any cause.
-
-**The before/after values and actor context on every audited change**  
-`security` · owner: Admin  
-- Backend — written by app/Services/AuditLogger.php:47-48 into audit_logs.before / audit_logs.after; rendered only as a badge in resources/views/admin-views/marketplace/audit-log.blade.php:96 ('changed'); dropped entirely by the Flutter model /home/user/sillercenter-syria-cosmatics/lib/features/security/domain/models/security_models.dart:99; app/Services/AuditLogger.php:51-52 (clientIp/userAgent, stored on audit_logs.ip_address and .user_agent); returned by app/Services/Marketplace/SellerAuditTrailService.php:111; never rendered in resources/views/admin-views/marketplace/audit-log.blade.php (no ip_address reference in the file)
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs on the Admin audit page and the seller's own trail — rows nobody can read are as much a gap as rows never written. AuditLogger captures before, after, ip_address and user_agent on every row; the admin page renders the word 'changed' and nothing else, and the Flutter model drops the diff entirely while its tile shows three of the eight returned fields. The bank-details change PayoutService records specifically so a fraud review can see what the account was redirected from and to cannot be read on any screen in this system.
-
-**Who may read the audit trail**  
-`security` · owner: Admin  
-- Backend — routes/admin/routes.php:549 (['prefix' => 'marketplace', 'middleware' => ['module:marketplace']]) wrapping the audit-log route at :577; enforcement in app/Http/Middleware/ModulePermissionMiddleware.php:20
-- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs behind its own permission. The only screen that reads the trail sits inside the marketplace route group, so an admin role without that unrelated module flag cannot see a single audit row while theme, commerce, developer-console and approval events keep writing to it.
-
-**The seller's web view of their own audit trail**  
-`security` · owner: Seller  
-- Backend — declared in the navigation registry at app/Services/SellerCenter/Navigation.php:193 as route 'seller.audit.index'; that route does not exist in routes/seller/routes.php (the file defines 37 routes, none named audit); the menu item is silently dropped by the route-existence filter at app/Services/SellerCenter/Navigation.php:230
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs in the Seller Center, where the IA already reserves seller.audit.index — verified absent from the route table, so the route-existence filter silently drops the menu item. A seller on a browser cannot see what happened in their own shop; only the phone app can, and it drops the before/after values.
-
-**Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch**  
-`security` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/Employee/EmployeeController.php and app/Http/Controllers/Admin/Employee/CustomRoleController.php (both contain zero AuditLogger references); routes routes/admin/routes.php:520 admin.employee.* and :533 admin.custom-role.*, including custom-role update at :537 and employee-role-status at :539
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the audit trail. Verified zero AuditLogger references in EmployeeController and CustomRoleController: the platform audits every change to a seller's permission model with before/after and none to its own, including granting an employee the 'marketplace' module that unlocks the audit page itself.
-
-**Business settings — the several hundred DB-driven switches the whole platform boots from**  
-`security` · owner: Admin  
-- Backend — app/Services/BusinessSettingService.php and app/Services/SettingService.php (zero AuditLogger references); app/Http/Controllers/Admin/BusinessSettings/WebsiteSetupController.php (zero); route groups routes/admin/routes.php:1292, :1402, :1552, :1621, :1679; the gap is measured by app/Services/Monitoring/Panels/SecurityPanel.php:76 which looks for a 'setting' action family that never exists; app/Services/AuditLogger.php:29 record(), surfaced read-only at routes/admin/routes.php:577 admin.marketplace.audit-log
-- No surface on — Seller Web, Analytics, Dev Portal
-- Ruled: belongs on the audit trail, and it matters more here than in most codebases because CLAUDE.md is explicit that behaviour on this platform is DB-driven rather than code-driven. Only 11 of 139 admin controllers call AuditLogger and none of them is under Admin/Settings, so changing the commission percentage, the OTP lockout window, the storage backend, maintenance mode or the forced minimum app version leaves no record of who did it or what it was before — most behavioural change on this platform is unaudited by construction.
-
-**reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper**  
-`security` · owner: Admin  
-- Backend — app/Services/RecaptchaService.php:13 and :72 read business_settings key `recaptcha` ({status, site_key, secret_key}); enforced from app/Http/Controllers/Customer/Auth/CustomerAuthController.php:52,:368,:527, Customer/Auth/ForgotPasswordController.php:58,:151,:340 and Vendor/Auth/ForgotPasswordController.php:77; app/Services/RecaptchaService.php:27 (if (($data['score'] ?? 0) < 0.5))
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Dev Portal
-- Ruled: belongs in Admin Settings. Verified by grep: the recaptcha key has read sites in RecaptchaService and the monitoring integrations panel and no writer anywhere in app/Http/Controllers/Admin or resources/views, so the platform's only bot defence on its authentication forms is seeded off at install and can be enabled — or its secret rotated — only by editing the database; the 0.5 score floor beside it is a class constant, and 0.5 is precisely the number an operator lowers when real customers start being blocked.
-
-**Which channel a customer password reset is sent through — email or SMS OTP**  
-`security` · owner: Admin  
-- Backend — business_settings key `forgot_password_verification`, read at app/Http/Controllers/Customer/Auth/ForgotPasswordController.php:48, app/Http/Controllers/RestAPI/v1/auth/ForgotPasswordController.php:43 and exposed to the apps at app/Http/Controllers/RestAPI/v1/ConfigController.php:183
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs in Admin Settings, where the vendor and delivery-man equivalents already have screens. Only the customer one has none, so switching customer account recovery to SMS is a hand-edited row.
-
-**Seller staff reaching the shop's own analytics page**  
-`security` · owner: Seller Staff  
-- Backend — routes/vendor/routes.php:104 — GET vendor/analytics; the segment 'analytics' is absent from the map at app/Http/Middleware/SellerStaffAccessMiddleware.php:65-128 and therefore hits default => DENY
-- No surface on — Admin, Seller Web, Monitor
-- Ruled: a defect belonging to Developer in one line. Verified in the current file: the segment 'analytics' is still absent from the permission map in SellerStaffAccessMiddleware, so deny-by-default 403s every staff member on /vendor/analytics while the same person's API token reaches seller-center/analytics under finance.view — the two clients disagree about what a staff member may see.
-
-**The authentication requirement the portal reports for the v2 seller API**  
-`security` · owner: Developer  
-- Backend — Route group routes/rest_api/v2/api.php:27 declares no auth middleware; the controllers authenticate in-line via Helpers::get_seller_by_token() (app/Utils/Helpers.php:523), used 48 times across app/Http/Controllers/RestAPI/v2/seller/
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: a defect belonging to Developer, and the single most dangerous claim the portal makes. Verified: routes/rest_api/v2/api.php:27 declares only api_lang, the controllers authenticate in-line through Helpers::get_seller_by_token(), and AuthResolver reads middleware only — so the portal tells every reader that balance-withdraw, shop-update and product delete on 55 live endpoints need no credentials. That is the one direction an auth resolver must never be wrong in.
-
-**The permission scope an endpoint requires, and which endpoints a seller-issued API key may call**  
-`security` · owner: Developer  
-- Backend — app/Services/DeveloperPortal/Support/AuthResolver.php:182 permissions() — matches only `module:` and `can:` middleware; merged with ApiDoc::$scopes at app/Services/DeveloperPortal/ApiManifest.php:265; rendered at resources/views/admin-views/telemetry/developer-endpoint.blade.php:68; app/Http/Middleware/SellerApiAuthMiddleware.php:70 (a key is refused with 403 `api_key` unless the route declares a seller_can scope) / :96 routeDeclaresAScope(); scopes declared in routes/rest_api/v3/seller.php:23-622
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs in the Developer Portal and resolves empty for all 537 endpoints. Verified in the current file: AuthResolver::permissions() matches only module: and can:, while the real gate on the seller API is seller_can: (53 route groups), and no controller anywhere passes ApiDoc(scopes:). On top of that, SellerApiAuthMiddleware refuses a key unless the route declares a scope — 232 of 248 seller endpoints accept a key and 16 refuse one — and that split is written down nowhere, so an integrator discovers it by getting a 403.
 
 **Documented intent for the API — 438 of 537 endpoints carry no declared contract**  
 `integrations` · owner: Developer  

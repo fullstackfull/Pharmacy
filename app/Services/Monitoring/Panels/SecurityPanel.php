@@ -73,7 +73,17 @@ class SecurityPanel implements Panel
      * asserted here: the point of the list is to name what is missing, and a hard-coded claim
      * would go stale the day somebody wires one of them up.
      */
-    private const SECURITY_ACTION_PREFIXES = ['auth', 'role', 'permission', 'setting'];
+    private const SECURITY_ACTION_FAMILIES = [
+        // Named by the module prefix this platform actually writes, not by the word a reviewer
+        // would use. The list used to read ['auth', 'role', 'permission', 'setting'], and three of
+        // those four never match an action name — roles and employees are written as `access.*`
+        // and settings as `settings.*` — so the page reported permanent blind spots over coverage
+        // that was there all along, which is a worse failure than the one it was looking for.
+        'authentication' => ['auth'],
+        'access_control' => ['access'],
+        'configuration' => ['settings', 'platform'],
+        'monitoring' => ['monitoring'],
+    ];
 
     /**
      * Timeline types worth reading on a security page.
@@ -838,8 +848,8 @@ class SecurityPanel implements Panel
         // Which of the families a security reviewer expects have ever been written here. Reported
         // per family so the page can name the specific blind spot instead of one vague disclaimer.
         $families = [];
-        foreach (self::SECURITY_ACTION_PREFIXES as $family) {
-            $families[$family] = array_key_exists($family, $modules);
+        foreach (self::SECURITY_ACTION_FAMILIES as $family => $prefixes) {
+            $families[$family] = array_intersect($prefixes, array_keys($modules)) !== [];
         }
 
         return array_merge($empty, [

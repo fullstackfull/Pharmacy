@@ -114,11 +114,17 @@ class SellerStaffAccessMiddleware
             // Reviews.
             'reviews' => 'reviews.view',
 
-            // Money.
-            'transaction', 'report' => 'finance.view',
+            // Money. `analytics` is the shop's own numbers — the same screen the API already serves
+            // this staff member under finance.view. It was absent from this map, so deny-by-default
+            // 403'd every staff member on the web page while their token reached the identical data.
+            'transaction', 'report', 'analytics' => 'finance.view',
 
             // Delivery team is an order-fulfilment concern.
             'delivery-man' => 'orders.manage',
+
+            // The shop's own history. Same permission as the team screens it sits beside, and the
+            // route declares it too — this is the coarse pre-filter, not the decision.
+            'audit' => 'staff.manage',
 
             // Settings — the staff area itself needs staff.manage; the rest needs shop settings.
             'business-settings' => $request->segment(3) === 'staff' ? 'staff.manage' : 'shop_settings.manage',

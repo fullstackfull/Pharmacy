@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 459 |
+| Fully connected to a surface | 470 |
 | Internal by design | 52 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **77** |
+| **Orphaned — no owner, no surface** | **66** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -640,19 +640,19 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | **None** | **None** | **None** | Events | Alerts | **None** | No | Admin | ORPHAN |
-| The before/after values and actor context on every audited change | View | **None** | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Who may read the audit trail | View | **None** | **None** | **None** | **None** | **None** | Yes | Admin | ORPHAN |
-| The seller's web view of their own audit trail | View | **None** | View | **None** | **None** | Full | Yes | Seller | ORPHAN |
-| Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch | Configure | **None** | N/A | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Business settings — the several hundred DB-driven switches the whole platform boots from | Configure | **None** | View | **None** | Health | **None** | No | Admin | ORPHAN |
-| reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | **None** | **None** | **None** | **None** | Health | **None** | No | Admin | ORPHAN |
-| Which channel a customer password reset is sent through — email or SMS OTP | **None** | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | View | **None** | **None** | Events | Alerts | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| The before/after values and actor context on every audited change | View | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| Who may read the audit trail | Manage | **None** | **None** | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| The seller's web view of their own audit trail | View | View | View | **None** | **None** | Full | Yes | Seller | CONNECTED TO SELLER |
+| Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch | View | **None** | N/A | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| Business settings — the several hundred DB-driven switches the whole platform boots from | View | **None** | View | **None** | Health | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | Manage | **None** | **None** | **None** | Health | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| Which channel a customer password reset is sent through — email or SMS OTP | Manage | **None** | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Minimum password length — 6 characters on some surfaces and 8 on others | Manage | **None** | **None** | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | Manage | **None** | **None** | **None** | Alerts | Documented | No | Admin | CONNECTED TO ADMIN |
-| Seller staff reaching the shop's own analytics page | **None** | **None** | View | Metrics | **None** | Documented | No | Seller Staff | ORPHAN |
-| The authentication requirement the portal reports for the v2 seller API | View | **None** | N/A | **None** | **None** | Full | No | Developer | ORPHAN |
-| The permission scope an endpoint requires, and which endpoints a seller-issued API key may call | View | **None** | Manage | **None** | **None** | Partial | No | Developer | ORPHAN |
+| Seller staff reaching the shop's own analytics page | **None** | View | View | Metrics | **None** | Documented | No | Seller Staff | FIXED |
+| The authentication requirement the portal reports for the v2 seller API | View | **None** | N/A | **None** | **None** | Full | No | Developer | FIXED |
+| The permission scope an endpoint requires, and which endpoints a seller-issued API key may call | View | **None** | Manage | **None** | **None** | Full | No | Developer | FIXED |
 | Unified audit trail viewer | Oversight | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Seller API key oversight: revoke a leaked key | Oversight | **None** | Manage | **None** | **None** | Full | Yes | Admin | CONNECTED TO ADMIN |
 | Seller staff and role oversight (who is acting for a shop) | Oversight | Manage | Manage | **None** | **None** | Full | Yes | Admin | CONNECTED TO ADMIN |

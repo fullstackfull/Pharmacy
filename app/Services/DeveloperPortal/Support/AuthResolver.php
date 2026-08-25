@@ -78,6 +78,38 @@ class AuthResolver
         ],
     ];
 
+    /**
+     * The in-line authentication this application actually uses, and where to look for it.
+     *
+     * The v2 seller API declares no auth middleware at all — its controllers call
+     * `Helpers::get_seller_by_token()` on the first line instead — so a resolver that read only
+     * middleware told every reader that balance-withdraw and seller-update were public. That is the
+     * single most dangerous claim a portal can make, and the one direction this class must never be
+     * wrong in.
+     *
+     * Detected per controller by looking for the call rather than declared per namespace, because a
+     * namespace rule would be wrong the moment one controller in it is genuinely public — which is
+     * already the case: BrandController under the same prefix lists brands and authenticates
+     * nothing. A list would have documented it as protected and it is not.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const INLINE_AUTHENTICATION = [
+        'get_seller_by_token' => [
+            'scheme' => 'bearer',
+            'mechanism' => 'seller_token',
+            'actor' => 'vendor',
+            'header' => 'Authorization: Bearer <seller_auth_token>',
+            'note' => 'Authenticated inside the controller through Helpers::get_seller_by_token(), not by middleware — the route group declares none. This is the vendor auth_token from the seller login endpoint, and it is NOT a Passport token.',
+        ],
+    ];
+
+    /** Only these namespaces are read from disk; everything else authenticates through middleware. */
+    private const INLINE_NAMESPACES = ['App\\Http\\Controllers\\RestAPI\\'];
+
+    /** @var array<string, array<string, string>|null> one read per controller class, not per route. */
+    private array $inlineCache = [];
+
     /** Middleware that makes authentication optional rather than required. */
     private const OPTIONAL = [
         'App\Http\Middleware\APIGuestMiddleware',
@@ -118,6 +150,8 @@ class AuthResolver
             }
         }
 
+        $matched ??= $this->inlineAuthentication($route);
+
         if ($matched === null) {
             return [
                 'required' => false,
@@ -136,6 +170,46 @@ class AuthResolver
         }
 
         return $matched + ['required' => true, 'optional_auth' => $optional];
+    }
+
+    /**
+     * Authentication the route table cannot see, because it happens inside the action.
+     *
+     * @return array<string, string>|null
+     */
+    private function inlineAuthentication(Route $route): ?array
+    {
+        $controller = $route->getAction('controller');
+
+        if (!is_string($controller) || !str_contains($controller, '@')) {
+            return null;
+        }
+
+        $class = ltrim(explode('@', $controller)[0], '\\');
+
+        if (array_key_exists($class, $this->inlineCache)) {
+            return $this->inlineCache[$class];
+        }
+
+        $inNamespace = false;
+        foreach (self::INLINE_NAMESPACES as $namespace) {
+            $inNamespace = $inNamespace || str_starts_with($class, ltrim($namespace, '\\'));
+        }
+
+        if (!$inNamespace || !class_exists($class)) {
+            return $this->inlineCache[$class] = null;
+        }
+
+        $file = (new \ReflectionClass($class))->getFileName();
+        $source = $file !== false && is_readable($file) ? (string) file_get_contents($file) : '';
+
+        foreach (self::INLINE_AUTHENTICATION as $marker => $scheme) {
+            if (str_contains($source, $marker)) {
+                return $this->inlineCache[$class] = $scheme;
+            }
+        }
+
+        return $this->inlineCache[$class] = null;
     }
 
     /**
@@ -196,6 +270,16 @@ class AuthResolver
 
             if (str_starts_with($item, 'can:')) {
                 $permissions[] = trim(substr($item, 4));
+            }
+
+            // The real gate on the seller API. Fifty-three route groups declare `seller_can:` and
+            // this method matched only `module:` and `can:`, so the scope column resolved empty for
+            // all 537 endpoints — including the ones a seller-issued API key is refused by unless
+            // the route declares one.
+            if (str_starts_with($item, 'seller_can:')) {
+                foreach (explode(',', substr($item, 11)) as $scope) {
+                    $permissions[] = trim($scope);
+                }
             }
         }
 

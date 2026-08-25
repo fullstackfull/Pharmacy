@@ -169,6 +169,29 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     })->name('settings.index');
 
     /*
+    | The unified audit center (spec item 84). Read-only: no edit or delete path exists.
+    |
+    | Its own group, gated on system settings rather than on the marketplace module it used to sit
+    | inside. Theme changes, commerce, the developer console and approvals all write to this trail,
+    | and an admin role without the unrelated marketplace flag could not read a single row of any of
+    | it. The URL and the route name are unchanged, so every existing link keeps working.
+    */
+    Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:system_settings']], function () {
+        Route::get('audit-log', [\App\Http\Controllers\Admin\Marketplace\AuditLogController::class, 'index'])->name('audit-log');
+    });
+
+    /*
+    | Authentication security: the bot defence on every sign-in form, and how a customer recovers
+    | their account. Both had settings rows and no writer anywhere in the admin panel.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Settings\AuthenticationSecurityController::class)
+        ->prefix('settings/authentication')->name('settings.authentication.')->middleware('module:system_settings')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'update')->name('update');
+        });
+
+    /*
     | Platform policies: every rule the platform applies to itself, in one place.
     |
     | The control-surface audit found ninety hard-coded thresholds that a marketplace would want to
@@ -621,11 +644,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
                 Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
             });
-        });
-
-        // The unified audit center (spec item 84). Read-only: no edit or delete path exists.
-        Route::controller(\App\Http\Controllers\Admin\Marketplace\AuditLogController::class)->group(function () {
-            Route::get('audit-log', 'index')->name('audit-log');
         });
 
         // The approvals inbox (spec item 82): the operable surface of the reusable maker-checker

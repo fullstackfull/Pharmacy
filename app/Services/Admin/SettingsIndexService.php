@@ -115,6 +115,7 @@ class SettingsIndexService
                 'module' => 'system_settings',
                 'icon'   => 'settings',
                 'items'  => [
+                    ['admin.settings.authentication.index', translate('Authentication_Security'), translate('the_bot_defence_on_your_sign_in_forms_and_how_a_customer_recovers_their_account'), 'recaptcha captcha bot login password reset otp security'],
                     ['admin.settings.policies.index', translate('Platform_Policies'), translate('the_rules_the_platform_applies_to_itself_thresholds_limits_and_windows'), 'policy threshold limit rule window stock password webhook payout'],
                     ['admin.system-setup.environment-setup', translate('System_Setup'), translate('environment_and_application_configuration'), 'environment system config env'],
                     ['admin.system-setup.language.index', translate('Languages'), translate('the_languages_your_panel_and_store_offer'), 'language translation locale arabic english'],

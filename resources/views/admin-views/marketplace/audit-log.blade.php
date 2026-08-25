@@ -6,6 +6,45 @@
     $actorColours = ['admin' => 'accent', 'seller' => 'info', 'customer' => 'secondary', 'system' => 'secondary'];
 @endphp
 
+@php
+    // What actually changed, rather than the word "changed". A row records the fields it wrote and
+    // the values they had; showing only that a change happened made the two most useful columns in
+    // the table unreadable — an auditor could see that the commission rate was touched and never
+    // what it was moved from.
+    $changedFields = static function ($entry): array {
+        $before = is_array($entry->before) ? $entry->before : [];
+        $after = is_array($entry->after) ? $entry->after : [];
+        $changed = [];
+
+        foreach (array_keys($before + $after) as $field) {
+            $was = $before[$field] ?? null;
+            $now = $after[$field] ?? null;
+
+            if ($was === $now) {
+                continue;
+            }
+
+            $changed[$field] = ['before' => $was, 'after' => $now];
+        }
+
+        return $changed;
+    };
+
+    $show = static function ($value): string {
+        if ($value === null) {
+            return '—';
+        }
+        if (is_bool($value)) {
+            return $value ? translate('yes') : translate('no');
+        }
+        if (is_array($value)) {
+            return \Illuminate\Support\Str::limit(json_encode($value, JSON_UNESCAPED_UNICODE), 120);
+        }
+
+        return \Illuminate\Support\Str::limit((string) $value, 120);
+    };
+@endphp
+
 @section('content')
     <div class="content container-fluid">
         <div class="mb-3">
@@ -93,8 +132,37 @@
                                                 @endif
                                             @endforeach
                                         @endif
-                                        @if ($entry->before || $entry->after)
-                                            <span class="k-badge k-badge--warning">{{ translate('changed') }}</span>
+                                        @php($diff = $changedFields($entry))
+                                        @if ($diff !== [])
+                                            <details class="mt-1">
+                                                <summary class="fs-12">{{ translate('changed') }} ({{ count($diff) }})</summary>
+                                                <table class="k-table k-table--compact mt-1">
+                                                    <thead><tr>
+                                                        <th>{{ translate('field') }}</th>
+                                                        <th>{{ translate('before') }}</th>
+                                                        <th>{{ translate('after') }}</th>
+                                                    </tr></thead>
+                                                    <tbody>
+                                                    @foreach ($diff as $field => $change)
+                                                        <tr>
+                                                            <td class="fs-12"><code>{{ $field }}</code></td>
+                                                            <td class="fs-12 text-muted">{{ $show($change['before']) }}</td>
+                                                            <td class="fs-12 fw-bold">{{ $show($change['after']) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </details>
+                                        @elseif ($entry->before || $entry->after)
+                                            {{-- Recorded as a change, and the two states are equal:
+                                                 a save that touched nothing. Said, not hidden. --}}
+                                            <span class="k-badge">{{ translate('no_field_changed') }}</span>
+                                        @endif
+                                        @if ($entry->ip_address || $entry->user_agent)
+                                            <div class="fs-10 text-muted mt-1">
+                                                {{ $entry->ip_address ?: '—' }}
+                                                @if ($entry->user_agent) · {{ \Illuminate\Support\Str::limit($entry->user_agent, 60) }} @endif
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>

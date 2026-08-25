@@ -267,6 +267,11 @@ class PolicyRegistry
                     'type' => 'int', 'default' => 20, 'min' => 1, 'max' => 600,
                     'label' => 'sign_in_attempts_allowed_per_minute',
                 ],
+                'recaptcha_minimum_score' => [
+                    'type' => 'ratio', 'default' => 0.5, 'min' => 0.0, 'max' => 1.0,
+                    'label' => 'lowest_recaptcha_score_a_visitor_may_have_and_still_be_let_through',
+                    'help' => 'higher_turns_away_more_bots_and_more_people',
+                ],
                 'api_requests_per_minute' => [
                     'type' => 'int', 'default' => 3000, 'min' => 60, 'max' => 100000,
                     'label' => 'api_requests_allowed_per_minute_per_client',
