@@ -62,7 +62,7 @@ class Review extends Model
 
     public function scopeActive($query): mixed
     {
-        return $query->where('status', 1);
+        return $query->where($this->getTable() . '.status', 1);
     }
 
     public function user():HasOne
@@ -116,7 +116,11 @@ class Review extends Model
             if (str_contains(url()->current(), url('/') . '/admin') || str_contains(url()->current(), url('/') . '/seller') || str_contains(url()->current(), url('/') . '/vendor') || str_contains(url()->current(), url('/') . '/api/v2') || str_contains(url()->current(), url('/') . '/api/v3')) {
                 return $builder;
             } else {
-                return $builder->where('status', 1);
+                // Qualified, because this scope follows the model into joins:
+                // products carries a `status` of its own, so an unqualified
+                // column here is ambiguous the moment a query reaches reviews
+                // through a product — and the database rejects the whole query.
+                return $builder->where($builder->getModel()->getTable() . '.status', 1);
             }
         });
 
