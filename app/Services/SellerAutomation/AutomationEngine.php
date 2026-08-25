@@ -60,7 +60,12 @@ class AutomationEngine
         }
 
         // One past the cap, so "more than you allow" is distinguishable from "exactly your cap".
-        $matched = $trigger->match($rule->seller_id, $rule->trigger_settings ?? [], $rule->max_actions_per_run + 1);
+        $matched = $trigger->match(
+            $rule->seller_id,
+            $rule->trigger_settings ?? [],
+            $rule->max_actions_per_run + 1,
+            $rule->scope ?? [],
+        );
         $capped = $matched->count() > $rule->max_actions_per_run;
 
         $subjects = $matched->take($limit)->map(function (object $subject) use ($action, $rule) {
@@ -117,6 +122,7 @@ class AutomationEngine
                 $rule->seller_id,
                 $rule->trigger_settings ?? [],
                 $rule->max_actions_per_run + 1,
+                $rule->scope ?? [],
             );
         } catch (Throwable $exception) {
             return $this->fail($rule, $startedAt, 'automation_failed_trigger_error', detail: $exception->getMessage());

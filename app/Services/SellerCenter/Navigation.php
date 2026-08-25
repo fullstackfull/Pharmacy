@@ -41,6 +41,9 @@ class Navigation
                     ['key' => 'home', 'label' => 'nav_seller_home', 'route' => 'seller.home'],
                     ['key' => 'control-tower', 'label' => 'nav_control_tower', 'route' => 'seller.control-tower', 'badge' => 'issues_open', 'badgeTone' => 'issues_severity'],
                     ['key' => 'actions', 'label' => 'nav_action_center', 'route' => 'seller.actions', 'badge' => 'actions_mine'],
+                    // The panel's own dashboard, untouched and still where it has always been.
+                    // The Seller Center home sits beside it, not over it.
+                    ['key' => 'dashboard.classic', 'label' => 'nav_classic_dashboard', 'url' => 'vendor/dashboard', 'legacy' => true],
                 ],
             ],
             [

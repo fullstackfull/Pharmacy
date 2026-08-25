@@ -12,13 +12,20 @@ flight.
 
 ## Where the work lives
 
-The Seller Center is a **parallel surface** at `/seller`, not a re-skin of `/vendor`.
+**One panel, at `/vendor`.** The Seller Center's screens are *added to* the panel sellers already use —
+they do not replace or remove anything that is there.
 
-The legacy vendor panel carries 126 hard-coded colours outside its token block; re-theming it in place would
-have put every existing seller screen at risk for a visual gain. Instead the new shell owns its own
-stylesheet and its own routes, and the navigation registry links un-migrated destinations straight back into
-`/vendor`. Nothing a seller can do today stopped working when wave 1 landed, and each wave removes one more
-legacy link (PART 15).
+Every existing page is still at its own address, working as it works today: `/vendor/dashboard` is still the
+classic dashboard, `/vendor/orders/list/all` is still the classic order list. The new screens take their own
+`/vendor` addresses beside them (`/vendor/overview`, `/vendor/control-tower`, `/vendor/automation`, …), and
+the two shells are bridged in both directions: the classic sidebar carries a **Seller Center** group built
+from the same navigation registry the new rail reads, and the new navigation links straight back to the
+classic pages. A screen that has not shipped is absent from both rather than dead in either.
+
+The legacy panel is not re-themed. It carries 126 hard-coded colours outside its token block, and repainting
+it in place would put every existing seller screen at risk for a visual gain. The new screens bring the
+design; the old ones keep working exactly as they do now until a wave replaces one — and that replacement,
+when it comes, is a decision taken per screen, not a side effect (PART 15).
 
 ## Wave ledger
 
@@ -26,7 +33,7 @@ legacy link (PART 15).
 |---|---|---|---|
 | 1 | Foundation — tokens, shell, component library, table + filter system, status renderers, states, RTL | **Done** | `b969dd21` |
 | 2 | Core seller operations — Home, Control Tower, Issue Center, Orders, Order detail, Products, Inventory, Movement ledger | **Done** | `e5125f33`, `53085acb` |
-| 3 | Automation — rules, builder, history + undo, scheduled operations, opportunities | Not started | — |
+| 3 | Automation — rules, builder, history + undo, opportunities | **Done** (scheduled operations deferred, see below) | — |
 | 4 | Fulfilment — shipments, exceptions, picking, packing, warehouse operations | Not started | — |
 | 5 | Finance — overview, ledger, payout detail, statements, reconciliation, fee simulator | Not started | — |
 | 6 | Trust — performance, account health, brand registry, claims, compliance | Not started | — |
@@ -85,6 +92,47 @@ count matches, the action resolves it, and the resolution shows in the entity ti
 
 **Copy** — 7,440 keys in `en`, `sy` and `sa`, seeded by `SellerCenterCopySeeder`. No production string is
 hard-coded in a component.
+
+## Wave 3 — Automation
+
+**Built** — Automation rules list, rule builder, preview-matches, automation history with the run drawer and
+Undo, Opportunities. Server work that the screens needed and did not have: rule scope, a field schema, and a
+safety classification.
+
+**Decisions worth knowing**
+
+- **The form is derived from the validator.** `SettingField` reads each setting's Laravel rule and returns
+  the control it needs — type, bounds, options. A trigger whose threshold gains an upper bound gets a bounded
+  input the same day, in both clients, because there is only one statement of what is allowed.
+- **A rule can be pointed at part of the catalogue.** `scope` (brands, categories, products) is new, nullable,
+  and absent by default, so every rule that already exists keeps applying exactly as it did. Without it, "mark
+  down anything that has not sold in ninety days" was a rule no sensible seller could switch on.
+- **The safety class is the server's answer.** An action the signed-in person may not perform, or one whose
+  changes cannot be put back, is marked *Cannot be automated* with the reason. There is deliberately no
+  "needs confirmation" badge: nothing implements a confirmation step, and a badge promising one would lie.
+- **`matched` is never called `applied`.** A capped run matched a great many things and changed none of
+  them; the history says exactly that, in the row and in the drawer.
+- **Undo restores only what the action owns.** A change somebody else has since overwritten is not offered as
+  undoable — putting it back would overwrite their decision with one taken before it.
+- **Opportunities are computed, never invented.** Three types, each from this shop's own data: fast sellers
+  running out of cover, products viewed and not bought, listings under their category's median. A type with
+  no data behind it does not render at all — a conversion rate with no views is not a low rate, it is no
+  measurement (PART 14).
+
+**Gates** — verified end to end in the browser: a rule created from the catalogue, previewed (1 match, no
+change made), run (the listing hidden, the trail written), and undone (the listing restored, the trail
+stamped). 22 tests for the wave, 54 across waves 1–3, 1822 in the suite, 0 failures.
+
+**Not built, and why**
+
+- **Scheduled operations (A4)** — there is no server for it. Scheduled price changes, timed activations and
+  campaign starts do not exist as a domain, and a screen listing them would have nothing to list. Recorded as
+  BACKEND MISSING; it needs its own wave, not a page.
+- **The IF condition builder (A2)** — the rule model has no condition expressions, and a builder writing
+  conditions nothing evaluates would be a form that silently does nothing. The practical half of it — limiting
+  a rule to a brand, a category or a list of products — is what `scope` implements.
+- **"Eligible for campaign" opportunity (A5)** — sellers cannot join a campaign from the panel, so the card
+  would have no action behind it.
 
 ---
 

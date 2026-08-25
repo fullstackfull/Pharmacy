@@ -34,13 +34,13 @@ class LowStockTrigger implements AutomationTrigger
         return ['threshold' => 'required|integer|min:1|max:1000'];
     }
 
-    public function match(int $sellerId, array $settings, int $limit): Collection
+    public function match(int $sellerId, array $settings, int $limit, array $scope = []): Collection
     {
         if (!Schema::hasTable('products')) {
             return collect();
         }
 
-        $products = $this->sellerProducts($sellerId)
+        $products = $this->sellerProducts($sellerId, $scope)
             ->where('status', 1)
             ->where('current_stock', '>', 0)
             ->where('current_stock', '<=', (int) ($settings['threshold'] ?? 5))

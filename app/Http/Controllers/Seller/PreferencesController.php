@@ -57,6 +57,6 @@ class PreferencesController extends SellerCenterController
         $target = (string) $request->query('back', '');
         $path = parse_url($target, PHP_URL_PATH) ?: '';
 
-        return redirect()->to(str_starts_with($path, '/seller') ? $target : route('seller.home'));
+        return redirect()->to(str_starts_with($path, '/vendor') ? $target : route('seller.home'));
     }
 }

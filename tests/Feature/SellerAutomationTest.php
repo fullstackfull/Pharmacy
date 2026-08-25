@@ -130,6 +130,8 @@ class SellerAutomationTest extends TestCase
         (require base_path('database/migrations/2026_09_16_000002_record_who_suspended_an_automation_rule.php'))->up();
         // And the one that releases automation's claim on a listing somebody else has changed.
         (require base_path('database/migrations/2026_09_16_000003_note_when_something_else_changed_what_a_rule_touched.php'))->up();
+        // And the one that lets a rule be pointed at part of the catalogue rather than all of it.
+        (require base_path('database/migrations/2026_09_17_000001_let_a_rule_be_pointed_at_part_of_the_catalogue.php'))->up();
     }
 
     private function product(array $attributes = []): Product

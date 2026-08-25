@@ -29,8 +29,13 @@ interface AutomationTrigger
     /**
      * The records this trigger currently selects, newest first, bounded by $limit.
      *
+     * The scope is separate from the settings because it is not the trigger's own configuration:
+     * it is the seller's statement of which part of their catalogue any rule may touch, and it
+     * narrows every trigger the same way. An empty scope means the whole shop.
+     *
      * @param  array<string, mixed>  $settings
+     * @param  array<string, array<int, int>>  $scope
      * @return Collection<int, object>
      */
-    public function match(int $sellerId, array $settings, int $limit): Collection;
+    public function match(int $sellerId, array $settings, int $limit, array $scope = []): Collection;
 }

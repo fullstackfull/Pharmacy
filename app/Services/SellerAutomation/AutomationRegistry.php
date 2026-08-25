@@ -3,6 +3,7 @@
 namespace App\Services\SellerAutomation;
 
 use App\Models\SellerAutomationRule;
+use App\Services\Marketplace\SellerPrincipal;
 
 /**
  * What a seller is allowed to build a rule out of.
@@ -71,11 +72,34 @@ class AutomationRegistry
     }
 
     /**
+     * How much a seller has to think before switching this action on (handoff 08 A2).
+     *
+     * Decided here rather than on the screen, and only from what the server actually knows: an
+     * action nobody may perform cannot be automated, and an action whose changes can be put back
+     * runs on its own. There is deliberately no third answer — a badge saying "needs confirmation"
+     * would promise a confirmation step that nothing implements.
+     */
+    public function classify(AutomationAction $action, ?SellerPrincipal $principal): array
+    {
+        if ($principal !== null && !$principal->can($action->permission())) {
+            return ['class' => 'restricted', 'reason' => 'automation_class_restricted_reason'];
+        }
+
+        return $action->revertibleColumns() === []
+            ? ['class' => 'restricted', 'reason' => 'automation_class_not_revertible_reason']
+            : ['class' => 'safe', 'reason' => null];
+    }
+
+    /**
      * The catalogue as a screen needs it: every trigger, every action, and which pairs are legal.
      *
-     * @return array{triggers: array<int, array>, actions: array<int, array>}
+     * Given a principal, each action also carries whether that principal may automate it, so a
+     * screen offers what the seller in front of it can actually use rather than what the shop owner
+     * could.
+     *
+     * @return array{triggers: array<int, array>, actions: array<int, array>, scope: array<int, array>}
      */
-    public function catalogue(): array
+    public function catalogue(?SellerPrincipal $principal = null): array
     {
         return [
             'triggers' => array_values(array_map(fn (AutomationTrigger $trigger) => [
@@ -83,6 +107,7 @@ class AutomationRegistry
                 'subject_type' => $trigger->subjectType(),
                 'settings' => array_keys($trigger->rules()),
                 'required_settings' => $this->requiredKeys($trigger->rules()),
+                'fields' => SettingField::describe($trigger->rules()),
                 'actions' => array_values(array_keys(array_filter(
                     $this->actions,
                     fn (AutomationAction $action) => in_array($trigger->subjectType(), $action->subjectTypes(), true),
@@ -94,7 +119,17 @@ class AutomationRegistry
                 'subject_types' => $action->subjectTypes(),
                 'settings' => array_keys($action->rules()),
                 'required_settings' => $this->requiredKeys($action->rules()),
+                'fields' => SettingField::describe($action->rules()),
+                'revertible_columns' => $action->revertibleColumns(),
+                'classification' => $this->classify($action, $principal),
             ], $this->actions)),
+            // The same shape as a settings bag, so a screen renders the scope with the code it
+            // already has for trigger and action settings.
+            'scope' => SettingField::describe(array_filter(
+                RuleScope::rules(),
+                fn (string $key) => !str_contains($key, '.'),
+                ARRAY_FILTER_USE_KEY,
+            )),
         ];
     }
 

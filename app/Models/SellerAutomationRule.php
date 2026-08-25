@@ -39,6 +39,7 @@ class SellerAutomationRule extends Model
         'action',
         'trigger_settings',
         'action_settings',
+        'scope',
         'status',
         'max_actions_per_run',
         'cooldown_minutes',
@@ -47,6 +48,7 @@ class SellerAutomationRule extends Model
     protected $casts = [
         'trigger_settings' => 'array',
         'action_settings' => 'array',
+        'scope' => 'array',
         'max_actions_per_run' => 'integer',
         'cooldown_minutes' => 'integer',
         'run_count' => 'integer',

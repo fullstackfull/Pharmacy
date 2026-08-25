@@ -35,17 +35,20 @@ class SellerAutomationController extends Controller
     #[ApiDoc(
         summary: 'What a rule can be built out of',
         description: 'Every trigger, every action, which pairs are legal, and which settings each one '
-            . 'requires. The screen builds its form from this rather than hard-coding a list, so a '
-            . 'trigger added on the server appears in the app without shipping a new build.',
+            . 'requires — each setting described as the form control it needs, derived from the rule '
+            . 'that will validate it. The screen builds its form from this rather than hard-coding a '
+            . 'list, so a trigger added on the server appears in the app without shipping a new build.',
         audience: ApiDoc::VENDOR_APP,
         stability: ApiDoc::STABLE,
         since: 'v3',
         idempotent: true,
         group: 'vendors',
     )]
-    public function catalogue(): JsonResponse
+    public function catalogue(Request $request): JsonResponse
     {
-        return response()->json($this->registry->catalogue(), 200);
+        // Built for whoever is asking. A staff member who may not change products is told so on the
+        // action itself, rather than discovering it when the rule they wrote is refused.
+        return response()->json($this->registry->catalogue($this->principal($request)), 200);
     }
 
     #[ApiDoc(
@@ -331,6 +334,7 @@ class SellerAutomationController extends Controller
             'action' => $rule->action,
             'trigger_settings' => $rule->trigger_settings ?? [],
             'action_settings' => $rule->action_settings ?? [],
+            'scope' => $rule->scope ?? [],
             'status' => $rule->status,
             'max_actions_per_run' => $rule->max_actions_per_run,
             'cooldown_minutes' => $rule->cooldown_minutes,

@@ -43,7 +43,7 @@ class RestockedTrigger implements AutomationTrigger
         return ['threshold' => 'nullable|integer|min:1|max:1000'];
     }
 
-    public function match(int $sellerId, array $settings, int $limit): Collection
+    public function match(int $sellerId, array $settings, int $limit, array $scope = []): Collection
     {
         if (!Schema::hasTable('products') || !Schema::hasTable('seller_automation_actions')) {
             return collect();
@@ -55,7 +55,7 @@ class RestockedTrigger implements AutomationTrigger
             return collect();
         }
 
-        $products = $this->sellerProducts($sellerId)
+        $products = $this->sellerProducts($sellerId, $scope)
             ->where('status', 0)
             ->where('current_stock', '>=', (int) ($settings['threshold'] ?? 1))
             ->whereIn('id', $hidden)
