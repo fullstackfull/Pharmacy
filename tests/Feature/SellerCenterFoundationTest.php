@@ -288,6 +288,45 @@ class SellerCenterFoundationTest extends TestCase
         $this->assertNull(Shell::route('seller.a-screen-from-wave-eight'));
     }
 
+    public function test_every_link_into_the_classic_panel_actually_goes_somewhere(): void
+    {
+        // The registry drops a destination whose route has not shipped, which kept the new screens
+        // honest — but the classic panel's pages are named by URL, and nothing checked those. Five
+        // of the six had rotted: `products/add-new` had become `products/add`, `messages/list` had
+        // become `messages/index/{type}`, and so on. A link that goes nowhere is a dead control.
+        $legacy = [];
+        foreach (Navigation::groups() as $group) {
+            foreach ($group['items'] as $item) {
+                if (isset($item['url'])) {
+                    $legacy[$item['key']] = trim($item['url'], '/');
+                }
+            }
+        }
+
+        $this->assertNotEmpty($legacy, 'the registry should still link into the classic panel');
+
+        foreach ($legacy as $key => $path) {
+            $this->assertTrue(
+                Navigation::pathIsRouted($path),
+                "the navigation item '{$key}' points at {$path}, which nothing serves",
+            );
+        }
+    }
+
+    public function test_a_legacy_page_that_has_been_renamed_stops_being_offered(): void
+    {
+        $groups = Navigation::for(
+            null,
+            routeExists: fn () => true,
+            urlExists: fn (string $path) => $path !== 'vendor/coupon/index',
+        );
+
+        $keys = collect($groups)->flatMap(fn (array $group) => $group['items'])->pluck('key');
+
+        $this->assertNotContains('coupons', $keys);
+        $this->assertContains('campaigns', $keys);
+    }
+
     // ────────────────────────────────────────────── moments in time
 
     public function test_a_moment_that_never_happened_renders_as_a_dash(): void

@@ -59,7 +59,7 @@ class Navigation
                     ['key' => 'orders.cancelled', 'label' => 'nav_cancelled', 'route' => 'seller.orders.index', 'params' => ['view' => 'cancelled'], 'permission' => 'orders.view'],
                     ['key' => 'returns', 'label' => 'nav_returns', 'route' => 'seller.returns.index', 'permission' => 'orders.view', 'badge' => 'returns_open', 'badgeTone' => 'returns_severity'],
                     ['key' => 'refunds', 'label' => 'nav_refunds', 'route' => 'seller.refunds.index', 'permission' => 'orders.view'],
-                    ['key' => 'messages', 'label' => 'nav_messages', 'url' => 'vendor/messages/list', 'permission' => 'orders.view', 'legacy' => true],
+                    ['key' => 'messages', 'label' => 'nav_messages', 'url' => 'vendor/messages/index/customer', 'permission' => 'orders.view', 'legacy' => true],
                 ],
             ],
             [
@@ -69,7 +69,7 @@ class Navigation
                 'permission' => 'products.view',
                 'items' => [
                     ['key' => 'products', 'label' => 'nav_products', 'route' => 'seller.products.index', 'permission' => 'products.view'],
-                    ['key' => 'products.new', 'label' => 'nav_add_product', 'url' => 'vendor/products/add-new', 'permission' => 'products.manage', 'legacy' => true],
+                    ['key' => 'products.new', 'label' => 'nav_add_product', 'url' => 'vendor/products/add', 'permission' => 'products.manage', 'legacy' => true],
                     ['key' => 'products.drafts', 'label' => 'nav_drafts', 'route' => 'seller.products.index', 'params' => ['status' => 'draft'], 'permission' => 'products.view', 'badge' => 'products_draft'],
                     ['key' => 'products.issues', 'label' => 'nav_product_issues', 'route' => 'seller.products.index', 'params' => ['issues' => 'any'], 'permission' => 'products.view', 'badge' => 'products_issues', 'badgeTone' => 'high'],
                     ['key' => 'bulk-jobs', 'label' => 'nav_bulk_operations', 'route' => 'seller.bulk-jobs.index', 'permission' => 'products.manage', 'badge' => 'bulk_running'],
@@ -109,7 +109,7 @@ class Navigation
                     ['key' => 'shipments', 'label' => 'nav_shipments', 'route' => 'seller.shipments.index', 'permission' => 'orders.view'],
                     ['key' => 'picking', 'label' => 'nav_picking', 'route' => 'seller.picking.index', 'permission' => 'orders.manage'],
                     ['key' => 'packing', 'label' => 'nav_packing', 'route' => 'seller.packing.index', 'permission' => 'orders.manage'],
-                    ['key' => 'shipping', 'label' => 'nav_shipping', 'url' => 'vendor/business-settings/shipping-method/list', 'permission' => 'shop_settings.manage', 'legacy' => true],
+                    ['key' => 'shipping', 'label' => 'nav_shipping', 'url' => 'vendor/business-settings/shipping-method/index', 'permission' => 'shop_settings.manage', 'legacy' => true],
                     ['key' => 'shipments.exceptions', 'label' => 'nav_exceptions', 'route' => 'seller.shipments.exceptions', 'permission' => 'orders.view', 'badge' => 'shipping_exceptions', 'badgeTone' => 'critical'],
                 ],
             ],
@@ -147,8 +147,8 @@ class Navigation
                 'icon' => 'chart-line-up',
                 'permission' => 'promotions.manage',
                 'items' => [
-                    ['key' => 'campaigns', 'label' => 'nav_campaigns', 'url' => 'vendor/clearance-sale/list', 'permission' => 'promotions.manage', 'legacy' => true],
-                    ['key' => 'coupons', 'label' => 'nav_coupons', 'url' => 'vendor/coupon/add-new', 'permission' => 'promotions.manage', 'legacy' => true],
+                    ['key' => 'campaigns', 'label' => 'nav_campaigns', 'url' => 'vendor/clearance-sale', 'permission' => 'promotions.manage', 'legacy' => true],
+                    ['key' => 'coupons', 'label' => 'nav_coupons', 'url' => 'vendor/coupon/index', 'permission' => 'promotions.manage', 'legacy' => true],
                     ['key' => 'advertising', 'label' => 'nav_advertising', 'route' => 'seller.advertising.index'],
                     ['key' => 'growth.opportunities', 'label' => 'nav_opportunities', 'route' => 'seller.opportunities.index'],
                 ],
@@ -207,9 +207,15 @@ class Navigation
      * @param  ?callable             $routeExists  seam for tests; defaults to the real route table
      * @return array<int, array<string, mixed>>
      */
-    public static function for(?SellerPrincipal $principal, array $counts = [], array $flags = [], ?callable $routeExists = null): array
-    {
+    public static function for(
+        ?SellerPrincipal $principal,
+        array $counts = [],
+        array $flags = [],
+        ?callable $routeExists = null,
+        ?callable $urlExists = null,
+    ): array {
         $routeExists ??= static fn (string $name): bool => \Illuminate\Support\Facades\Route::has($name);
+        $urlExists ??= static fn (string $path): bool => self::pathIsRouted($path);
         $visible = [];
 
         foreach (self::groups() as $group) {
@@ -222,6 +228,12 @@ class Navigation
                 // A destination whose screen has not shipped yet is absent rather than dead. The
                 // product bans dead controls, and a link that goes nowhere is one.
                 if (isset($item['route']) && !$routeExists($item['route'])) {
+                    continue;
+                }
+                // The same test for the classic panel's pages, which are named by URL rather than
+                // by route. Without it a legacy link rots silently the day that page is renamed —
+                // which is exactly what had happened to five of the six of them.
+                if (isset($item['url']) && !$urlExists($item['url'])) {
                     continue;
                 }
                 if (isset($item['permission']) && $principal && !$principal->can($item['permission'])) {
@@ -240,6 +252,28 @@ class Navigation
         }
 
         return $visible;
+    }
+
+    /**
+     * Whether the classic panel really serves this path.
+     *
+     * Asked of the router rather than fetched: a legacy destination is a GET page in this same
+     * application, so whether it exists is something the route table already knows.
+     */
+    public static function pathIsRouted(string $path): bool
+    {
+        $request = \Illuminate\Http\Request::create('/' . trim($path, '/'), 'GET');
+
+        foreach (\Illuminate\Support\Facades\Route::getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
+            // Matched as the router would match it, not compared as a string: a page whose path
+            // carries a parameter — `messages/index/{type}` — is served, and a literal comparison
+            // would call it dead.
+            if ($route->matches($request, includingMethod: false)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Resolve an item's href and badge once, so every renderer agrees. */
