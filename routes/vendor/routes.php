@@ -50,7 +50,10 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
             Route::controller(LoginController::class)->group(function () {
                 Route::get('login', 'getLoginView');
                 Route::post('login', 'login')->name('login');
-                Route::get('vendor.auth.login', 'logout')->name('logout');
+                // The address was literally the string `vendor.auth.login` — a route name pasted
+                // into the URI slot, which put logout at /vendor/auth/vendor.auth.login. Every
+                // caller uses the name, so the URL is all that changes.
+                Route::get('logout', 'logout')->name('logout');
             });
             Route::group(['prefix' => 'forgot-password', 'as' => 'forgot-password.'], function () {
                 Route::controller(ForgotPasswordController::class)->group(function () {

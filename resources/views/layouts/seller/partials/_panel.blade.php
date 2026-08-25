@@ -17,10 +17,10 @@
             @endforeach
         </div>
         <div class="sc-panel__foot">
-            <a class="sc-panel__item" href="{{ \App\Services\SellerCenter\Shell::route('seller.settings.index') ?? url('vendor/shop/view') }}">
+            <a class="sc-panel__item" href="{{ \App\Services\SellerCenter\Shell::route('seller.settings.index') ?? url('vendor/shop/index') }}">
                 <x-sc.icon name="gear-six" :size="14" /><span class="sc-panel__label">{{ translate('settings') }}</span>
             </a>
-            <a class="sc-panel__item" href="{{ \App\Services\SellerCenter\Shell::route('seller.cases.index') ?? url('vendor/messages/list') }}">
+            <a class="sc-panel__item" href="{{ \App\Services\SellerCenter\Shell::route('seller.cases.index') ?? url('vendor/messages/index/customer') }}">
                 <x-sc.icon name="lifebuoy" :size="14" /><span class="sc-panel__label">{{ translate('support') }}</span>
                 <x-sc.count :value="$scCounts['cases_open'] ?? null" />
             </a>

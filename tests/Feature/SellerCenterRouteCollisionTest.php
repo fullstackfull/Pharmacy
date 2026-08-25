@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\SellerCenter\Navigation;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -120,6 +121,70 @@ class SellerCenterRouteCollisionTest extends TestCase
         $this->assertArrayHasKey('classic', $positions);
         $this->assertArrayHasKey('seller_center', $positions);
         $this->assertLessThan($positions['seller_center'], $positions['classic']);
+    }
+
+    public function test_no_screen_hard_codes_a_panel_url_that_does_not_exist(): void
+    {
+        // Destinations that have not been rebuilt yet are linked by their existing URL, which is the
+        // one thing in this panel the router is not asked about. So they rot silently: sign-out
+        // pointed at `vendor/auth/logout` while the route's address was the literal string
+        // `vendor.auth.login` — a route name pasted into the URI slot — and signing out 404'd.
+        $dead = [];
+
+        foreach ($this->sellerCenterBlades() as $file) {
+            foreach ($this->hardCodedPanelUrls((string) file_get_contents($file)) as $url) {
+                if (!Navigation::pathIsRouted($url)) {
+                    $dead[] = basename($file) . ' → ' . $url;
+                }
+            }
+        }
+
+        $this->assertSame([], $dead, "these links go nowhere:\n" . implode("\n", $dead));
+    }
+
+    /** @return array<int, string> */
+    private function sellerCenterBlades(): array
+    {
+        $files = [];
+
+        foreach ([
+            resource_path('views/layouts/seller'),
+            resource_path('views/seller-views'),
+            resource_path('views/components/sc'),
+        ] as $directory) {
+            if (!is_dir($directory)) {
+                continue;
+            }
+
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory));
+            foreach ($iterator as $file) {
+                if ($file->isFile() && str_ends_with($file->getFilename(), '.blade.php')) {
+                    $files[] = $file->getPathname();
+                }
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Every `url('vendor/…')` a template writes out, with a concatenated id standing in for the
+     * dynamic tail so a parameterised path is still checked.
+     *
+     * @return array<int, string>
+     */
+    private function hardCodedPanelUrls(string $blade): array
+    {
+        preg_match_all("/url\(\s*'(vendor\/[^']*)'(\s*\.\s*[^)]+)?\)/", $blade, $found, PREG_SET_ORDER);
+
+        $urls = [];
+        foreach ($found as $match) {
+            $path = rtrim($match[1], '/');
+            // `url('vendor/products/edit/' . $product->id)` — the id is the part being appended.
+            $urls[] = isset($match[2]) && trim($match[2]) !== '' ? $path . '/1' : $path;
+        }
+
+        return array_values(array_unique($urls));
     }
 
     public function test_every_seller_center_screen_is_reachable_by_staff_not_just_by_the_owner(): void

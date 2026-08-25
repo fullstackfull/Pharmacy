@@ -30,7 +30,7 @@
     <x-sc.page-header :eyebrow="translate('nav_catalog')" :title="translate('nav_products')">
         <x-slot:actions>
             <x-sc.button variant="secondary" icon="upload-simple" :href="url('vendor/products/bulk-import')">{{ translate('bulk_import') }}</x-sc.button>
-            <x-sc.button variant="primary" icon="plus" :href="url('vendor/products/add-new')">{{ translate('nav_add_product') }}</x-sc.button>
+            <x-sc.button variant="primary" icon="plus" :href="url('vendor/products/add')">{{ translate('nav_add_product') }}</x-sc.button>
         </x-slot:actions>
     </x-sc.page-header>
 
@@ -51,7 +51,7 @@
                 <x-sc.empty glyph="tag" :title="translate('no_products_yet')"
                             :text="translate('add_your_first_product_to_start_selling')">
                     <x-slot:actions>
-                        <x-sc.button variant="primary" :href="url('vendor/products/add-new')">{{ translate('nav_add_product') }}</x-sc.button>
+                        <x-sc.button variant="primary" :href="url('vendor/products/add')">{{ translate('nav_add_product') }}</x-sc.button>
                     </x-slot:actions>
                 </x-sc.empty>
             </x-slot:empty>
@@ -69,7 +69,7 @@
                 @php($quality = $list->listingQuality($product))
                 @php($issue = $issues[$product->id] ?? null)
                 @php($stock = (int) $product->current_stock)
-                <x-sc.tr :href="url('vendor/products/edit/' . $product->id)" :id="$product->id">
+                <x-sc.tr :href="url('vendor/products/update/' . $product->id)" :id="$product->id">
                     <x-sc.td>{{ $product->getRawOriginal('name') }}</x-sc.td>
                     <x-sc.td class="sc-code sc-muted">{{ $product->code ?: '—' }}</x-sc.td>
                     <x-sc.td drop="md" class="sc-muted">{{ $product->brand->name ?? '—' }}</x-sc.td>
@@ -99,7 +99,7 @@
             <x-slot:mobile>
                 @foreach ($products as $product)
                     @php($issue = $issues[$product->id] ?? null)
-                    <x-sc.entity-card :title="$product->getRawOriginal('name')" :href="url('vendor/products/edit/' . $product->id)"
+                    <x-sc.entity-card :title="$product->getRawOriginal('name')" :href="url('vendor/products/update/' . $product->id)"
                                       :figure="number_format((float) $product->unit_price)"
                                       :meta="\App\Services\SellerCenter\Copy::line('sku_and_stock', ['sku' => $product->code ?: '—', 'stock' => (int) $product->current_stock])">
                         <div class="sc-row">
