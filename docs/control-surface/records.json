@@ -212,8 +212,8 @@
  {
   "capability": "How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders)",
   "area": "finance",
-  "backend": "app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:32 (GRACE_HOURS = 6), :35 (LOOKBACK_DAYS = 90), :37 (LIMIT = 200), used at :53",
-  "admin": "None",
+  "backend": "app/Services/Marketplace/OperationsPolicy.php (ops_finance_grace_hours, default 6), read at app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:51; LOOKBACK_DAYS = 90 and LIMIT = 200 remain sweep bounds",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -221,8 +221,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Admin SLA/threshold settings. It is the platform's own definition of 'money is late', it is not shown to the admin at all, and it does not agree with the separately configurable stuck_order_hours in config/monitoring.php."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the Admin SLA/threshold settings. It is the platform's own definition of 'money is late', it is not shown to the admin at all, and it does not agree with the separately configurable stuck_order_hours in config/monitoring.php. RESOLVED: now settings-backed via app/Services/Marketplace/OperationsPolicy.php, editable on Admin → Marketplace → Seller SLA (Operations windows), read by every detector and by the seller countdown. The shipped defaults are the values the constants had, so an untouched install is unchanged."
  },
  {
   "capability": "Diagnose a payment gateway that is switched on but cannot take a payment",
@@ -422,8 +422,8 @@
  {
   "capability": "Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon",
   "area": "compliance",
-  "backend": "app/Services/Marketplace/BatchService.php:52 (expiringSoon(int $days = 30)); admin list hardcodes it at app/Http/Controllers/Admin/Marketplace/BatchController.php:43 (now()->addDays(30)); API lets the caller pass ?days but defaults to 30 and caps at 365 at app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:238",
-  "admin": "View",
+  "backend": "app/Services/Marketplace/OperationsPolicy.php (ops_batch_expiry_days, default 30), read at app/Services/Marketplace/BatchService.php:61",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "View",
   "analytics": "None",
@@ -431,8 +431,8 @@
   "dev_portal": "Documented",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings; on a pharmacy and cosmetics catalogue the expiry warning window is a regulated operational decision. The admin screen hardcodes 30 days with no field while BatchService::expiringSoon takes a caller-supplied value the API can vary, so the two surfaces can disagree about what is expiring."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings; on a pharmacy and cosmetics catalogue the expiry warning window is a regulated operational decision. The admin screen hardcodes 30 days with no field while BatchService::expiringSoon takes a caller-supplied value the API can vary, so the two surfaces can disagree about what is expiring. RESOLVED: now settings-backed via app/Services/Marketplace/OperationsPolicy.php, editable on Admin → Marketplace → Seller SLA (Operations windows), read by every detector and by the seller countdown. The shipped defaults are the values the constants had, so an untouched install is unchanged."
  },
  {
   "capability": "How much notice a seller gets before a verification document expires (45 days)",
@@ -602,8 +602,8 @@
  {
   "capability": "What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands)",
   "area": "orders",
-  "backend": "app/Services/SellerCenter/Status.php:206 ($minutes <= 120 => closing) and :209 ($minutes <= 480 => soon); fed by app/Services/Marketplace/SlaService.php:89 processingDeadline(); app/Services/SellerIntelligence/Producers/OrderStuckProducer.php:34 (STALE_AFTER_HOURS = 72), :37 (STOP_AFTER_DAYS = 45), :40 (LIMIT = 100); run by app/Console/Commands/RefreshSellerInsights.php; app/Services/SellerIntelligence/Producers/OrderSlaProducer.php:30 (URGENT_FRACTION = 0.25) used at :71; insight self-expires at deadline+7 days (:95)",
-  "admin": "None",
+  "backend": "app/Services/Marketplace/OperationsPolicy.php (ops_stuck_order_hours, ops_stuck_stop_after_days, ops_sla_urgent_fraction, ops_sla_closing_minutes, ops_sla_soon_minutes), read at app/Services/SellerCenter/Status.php:211, OrderStuckProducer.php:58,64 and OrderSlaProducer.php:72; deadline still from app/Services/Marketplace/SlaService.php:89 processingDeadline()",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -611,8 +611,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Admin SLA settings that already own sla_processing_hours. The deadline is configurable and the three warning rules around it are not, so a marketplace running a two-hour SLA shows every order as closing from the moment it arrives and the daily briefing calls a different set of orders late than the order screen does."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the Admin SLA settings that already own sla_processing_hours. The deadline is configurable and the three warning rules around it are not, so a marketplace running a two-hour SLA shows every order as closing from the moment it arrives and the daily briefing calls a different set of orders late than the order screen does. RESOLVED: now settings-backed via app/Services/Marketplace/OperationsPolicy.php, editable on Admin → Marketplace → Seller SLA (Operations windows), read by every detector and by the seller countdown. The shipped defaults are the values the constants had, so an untouched install is unchanged."
  },
  {
   "capability": "Which order states remain editable, and which remain cancellable",
@@ -677,8 +677,8 @@
  {
   "capability": "The returns response promise — 48 hours to answer a return request, 72 hours to process it",
   "area": "returns",
-  "backend": "app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:31 (RESPONSE_HOURS = 48), :34 (PROCESSING_HOURS = 72), :36 (LIMIT = 100)",
-  "admin": "None",
+  "backend": "app/Services/Marketplace/OperationsPolicy.php (ops_returns_response_hours, ops_returns_processing_hours), read at app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:53,111",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -686,8 +686,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Admin SLA settings. A returns-response SLA is a customer promise the marketplace makes, and it exists only as two private constants with no admin or seller field."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the Admin SLA settings. A returns-response SLA is a customer promise the marketplace makes, and it exists only as two private constants with no admin or seller field. RESOLVED: now settings-backed via app/Services/Marketplace/OperationsPolicy.php, editable on Admin → Marketplace → Seller SLA (Operations windows), read by every detector and by the seller countdown. The shipped defaults are the values the constants had, so an untouched install is unchanged."
  },
  {
   "capability": "Registering a second courier — credentials, rates, labels and tracking per carrier",

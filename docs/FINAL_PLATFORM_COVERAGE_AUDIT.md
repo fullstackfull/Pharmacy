@@ -99,9 +99,8 @@ Monitor: 4 of 22 covered
 Dev Portal: 13 of 21 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (6):
+Incomplete — the owner cannot reach it (5):
 
-- **Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings; on a pharmacy and cosmetics catalogue the expiry warning window is a regulated operational decision. The admin screen hardcodes 30 days with no field while BatchService::expiringSoon takes a caller-supplied value the API can vary, so the two surfaces can disagree about what is expiring.
 - **How much notice a seller gets before a verification document expires (45 days)** — assigned to Admin, no surface yet. Ruled: belongs on the seller-verification settings page that already configures which documents are required and whether KYC gates payouts. Today it is an inline literal inside a badge-count query.
 - **Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback** — assigned to Admin, no surface yet. Ruled: belongs to both panels and exists in neither. Searched app/, Modules/, routes/ and database/migrations for dispute|appeal|case: no controller, no table, no route — only prose in two service files and three dead nav entries (seller.cases.index, seller.incidents.index, seller.appeals.index). The panel can suspend a shop, deny a listing and revoke a brand claim, and the seller's only channel is a support ticket that carries no link to the decision it contests, so nobody can see how many decisions are being challenged.
 - **The seller's own account health and SLA standing** — assigned to Seller, no surface yet. Ruled: belongs in the Seller Center. The platform evaluates every approved seller against SLA policy daily and writes audited breaches, and no client renders account health — the seller sees a scorecard number and never the standing, the breach, or the deadline they are being judged against.
@@ -111,7 +110,7 @@ Incomplete — the owner cannot reach it (6):
 ## FINANCE
 
 Backend: 57 capabilities
-Admin: 47 of 57 covered
+Admin: 48 of 57 covered
 Seller Web: 29 of 57 covered
 Flutter App: 37 of 49 covered
 Analytics: 14 of 57 covered
@@ -119,7 +118,7 @@ Monitor: 8 of 57 covered
 Dev Portal: 39 of 52 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (12):
+Incomplete — the owner cannot reach it (11):
 
 - **Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers** — assigned to Admin, no surface yet. Ruled: belongs on Admin → Marketplace → Settlements, beside the maker-checker toggle that already has a screen. Verified by repo-wide grep — payout_dual_control_threshold appears at exactly two read sites and no writer — so it defaults to 0, dual control is off on every install, and arming it is a hand-written database row; the required approver count of 2 is a default argument as well.
 - **24-hour payout freeze after a seller changes their bank details** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings next to the payout queue. It is the platform's anti-account-takeover hold and the length is exactly what a risk team retunes after an incident, yet PayoutService.php:37 is a class constant with no setting key.
@@ -127,7 +126,6 @@ Incomplete — the owner cannot reach it (12):
 - **Mark a payout failed, or retry one a bank bounced** — assigned to Admin, no surface yet. Ruled: belongs on the Admin payout queue. VendorPayoutRequest::STATUS_FAILED exists and payouts.blade.php:8 colours the badge, but a grep of every STATUS_FAILED write shows only bulk jobs, automation actions and webhook deliveries setting it — nothing ever marks a payout failed, so a bounced transfer stays 'paid' and the seller is never made whole.
 - **Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy.
 - **How far back a seller's finance reconciliation looks, and how many example rows it shows** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings. The 30-day default silently bounds how far back a seller can chase a missing payment, which is wrong for any marketplace settling monthly.
-- **How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders)** — assigned to Admin, no surface yet. Ruled: belongs in the Admin SLA/threshold settings. It is the platform's own definition of 'money is late', it is not shown to the admin at all, and it does not agree with the separately configurable stuck_order_hours in config/monitoring.php.
 - **Diagnose a payment gateway that is switched on but cannot take a payment** — assigned to Admin, no surface yet. Ruled: belongs on Admin → Third-party → Payment methods as a check button or a banner. Credentials live in addon_settings as separate live_values/test_values blobs and the controllers read only the blob matching the row's mode, so a shop can show a green, fully-filled gateway that refuses every payment; payment:check names the blank field and no screen ever runs it.
 - **Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. No gateway callback leaves a receipt anywhere (PaymentsPanel.php:2056), so a callback that never arrived and one that arrived and failed are the same absent row, and a payment outage is visible only as orders that stopped appearing.
 - **Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section.
@@ -227,7 +225,7 @@ Incomplete — the owner cannot reach it (2):
 ## ORDERS
 
 Backend: 26 capabilities
-Admin: 22 of 26 covered
+Admin: 23 of 26 covered
 Seller Web: 19 of 26 covered
 Flutter App: 21 of 25 covered
 Analytics: 8 of 25 covered
@@ -235,10 +233,9 @@ Monitor: 6 of 26 covered
 Dev Portal: 22 of 26 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (4):
+Incomplete — the owner cannot reach it (3):
 
 - **vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls** — assigned to Developer, no surface yet. Ruled: belongs to Developer to delete or document. It is either dead code or an undocumented integration point on order data, and the difference matters because it is reachable with a seller session.
-- **What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands)** — assigned to Admin, no surface yet. Ruled: belongs in the Admin SLA settings that already own sla_processing_hours. The deadline is configurable and the three warning rules around it are not, so a marketplace running a two-hour SLA shows every order as closing from the moment it arrives and the daily briefing calls a different set of orders late than the order screen does.
 - **Which order states remain editable, and which remain cancellable** — assigned to Admin, no surface yet. Ruled: belongs in Admin → Order settings, which already exists. Both rules are inline status arrays repeated across at least three files, so a marketplace that wants cancellation to stop at 'processing' has to be given a code change.
 - **Minimum number of items required before a customer may check out** — assigned to Admin, no surface yet. Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It is seeded at install, read in exactly one place, shipped to all three mobile apps in /api/v1/config, and written by nothing — so the apps enforce a checkout rule the operator cannot see or change.
 
@@ -284,7 +281,7 @@ Incomplete — the owner cannot reach it (2):
 ## RETURNS
 
 Backend: 7 capabilities
-Admin: 6 of 7 covered
+Admin: Complete
 Seller Web: 6 of 7 covered
 Flutter App: Complete
 Analytics: 2 of 7 covered
@@ -292,11 +289,10 @@ Monitor: 0 of 7 covered
 Dev Portal: 6 of 7 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (3):
+Incomplete — the owner cannot reach it (2):
 
 - **Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle** — assigned to Admin, no surface yet. Ruled: belongs to Analytics. No event is raised when a refund request is created or approved, and the RMA state machine writes nothing at all, so the platform has two half-measurements that cannot be joined: a rate derived from order_status on the scorecard, and an event named refund_requested that actually fires on an order status change.
 - **Approve or reject a customer refund** — assigned to Admin, no surface yet. Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and writes only to its own refund_status history — so the audit centre cannot answer who approved any refund ever processed.
-- **The returns response promise — 48 hours to answer a return request, 72 hours to process it** — assigned to Admin, no surface yet. Ruled: belongs in the Admin SLA settings. A returns-response SLA is a customer promise the marketplace makes, and it exists only as two private constants with no admin or seller field.
 
 ## SECURITY
 

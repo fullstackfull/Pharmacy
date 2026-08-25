@@ -985,5 +985,48 @@ class SellerCenterCopySeeder extends Seeder
             'Discard this failed job without running it again?',
             'هل تتجاهل هذه المهمة الفاشلة دون إعادة تشغيلها؟',
         ],
+
+        // ── admin · the operations windows the detectors judge by ──────────
+        'operations_windows' => ['Operations windows', 'نوافذ التشغيل'],
+        'these_windows_are_what_the_action_center_raises_by_and_what_the_countdown_colours_by' => [
+            'These windows are what the Action Center raises findings by, and what the seller countdown colours by.',
+            'هذه النوافذ هي ما يرفع مركز المهام تنبيهاته وفقه، وما يلوّن العدّ التنازلي لدى البائع بحسبه.',
+        ],
+        'hours_without_movement_before_an_order_is_raised_as_stuck' => [
+            'Hours without movement before an order is raised as stuck',
+            'ساعات بلا حركة قبل اعتبار الطلب متوقفاً',
+        ],
+        'stop_raising_a_stuck_order_after_days' => [
+            'Stop raising a stuck order after (days)',
+            'التوقف عن رفع الطلب المتوقف بعد (أيام)',
+        ],
+        'call_an_order_urgent_when_this_share_of_its_window_is_left' => [
+            'Call an order urgent when this share of its window is left (0–1)',
+            'اعتبار الطلب عاجلاً عندما يتبقى هذا الجزء من نافذته (0–1)',
+        ],
+        'minutes_left_when_the_countdown_turns_red' => [
+            'Minutes left when the countdown turns red',
+            'الدقائق المتبقية عندما يتحول العدّ التنازلي إلى الأحمر',
+        ],
+        'minutes_left_when_the_countdown_turns_amber' => [
+            'Minutes left when the countdown turns amber',
+            'الدقائق المتبقية عندما يتحول العدّ التنازلي إلى البرتقالي',
+        ],
+        'hours_to_answer_a_refund_request' => [
+            'Hours to answer a refund request',
+            'ساعات للردّ على طلب استرداد',
+        ],
+        'hours_to_process_an_authorised_return' => [
+            'Hours to process an authorised return',
+            'ساعات لمعالجة إرجاع مُعتمَد',
+        ],
+        'hours_after_delivery_before_a_missing_earning_is_raised' => [
+            'Hours after delivery before a missing earning is raised',
+            'ساعات بعد التسليم قبل رفع تنبيه بأرباح غير مُقيّدة',
+        ],
+        'days_ahead_expiring_stock_is_surfaced' => [
+            'Days ahead expiring stock is surfaced',
+            'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
+        ],
     ];
 }

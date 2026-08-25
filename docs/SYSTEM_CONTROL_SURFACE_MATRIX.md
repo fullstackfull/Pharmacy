@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 432 |
+| Fully connected to a surface | 436 |
 | Internal by design | 52 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **104** |
+| **Orphaned — no owner, no surface** | **100** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -160,7 +160,7 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | View | **None** | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
+| Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | Manage | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | How much notice a seller gets before a verification document expires (45 days) | **None** | View | View | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | The seller's own account health and SLA standing | Oversight | **None** | **None** | **None** | Failures | **None** | Yes | Seller | ORPHAN |
@@ -193,7 +193,7 @@ the whole point of the document, so it is never blurred.
 | Mark a payout failed, or retry one a bank bounced | **None** | View | View | **None** | **None** | Partial | Partial | Admin | ORPHAN |
 | Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | **None** | View | View | Metrics | Health | N/A | No | Admin | ORPHAN |
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | Oversight | **None** | View | **None** | **None** | Documented | No | Admin | ORPHAN |
-| How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | **None** | View | View | **None** | Failures | Documented | No | Admin | ORPHAN |
+| How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | Manage | View | View | **None** | Failures | Documented | No | Admin | CONNECTED TO ADMIN |
 | Diagnose a payment gateway that is switched on but cannot take a payment | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches | View | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
@@ -451,7 +451,7 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | ORPHAN |
-| What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Which order states remain editable, and which remain cancellable | Configure | Manage | Manage | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Minimum number of items required before a customer may check out | **None** | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
 | Fulfilment workflow overlay (pick / pack / ship) | Configure | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
@@ -630,7 +630,7 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle | Oversight | View | View | Events | **None** | **None** | Partial | Admin | ORPHAN |
 | Approve or reject a customer refund | Approve | Manage | Manage | Events | **None** | Partial | No | Admin | ORPHAN |
-| The returns response promise — 48 hours to answer a return request, 72 hours to process it | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| The returns response promise — 48 hours to answer a return request, 72 hours to process it | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Global return / refund policy (refund day limit, wallet refunds) | Configure | View | View | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | RMA / returns logistics queue (authorize, in-transit, receive, reject) | Configure | **None** | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Return authorisations — authorise, receive (restocking), reject | Approve | View | Manage | **None** | **None** | Full | Yes | Admin | CONNECTED TO ADMIN |

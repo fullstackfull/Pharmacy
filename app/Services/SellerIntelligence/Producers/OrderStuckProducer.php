@@ -2,6 +2,7 @@
 
 namespace App\Services\SellerIntelligence\Producers;
 
+use App\Services\Marketplace\OperationsPolicy;
 use App\Models\SellerInsight;
 use Illuminate\Support\Carbon;
 use App\Services\SellerCenter\Copy;
@@ -30,12 +31,6 @@ class OrderStuckProducer implements InsightProducer
 {
     public const TYPE = 'ORDER_STUCK';
 
-    /** An order untouched for longer than this is worth raising, whatever its status. */
-    private const STALE_AFTER_HOURS = 72;
-
-    /** Beyond this it is a different conversation, and one banner has already been shown. */
-    private const STOP_AFTER_DAYS = 45;
-
     /** How many to look at in one sweep. A shop with ten thousand stuck orders has one problem, not ten thousand. */
     private const LIMIT = 100;
 
@@ -54,12 +49,13 @@ class OrderStuckProducer implements InsightProducer
             return [];
         }
 
-        $staleBefore = now()->subHours(self::STALE_AFTER_HOURS);
+        $staleAfterHours = app(OperationsPolicy::class)->stuckOrderHours();
+        $staleBefore = now()->subHours($staleAfterHours);
 
         $orders = DB::table('orders')
             ->where(['seller_is' => 'seller', 'seller_id' => $sellerId])
             ->whereIn('order_status', SlaService::AWAITING_SELLER_STATUSES)
-            ->where('created_at', '>=', now()->subDays(self::STOP_AFTER_DAYS))
+            ->where('created_at', '>=', now()->subDays(app(OperationsPolicy::class)->stuckStopAfterDays()))
             ->orderBy('created_at')
             ->limit(self::LIMIT)
             ->get(['id', 'order_status', 'order_amount', 'created_at']);
@@ -109,7 +105,7 @@ class OrderStuckProducer implements InsightProducer
                     affectedCount: 1,
                     // Already past the point of being worth raising, so the urgency component is at
                     // its maximum rather than counting down to something.
-                    hoursUntilDue: -($stillHours - self::STALE_AFTER_HOURS),
+                    hoursUntilDue: -($stillHours - $staleAfterHours),
                     openForHours: $stillHours,
                 ),
                 metadata: ['status' => $order->order_status, 'hours_in_status' => $stillHours],

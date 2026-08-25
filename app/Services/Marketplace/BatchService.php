@@ -49,11 +49,16 @@ class BatchService
     }
 
     /** Active batches expiring within $days from now (including already expired), soonest first. */
-    public function expiringSoon(int $days = 30, ?int $productId = null)
+    public function expiringSoon(?int $days = null, ?int $productId = null)
     {
         if (!Schema::hasTable('product_batches')) {
             return collect();
         }
+
+        // The marketplace's horizon unless a caller asks for a different one. On a regulated
+        // catalogue how far ahead expiring stock is surfaced is an operational decision, and it was
+        // a default written twice — here and again in the admin list that calls this.
+        $days ??= app(OperationsPolicy::class)->batchExpiryDays();
 
         $query = ProductBatch::active()
             ->whereNotNull('expiry_date')

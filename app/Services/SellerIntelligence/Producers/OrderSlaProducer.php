@@ -2,6 +2,7 @@
 
 namespace App\Services\SellerIntelligence\Producers;
 
+use App\Services\Marketplace\OperationsPolicy;
 use App\Models\Order;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
@@ -25,9 +26,6 @@ use Illuminate\Support\Facades\Schema;
 class OrderSlaProducer implements InsightProducer
 {
     public const TYPE = 'ORDER_SLA';
-
-    /** Inside this fraction of the window remaining, it is worth interrupting the seller. */
-    private const URGENT_FRACTION = 0.25;
 
     public function __construct(private readonly SlaService $sla)
     {
@@ -68,7 +66,7 @@ class OrderSlaProducer implements InsightProducer
             $isLate = $hoursLeft <= 0;
 
             // Still comfortably inside the window: nothing to say yet.
-            if (!$isLate && $hoursLeft > $windowHours * self::URGENT_FRACTION) {
+            if (!$isLate && $hoursLeft > $windowHours * app(OperationsPolicy::class)->slaUrgentFraction()) {
                 continue;
             }
 

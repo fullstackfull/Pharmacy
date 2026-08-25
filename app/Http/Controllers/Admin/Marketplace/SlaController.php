@@ -6,6 +6,7 @@ use App\Http\Controllers\BaseController;
 use App\Models\BusinessSetting;
 use App\Models\Seller;
 use App\Models\SellerSlaBreach;
+use App\Services\Marketplace\OperationsPolicy;
 use App\Services\Marketplace\SlaService;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
@@ -19,7 +20,10 @@ use Illuminate\Support\Facades\Schema;
  */
 class SlaController extends BaseController
 {
-    public function __construct(private readonly SlaService $sla)
+    public function __construct(
+        private readonly SlaService $sla,
+        private readonly OperationsPolicy $operations,
+    )
     {
     }
 
@@ -45,6 +49,10 @@ class SlaController extends BaseController
 
         return view('admin-views.marketplace.sla', [
             'thresholds' => $this->sla->thresholds(),
+            // The windows the detectors judge by, on the same page as the rates they sit beside —
+            // they are the same policy, and the seller feels them the same way.
+            'operations' => $this->operations->all(),
+            'operationLimits' => OperationsPolicy::LIMITS,
             'breaches' => $breaches,
             'paginator' => $paginator,
             'sellers' => $sellers,
@@ -63,7 +71,7 @@ class SlaController extends BaseController
             // Whole hours, and at least one: a zero-hour deadline would mark every order late the
             // instant it arrived.
             'sla_processing_hours' => 'required|integer|min:1|max:720',
-        ]);
+        ] + $this->operationRules());
 
         foreach ($validated as $type => $value) {
             BusinessSetting::updateOrCreate(['type' => $type], ['value' => (string) $value]);
@@ -72,6 +80,27 @@ class SlaController extends BaseController
         ToastMagic::success(translate('sla_policy_updated'));
 
         return back();
+    }
+
+    /**
+     * Validation for the operations windows, built from the policy's own limits.
+     *
+     * Read from the service rather than repeated here: the bounds exist because each value drives a
+     * deadline, and a form that accepted what the policy clamps would silently save one number and
+     * apply another.
+     *
+     * @return array<string, string>
+     */
+    private function operationRules(): array
+    {
+        $rules = [];
+
+        foreach (OperationsPolicy::LIMITS as $key => $limits) {
+            $numeric = is_float(OperationsPolicy::DEFAULTS[$key]) ? 'numeric' : 'integer';
+            $rules[$key] = "required|{$numeric}|min:{$limits['min']}|max:{$limits['max']}";
+        }
+
+        return $rules;
     }
 
     public function evaluate(): RedirectResponse
