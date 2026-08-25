@@ -111,6 +111,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => AdminMiddleware::class,
             'seller' => SellerMiddleware::class,
             'seller_staff_access' => \App\Http\Middleware\SellerStaffAccessMiddleware::class,
+            // Puts the web session's seller principal on the request, so the API's permission gate
+            // and audit actor serve the panel too rather than a second authorization system.
+            'seller_center' => \App\Http\Middleware\SellerCenterContext::class,
             'customer' => CustomerMiddleware::class,
             'module' => ModulePermissionMiddleware::class,
             'installation-check' => InstallationMiddleware::class,
