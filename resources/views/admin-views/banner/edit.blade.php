@@ -104,7 +104,7 @@
                                                     name="category_id">
                                                 @foreach($categories as $category)
                                                     <option
-                                                        value="{{ $category['id'] }}" {{ $banner['resource_id']==$category['id']?'selected':''}}>{{ $category['name'] }}</option>
+                                                        value="{{ $category['id'] }}" {{ $banner['resource_id']==$category['id']?'selected':''}}>{{ $category['label'] }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

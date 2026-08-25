@@ -54,6 +54,7 @@ class MonitoringNavigation
             'payments' => ['label' => 'payments', 'group' => 'business', 'icon' => 'reports', 'hint' => 'attempts_success_rate_gateway_latency_and_webhooks'],
             'orders' => ['label' => 'order_integrity', 'group' => 'business', 'icon' => 'orders', 'hint' => 'orders_that_contradict_themselves_paid_but_missing_stuck_duplicated'],
             'inventory' => ['label' => 'inventory_integrity', 'group' => 'business', 'icon' => 'catalog', 'hint' => 'negative_stock_double_deductions_and_stuck_reservations'],
+            'search' => ['label' => 'search_index', 'group' => 'business', 'icon' => 'catalog', 'hint' => 'how_much_of_the_catalogue_storefront_search_can_actually_find'],
             'integrations' => ['label' => 'integrations', 'group' => 'business', 'icon' => 'external', 'hint' => 'every_outbound_service_with_its_latency_and_failures'],
 
             // ---- keeping it running ---------------------------------------------------------

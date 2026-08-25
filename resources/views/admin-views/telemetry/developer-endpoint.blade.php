@@ -176,6 +176,15 @@
              missing when it is refused. The verdict is the server's — this only draws it. --}}
         @php($methods = array_keys($endpoint['console']))
         @php($firstVerdict = $endpoint['console'][$methods[0]] ?? ['allowed' => false])
+        @if (!($mayUseConsole ?? true))
+            {{-- Reading the documentation and firing requests at the platform are different
+                 permissions now. The page still says the console exists and what it would need. --}}
+            <x-k.card :title="translate('try_it')" id="dev-console">
+                <p class="dev-callout dev-callout--warn">
+                    {{ translate('sending_requests_from_the_console_needs_its_own_permission_ask_an_administrator_for_it') }}
+                </p>
+            </x-k.card>
+        @else
         <x-k.card :title="translate('try_it')" id="dev-console">
             <div class="dev-console" data-console
                  data-url="{{ route('admin.developer.try', ['id' => $endpoint['id']]) }}"
@@ -255,6 +264,7 @@
                 </div>
             </div>
         </x-k.card>
+        @endif
 
         {{-- What it actually answers with. Nothing in this API declares a response type — the
              controllers return JSON directly — so the only honest source is what the endpoint has

@@ -58,7 +58,11 @@ class ThemeSourceMap
             'bundle' => $this->endpointFor(
                 ContentSource::picked($settings['product_ids'] ?? null, SectionDataResolver::BUNDLE_LIMIT),
             ),
-            'vendor_slider', 'vendor_showcase' => $this->api('/api/v1/seller/list/all'),
+            'vendor_slider' => $this->api('/api/v1/seller/list/all'),
+
+            // A showcase is ONE shop and what it is selling — the list of every seller answers a
+            // different question entirely, and an app pointed at it drew the wrong section.
+            'vendor_showcase' => $this->shopProducts($settings),
 
             'flash_deal' => $this->flashDealProductsHint($settings),
             // The web counts this section down to midnight; the app ticks against the same
@@ -76,6 +80,11 @@ class ThemeSourceMap
                 'note' => 'The Blog module exposes no public API. Hide this section in the app.'],
             'trending_searches' => ['kind' => 'none',
                 'note' => 'Search-term aggregation has no public endpoint. Hide this section in the app.'],
+            // The storefront's own newsletter form submits nowhere — there is no
+            // subscribe endpoint on either surface. An app screen that collected
+            // an address and dropped it would be worse than no section at all.
+            'newsletter' => ['kind' => 'none',
+                'note' => 'No subscribe endpoint exists. Hide this section in the app.'],
 
             // Everything else renders entirely from its own payload.
             default => ['kind' => 'inline'],
@@ -204,6 +213,37 @@ class ThemeSourceMap
      * @param  array<string, mixed>  $params
      * @return array<string, mixed>
      */
+    /**
+     * The products of the shop a showcase is about.
+     *
+     * The endpoint is keyed by slug, which the section stores as an id — so the slug is looked up
+     * here rather than asking every client to resolve it. A shop that has since been deleted, or a
+     * section saved before one was picked, has nothing to show and says so.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    private function shopProducts(array $settings): array
+    {
+        $slug = null;
+        if ((int) ($settings['shop_id'] ?? 0) > 0) {
+            try {
+                $slug = \App\Models\Shop::query()
+                    ->whereKey((int) $settings['shop_id'])
+                    ->value('slug');
+            } catch (\Throwable) {
+                // Describing where a section's data lives may never be the reason a page fails
+                // to render — same recovery the flash-deal hint above makes.
+                $slug = null;
+            }
+        }
+
+        return $slug === null || $slug === ''
+            ? ['kind' => 'none', 'note' => 'No shop is chosen for this showcase. Hide this section.']
+            : $this->api('/api/v1/seller/' . $slug . '/products',
+                ['limit' => max(1, (int) ($settings['limit'] ?? 10)), 'offset' => 1]);
+    }
+
     private function api(string $endpoint, array $params = [], ?string $note = null): array
     {
         // A hint must be callable AS GIVEN. The catalogue routes sit behind apiGuestCheck, which

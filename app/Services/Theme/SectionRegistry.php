@@ -57,6 +57,8 @@ class SectionRegistry
                                  'options' => ['container', 'full']],
             'alignment'      => ['type' => 'select',  'label' => 'alignment',       'default' => 'start',
                                  'options' => ['start', 'center', 'end']],
+            'heading_style'  => ['type' => 'select',  'label' => 'heading_style',   'default' => 'standard',
+                                 'options' => ['standard', 'editorial', 'compact']],
             'visible'        => ['type' => 'boolean', 'label' => 'visible',         'default' => true, 'responsive' => true],
         ];
     }
@@ -624,7 +626,10 @@ class SectionRegistry
                                     'resource' => 'shop', 'multiple' => true,
                                     'hint' => 'leave_empty_to_show_the_highest_rated_shops_automatically'],
                     'style'     => ['type' => 'select', 'label' => 'display_style', 'default' => 'cards',
-                                    'options' => ['cards', 'rail', 'compact']],
+                                    // storefront: the shop's own cover, its logo, an official
+                                    // badge where the platform owns the store, its rating and
+                                    // range, and a way in. logos: a bare discovery strip.
+                                    'options' => ['cards', 'storefront', 'rail', 'compact', 'logos']],
                     'limit'     => ['type' => 'number', 'label' => 'max_items', 'default' => 8],
                     'columns'   => ['type' => 'number', 'label' => 'columns', 'default' => 4, 'responsive' => true],
                     'stats'     => ['type' => 'boolean','label' => 'show_rating_and_product_count', 'default' => true],

@@ -11,6 +11,7 @@ use App\Http\Controllers\BaseController;
 use App\Http\Requests\Admin\BannerAddRequest;
 use App\Http\Requests\Admin\BannerUpdateRequest;
 use App\Services\BannerService;
+use App\Services\CategoryService;
 use App\Traits\FileManagerTrait;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
@@ -32,6 +33,7 @@ class BannerController extends BaseController
         private readonly BrandRepositoryInterface    $brandRepo,
         private readonly ProductRepositoryInterface  $productRepo,
         private readonly BannerService               $bannerService,
+        private readonly CategoryService             $categoryService,
     )
     {
     }
@@ -52,7 +54,12 @@ class BannerController extends BaseController
             whereInFilters: ['banner_type' => array_keys($bannerTypes)],
             dataLimit: getWebConfig(name: 'pagination_limit'),
         );
-        $categories = $this->categoryRepo->getListWhere(filters: ['position' => 0], dataLimit: 'all');
+        // A category page banner heads whichever page the shopper is standing on —
+        // main, sub or sub-sub — so the picker offers the whole tree, each entry
+        // labelled with its ancestry.
+        $categories = $this->categoryService->getHierarchicalOptions(
+            categories: $this->categoryRepo->getListWhere(orderBy: ['priority' => 'asc'], dataLimit: 'all')
+        );
         $shops = $this->shopRepo->getListWithScope(scope: 'active', filters: ['author_type' => 'vendor'],  dataLimit: 'all');
         $inhouseShop = getInHouseShopConfig();
         $shops = $shops->prepend($inhouseShop);
@@ -252,7 +259,12 @@ class BannerController extends BaseController
     {
         $bannerTypes = $this->bannerService->getBannerTypes();
         $banner = $this->bannerRepo->getFirstWhere(params: ['id' => $id]);
-        $categories = $this->categoryRepo->getListWhere(filters: ['position' => 0], dataLimit: 'all');
+        // A category page banner heads whichever page the shopper is standing on —
+        // main, sub or sub-sub — so the picker offers the whole tree, each entry
+        // labelled with its ancestry.
+        $categories = $this->categoryService->getHierarchicalOptions(
+            categories: $this->categoryRepo->getListWhere(orderBy: ['priority' => 'asc'], dataLimit: 'all')
+        );
         $shops = $this->shopRepo->getListWithScope(scope: 'active', filters: ['author_type' => 'vendor'] , dataLimit: 'all');
         $inhouseShop = getInHouseShopConfig();
         $shops = $shops->prepend($inhouseShop);

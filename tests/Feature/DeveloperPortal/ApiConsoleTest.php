@@ -37,6 +37,20 @@ class ApiConsoleTest extends TestCase
             $table->timestamps();
         });
         \Illuminate\Support\Facades\Cache::flush();
+
+        // The console now needs its own capability — reading the documentation no longer grants
+        // firing requests at the installation. These tests are about the guard and the ceremony
+        // around a write, so they act as somebody who holds it.
+        $this->be(new class implements \Illuminate\Contracts\Auth\Authenticatable {
+            public $admin_role_id = 1;
+            public function getAuthIdentifierName() { return 'id'; }
+            public function getAuthIdentifier() { return 1; }
+            public function getAuthPassword() { return ''; }
+            public function getRememberToken() { return null; }
+            public function setRememberToken($value) {}
+            public function getRememberTokenName() { return null; }
+            public function getAuthPasswordName() { return 'password'; }
+        }, 'admin');
     }
 
     public function test_a_read_is_allowed_and_needs_no_ceremony(): void
@@ -355,6 +369,29 @@ class ApiConsoleTest extends TestCase
     // ---------------------------------------------------------------------------------------
 
     /** @param array<string, mixed> $input */
+    public function test_an_admin_without_the_console_capability_is_refused_before_anything_is_sent(): void
+    {
+        // The gate that made this split worth making: reading the documentation used to be the
+        // only thing standing between an operator and a real request against this installation.
+        $this->be(new class implements \Illuminate\Contracts\Auth\Authenticatable {
+            public $admin_role_id = 7;
+            public $role;
+            public function __construct() { $this->role = (object) ['module_access' => json_encode(['system_settings'])]; }
+            public function getAuthIdentifierName() { return 'id'; }
+            public function getAuthIdentifier() { return 2; }
+            public function getAuthPassword() { return ''; }
+            public function getRememberToken() { return null; }
+            public function setRememberToken($value) {}
+            public function getRememberTokenName() { return null; }
+            public function getAuthPasswordName() { return 'password'; }
+        }, 'admin');
+
+        $response = $this->callConsole('0000000000000000', ['method' => 'GET']);
+
+        $this->assertSame(403, $response->getStatusCode());
+        $this->assertFalse($response->getData(true)['ok']);
+    }
+
     private function callConsole(string $id, array $input): \Illuminate\Http\JsonResponse
     {
         $request = \Illuminate\Http\Request::create('/admin/developer/try/' . $id, 'POST', $input);

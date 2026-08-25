@@ -128,7 +128,7 @@
                 @else
                     @includeFirst(
                         ['admin-views.monitoring.sections.' . $section, 'admin-views.monitoring.sections._placeholder'],
-                        ['panel' => $panel, 'range' => $range, 'section' => $section]
+                        ['panel' => $panel, 'range' => $range, 'section' => $section, 'permissions' => $permissions]
                     )
                 @endif
             </main>

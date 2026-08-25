@@ -4181,6 +4181,7 @@ return [
 	"close_this_ticket" => "أغلق هذه التذكرة",
 	"closed_Now" => "مغلق الآن",
 	"closed_now" => "مغلق الآن",
+	"official_store" => "متجر رسمي",
 	"code" => "كود",
 	"code_with_a_minimum_length_requirement_of_6_characters" => "رمز بحد أدنى لطول 6 أحرف",
 	"codecanyon_username" => "اسم مستخدم Codecanyon",

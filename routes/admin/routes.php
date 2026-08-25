@@ -230,11 +230,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             // The header strip's own feed: polled every few seconds, so it stays cheap and
             // separate from a section's full payload.
             Route::get('pulse', 'pulse')->name('pulse');
-            // The one write in this area. Registered before the section catch-all below, which is
-            // GET-only — the order is the habit rather than the requirement.
+            // The two writes in this otherwise read-only area, both POST and both declared before
+            // the catch-all below so they are named actions rather than section names.
+            //
+            // Put a failed job back on its queue, or drop it.
             Route::post('queues/failed/{action}/{uuid}', 'failedJob')
                 ->where('action', 'retry|discard')
                 ->name('failed-job');
+            // Queue a full rebuild of the product search index, for after a bulk import writes rows
+            // the index observer never saw.
+            Route::post('search/rebuild', 'rebuildSearchIndex')->name('search.rebuild');
             // Every section on one route. A new section needs an entry in MonitoringNavigation and
             // a panel class — nothing here changes, so the two can never drift apart.
             Route::get('{section}', 'index')->name('section')->where('section', '[a-z0-9\-]+');

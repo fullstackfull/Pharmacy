@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Jobs\RebuildProductSearchIndex;
+use App\Services\AuditLogger;
 use App\Services\Monitoring\FailedJobs;
 use App\Services\Monitoring\MonitoringNavigation;
 use App\Services\Monitoring\MonitoringPermissionService;
@@ -89,17 +91,17 @@ class MonitoringController extends BaseController
     /**
      * Put a failed job back on its queue, or drop it.
      *
-     * The one write in an area that is otherwise read-only, and the reason for the exception is
-     * that the alternative is worse: a failed order confirmation is visible on this page and
-     * repairable only from a shell, so the person who can see the problem is never the person who
-     * can fix it.
+     * One of the two writes in an area that is otherwise read-only, and the reason for the
+     * exception is that the alternative is worse: a failed order confirmation is visible on this
+     * page and repairable only from a shell, so the person who can see the problem is never the
+     * person who can fix it.
      *
      * Reading the queue is infrastructure; changing what it will do is the write capability, which
      * this area already calls settings. Both are checked, and both are audited.
      */
     public function failedJob(Request $request, string $action, string $uuid): RedirectResponse
     {
-        if (!$this->permissions->can(MonitoringPermissionService::SETTINGS)) {
+        if (!$this->permissions->canEditSettings()) {
             ToastMagic::error(translate('access_Denied') . '!');
 
             return redirect()->route('admin.monitoring.section', ['section' => 'queues']);
@@ -114,6 +116,40 @@ class MonitoringController extends BaseController
             : ToastMagic::error(translate($result['reason'] ?? 'that_job_is_no_longer_in_the_failed_list'));
 
         return redirect()->route('admin.monitoring.section', ['section' => 'queues']);
+    }
+
+    /**
+     * Ask for the search index to be rebuilt.
+     *
+     * The other write this page allows, and the reason it exists: a bulk import writes product rows
+     * without going through the model save path the index observer listens on, so a large import
+     * leaves search answering from a stale index and, until now, only shell access could fix it.
+     *
+     * Queued rather than run here — a rebuild walks the whole catalogue in chunks and outlives a
+     * request — and gated on the settings capability rather than on merely being able to read the
+     * page, because it is work the operator is asking the server to do.
+     */
+    public function rebuildSearchIndex(Request $request, AuditLogger $audit): RedirectResponse
+    {
+        if (!$this->permissions->canEditSettings()) {
+            ToastMagic::error(translate('access_Denied') . '!');
+
+            return redirect()->route('admin.monitoring.section', ['section' => 'search']);
+        }
+
+        $actor = auth('admin')->user();
+        RebuildProductSearchIndex::dispatch($actor?->name ?? $actor?->email);
+
+        $audit->record(
+            action: 'platform.search_index_rebuild_requested',
+            context: ['queue' => config('queue.default')],
+        );
+
+        // Said plainly because it is true: the request is queued, and a shop with no queue worker
+        // running will see nothing happen. The page names the command for that case.
+        ToastMagic::success(translate('the_rebuild_has_been_queued'));
+
+        return redirect()->route('admin.monitoring.section', ['section' => 'search']);
     }
 
     /**

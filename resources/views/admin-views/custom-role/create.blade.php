@@ -123,6 +123,28 @@
                             </div>
                         @endforeach
                     </div>
+
+                    {{-- The Developer Portal, split for the reason the console makes obvious:
+                         reading what an endpoint does and firing it at this installation are not
+                         the same act. The module grant carries the documentation; sending a request
+                         and capturing a snapshot are asked for. --}}
+                    <h5 class="mb-2">{{ translate('developer_portal') }}</h5>
+                    <div class="row gy-2 mb-4">
+                        @foreach (\App\Services\DeveloperPortal\DeveloperPortalPermissionService::all() as $developerKey => $developerLabel)
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="form-group d-flex gap-2">
+                                    <input type="checkbox" name="modules[]" value="{{ $developerKey }}"
+                                           class="form-check-input checkbox--input module-permission"
+                                           id="{{ $developerKey }}-permission"
+                                           >
+                                    <label class="" style="{{ $direction === "rtl" ? 'margin-right: 1.25rem;' : '' }};"
+                                           for="{{ $developerKey }}-permission">
+                                        {{ translate($developerLabel) }}
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                     <div class="d-flex justify-content-end ">
                         <button type="submit" class="btn btn-primary">
                             {{ translate('submit') }}

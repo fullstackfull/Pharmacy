@@ -13,6 +13,7 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\InHouseTrait;
 use App\Utils\Helpers;
 use App\Utils\ProductManager;
+use App\Services\VendorSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -26,6 +27,7 @@ class SellerController extends Controller
 
     public function __construct(
         private Seller $seller,
+        private readonly VendorSummaryService $vendorSummary,
     )
     {
     }
@@ -92,33 +94,55 @@ class SellerController extends Controller
         ]);
     }
 
+    /**
+     * Every active review on one seller's own products, correlated to the row
+     * being selected. Fully qualified and free of global scopes: this is the one
+     * query in the app where two tables each bring a `status` column.
+     */
+    private function sellerReviews(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Review::query()
+            ->withoutGlobalScopes()
+            ->join('products', 'products.id', '=', 'reviews.product_id')
+            ->whereColumn('products.user_id', 'sellers.id')
+            ->where('products.added_by', 'seller')
+            ->where('reviews.status', 1);
+    }
+
     public function getSellerList(Request $request, $type): array
     {
         $sellers = $this->seller->when($type == 'top', function ($query) {
             return $query->whereHas('orders');
         })
-            ->approved()->with(['shop', 'orders', 'product.reviews' => function ($query) {
-                $query->active();
-            }])
+            ->approved()->with(['shop'])
+            ->select('sellers.*')
             ->withCount(['orders', 'product' => function ($query) {
                 $query->active();
             }])
+            // The card needs two numbers about this seller's reviews, so ask the
+            // database for the two numbers. Loading every product and every
+            // review of every seller to add them up in PHP — and then discarding
+            // the rows — is the same answer at a fraction of the cost.
+            //
+            // Written as subqueries rather than relation aggregates on purpose.
+            // Reaching reviews through products puts a `status` column from each
+            // table in scope, and Review's global scope names that column
+            // unqualified — ambiguous, and MySQL rejects the statement. A
+            // relation aggregate merges that scope back in from the relation's
+            // own builder however the closure asks it not to, so the only way to
+            // be sure of every predicate is to write them all.
+            ->addSelect([
+                'rating_count' => $this->sellerReviews()->selectRaw('count(*)'),
+                'total_rating' => $this->sellerReviews()->selectRaw('coalesce(sum(reviews.rating), 0)'),
+            ])
             ->get()
             ->each(function ($seller) {
                 $seller['temporary_close'] = (int)$seller?->shop?->temporary_close ?? 0;
-                $seller->product?->map(function ($product) {
-                    $product['rating'] = $product?->reviews?->where('status', 1)->pluck('rating')->sum();
-                    $product['rating_count'] = $product->reviews?->where('status', 1)->count();
-                    $product['rating_count'] = $product->reviews?->where('status', 1)->count();
-                });
-                $seller['total_rating'] = $seller?->product->pluck('rating')->sum();
-                $seller['rating_count'] = $seller->product->pluck('rating_count')->sum();
-                $seller['review_count'] = $seller->product->pluck('rating_count')->sum();
+                $seller['total_rating'] = (float)($seller->total_rating ?? 0);
+                $seller['rating_count'] = (int)($seller->rating_count ?? 0);
+                $seller['review_count'] = $seller['rating_count'];
                 $seller['average_rating'] = $seller['total_rating'] / ($seller['rating_count'] == 0 ? 1 : $seller['rating_count']);
                 $seller->is_vacation_mode_now = checkVendorAbility(type: 'vendor', status: 'vacation_status', vendor: $seller?->shop);
-
-                unset($seller['product']);
-                unset($seller['orders']);
             });
 
         $inhouseProducts = Product::active()->with(['reviews', 'rating'])
@@ -170,7 +194,9 @@ class SellerController extends Controller
             'total_size' => $sellers->total(),
             'limit' => (int)$request['limit'],
             'offset' => (int)$request['offset'],
-            'sellers' => $sellers->values()
+            // A shopper's view of each vendor: never the seller's contact,
+            // banking or tax documents, which whole-model responses leaked.
+            'sellers' => $this->vendorSummary->summarizeMany($sellers->values()),
         ];
 
     }
