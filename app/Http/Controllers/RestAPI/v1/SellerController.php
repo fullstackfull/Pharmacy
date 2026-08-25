@@ -94,12 +94,28 @@ class SellerController extends Controller
         ]);
     }
 
+    /**
+     * Every active review on one seller's own products, correlated to the row
+     * being selected. Fully qualified and free of global scopes: this is the one
+     * query in the app where two tables each bring a `status` column.
+     */
+    private function sellerReviews(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Review::query()
+            ->withoutGlobalScopes()
+            ->join('products', 'products.id', '=', 'reviews.product_id')
+            ->whereColumn('products.user_id', 'sellers.id')
+            ->where('products.added_by', 'seller')
+            ->where('reviews.status', 1);
+    }
+
     public function getSellerList(Request $request, $type): array
     {
         $sellers = $this->seller->when($type == 'top', function ($query) {
             return $query->whereHas('orders');
         })
             ->approved()->with(['shop'])
+            ->select('sellers.*')
             ->withCount(['orders', 'product' => function ($query) {
                 $query->active();
             }])
@@ -108,18 +124,17 @@ class SellerController extends Controller
             // review of every seller to add them up in PHP — and then discarding
             // the rows — is the same answer at a fraction of the cost.
             //
-            // These two reach reviews THROUGH products, and both tables carry a
-            // `status`. Review's global scope names that column unqualified,
-            // which is unambiguous in every other query in the app and ambiguous
-            // in exactly these — so the scope is set aside here and its filter
-            // restated against the right table, rather than rewriting a rule the
-            // whole codebase depends on to suit one join.
-            ->withCount(['productReviews as rating_count' => function ($query) {
-                $query->withoutGlobalScope('active')->where('reviews.status', 1);
-            }])
-            ->withSum(['productReviews as total_rating' => function ($query) {
-                $query->withoutGlobalScope('active')->where('reviews.status', 1);
-            }], 'rating')
+            // Written as subqueries rather than relation aggregates on purpose.
+            // Reaching reviews through products puts a `status` column from each
+            // table in scope, and Review's global scope names that column
+            // unqualified — ambiguous, and MySQL rejects the statement. A
+            // relation aggregate merges that scope back in from the relation's
+            // own builder however the closure asks it not to, so the only way to
+            // be sure of every predicate is to write them all.
+            ->addSelect([
+                'rating_count' => $this->sellerReviews()->selectRaw('count(*)'),
+                'total_rating' => $this->sellerReviews()->selectRaw('coalesce(sum(reviews.rating), 0)'),
+            ])
             ->get()
             ->each(function ($seller) {
                 $seller['temporary_close'] = (int)$seller?->shop?->temporary_close ?? 0;

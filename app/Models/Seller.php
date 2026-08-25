@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Traits\DemoMaskingTrait;
 use App\Traits\StorageTrait;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -111,23 +110,6 @@ class Seller extends Authenticatable
     public function product(): HasMany
     {
         return $this->hasMany(Product::class, 'user_id')->where(['added_by' => 'seller']);
-    }
-
-    /**
-     * Every review left on this seller's own products.
-     *
-     * A vendor card's rating is the sum of these over their count. Reaching them
-     * through the products lets the database do that arithmetic inside the
-     * listing query — the alternative, and what the seller list used to do, was
-     * to hydrate every product of every seller on the marketplace together with
-     * all of its reviews, add the numbers up in PHP, and throw the rows away.
-     */
-    public function productReviews(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            Review::class, Product::class,
-            'user_id', 'product_id', 'id', 'id',
-        )->where('products.added_by', 'seller');
     }
 
     public function wallet(): HasOne
