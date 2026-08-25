@@ -5,6 +5,7 @@ namespace App\Services\SellerCenter\Lists;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\Marketplace\InventoryService;
+use App\Services\Marketplace\StockPolicy;
 use App\Services\SellerCenter\Status;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -22,12 +23,6 @@ use Illuminate\Support\Facades\Schema;
  */
 class InventoryList
 {
-    /** The window the whole product quotes when it explains coverage. */
-    public const VELOCITY_DAYS = 14;
-
-    /** Under this many days of cover, a moving product is at risk. */
-    public const COVERAGE_CRITICAL_DAYS = 1.0;
-    public const COVERAGE_LOW_DAYS = 3.0;
 
     public const VIEWS = [
         'all' => ['label' => 'all', 'tone' => 'neutral'],
@@ -36,8 +31,10 @@ class InventoryList
         'reserved' => ['label' => 'reserved', 'tone' => 'neutral'],
     ];
 
-    public function __construct(private readonly InventoryService $inventory)
-    {
+    public function __construct(
+        private readonly InventoryService $inventory,
+        private readonly StockPolicy $stock,
+    ) {
     }
 
     public function paginate(int $sellerId, Request $request): LengthAwarePaginator
@@ -151,13 +148,15 @@ class InventoryList
             return [];
         }
 
+        $velocityDays = $this->stock->velocityDays();
+
         return DB::table('order_details')
             ->where('seller_id', $sellerId)
             ->where('delivery_status', 'delivered')
-            ->where('created_at', '>=', now()->subDays(self::VELOCITY_DAYS))
+            ->where('created_at', '>=', now()->subDays($velocityDays))
             ->whereIn('product_id', $productIds)
             ->groupBy('product_id')
-            ->pluck(DB::raw('SUM(qty) / ' . self::VELOCITY_DAYS . ' as daily'), 'product_id')
+            ->pluck(DB::raw('SUM(qty) / ' . $velocityDays . ' as daily'), 'product_id')
             ->map(fn ($value) => (float) $value)
             ->all();
     }
@@ -183,10 +182,12 @@ class InventoryList
         if ($available <= 0) {
             return ['state' => 'out_of_stock', 'tone' => Status::CRITICAL];
         }
-        if ($coverage !== null && $coverage <= self::COVERAGE_CRITICAL_DAYS) {
+        $bands = $this->stock->coverBands();
+
+        if ($coverage !== null && $coverage <= $bands['critical']) {
             return ['state' => 'low_stock', 'tone' => Status::CRITICAL];
         }
-        if ($coverage !== null && $coverage <= self::COVERAGE_LOW_DAYS) {
+        if ($coverage !== null && $coverage <= $bands['low']) {
             return ['state' => 'low_stock', 'tone' => Status::HIGH];
         }
         if ($available <= max(1, $threshold)) {

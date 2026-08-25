@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\AuditLog;
+use App\Services\Platform\Policy;
 use App\Models\SellerApiKey;
 use App\Models\SellerStaff;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,9 +27,6 @@ use Illuminate\Support\Facades\Schema;
  */
 class SellerAuditTrailService
 {
-    /** Reading the whole platform's history to find one shop's is bounded here. */
-    public const MAX_ROWS = 200;
-
     /**
      * @return Builder<AuditLog>|null  null when the table has not been created yet
      */
@@ -97,7 +95,7 @@ class SellerAuditTrailService
         $total = (clone $query)->count();
 
         $entries = $query->orderByDesc('id')
-            ->limit(min(self::MAX_ROWS, max(1, $limit)))
+            ->limit(min(app(Policy::class)->int('limit_audit_rows'), max(1, $limit)))
             ->get()
             ->map(fn (AuditLog $entry) => [
                 'id' => $entry->id,

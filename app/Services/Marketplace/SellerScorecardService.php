@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\SellerVerificationDocument;
+use App\Services\Platform\Policy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -101,16 +102,43 @@ class SellerScorecardService
         $strikes = (int) ($m['moderation_strikes'] ?? 0);
         $ratedEnough = $reviewCount >= 5; // one bad review should not sink a seller
 
-        $atRisk = $cancel > 0.15 || $return > 0.10 || $refund > 0.15 || $strikes >= 3
-            || ($ratedEnough && $rating !== null && $rating < 3.0);
-        if ($atRisk) {
-            return self::TIER_AT_RISK;
+        // The bands the marketplace set. They were fixed here while the SLA thresholds beside them
+        // were editable, so an operator could raise the return ceiling to 10% and still watch every
+        // seller who passed 5% — two policies about the same number, one of them invisible.
+        $policy = app(Policy::class);
+
+        // Written out rather than built by concatenation: a settings key assembled from pieces is
+        // one nothing can find, and the whole point of the registry is that every rule is locatable.
+        $bands = [
+            self::TIER_AT_RISK => [
+                'cancellation' => 'health_at_risk_cancellation_rate',
+                'return' => 'health_at_risk_return_rate',
+                'refund' => 'health_at_risk_refund_rate',
+                'rating' => 'health_at_risk_rating',
+                'strikes' => 'health_at_risk_strikes',
+            ],
+            self::TIER_WATCH => [
+                'cancellation' => 'health_watch_cancellation_rate',
+                'return' => 'health_watch_return_rate',
+                'refund' => 'health_watch_refund_rate',
+                'rating' => 'health_watch_rating',
+                'strikes' => 'health_watch_strikes',
+            ],
+        ];
+
+        foreach ($bands as $tier => $keys) {
+            $crossed = $cancel > $policy->float($keys['cancellation'])
+                || $return > $policy->float($keys['return'])
+                || $refund > $policy->float($keys['refund'])
+                || $strikes >= $policy->int($keys['strikes'])
+                || ($ratedEnough && $rating !== null && $rating < $policy->float($keys['rating']));
+
+            if ($crossed) {
+                return $tier;
+            }
         }
 
-        $watch = $cancel > 0.05 || $return > 0.05 || $refund > 0.05 || $strikes >= 1
-            || ($ratedEnough && $rating !== null && $rating < 4.0);
-
-        return $watch ? self::TIER_WATCH : self::TIER_GOOD;
+        return self::TIER_GOOD;
     }
 
     // ---- the individual metrics, each from a measured column ----

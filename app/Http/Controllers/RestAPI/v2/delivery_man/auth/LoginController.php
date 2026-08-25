@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v2\delivery_man\auth;
 
 use App\Events\DeliverymanPasswordResetEvent;
+use App\Services\Platform\PasswordPolicy;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryMan;
 use App\Models\PasswordReset;
@@ -153,7 +154,7 @@ class LoginController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required',
-            'password' => 'required|same:confirm_password|min:8',
+            'password' => 'same:confirm_password|' . app(PasswordPolicy::class)->ruleString(),
         ]);
 
         if ($validator->fails()) {

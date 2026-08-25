@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller\auth;
 
 use App\Contracts\Repositories\PhoneOrEmailVerificationRepositoryInterface;
+use App\Services\Platform\PasswordPolicy;
 use App\Contracts\Repositories\VendorRepositoryInterface;
 use App\Events\PasswordResetEvent;
 use App\Http\Controllers\Controller;
@@ -134,7 +135,7 @@ class ForgotPasswordController extends Controller
         $validator = Validator::make($request->all(), [
             'identity' => 'required',
             'otp' => 'required',
-            'password' => 'required|same:confirm_password|min:8',
+            'password' => 'same:confirm_password|' . app(PasswordPolicy::class)->ruleString(),
         ]);
 
         if ($validator->fails()) {

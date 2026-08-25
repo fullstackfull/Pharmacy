@@ -379,7 +379,7 @@ class SellerCenterWave3Test extends TestCase
 
         $this->assertTrue($found->has('fast_sellers_at_stock_risk'));
         $this->assertSame(1, $found['fast_sellers_at_stock_risk']['count']);
-        $this->assertStringContainsString((string) Opportunities::WINDOW_DAYS, $found['fast_sellers_at_stock_risk']['evidence']);
+        $this->assertStringContainsString((string) app(Opportunities::class)->windowDays(), $found['fast_sellers_at_stock_risk']['evidence']);
     }
 
     public function test_a_product_with_plenty_of_cover_is_not_called_a_risk(): void

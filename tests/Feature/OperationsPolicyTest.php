@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BusinessSetting;
 use App\Services\Marketplace\OperationsPolicy;
+use App\Services\Platform\PolicyRegistry;
 use App\Services\SellerCenter\Status;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -56,7 +57,7 @@ class OperationsPolicyTest extends TestCase
         $this->assertSame(72, $policy->returnsProcessingHours());
         $this->assertSame(6, $policy->financeGraceHours());
         $this->assertSame(30, $policy->batchExpiryDays());
-        $this->assertSame(OperationsPolicy::DEFAULTS, $policy->all());
+        $this->assertSame(OperationsPolicy::defaults(), $policy->all());
     }
 
     public function test_a_stored_value_is_the_value_the_platform_uses(): void
@@ -75,8 +76,8 @@ class OperationsPolicyTest extends TestCase
         $this->set('ops_stuck_order_hours', 0);
         $this->set('ops_batch_expiry_days', 9999);
 
-        $this->assertSame(OperationsPolicy::LIMITS['ops_stuck_order_hours']['min'], $this->policy()->stuckOrderHours());
-        $this->assertSame(OperationsPolicy::LIMITS['ops_batch_expiry_days']['max'], $this->policy()->batchExpiryDays());
+        $this->assertSame(OperationsPolicy::limits()['ops_stuck_order_hours']['min'], $this->policy()->stuckOrderHours());
+        $this->assertSame(OperationsPolicy::limits()['ops_batch_expiry_days']['max'], $this->policy()->batchExpiryDays());
     }
 
     public function test_an_unusable_value_falls_back_to_the_shipped_default(): void
@@ -113,15 +114,12 @@ class OperationsPolicyTest extends TestCase
         $this->assertSame('soon', Status::sla(dueAt: $dueIn(600), met: false, now: $now)['state']);
     }
 
-    /** Every policy is bounded, labelled, and on the form — a new one cannot arrive unmanageable. */
-    public function test_every_policy_is_bounded_and_editable_on_the_admin_page(): void
+    /** The windows this class reads are exactly the ones the registry declares for its group. */
+    public function test_every_window_is_declared_with_the_rest_of_the_platform_policy(): void
     {
-        $form = file_get_contents(base_path('resources/views/admin-views/marketplace/sla.blade.php'));
-
-        $this->assertSame(array_keys(OperationsPolicy::DEFAULTS), array_keys(OperationsPolicy::LIMITS));
-
-        foreach (array_keys(OperationsPolicy::DEFAULTS) as $key) {
-            $this->assertStringContainsString("'" . $key . "' =>", $form, $key . ' has no label on the SLA page');
-        }
+        $this->assertSame(
+            array_keys(PolicyRegistry::GROUPS['operations']['policies']),
+            array_keys(OperationsPolicy::defaults()),
+        );
     }
 }

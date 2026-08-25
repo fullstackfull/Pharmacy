@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\Seller;
+use App\Services\Platform\Policy;
 use App\Models\SellerApiKey;
 use App\Models\SellerAutomationAction;
 use App\Models\SellerAutomationRule;
@@ -194,7 +195,7 @@ class SellerOperationsOverview
     {
         $state = [];
 
-        foreach ($this->issuesBySeller(limit: 200) as $row) {
+        foreach ($this->issuesBySeller(limit: app(Policy::class)->int('limit_admin_seller_rollup')) as $row) {
             $state[(int) $row->seller_id] = [
                 'issues' => (int) $row->total,
                 'critical' => (int) $row->critical,

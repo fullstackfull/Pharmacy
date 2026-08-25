@@ -6,8 +6,9 @@ use App\Http\Controllers\BaseController;
 use App\Models\BusinessSetting;
 use App\Models\Seller;
 use App\Models\SellerSlaBreach;
-use App\Services\Marketplace\OperationsPolicy;
 use App\Services\Marketplace\SlaService;
+use App\Services\Platform\Policy;
+use App\Services\Platform\PolicyRegistry;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -20,11 +21,13 @@ use Illuminate\Support\Facades\Schema;
  */
 class SlaController extends BaseController
 {
+    /** The operations windows are declared with every other platform rule; this page edits that group. */
+    private const POLICY_GROUP = 'operations';
+
     public function __construct(
         private readonly SlaService $sla,
-        private readonly OperationsPolicy $operations,
-    )
-    {
+        private readonly Policy $policy,
+    ) {
     }
 
     public function index(Request|null $request, ?string $type = null): View
@@ -51,8 +54,8 @@ class SlaController extends BaseController
             'thresholds' => $this->sla->thresholds(),
             // The windows the detectors judge by, on the same page as the rates they sit beside —
             // they are the same policy, and the seller feels them the same way.
-            'operations' => $this->operations->all(),
-            'operationLimits' => OperationsPolicy::LIMITS,
+            'operations' => $this->policy->all(self::POLICY_GROUP),
+            'operationFields' => PolicyRegistry::GROUPS[self::POLICY_GROUP]['policies'],
             'breaches' => $breaches,
             'paginator' => $paginator,
             'sellers' => $sellers,
@@ -71,36 +74,19 @@ class SlaController extends BaseController
             // Whole hours, and at least one: a zero-hour deadline would mark every order late the
             // instant it arrived.
             'sla_processing_hours' => 'required|integer|min:1|max:720',
-        ] + $this->operationRules());
+        ] + $this->policy->rules(self::POLICY_GROUP));
 
-        foreach ($validated as $type => $value) {
+        // The operations windows go through the policy service so the write is clamped and audited
+        // like every other platform rule; the four rate thresholds are this page's own settings.
+        $this->policy->save(array_intersect_key($validated, $this->policy->rules(self::POLICY_GROUP)));
+
+        foreach (array_diff_key($validated, $this->policy->rules(self::POLICY_GROUP)) as $type => $value) {
             BusinessSetting::updateOrCreate(['type' => $type], ['value' => (string) $value]);
         }
         cache()->flush();
         ToastMagic::success(translate('sla_policy_updated'));
 
         return back();
-    }
-
-    /**
-     * Validation for the operations windows, built from the policy's own limits.
-     *
-     * Read from the service rather than repeated here: the bounds exist because each value drives a
-     * deadline, and a form that accepted what the policy clamps would silently save one number and
-     * apply another.
-     *
-     * @return array<string, string>
-     */
-    private function operationRules(): array
-    {
-        $rules = [];
-
-        foreach (OperationsPolicy::LIMITS as $key => $limits) {
-            $numeric = is_float(OperationsPolicy::DEFAULTS[$key]) ? 'numeric' : 'integer';
-            $rules[$key] = "required|{$numeric}|min:{$limits['min']}|max:{$limits['max']}";
-        }
-
-        return $rules;
     }
 
     public function evaluate(): RedirectResponse

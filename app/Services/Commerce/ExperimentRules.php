@@ -3,6 +3,7 @@
 namespace App\Services\Commerce;
 
 use App\Models\ThemeSection;
+use App\Services\Platform\Policy;
 use App\Services\Theme\SectionRegistry;
 
 /**
@@ -15,10 +16,10 @@ use App\Services\Theme\SectionRegistry;
  */
 class ExperimentRules
 {
-    public const MAX_VARIANTS = 4;
-
-    public function __construct(private readonly SectionRegistry $registry)
-    {
+    public function __construct(
+        private readonly SectionRegistry $registry,
+        private readonly Policy $policy,
+    ) {
     }
 
     /**
@@ -36,7 +37,14 @@ class ExperimentRules
         $totalWeight = 0;
         $keysSeen = [];
 
-        foreach (array_slice(array_values($rows), 0, self::MAX_VARIANTS) as $index => $row) {
+        // Refused, not truncated. Slicing the tail off meant an admin who went one over the limit
+        // saw the rest saved and was never told what had been dropped.
+        $limit = $this->policy->int('commerce_max_variants');
+        if (count($rows) > $limit) {
+            return ['variants' => [], 'errors' => ['variants:at_most_' . $limit]];
+        }
+
+        foreach (array_values($rows) as $index => $row) {
             $label = 'variant_' . ($index + 1);
 
             if (!is_array($row)) {

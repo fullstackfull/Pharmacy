@@ -7,6 +7,7 @@ use App\Models\ProductModerationEvent;
 use App\Services\Marketplace\ProductModerationService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -28,9 +29,6 @@ use Illuminate\Support\Facades\Schema;
 class ListingQualityProducer implements InsightProducer
 {
     public const TYPE = 'LISTING_QUALITY';
-
-    /** Out of 100. Above this a listing is good enough not to interrupt anyone about. */
-    private const QUALITY_BAR = 70;
 
     private const REQUEST_STATUS_DENIED = 2;
 
@@ -59,6 +57,9 @@ class ListingQualityProducer implements InsightProducer
         if (!Schema::hasTable('products')) {
             return [];
         }
+
+        // The bar a marketplace raises as its catalogue matures, rather than a constant it deploys.
+        $qualityBar = app(Policy::class)->int('catalog_quality_bar');
 
         $products = Product::query()
             ->where(['added_by' => 'seller', 'user_id' => $sellerId])
@@ -109,7 +110,7 @@ class ListingQualityProducer implements InsightProducer
 
             [$score, $missing] = $this->score($product);
 
-            if ($score >= self::QUALITY_BAR) {
+            if ($score >= $qualityBar) {
                 continue;
             }
 

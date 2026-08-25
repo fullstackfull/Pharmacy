@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\Marketplace\StockPolicy;
 use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -31,12 +32,6 @@ class StaleInventoryProducer implements InsightProducer
 {
     public const TYPE = 'INVENTORY_STALE';
 
-    /** No movement in this long, on a product that has stock, is worth saying. */
-    private const STALE_DAYS = 90;
-
-    /** Ignore rounding-error quantities: one forgotten unit is not a finding. */
-    private const MINIMUM_UNITS = 3;
-
     private const LIMIT = 200;
 
     public function type(): string
@@ -50,6 +45,12 @@ class StaleInventoryProducer implements InsightProducer
             return [];
         }
 
+        // The marketplace's own judgement of dead capital, which the seller's equivalent automation
+        // rule has always let them set for themselves.
+        $stockPolicy = app(StockPolicy::class);
+        $staleDays = $stockPolicy->staleDays();
+        $minimumUnits = $stockPolicy->staleMinimumUnits();
+
         $products = DB::table('products')
             ->where(['added_by' => 'seller', 'user_id' => $sellerId, 'product_type' => 'physical'])
             ->limit(self::LIMIT * 5)
@@ -59,7 +60,7 @@ class StaleInventoryProducer implements InsightProducer
             return [];
         }
 
-        $soldRecently = $this->recentlySoldProductIds($sellerId);
+        $soldRecently = $this->recentlySoldProductIds($sellerId, $staleDays);
 
         $stale = [];
         $liveWithoutStock = [];
@@ -74,19 +75,19 @@ class StaleInventoryProducer implements InsightProducer
                 continue;
             }
 
-            if (!$isLive && $stock >= self::MINIMUM_UNITS) {
+            if (!$isLive && $stock >= $minimumUnits) {
                 $hiddenWithStock[] = $product;
                 continue;
             }
 
-            if ($stock >= self::MINIMUM_UNITS && !isset($soldRecently[$product->id])) {
+            if ($stock >= $minimumUnits && !isset($soldRecently[$product->id])) {
                 $stale[] = $product;
             }
         }
 
-        yield from $this->draftFor($sellerId, 'insight_inventory_not_moving', 'not_moving', $stale, SellerInsight::SEVERITY_LOW);
-        yield from $this->draftFor($sellerId, 'insight_listing_live_without_stock', 'live_without_stock', $liveWithoutStock, SellerInsight::SEVERITY_MEDIUM);
-        yield from $this->draftFor($sellerId, 'insight_listing_hidden_with_stock', 'hidden_with_stock', $hiddenWithStock, SellerInsight::SEVERITY_MEDIUM);
+        yield from $this->draftFor($sellerId, 'insight_inventory_not_moving', 'not_moving', $stale, SellerInsight::SEVERITY_LOW, $staleDays);
+        yield from $this->draftFor($sellerId, 'insight_listing_live_without_stock', 'live_without_stock', $liveWithoutStock, SellerInsight::SEVERITY_MEDIUM, $staleDays);
+        yield from $this->draftFor($sellerId, 'insight_listing_hidden_with_stock', 'hidden_with_stock', $hiddenWithStock, SellerInsight::SEVERITY_MEDIUM, $staleDays);
     }
 
     /**
@@ -99,7 +100,7 @@ class StaleInventoryProducer implements InsightProducer
      * @param  array<int, object>  $products
      * @return iterable<InsightDraft>
      */
-    private function draftFor(int|string $sellerId, string $title, string $kind, array $products, string $severity): iterable
+    private function draftFor(int|string $sellerId, string $title, string $kind, array $products, string $severity, int $staleDays): iterable
     {
         if ($products === []) {
             return;
@@ -122,11 +123,11 @@ class StaleInventoryProducer implements InsightProducer
             // when no cost was recorded, because "holding — in stock" is not a sentence.
             body: $tiedUp
                 ? Copy::choice('insight_body_stale_inventory_one', 'insight_body_stale_inventory', count($products), [
-                    'days' => self::STALE_DAYS,
+                    'days' => $staleDays,
                     'value' => $tiedUp,
                 ])
                 : Copy::choice('insight_body_stale_inventory_one_no_cost', 'insight_body_stale_inventory_no_cost', count($products), [
-                    'days' => self::STALE_DAYS,
+                    'days' => $staleDays,
                 ]),
             entityType: 'product_group',
             entityId: $kind,
@@ -155,7 +156,7 @@ class StaleInventoryProducer implements InsightProducer
      *
      * @return array<int, bool>
      */
-    private function recentlySoldProductIds(int|string $sellerId): array
+    private function recentlySoldProductIds(int|string $sellerId, int $staleDays): array
     {
         if (!Schema::hasTable('order_details')) {
             return [];
@@ -164,7 +165,7 @@ class StaleInventoryProducer implements InsightProducer
         return DB::table('order_details')
             ->where('seller_id', $sellerId)
             ->where('delivery_status', 'delivered')
-            ->where('created_at', '>=', now()->subDays(self::STALE_DAYS))
+            ->where('created_at', '>=', now()->subDays($staleDays))
             ->distinct()
             ->pluck('product_id')
             ->flip()

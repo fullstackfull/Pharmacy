@@ -1028,5 +1028,311 @@ class SellerCenterCopySeeder extends Seeder
             'Days ahead expiring stock is surfaced',
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
+
+        // ── admin · the platform policy registry ──────────────────────────
+        'a_floor_on_top_of_the_category_return_window_zero_leaves_the_return_window_alone' => [
+            'A floor on top of the category return window — zero leaves the return window alone',
+            'حدّ أدنى فوق نافذة إرجاع الفئة — القيمة صفر تترك نافذة الإرجاع كما هي',
+        ],
+        'days_of_cover_below_which_a_restock_is_raised_in_the_briefing' => [
+            'Days of cover below which a restock is raised in the briefing',
+            'أيام التغطية التي يُرفع دونها تنبيه إعادة التخزين في الملخّص',
+        ],
+        'days_of_cover_below_which_a_restock_is_offered_as_an_opportunity' => [
+            'Days of cover below which a restock is offered as an opportunity',
+            'أيام التغطية التي يُعرض دونها إعادة التخزين كفرصة',
+        ],
+        'every_cover_figure_on_every_screen_is_measured_over_this_window' => [
+            'Every cover figure on every screen is measured over this window',
+            'كل أرقام التغطية في كل الشاشات تُقاس على هذه النافذة',
+        ],
+        'access_policy' => [
+            'Access policy',
+            'سياسة الوصول',
+        ],
+        'api_requests_allowed_per_minute_per_client' => [
+            'API requests allowed per minute, per client',
+            'عدد طلبات الواجهة البرمجية المسموحة في الدقيقة لكل عميل',
+        ],
+        'applies_to_every_sign_up_reset_and_staff_account_across_web_and_api' => [
+            'Applies to every sign-up, reset and staff account, on the web and over the API',
+            'تُطبَّق على كل تسجيل واستعادة وحساب موظف، على الويب وعبر الواجهة البرمجية',
+        ],
+        'audit_rows_a_seller_may_page_back_through' => [
+            'Audit rows a seller may page back through',
+            'عدد سجلات التدقيق التي يمكن للبائع تصفّحها للخلف',
+        ],
+        'automation_rules_evaluated_in_one_sweep' => [
+            'Automation rules evaluated in one sweep',
+            'عدد قواعد الأتمتة التي تُقيَّم في الجولة الواحدة',
+        ],
+        'boosted_products_per_collection' => [
+            'Boosted products per collection',
+            'عدد المنتجات المعزّزة في المجموعة',
+        ],
+        'cancellation_rate_that_puts_a_seller_at_risk' => [
+            'Cancellation rate that puts a seller at risk',
+            'نسبة الإلغاء التي تضع البائع في دائرة الخطر',
+        ],
+        'cancellation_rate_that_puts_a_seller_on_watch' => [
+            'Cancellation rate that puts a seller on watch',
+            'نسبة الإلغاء التي تضع البائع تحت المراقبة',
+        ],
+        'catalogue_policy' => [
+            'Catalogue policy',
+            'سياسة الكتالوج',
+        ],
+        'days_a_sellers_reconciliation_looks_back_by_default' => [
+            'Days a seller’s reconciliation looks back by default',
+            'عدد الأيام التي تعود إليها تسوية البائع افتراضياً',
+        ],
+        'days_an_earning_is_held_before_it_becomes_available' => [
+            'Days an earning is held before it becomes available',
+            'عدد أيام حجز الأرباح قبل أن تصبح متاحة',
+        ],
+        'days_of_cover_below_which_stock_is_called_critical' => [
+            'Days of cover below which stock is called critical',
+            'أيام التغطية التي يُعتبر المخزون دونها حرجاً',
+        ],
+        'days_of_cover_below_which_stock_is_called_low' => [
+            'Days of cover below which stock is called low',
+            'أيام التغطية التي يُعتبر المخزون دونها منخفضاً',
+        ],
+        'days_of_notice_before_a_verification_document_expires' => [
+            'Days of notice before a verification document expires',
+            'عدد أيام التنبيه قبل انتهاء صلاحية وثيقة التوثيق',
+        ],
+        'days_of_sales_used_to_work_out_how_fast_stock_moves' => [
+            'Days of sales used to work out how fast stock moves',
+            'عدد أيام المبيعات المستخدمة لحساب سرعة حركة المخزون',
+        ],
+        'days_unsold_before_stock_is_called_dead_capital' => [
+            'Days unsold before stock is called dead capital',
+            'عدد أيام عدم البيع قبل اعتبار المخزون رأس مال راكد',
+        ],
+        'delivery_attempts_before_a_webhook_is_given_up_on' => [
+            'Delivery attempts before a webhook is given up on',
+            'عدد محاولات التسليم قبل التخلي عن الويب هوك',
+        ],
+        'excluded_products_per_collection' => [
+            'Excluded products per collection',
+            'عدد المنتجات المستبعدة في المجموعة',
+        ],
+        'fulfilment_policy' => [
+            'Fulfilment policy',
+            'سياسة التنفيذ والشحن',
+        ],
+        'highest_boost_weight_allowed' => [
+            'Highest boost weight allowed',
+            'أعلى وزن تعزيز مسموح',
+        ],
+        'hours_a_price_change_is_watched_for' => [
+            'Hours a price change is watched for',
+            'عدد ساعات مراقبة تغيّر السعر',
+        ],
+        'hours_of_courier_silence_before_a_shipment_is_raised' => [
+            'Hours of courier silence before a shipment is raised',
+            'ساعات صمت شركة الشحن قبل رفع تنبيه بالشحنة',
+        ],
+        'hours_payouts_are_frozen_after_a_seller_changes_their_bank_details' => [
+            'Hours payouts are frozen after a seller changes their bank details',
+            'ساعات تجميد الدفعات بعد تغيير البائع لبياناته البنكية',
+        ],
+        'how_deep_a_fallback_chain_may_go' => [
+            'How deep a fallback chain may go',
+            'عمق سلسلة البدائل المسموح',
+        ],
+        'how_hard_the_platform_tries_before_a_sellers_event_is_lost' => [
+            'How hard the platform tries before a seller’s event is lost',
+            'مدى إصرار المنصة قبل ضياع حدث البائع',
+        ],
+        'how_large_a_curated_collection_campaign_or_experiment_may_get' => [
+            'How large a curated collection, campaign or experiment may get',
+            'الحجم الأقصى للمجموعة المنسّقة أو الحملة أو التجربة',
+        ],
+        'how_long_a_parcel_may_go_without_courier_movement_before_it_is_an_exception' => [
+            'How long a parcel may go without courier movement before it is an exception',
+            'المدة التي تبقى فيها الشحنة بلا حركة قبل اعتبارها استثناء',
+        ],
+        'how_much_the_platform_looks_at_in_one_pass_raise_these_as_the_marketplace_grows' => [
+            'How much the platform looks at in one pass — raise these as the marketplace grows',
+            'حجم ما تفحصه المنصة في المرور الواحد — ارفعها مع نمو السوق',
+        ],
+        'listing_score_below_which_a_product_is_raised_for_improvement' => [
+            'Listing score below which a product is raised for improvement',
+            'درجة الإدراج التي يُرفع المنتج دونها للتحسين',
+        ],
+        'merchandising_limits' => [
+            'Merchandising limits',
+            'حدود العرض والتنسيق',
+        ],
+        'minutes_before_the_first_retry_doubling_each_attempt' => [
+            'Minutes before the first retry, doubling each attempt',
+            'الدقائق قبل أول إعادة محاولة، وتتضاعف مع كل محاولة',
+        ],
+        'one_definition_of_low_stock_read_by_the_briefing_the_inventory_screen_and_the_opportunity_cards' => [
+            'One definition of low stock, read by the briefing, the inventory screen and the opportunity cards',
+            'تعريف واحد للمخزون المنخفض، يقرأه الملخّص اليومي وشاشة المخزون وبطاقات الفرص',
+        ],
+        'one_password_rule_and_one_brute_force_tolerance_for_every_surface' => [
+            'One password rule and one brute-force tolerance for every surface',
+            'قاعدة كلمة مرور واحدة وحدّ محاولات واحد لكل الواجهات',
+        ],
+        'open_issues_and_deadlines_read_per_control_tower_load' => [
+            'Open issues and deadlines read per Control Tower load',
+            'عدد المشكلات والمواعيد المقروءة عند فتح مركز التحكم',
+        ],
+        'overrides_per_campaign' => [
+            'Overrides per campaign',
+            'عدد التجاوزات في الحملة',
+        ],
+        'payment_terms' => [
+            'Payment terms',
+            'شروط الدفع',
+        ],
+        'payout_amount_above_which_a_second_approver_is_required' => [
+            'Payout amount above which a second approver is required',
+            'قيمة الدفعة التي تستوجب موافقاً ثانياً',
+        ],
+        'pinned_products_per_collection' => [
+            'Pinned products per collection',
+            'عدد المنتجات المثبّتة في المجموعة',
+        ],
+        'rating_below_which_a_seller_is_at_risk' => [
+            'Rating below which a seller is at risk',
+            'التقييم الذي يصبح البائع دونه في دائرة الخطر',
+        ],
+        'rating_below_which_a_seller_is_on_watch' => [
+            'Rating below which a seller is on watch',
+            'التقييم الذي يصبح البائع دونه تحت المراقبة',
+        ],
+        'refund_rate_that_puts_a_seller_at_risk' => [
+            'Refund rate that puts a seller at risk',
+            'نسبة الاسترداد التي تضع البائع في دائرة الخطر',
+        ],
+        'refund_rate_that_puts_a_seller_on_watch' => [
+            'Refund rate that puts a seller on watch',
+            'نسبة الاسترداد التي تضع البائع تحت المراقبة',
+        ],
+        'return_rate_that_puts_a_seller_at_risk' => [
+            'Return rate that puts a seller at risk',
+            'نسبة الإرجاع التي تضع البائع في دائرة الخطر',
+        ],
+        'return_rate_that_puts_a_seller_on_watch' => [
+            'Return rate that puts a seller on watch',
+            'نسبة الإرجاع التي تضع البائع تحت المراقبة',
+        ],
+        'rules_per_collection' => [
+            'Rules per collection',
+            'عدد القواعد في المجموعة',
+        ],
+        'rules_per_segment' => [
+            'Rules per segment',
+            'عدد القواعد في الشريحة',
+        ],
+        'seconds_to_wait_for_the_receiving_endpoint' => [
+            'Seconds to wait for the receiving endpoint',
+            'عدد الثواني لانتظار نقطة الاستقبال',
+        ],
+        'seller_standing' => [
+            'Seller standing',
+            'وضع البائع',
+        ],
+        'sellers_included_in_the_admin_issue_rollup' => [
+            'Sellers included in the admin issue rollup',
+            'عدد البائعين في تجميعة المشكلات لدى الإدارة',
+        ],
+        'share_of_the_previous_price_a_change_must_exceed_to_be_called_extreme' => [
+            'Share of the previous price a change must exceed to be called extreme',
+            'نسبة من السعر السابق يجب أن يتجاوزها التغيير ليُعتبر متطرفاً',
+        ],
+        'shortest_password_the_platform_accepts' => [
+            'Shortest password the platform accepts',
+            'أقصر كلمة مرور تقبلها المنصة',
+        ],
+        'sign_in_attempts_allowed_per_minute' => [
+            'Sign-in attempts allowed per minute',
+            'عدد محاولات تسجيل الدخول المسموحة في الدقيقة',
+        ],
+        'smallest_balance_a_seller_may_request_a_payout_for' => [
+            'Smallest balance a seller may request a payout for',
+            'أصغر رصيد يمكن للبائع طلب صرفه',
+        ],
+        'stock_policy' => [
+            'Stock policy',
+            'سياسة المخزون',
+        ],
+        'stop_raising_a_silent_shipment_after_days' => [
+            'Stop raising a silent shipment after (days)',
+            'التوقف عن رفع الشحنة الصامتة بعد (أيام)',
+        ],
+        'strikes_that_put_a_seller_at_risk' => [
+            'Strikes that put a seller at risk',
+            'عدد المخالفات التي تضع البائع في دائرة الخطر',
+        ],
+        'strikes_that_put_a_seller_on_watch' => [
+            'Strikes that put a seller on watch',
+            'عدد المخالفات التي تضع البائع تحت المراقبة',
+        ],
+        'sweep_and_page_limits' => [
+            'Sweep and page limits',
+            'حدود المسح والصفحات',
+        ],
+        'the_notice_a_seller_gets_before_a_document_expires_and_the_bands_that_label_their_account' => [
+            'The notice a seller gets before a document expires, and the bands that label their account',
+            'التنبيه الذي يصل البائع قبل انتهاء وثيقة، والنطاقات التي تصنّف حسابه',
+        ],
+        'the_quality_bar_a_listing_must_clear_and_the_limits_a_merchandiser_works_within' => [
+            'The quality bar a listing must clear, and the limits a merchandiser works within',
+            'معيار الجودة الذي يجب أن يجتازه الإدراج، والحدود التي يعمل ضمنها منسّق العرض',
+        ],
+        'units_on_hand_before_unsold_stock_is_worth_raising' => [
+            'Units on hand before unsold stock is worth raising',
+            'عدد الوحدات المتوفرة قبل أن يستحق المخزون الراكد التنبيه',
+        ],
+        'variants_per_storefront_experiment' => [
+            'Variants per storefront experiment',
+            'عدد المتغيرات في تجربة الواجهة',
+        ],
+        'webhook_delivery' => [
+            'Webhook delivery',
+            'تسليم الويب هوك',
+        ],
+        'what_the_marketplace_promises_its_sellers_about_when_they_are_paid' => [
+            'What the marketplace promises its sellers about when they are paid',
+            'ما تعد به المنصة بائعيها بشأن موعد الدفع',
+        ],
+        'zero_switches_the_second_approver_off' => [
+            'Zero switches the second approver off',
+            'القيمة صفر تُلغي اشتراط الموافق الثاني',
+        ],
+        'platform_policies' => [
+            'Platform policies',
+            'سياسات المنصة',
+        ],
+        'Platform_Policies' => [
+            'Platform Policies',
+            'سياسات المنصة',
+        ],
+        'the_rules_the_platform_applies_to_itself_every_one_of_them_settable_bounded_and_audited' => [
+            'The rules the platform applies to itself — every one of them settable, bounded and audited',
+            'القواعد التي تطبّقها المنصة على نفسها — كلها قابلة للضبط ومحدودة ومُدقَّقة',
+        ],
+        'the_rules_the_platform_applies_to_itself_thresholds_limits_and_windows' => [
+            'The rules the platform applies to itself: thresholds, limits and windows',
+            'القواعد التي تطبّقها المنصة على نفسها: العتبات والحدود والنوافذ',
+        ],
+        'the_policy_was_updated' => [
+            'The policy was updated.',
+            'تم تحديث السياسة.',
+        ],
+        'nothing_changed' => [
+            'Nothing changed.',
+            'لم يتغيّر شيء.',
+        ],
+        'allowed' => [
+            'Allowed',
+            'المسموح',
+        ],
     ];
 }

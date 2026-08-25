@@ -2,6 +2,8 @@
 
 namespace App\Services\Commerce;
 
+use App\Services\Platform\Policy;
+
 /**
  * What a segment rule may read, and how (Phase 3.4).
  *
@@ -12,7 +14,9 @@ namespace App\Services\Commerce;
  */
 class SegmentRules
 {
-    public const MAX_RULES = 8;
+    public function __construct(private readonly Policy $policy)
+    {
+    }
 
     public const OPERATORS = [
         'equals', 'not_equals', 'greater_than', 'greater_than_or_equal',
@@ -40,7 +44,14 @@ class SegmentRules
         $clean = [];
         $errors = [];
 
-        foreach (array_slice(array_values($rows), 0, self::MAX_RULES) as $index => $row) {
+        // Refused, not truncated. Slicing the tail off meant an admin who went one over the limit
+        // saw the rest saved and was never told what had been dropped.
+        $limit = $this->policy->int('commerce_max_segment_rules');
+        if (count($rows) > $limit) {
+            return ['rules' => [], 'errors' => ['rules:at_most_' . $limit]];
+        }
+
+        foreach (array_values($rows) as $index => $row) {
             $label = 'rule_' . ($index + 1);
 
             $field = is_array($row) && is_string($row['field'] ?? null) ? $row['field'] : '';

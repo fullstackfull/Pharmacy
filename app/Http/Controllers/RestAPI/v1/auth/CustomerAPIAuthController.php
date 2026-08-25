@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v1\auth;
 
 use App\Contracts\Repositories\BusinessSettingRepositoryInterface;
+use App\Services\Platform\PasswordPolicy;
 use App\Contracts\Repositories\CustomerRepositoryInterface;
 use App\Contracts\Repositories\LoginSetupRepositoryInterface;
 use App\Contracts\Repositories\PhoneOrEmailVerificationRepositoryInterface;
@@ -48,7 +49,7 @@ class CustomerAPIAuthController extends Controller
             'l_name' => 'required',
             'email' => 'required|unique:users',
             'phone' => 'required|min:6|max:20|unique:users',
-            'password' => 'required|min:6',
+            'password' => app(PasswordPolicy::class)->ruleString(),
         ], [
             'f_name.required' => translate('The first name field is required.'),
             'l_name.required' => translate('The last name field is required.'),
@@ -440,7 +441,7 @@ class CustomerAPIAuthController extends Controller
             'l_name' => 'required',
             'email' => 'required|unique:users',
             'phone' => 'required|min:6|max:20|unique:users',
-            'password' => 'required|min:6',
+            'password' => app(PasswordPolicy::class)->ruleString(),
         ], [
             'f_name.required' => translate('The first name field is required.'),
             'l_name.required' => translate('The last name field is required.'),

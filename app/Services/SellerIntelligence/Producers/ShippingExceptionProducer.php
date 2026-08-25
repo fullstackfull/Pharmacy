@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use App\Services\SellerCenter\Copy;
 use App\Services\DeliverySyria\DeliverySyriaStatus;
 use App\Services\SellerIntelligence\InsightDraft;
@@ -27,12 +28,6 @@ class ShippingExceptionProducer implements InsightProducer
 {
     public const TYPE = 'SHIPPING_EXCEPTION';
 
-    /** No word from the courier in this long, on a parcel that has not arrived. */
-    private const SILENT_HOURS = 72;
-
-    /** Past this the parcel is a dispute, not a delay, and a banner is not the right place for it. */
-    private const STOP_AFTER_DAYS = 30;
-
     private const LIMIT = 200;
 
     public function type(): string
@@ -46,18 +41,24 @@ class ShippingExceptionProducer implements InsightProducer
             return [];
         }
 
+        // Courier silence tolerance is a per-market judgement — a two-day gap is normal in one
+        // country and an incident in another — so the marketplace sets it rather than the code.
+        $policy = app(Policy::class);
+        $silentHours = $policy->int('shipping_silent_hours');
+        $stopAfterDays = $policy->int('shipping_stop_after_days');
+
         $silent = DB::table('delivery_syria_parcels')
             ->join('orders', 'orders.id', '=', 'delivery_syria_parcels.order_id')
             ->where('orders.seller_is', 'seller')
             ->where('orders.seller_id', $sellerId)
             ->whereNotIn('orders.order_status', ['delivered', 'canceled', 'returned', 'failed'])
-            ->where('delivery_syria_parcels.created_at', '>=', now()->subDays(self::STOP_AFTER_DAYS))
-            ->where(function ($query) {
+            ->where('delivery_syria_parcels.created_at', '>=', now()->subDays($stopAfterDays))
+            ->where(function ($query) use ($silentHours) {
                 // Either the courier has gone quiet, or it never said anything in the first place.
-                $query->where('delivery_syria_parcels.status_updated_at', '<=', now()->subHours(self::SILENT_HOURS))
-                    ->orWhere(function ($inner) {
+                $query->where('delivery_syria_parcels.status_updated_at', '<=', now()->subHours($silentHours))
+                    ->orWhere(function ($inner) use ($silentHours) {
                         $inner->whereNull('delivery_syria_parcels.status_updated_at')
-                            ->where('delivery_syria_parcels.created_at', '<=', now()->subHours(self::SILENT_HOURS));
+                            ->where('delivery_syria_parcels.created_at', '<=', now()->subHours($silentHours));
                     });
             })
             ->orderBy('delivery_syria_parcels.created_at')
@@ -79,7 +80,7 @@ class ShippingExceptionProducer implements InsightProducer
         $value = round((float) $silent->sum('order_amount'), 2);
         $oldest = $silent->first();
         $silentSince = $oldest->status_updated_at ?? $oldest->created_at;
-        $silentHours = round(\Illuminate\Support\Carbon::parse($silentSince)->diffInMinutes(now()) / 60, 1);
+        $longestSilenceHours = round(\Illuminate\Support\Carbon::parse($silentSince)->diffInMinutes(now()) / 60, 1);
 
         yield new InsightDraft(
             sellerId: $sellerId,
@@ -87,7 +88,7 @@ class ShippingExceptionProducer implements InsightProducer
             severity: SellerInsight::SEVERITY_HIGH,
             title: 'insight_shipments_not_moving',
             body: Copy::choice('insight_body_shipments_silent_one', 'insight_body_shipments_silent', $silent->count(), [
-                'elapsed' => Copy::duration((int) round($silentHours * 60)),
+                'elapsed' => Copy::duration((int) round($longestSilenceHours * 60)),
                 'value' => $value,
             ]),
             entityType: 'shipment_group',
@@ -101,12 +102,12 @@ class ShippingExceptionProducer implements InsightProducer
             signals: new ImpactSignals(
                 revenueAtRisk: $value,
                 affectedCount: $silent->count(),
-                openForHours: $silentHours,
+                openForHours: $longestSilenceHours,
             ),
             metadata: [
                 'count' => $silent->count(),
-                'longest_silence_hours' => $silentHours,
-                'window_hours' => self::SILENT_HOURS,
+                'longest_silence_hours' => $longestSilenceHours,
+                'window_hours' => $silentHours,
                 'last_known_status' => $oldest->courier_status,
             ],
         );

@@ -115,6 +115,7 @@ class SettingsIndexService
                 'module' => 'system_settings',
                 'icon'   => 'settings',
                 'items'  => [
+                    ['admin.settings.policies.index', translate('Platform_Policies'), translate('the_rules_the_platform_applies_to_itself_thresholds_limits_and_windows'), 'policy threshold limit rule window stock password webhook payout'],
                     ['admin.system-setup.environment-setup', translate('System_Setup'), translate('environment_and_application_configuration'), 'environment system config env'],
                     ['admin.system-setup.language.index', translate('Languages'), translate('the_languages_your_panel_and_store_offer'), 'language translation locale arabic english'],
                     ['admin.system-setup.login-settings.customer-login-setup', translate('Login_Settings'), translate('how_customers_and_staff_sign_in'), 'login otp password signin'],

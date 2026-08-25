@@ -3,6 +3,7 @@
 namespace App\Services\Commerce;
 
 use App\Models\ProductCollection;
+use App\Services\Platform\Policy;
 
 /**
  * The shape of a collection's merchandising, and the referee of what it may say (Phase 3.2).
@@ -16,19 +17,15 @@ use App\Models\ProductCollection;
  */
 class MerchandisingRules
 {
-    public const MAX_PINS = 12;
-    public const MAX_EXCLUSIONS = 100;
-    public const MAX_BOOSTS = 20;
-    public const MAX_BOOST_WEIGHT = 1000;
-
     public const BOOST_KINDS = ['product', 'brand', 'category', 'featured'];
     public const FALLBACK_KINDS = ['hide', 'source', 'collection'];
 
     /** The catalogue orderings a fallback may name — 'collection' deliberately not among them. */
     public const FALLBACK_SOURCES = ['featured', 'best_selling', 'new_arrival', 'top_rated'];
 
-    /** How deep a fallback chain may go at save time before it is declared a loop. */
-    private const MAX_CHAIN = 5;
+    public function __construct(private readonly Policy $policy)
+    {
+    }
 
     /**
      * Validate untrusted merchandising into exactly what the resolver reads — or name what is
@@ -49,7 +46,7 @@ class MerchandisingRules
         $errors = [];
 
         $pins = $this->pins($raw['pins'] ?? []);
-        $excluded = $this->ids($raw['excluded'] ?? [], self::MAX_EXCLUSIONS);
+        $excluded = $this->ids($raw['excluded'] ?? [], $this->limit('commerce_max_exclusions'));
 
         // A product cannot be fixed into the list and banned from it at once. Refusing beats
         // picking a winner silently: whichever the admin meant, the other one is a mistake.
@@ -59,13 +56,13 @@ class MerchandisingRules
         }
 
         $boosts = [];
-        foreach (array_slice(array_values(is_array($raw['boosts'] ?? null) ? $raw['boosts'] : []), 0, self::MAX_BOOSTS) as $row) {
+        foreach (array_slice(array_values(is_array($raw['boosts'] ?? null) ? $raw['boosts'] : []), 0, $this->limit('commerce_max_boosts')) as $row) {
             if (!is_array($row) || !in_array($row['kind'] ?? null, self::BOOST_KINDS, true)) {
                 $errors[] = 'boost:unknown_kind';
                 continue;
             }
             $weight = $row['weight'] ?? null;
-            if (!is_numeric($weight) || (float) $weight <= 0 || (float) $weight > self::MAX_BOOST_WEIGHT) {
+            if (!is_numeric($weight) || (float) $weight <= 0 || (float) $weight > $this->limit('commerce_max_boost_weight')) {
                 $errors[] = 'boost:weight_out_of_range';
                 continue;
             }
@@ -116,7 +113,7 @@ class MerchandisingRules
         // the save path (an import, a hand edit) can still carry the contradiction, and here the
         // exclusion wins — it is the stronger statement, and rendering a banned product because
         // it is also pinned is the wrong reading of both.
-        $excluded = $this->ids($stored['excluded'] ?? [], self::MAX_EXCLUSIONS);
+        $excluded = $this->ids($stored['excluded'] ?? [], $this->limit('commerce_max_exclusions'));
 
         return [
             'pins'      => array_values(array_filter(
@@ -168,7 +165,7 @@ class MerchandisingRules
             $taken[] = $id;
             $pins[] = ['id' => $id, 'position' => $position];
 
-            if (count($pins) >= self::MAX_PINS) {
+            if (count($pins) >= $this->limit('commerce_max_pins')) {
                 break;
             }
         }
@@ -241,7 +238,7 @@ class MerchandisingRules
         $current = $toId;
         $hops = 0;
 
-        while ($current !== null && $hops < self::MAX_CHAIN) {
+        while ($current !== null && $hops < $this->limit('commerce_max_chain')) {
             if (in_array($current, $seen, true)) {
                 return false;
             }
@@ -262,4 +259,15 @@ class MerchandisingRules
         // A chain longer than the cap is treated as a loop: nobody composes five honest hops.
         return $current === null;
     }
+    /**
+     * How large a merchandiser may curate.
+     *
+     * These were constants, so a seasonal collection that needed a thirteenth pin was refused with
+     * no route open to the person refused except a deploy. They are the marketplace's limits now.
+     */
+    private function limit(string $key): int
+    {
+        return $this->policy->int($key);
+    }
+
 }

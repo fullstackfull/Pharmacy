@@ -14,25 +14,39 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 304 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 318 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 77 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 100 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 86 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (304)
+## CONNECTED TO ADMIN (318)
 
 The marketplace operator manages or oversees it.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| How far back a seller's finance reconciliation looks, and how many example rows it shows | finance | Admin | app/Services/Platform/PolicyRegistry.php (reconciliation_lookback_days) read at app/Services/Marketplace/SellerReconciliationService.php:305 |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | finance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_finance_grace_hours, default 6), read at app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:51; LOOKBACK_DAYS = 90 and LIMIT = 200 remain sweep bounds |
 | Low-stock threshold used by the seller API and the Flutter app | inventory | Admin | app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:42 (LOW_STOCK_THRESHOLD = 5) used at :69 and :73; mirrored in the Flutter app at /home/user/sillercenter-syria-cosmatics/lib/features/inventory/domain/models/inventory_models.dart:32 (lowStockThreshold ?? 5) |
+| What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | inventory | Admin | app/Services/Platform/PolicyRegistry.php inventory group (stock_cover_critical_days, stock_cover_low_days, stock_cover_raise_days, stock_cover_opportunity_days, stock_velocity_days) read through app/Services/Marketplace/StockPolicy.php by InventoryRiskProducer.php:42, app/Services/SellerCenter/Lists/InventoryList.php and app/Services/SellerCenter/Automation/Opportunities.php |
+| When unsold stock is called dead capital (90 days, at least 3 units) | inventory | Admin | app/Services/Platform/PolicyRegistry.php (stock_stale_days, stock_stale_minimum_units) read at app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:50-51 |
 | Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | compliance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_batch_expiry_days, default 30), read at app/Services/Marketplace/BatchService.php:61 |
+| How much notice a seller gets before a verification document expires (45 days) | compliance | Admin | app/Services/Platform/PolicyRegistry.php (compliance_expiry_notice_days) read at app/Services/SellerCenter/Counts.php:181 |
+| The listing quality bar (a score under 70 is raised for improvement) | catalog | Admin | app/Services/Platform/PolicyRegistry.php (catalog_quality_bar) read at app/Services/SellerIntelligence/Producers/ListingQualityProducer.php:61 |
+| Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep | catalog | Admin | app/Services/Platform/PolicyRegistry.php commerce group (commerce_max_pins, commerce_max_exclusions, commerce_max_boosts, commerce_max_boost_weight, commerce_max_chain, commerce_max_collection_rules) read at app/Services/Commerce/MerchandisingRules.php and CollectionRuleRegistry.php |
+| How many variants a storefront experiment may run, and how many rules a segment or campaign may carry | automation | Admin | app/Services/Platform/PolicyRegistry.php (commerce_max_variants, commerce_max_segment_rules, commerce_max_campaign_overrides) read at app/Services/Commerce/ExperimentRules.php, SegmentRules.php and CampaignRules.php |
+| What counts as a suspicious price swing (more than half the previous price within 48 hours) | pricing | Admin | app/Services/Platform/PolicyRegistry.php (catalog_price_swing_ratio, catalog_price_swing_hours) read at app/Services/SellerIntelligence/Producers/PricingRiskProducer.php:57-58 |
 | What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands) | orders | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_stuck_order_hours, ops_stuck_stop_after_days, ops_sla_urgent_fraction, ops_sla_closing_minutes, ops_sla_soon_minutes), read at app/Services/SellerCenter/Status.php:211, OrderStuckProducer.php:58,64 and OrderSlaProducer.php:72; deadline still from app/Services/Marketplace/SlaService.php:89 processingDeadline() |
 | The returns response promise — 48 hours to answer a return request, 72 hours to process it | returns | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_returns_response_hours, ops_returns_processing_hours), read at app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:53,111 |
+| How long a shipment may go without courier movement before it is raised as an exception (72 hours) | shipping | Admin | app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48 |
+| Seller health tiers — the good / watch / at-risk bands on the admin scorecard | compliance | Admin | app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137 |
+| Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | platform | Admin | app/Services/Platform/PolicyRegistry.php platform group (limit_automation_sweep, limit_audit_rows, limit_control_tower_rows, limit_admin_seller_rollup) read at AutomationEngine.php, SellerAuditTrailService.php, ControlTowerService.php and SellerOperationsOverview.php |
+| Minimum password length — 6 characters on some surfaces and 8 on others | security | Admin | app/Services/Platform/PasswordPolicy.php over the password_minimum_length policy, used by every validator where a password is CHOSEN (registration, reset, staff and deliveryman creation, on web and API); sign-in validators are deliberately excluded so raising the minimum cannot lock out an existing account |
+| Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | security | Admin | app/Providers/RouteServiceProvider.php:182 defines the `auth` and `global` limiters from the auth_attempts_per_minute and api_requests_per_minute policies; the six route files now use `throttle:auth` rather than a repeated literal |
+| Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | integrations | Admin | app/Services/Platform/PolicyRegistry.php (webhook_max_attempts, webhook_timeout_seconds, webhook_backoff_minutes) read at app/Services/Marketplace/SellerWebhookDispatcher.php |
 | Approve, reject or suspend a seller account (single and bulk) | platform | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:210 updateStatus + :167 bulkUpdateStatus; routes/admin/routes.php:498 admin.vendors.updateStatus, :501 admin.vendors.bulk-status; nav resources/views/layouts/admin/partials/v2/_side-bar.blade.php:493; routes routes/admin/routes.php:947 admin.vendors.update-vendor-status; the file contains zero AuditLogger references |
 | Commission rules — the rate the marketplace charges, by global, category, vendor or product scope | finance | Admin | app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php; app/Services/Marketplace/CommissionEngine.php; routes/admin/routes.php:768-776 admin.marketplace.commission-rules.*; nav _side-bar.blade.php:659; app/Services/Marketplace/CommissionEngine.php:46 (const DEFAULT_PRIORITY = [product 400, vendor 300, category 200, global 100]); legacy fallback at app/Utils/Helpers.php:633 seller_sales_commission() reading seller.sales_commission_percentage then setting 'sales_commission'; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php (routes/admin/routes.php:768-776), evaluated by app/Services/Marketplace/CommissionEngine.php; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php:60 store (audited 'commission.rule_created' at :63), :73 update, :81 toggle, :90 destroy (all three unaudited); routes under routes/admin/routes.php:549 marketplace group |
 | Per-seller commission override on the vendor record | finance | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:314 updateSalesCommission, :591 updateSetting; routes/admin/routes.php:505 admin.vendors.sales-commission-update, :508 admin.vendors.update-setting; no AuditLogger in the file |
@@ -919,7 +933,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (100)
+## ORPHAN (86)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -989,12 +1003,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin
 - Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy.
 
-**How far back a seller's finance reconciliation looks, and how many example rows it shows**  
-`finance` · owner: Admin  
-- Backend — app/Services/Marketplace/SellerReconciliationService.php:305 (now()->subDays(30) default when no range given) and :36 (const SAMPLE_SIZE = 20)
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs in Admin Settings. The 30-day default silently bounds how far back a seller can chase a missing payment, which is wrong for any marketplace settling monthly.
-
 **Diagnose a payment gateway that is switched on but cannot take a payment**  
 `finance` · owner: Admin  
 - Backend — app/Console/Commands/PaymentGatewayCheck.php:27 `payment:check`; reads addon_settings live_values/test_values against the row's mode column
@@ -1043,24 +1051,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Analytics
 - Ruled: belongs in the same Admin monitoring threshold map that already holds stuck_order_hours and backup_age_warning_hours — these five sit one file away from it, so the omission is inconsistency rather than design. The endpoint health verdicts additionally duplicate error_rate_warning and p95_critical_ms, so the Developer Portal and the monitor can disagree about the same endpoint.
 
-**What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover)**  
-`inventory` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/InventoryRiskProducer.php:28 (DAYS_OF_SUPPLY_THRESHOLD = 7), :30 (LOOKBACK_DAYS = 30); app/Services/SellerCenter/Lists/InventoryList.php:26 (VELOCITY_DAYS = 14), :29 (COVERAGE_CRITICAL_DAYS = 1.0), :30 (COVERAGE_LOW_DAYS = 3.0), applied at :182-196 stateFor(); route routes/seller/routes.php:75 seller.inventory.index; app/Services/SellerCenter/Automation/Opportunities.php:33 (WINDOW_DAYS = 14), :36 (COVER_DAYS_AT_RISK = 14), :39 (SAMPLE = 20); route routes/seller/routes.php:106 seller.opportunities.index
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings beside the stock_limit reorder level that already exists. The API's fifth definition has since been folded into that setting, but the insight producer, the Seller Center inventory list and the opportunity cards still each carry their own numbers, so the same shop reports different low-stock counts in the daily briefing, the inventory screen and the opportunity cards.
-
-**When unsold stock is called dead capital (90 days, at least 3 units)**  
-`inventory` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:35 (STALE_DAYS = 90), :38 (MINIMUM_UNITS = 3), :40 (LIMIT = 200)
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in the Policy settings that already exist for automation. The seller-facing automation rule for the same idea lets the seller pick 7-365 days, so the platform's own judgement is stricter and unmovable while the seller's is configurable.
-
-**How much notice a seller gets before a verification document expires (45 days)**  
-`compliance` · owner: Admin  
-- Backend — app/Services/SellerCenter/Counts.php:187 (whereBetween('expires_at', [now(), now()->addDays(45)])) feeding the seller.compliance badge in app/Services/SellerCenter/Navigation.php
-- No surface on — Admin, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the seller-verification settings page that already configures which documents are required and whether KYC gates payouts. Today it is an inline literal inside a badge-count query.
-
 **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
 `analytics` · owner: Admin  
 - Backend — None. No analytics event or rollup dimension touches stock; the nearest things are the point-in-time stock list at admin/stock/product-stock (routes/admin/routes.php:855) and the append-only movement log written by app/Services/Marketplace/InventoryService.php (surfaced at seller/inventory/movements, routes/seller/routes.php:76). Searched: AnalyticsEvent constants, AnalyticsRollup dimensions, product_metrics columns, SellerScorecardService metrics.
@@ -1079,24 +1069,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Analytics, Monitor, Dev Portal
 - Ruled: belongs to the audited moderation path that already exists. ProductModerationService records every decision with reason codes and history; ProductController::approveStatus/deny writes nothing — and the sidebar sends operators to the unaudited one, so whether a listing decision is recorded depends on which screen the operator happened to open.
 
-**The listing quality bar (a score under 70 is raised for improvement)**  
-`catalog` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/ListingQualityProducer.php:33 (QUALITY_BAR = 70), :35 (REQUEST_STATUS_DENIED = 2)
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings. A catalogue quality bar is exactly what a marketplace raises as its listings mature, and here only a deploy can move it.
-
-**Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep**  
-`catalog` · owner: Admin  
-- Backend — app/Services/Commerce/MerchandisingRules.php:19-22 and :31 (MAX_CHAIN); app/Services/Commerce/CollectionRuleRegistry.php:17 (MAX_RULES = 12); app/Services/Commerce/CollectionResolver.php:32 (POOL_FACTOR = 3)
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs in Admin Settings for Commerce. A merchandiser curating a large seasonal collection hits 12 pins or 20 boosts and the save is refused with no route other than a deploy.
-
-**How many variants a storefront experiment may run, and how many rules a segment or campaign may carry**  
-`automation` · owner: Admin  
-- Backend — app/Services/Commerce/ExperimentRules.php:18 (MAX_VARIANTS = 4) applied at :39; app/Services/Commerce/SegmentRules.php:15 (MAX_RULES = 8); app/Services/Commerce/CampaignRules.php:19 (MAX_OVERRIDES = 8); reach cache app/Services/Commerce/ExperimentReach.php:23-24 (CACHE_TTL 300, RANGE_DAYS 30)
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs in Admin Settings for Commerce. How many variants a marketplace may test at once is a traffic-constrained product decision, and variants beyond the fourth are silently sliced off rather than refused.
-
 **Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts**  
 `catalog` · owner: Admin  
 - Backend — app/Console/Commands/RebuildProductSearchIndex.php:20 `search:reindex-products`; scheduled bootstrap/app.php:192 weekly Sunday 04:00; app/Observers/ProductSearchIndexObserver.php:20; registered app/Providers/ObserverServiceProvider.php:38-43 on Product
@@ -1108,12 +1080,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Repositories/ProductRepository.php:478 updateByParams() uses $this->product->where($params)->update($data) — a builder update that fires no model events, so app/Observers/ProductPriceObserver.php:30 never runs; called for stock at app/Http/Controllers/Admin/Product/ProductController.php:821
 - No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs to Developer as a latent hole. ProductRepository::updateByParams issues a builder update, which fires no model events, so any future price write through it would skip the price-change history, the audit row and the seller-visible price history in one step; today's callers touch stock and variations only.
-
-**What counts as a suspicious price swing (more than half the previous price within 48 hours)**  
-`pricing` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/PricingRiskProducer.php:34 (EXTREME_CHANGE_RATIO = 0.5), :37 (RECENT_HOURS = 48), :39 (LIMIT = 100); recorded by app/Services/Marketplace/PriceChangeRecorder.php
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in the Policy settings. One ratio is applied to the whole catalogue, and what is extreme for a pharmacy line is normal for clearance.
 
 **Which order states remain editable, and which remain cancellable**  
 `orders` · owner: Admin  
@@ -1151,12 +1117,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Analytics, Monitor, Dev Portal
 - Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
 
-**How long a shipment may go without courier movement before it is raised as an exception (72 hours)**  
-`shipping` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:31 (SILENT_HOURS = 72), :34 (STOP_AFTER_DAYS = 30), :36 (LIMIT = 200)
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings, per carrier. Courier silence tolerance differs by carrier and country and there is no per-carrier or global setting anywhere.
-
 **Inbound courier status webhook — POST /api/delivery-syria/orders/update-status**  
 `integrations` · owner: Developer  
 - Backend — POST /api/delivery-syria/orders/update-status — routes/rest_api/delivery_syria.php:16; app/Http/Controllers/Api/DeliverySyriaWebhookController.php; authenticated by app/Http/Middleware/DeliverySyriaWebhookAuthMiddleware (X-Platform + bearer webhook token); settings at routes/admin/routes.php:1272
@@ -1186,12 +1146,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Counts only: app/Services/SellerCenter/Counts.php:56-58 (brands_expiring, compliance_action, brands_pending) feeding nav badges; the seller Compliance page it badges (Navigation.php:167 'seller.compliance.index') has no route in routes/seller/routes.php and is filtered out at Navigation.php:230; breaches ledger at Marketplace/SlaService.php with admin/marketplace/sla (routes/admin/routes.php:697)
 - No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
-
-**Seller health tiers — the good / watch / at-risk bands on the admin scorecard**  
-`compliance` · owner: Admin  
-- Backend — app/Services/Marketplace/SellerScorecardService.php:104 (at_risk: cancel>0.15, return>0.10, refund>0.15, strikes>=3, rating<3.0) and :110 (watch: cancel>0.05, return>0.05, refund>0.05, strikes>=1, rating<4.0); surfaced at routes/admin/routes.php:657
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs with the SLA thresholds that are already admin-configurable. The bands label every seller on the scorecard, are invisible to the operator, and silently disagree with the SLA page sitting beside them — an admin can set a 0.10 return ceiling while the watch band fires at 0.05 regardless.
 
 **Reporting how much traffic went unmeasured because of Do Not Track or missing consent**  
 `analytics` · owner: Admin  
@@ -1264,12 +1218,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — config/analytics.php:11 (`ANALYTICS_ENABLED`), :56-61 retention, :83-88 exclusions, :105-114 privacy, :125-130 campaign links, :141-146 beacon; read throughout app/Services/Analytics/; config/analytics.php:57-60 (event_days 90, session_days 400, daily_days 1100, click_days 400, each env-overridable); pruned by bootstrap/app.php:229 (analytics:rollup --days=2 --prune dailyAt 02:15); config/analytics.php:32 (session_gap_minutes 30), :36 (engaged_after_seconds 10), :46 (dedupe_window_seconds 5), :29 (buffer_limit 40), :72 (max_keys_per_dimension 500); config/telemetry.php:9 `TELEMETRY_ENABLED`, :12 `TELEMETRY_RETENTION_DAYS`, :15 session gap, :18 ignore_prefixes; consumed by app/Services/Telemetry/ and app/Console/Commands/TelemetryRollup.php (scheduled bootstrap/app.php:242-247)
 - No surface on — Seller Web
 - Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment.
-
-**Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep**  
-`platform` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/ControlTowerService.php:27 (TODAY_HOURS = 24), :30 (SECTION_LIMIT = 20), :145 (limit(500)), :157 (resolved within subDays(7)); route routes/seller/routes.php:58 seller.control-tower and app/Http/Controllers/RestAPI/v3/seller/SellerControlTowerController.php; app/Services/SellerAutomation/AutomationEngine.php:39 (SWEEP_LIMIT = 200); sweep scheduled every fifteen minutes at bootstrap/app.php:176 (seller:run-automation); app/Services/Marketplace/SellerAuditTrailService.php:30 (const MAX_ROWS = 200); surfaced via app/Http/Controllers/RestAPI/v3/seller/SellerSecurityController.php and the Seller Center security screens; app/Services/Marketplace/SellerOperationsOverview.php:33 (PREVIEW_ROWS = 10), :162 (issuesBySeller(int $limit = 20)) called with limit 200 at :197, and per-page 25 defaults at :126, :143, :248, :289, :303, :342, :355; app/Services/SellerIntellig
-- No surface on — Analytics, Monitor
-- Ruled: belongs to Developer to report, and to Admin to raise. Unlike the request guards above these change the answer without saying so: past 200 active rules some sellers' automation simply never runs, past 200 sellers the admin's cross-seller issue rollup is partial, and past 200 rows a seller cannot page further back through their own audit trail — and no screen anywhere prints 'showing 200 of N'.
 
 **Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires**  
 `monitoring` · owner: Admin  
@@ -1421,18 +1369,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Ruled: belongs in Admin Settings, where the vendor and delivery-man equivalents already have screens. Only the customer one has none, so switching customer account recovery to SMS is a hand-edited row.
 
-**Minimum password length — 6 characters on some surfaces and 8 on others**  
-`security` · owner: Admin  
-- Backend — min:6 at app/Http/Controllers/RestAPI/v3/seller/auth/LoginController.php:60, app/Http/Controllers/RestAPI/v2/seller/auth/LoginController.php:21, app/Http/Controllers/Vendor/Marketplace/SellerStaffController.php:81 and :104, app/Http/Controllers/RestAPI/v1/auth/CustomerAPIAuthController.php:51; min:8 at app/Http/Controllers/RestAPI/v2/seller/auth/RegisterController.php:26, app/Http/Controllers/RestAPI/v1/auth/ForgotPasswordController.php:178, app/Http/Controllers/RestAPI/v2/seller/auth/ForgotPasswordController.php:116; no central rule (app/Rules holds only DisallowedExtension.php)
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs in Admin Settings as one rule. Password policy is the most commonly retuned security control and here it is scattered across a dozen validators that do not agree with each other (app/Rules contains only DisallowedExtension.php), so a seller can register under an 8-character rule and then reset their password to 6.
-
-**Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally**  
-`security` · owner: Admin  
-- Backend — routes/rest_api/v3/seller.php:51, routes/rest_api/v2/api.php:118 and :135, routes/rest_api/v1/api.php:103, routes/admin/routes.php:125, routes/web/routes.php:396 (throttle:20,1); email verification throttle:6,1 at app/Http/Controllers/Auth/VerificationController.php:40; app/Providers/RouteServiceProvider.php:185 (Limit::perMinute(3000))
-- No surface on — Admin, Seller Web, Flutter App, Analytics
-- Ruled: belongs in Admin Settings. Tightening the login throttle under attack is a posture change an operator makes in minutes, and here it is six route files and a deploy; routes/rest_api/v1/api.php openly comments that the global 3000/min limiter is 'effectively none'.
-
 **Seller staff reaching the shop's own analytics page**  
 `security` · owner: Seller Staff  
 - Backend — routes/vendor/routes.php:104 — GET vendor/analytics; the segment 'analytics' is absent from the map at app/Http/Middleware/SellerStaffAccessMiddleware.php:65-128 and therefore hits default => DENY
@@ -1486,12 +1422,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php:192 storeWebhook, :242 updateWebhook, :288 setWebhookStatus, :330 destroyWebhook; routes routes/rest_api/v3/seller.php:524-527; the file contains zero audit references
 - No surface on — Seller Web, Analytics
 - Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing.
-
-**Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout**  
-`integrations` · owner: Admin  
-- Backend — app/Services/Marketplace/SellerWebhookDispatcher.php:48 (MAX_ATTEMPTS = 5), :50 (TIMEOUT_SECONDS = 8), :203 (next_attempt_at = now()->addMinutes(2 ** $delivery->attempts)); retried by bootstrap/app.php:182 (seller:retry-webhooks everyFiveMinutes)
-- No surface on — Analytics
-- Ruled: belongs in Admin Settings. Retry count and backoff decide how long a seller's ERP outage can last before order events are lost forever — five attempts over roughly 31 minutes — and no operator can extend that delivery guarantee without a deploy.
 
 **Which AI model writes seller content, and how creative it is allowed to be**  
 `integrations` · owner: Admin  

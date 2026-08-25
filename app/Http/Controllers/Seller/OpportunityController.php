@@ -25,7 +25,7 @@ class OpportunityController extends SellerCenterController
 
         return view('seller-views.opportunities.index', [
             'opportunities' => $found,
-            'windowDays' => Opportunities::WINDOW_DAYS,
+            'windowDays' => $this->opportunities->windowDays(),
             'state' => $found === [] ? 'empty' : 'normal',
         ]);
     }

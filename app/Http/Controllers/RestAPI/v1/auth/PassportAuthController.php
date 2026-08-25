@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v1\auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\Platform\PasswordPolicy;
 use App\Models\BusinessSetting;
 use App\Models\LoginSetup;
 use App\Models\PhoneOrEmailVerification;
@@ -34,7 +35,7 @@ class PassportAuthController extends Controller
             'l_name' => 'required',
             'email' => 'required|unique:users',
             'phone' => 'required|unique:users',
-            'password' => 'required|min:8',
+            'password' => app(PasswordPolicy::class)->ruleString(),
         ], [
             'f_name.required' => 'The first name field is required.',
             'l_name.required' => 'The last name field is required.',
