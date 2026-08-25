@@ -1029,6 +1029,92 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── finance · payout terms, failed transfers and gateway readiness ─
+        'the_platforms_anti_account_takeover_hold_the_length_is_what_a_risk_team_retunes_after_an_incident' => [
+            'The platform\'s anti-account-takeover hold — the length is what a risk team retunes after an incident',
+            'حجز المنصة ضد استيلاء الحسابات — مدّته ما يعيد فريق المخاطر ضبطه بعد أي حادثة',
+        ],
+        'mark_failed' => [
+            'Mark failed',
+            'وضع كفاشلة',
+        ],
+        'mark_payout_failed' => [
+            'Mark payout failed',
+            'وضع الدفعة كفاشلة',
+        ],
+        'a_failed_transfer_means_the_money_never_left_so_it_goes_back_to_the_sellers_available_balance' => [
+            'A failed transfer means the money never left, so it goes back to the seller\'s available balance',
+            'التحويل الفاشل يعني أن المال لم يغادر، فيعود إلى الرصيد المتاح للبائع',
+        ],
+        'what_the_bank_said' => [
+            'What the bank said',
+            'ما قالته البنك',
+        ],
+        'the_payout_was_marked_failed_and_the_money_is_back_in_the_sellers_available_balance' => [
+            'The payout was marked failed and the money is back in the seller\'s available balance.',
+            'تم وضع الدفعة كفاشلة وعاد المال إلى الرصيد المتاح للبائع.',
+        ],
+        'only_an_approved_processing_or_paid_payout_can_be_marked_failed' => [
+            'Only an approved, processing or paid payout can be marked failed.',
+            'لا يمكن وضع كفاشلة إلا دفعة معتمدة أو قيد المعالجة أو مدفوعة.',
+        ],
+        'send_again' => [
+            'Send again',
+            'إعادة الإرسال',
+        ],
+        'open_a_new_payout_request_for_the_same_amount' => [
+            'Open a new payout request for the same amount',
+            'فتح طلب صرف جديد بالمبلغ نفسه',
+        ],
+        'a_new_payout_request_was_opened' => [
+            'A new payout request was opened',
+            'تم فتح طلب صرف جديد',
+        ],
+        'that_payout_could_not_be_sent_again' => [
+            'That payout could not be sent again.',
+            'تعذّر إعادة إرسال هذه الدفعة.',
+        ],
+        'only_a_failed_payout_can_be_sent_again' => [
+            'Only a failed payout can be sent again.',
+            'لا يمكن إعادة إرسال سوى دفعة فاشلة.',
+        ],
+        'these_gateways_are_switched_on_and_cannot_take_a_payment' => [
+            'These gateways are switched on and cannot take a payment',
+            'هذه البوابات مفعّلة ولا يمكنها استقبال أي دفعة',
+        ],
+        'these_gateways_are_live_on_your_checkout_in_test_mode_so_no_money_moves' => [
+            'These gateways are live on your checkout in test mode, so no money moves',
+            'هذه البوابات ظاهرة في صفحة الدفع بوضع الاختبار، فلا ينتقل أي مال',
+        ],
+        'currency_model' => [
+            'Currency model',
+            'نموذج العملة',
+        ],
+        'whether_this_marketplace_runs_on_one_currency_or_several_with_exchange_rates' => [
+            'Whether this marketplace runs on one currency, or several with exchange rates',
+            'هل يعمل هذا السوق بعملة واحدة أم بعدّة عملات مع أسعار صرف',
+        ],
+        'single_currency' => [
+            'Single currency',
+            'عملة واحدة',
+        ],
+        'multi_currency' => [
+            'Multi currency',
+            'عدّة عملات',
+        ],
+        'on_single_currency_exchange_rates_are_not_applied_anywhere_even_where_they_are_stored' => [
+            'On single currency, exchange rates are not applied anywhere — even where they are stored',
+            'في وضع العملة الواحدة لا تُطبَّق أسعار الصرف في أي مكان — حتى حيث تكون مخزّنة',
+        ],
+        'the_currency_model_was_updated' => [
+            'The currency model was updated.',
+            'تم تحديث نموذج العملة.',
+        ],
+        'the_payment_terms_were_saved' => [
+            'The payment terms were saved.',
+            'تم حفظ شروط الدفع.',
+        ],
+
         // ── security · the audit trail, sign-in events and bot defence ────
         'what_changed' => [
             'What changed',

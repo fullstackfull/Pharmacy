@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 470 |
+| Fully connected to a surface | 478 |
 | Internal by design | 52 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **66** |
+| **Orphaned — no owner, no surface** | **58** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -187,19 +187,19 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | **None** | Submit | Submit | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| 24-hour payout freeze after a seller changes their bank details | **None** | View | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Changing the shop's bank / payout account from the Flutter app or the v3 API | **None** | Manage | Manage | **None** | **None** | Partial | No | Seller | ORPHAN |
-| Mark a payout failed, or retry one a bank bounced | **None** | View | View | **None** | **None** | Partial | Partial | Admin | ORPHAN |
-| Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | **None** | View | View | Metrics | Health | N/A | No | Admin | ORPHAN |
+| Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | Manage | Submit | Submit | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| 24-hour payout freeze after a seller changes their bank details | Manage | View | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| Changing the shop's bank / payout account from the Flutter app or the v3 API | **None** | Manage | Manage | **None** | **None** | Partial | Yes | Seller | FIXED |
+| Mark a payout failed, or retry one a bank bounced | Manage | View | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
+| Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | Manage | View | View | Metrics | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | Manage | **None** | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | Manage | View | View | **None** | Failures | Documented | No | Admin | CONNECTED TO ADMIN |
-| Diagnose a payment gateway that is switched on but cannot take a payment | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
+| Diagnose a payment gateway that is switched on but cannot take a payment | View | **None** | N/A | **None** | **None** | N/A | No | Admin | CONNECTED TO ADMIN |
 | Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches | View | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
-| Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | View | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | Manage | **None** | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Vendor\PaymentInformationController — a payment-details controller with no route | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
-| Payment success and abandonment rate | **None** | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Payment success and abandonment rate | **None** | **None** | N/A | **None** | **None** | Full | No | Developer | FIXED |
 | Commission rules — the rate the marketplace charges, by global, category, vendor or product scope | Configure | **None** | **None** | Metrics | **None** | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Per-seller commission override on the vendor record | Configure | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Seller payout queue — approve, mark paid or reject a requested payout | Approve | Submit | Submit | **None** | **None** | Full | Partial | Admin | CONNECTED TO ADMIN |

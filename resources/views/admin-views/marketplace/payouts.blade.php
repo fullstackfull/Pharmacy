@@ -24,7 +24,7 @@
         @else
             <div class="d-flex flex-wrap gap-2 mb-3">
                 @php
-                    $tabs = ['' => translate('all'), 'requested' => translate('requested'), 'under_review' => translate('under_review'), 'approved' => translate('approved'), 'paid' => translate('paid'), 'rejected' => translate('rejected')];
+                    $tabs = ['' => translate('all'), 'requested' => translate('requested'), 'under_review' => translate('under_review'), 'approved' => translate('approved'), 'paid' => translate('paid'), 'rejected' => translate('rejected'), 'failed' => translate('failed')];
                 @endphp
                 @foreach ($tabs as $key => $label)
                     <a href="{{ route('admin.marketplace.payouts.index', array_filter(['status' => $key])) }}"
@@ -83,6 +83,17 @@
                                             @elseif ($payout->status === 'approved')
                                                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#pay-{{ $payout->id }}">{{ translate('mark_paid') }}</button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reject-{{ $payout->id }}">{{ translate('reject') }}</button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#fail-{{ $payout->id }}">{{ translate('mark_failed') }}</button>
+                                            @elseif ($payout->status === 'paid' || $payout->status === 'processing')
+                                                {{-- A bank bounce arrives days after the payment was recorded, which is
+                                                     exactly the case the status set used to have no answer for. --}}
+                                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#fail-{{ $payout->id }}">{{ translate('mark_failed') }}</button>
+                                            @elseif ($payout->status === 'failed')
+                                                <form action="{{ route('admin.marketplace.payouts.reissue', $payout->id) }}" method="post" class="d-inline"
+                                                      onsubmit="return confirm('{{ translate('open_a_new_payout_request_for_the_same_amount') }}?')">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">{{ translate('send_again') }}</button>
+                                                </form>
                                             @else
                                                 <span class="text-muted fs-12">—</span>
                                             @endif
@@ -116,6 +127,25 @@
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ translate('cancel') }}</button>
                                     <button type="submit" class="btn btn-danger">{{ translate('reject') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+                @if (in_array($payout->status, ['approved', 'processing', 'paid']))
+                    <div class="modal fade" id="fail-{{ $payout->id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <form action="{{ route('admin.marketplace.payouts.mark-failed', $payout->id) }}" method="post" class="modal-content">
+                                @csrf
+                                <div class="modal-header"><h5 class="modal-title">{{ translate('mark_payout_failed') }} {{ $payout->reference }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                                <div class="modal-body">
+                                    <p class="fs-12 text-muted">{{ translate('a_failed_transfer_means_the_money_never_left_so_it_goes_back_to_the_sellers_available_balance') }}.</p>
+                                    <textarea name="note" class="form-control" rows="3" placeholder="{{ translate('what_the_bank_said') }}"></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ translate('cancel') }}</button>
+                                    <button type="submit" class="btn btn-warning">{{ translate('mark_failed') }}</button>
                                 </div>
                             </form>
                         </div>

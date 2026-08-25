@@ -623,6 +623,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     Route::group(['prefix' => 'marketplace', 'as' => 'marketplace.', 'middleware' => ['module:marketplace']], function () {
         Route::controller(\App\Http\Controllers\Admin\Marketplace\SettlementController::class)->group(function () {
             Route::group(['prefix' => 'settlements', 'as' => 'settlements.'], function () {
+                // What the marketplace promises its sellers about when they are paid.
+                Route::post('terms', [\App\Http\Controllers\Admin\Marketplace\SettlementController::class, 'updateTerms'])->name('terms');
                 Route::get('/', 'index')->name('index');
                 Route::post('calculate', 'calculate')->name('calculate');
                 Route::post('toggle-maker-checker', 'toggleMakerChecker')->name('toggle-maker-checker');
@@ -642,6 +644,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                 Route::get('/', 'index')->name('index');
                 Route::post('{id}/approve', 'approve')->whereNumber('id')->name('approve');
                 Route::post('{id}/mark-paid', 'markPaid')->whereNumber('id')->name('mark-paid');
+                // What happens after the bank sends it back. Both are POSTs and both move money.
+                Route::post('{id}/mark-failed', 'markFailed')->whereNumber('id')->name('mark-failed');
+                Route::post('{id}/reissue', 'reissue')->whereNumber('id')->name('reissue');
                 Route::post('{id}/reject', 'reject')->whereNumber('id')->name('reject');
             });
         });
@@ -1214,6 +1219,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
                     Route::post('status', 'status')->name('status');
                     Route::post('check-currency-update', 'checkSystemCurrency')->name('check-currency-update');
                     Route::post('system-currency-update', 'updateSystemCurrency')->name('system-currency-update');
+                    // Single- or multi-currency. 35 branch sites read it and only the installer
+                    // ever wrote it, so the shape of the whole money model was fixed at install.
+                    Route::post('currency-model', 'updateCurrencyModel')->name('currency-model');
                 });
             });
 

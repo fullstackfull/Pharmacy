@@ -313,6 +313,16 @@ class PolicyRegistry
                     'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 1000000,
                     'label' => 'smallest_balance_a_seller_may_request_a_payout_for',
                 ],
+                'payout_dual_control_amount' => [
+                    'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 100000000,
+                    'label' => 'payout_amount_above_which_a_second_approver_is_required',
+                    'help' => 'zero_switches_the_second_approver_off',
+                ],
+                'payout_bank_change_freeze_hours' => [
+                    'type' => 'int', 'default' => 24, 'min' => 0, 'max' => 720,
+                    'label' => 'hours_payouts_are_frozen_after_a_seller_changes_their_bank_details',
+                    'help' => 'the_platforms_anti_account_takeover_hold_the_length_is_what_a_risk_team_retunes_after_an_incident',
+                ],
                 'reconciliation_lookback_days' => [
                     'type' => 'int', 'default' => 30, 'min' => 1, 'max' => 730,
                     'label' => 'days_a_sellers_reconciliation_looks_back_by_default',

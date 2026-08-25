@@ -122,8 +122,8 @@
  {
   "capability": "Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers",
   "area": "finance",
-  "backend": "app/Services/Marketplace/PayoutService.php:152 openApprovalIfLarge(..., int $requiredApprovals = 2); threshold read from setting 'payout_dual_control_threshold' at app/Http/Controllers/Vendor/Marketplace/PayoutController.php:79 and app/Http/Controllers/RestAPI/v3/seller/SellerPayoutController.php:109; app/Http/Controllers/Vendor/Marketplace/PayoutController.php:79 and app/Http/Controllers/RestAPI/v3/seller/SellerPayoutController.php:109 read business_settings key `payout_dual_control_threshold` via getWebConfig(); when >0 they call PayoutService::openApprovalIfLarge()",
-  "admin": "None",
+  "backend": "payout_dual_control_amount in app/Services/Platform/PolicyRegistry.php, read by app/Services/Marketplace/PayoutService.php::dualControlAmount() and applied by openApprovalIfLarge(); edited on Admin → Marketplace → Settlements under Payment terms",
+  "admin": "Manage",
   "seller_web": "Submit",
   "flutter": "Submit",
   "analytics": "None",
@@ -131,14 +131,14 @@
   "dev_portal": "Documented",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on Admin → Marketplace → Settlements, beside the maker-checker toggle that already has a screen. Verified by repo-wide grep — payout_dual_control_threshold appears at exactly two read sites and no writer — so it defaults to 0, dual control is off on every install, and arming it is a hand-written database row; the required approver count of 2 is a default argument as well."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on Admin → Marketplace → Settlements, beside the maker-checker toggle that already has a screen. Verified by repo-wide grep — payout_dual_control_threshold appears at exactly two read sites and no writer — so it defaults to 0, dual control is off on every install, and arming it is a hand-written database row; the required approver count of 2 is a default argument as well. RESOLVED. The threshold is the service's own now rather than something each caller looked up — the two callers read a settings key no screen ever wrote, so it was 0 on every install and the whole maker-checker gate on large payouts was off everywhere."
  },
  {
   "capability": "24-hour payout freeze after a seller changes their bank details",
   "area": "finance",
-  "backend": "app/Services/Marketplace/PayoutService.php:37 (const COOLING_HOURS = 24), applied at app/Services/Marketplace/PayoutService.php:306 recordBankChange(), enforced in requestPayout(); no setting key exists",
-  "admin": "None",
+  "backend": "payout_bank_change_freeze_hours in app/Services/Platform/PolicyRegistry.php, read by PayoutService::bankChangeFreezeHours() and applied in recordBankChange()",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -146,53 +146,53 @@
   "dev_portal": "Documented",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings next to the payout queue. It is the platform's anti-account-takeover hold and the length is exactly what a risk team retunes after an incident, yet PayoutService.php:37 is a class constant with no setting key."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings next to the payout queue. It is the platform's anti-account-takeover hold and the length is exactly what a risk team retunes after an incident, yet PayoutService.php:37 is a class constant with no setting key. RESOLVED."
  },
  {
   "capability": "Changing the shop's bank / payout account from the Flutter app or the v3 API",
   "area": "finance",
-  "backend": "app/Http/Controllers/RestAPI/v3/seller/SellerController.php:352 seller_info_update(), writing bank_name/branch/account_no/holder_name at :364-375; route routes/rest_api/v3/seller.php:93 PUT /api/v3/seller/seller-update; Flutter caller /home/user/sillercenter-syria-cosmatics/lib/features/bank_info/domain/repositories/bank_info_repository.dart:19",
+  "backend": "app/Http/Controllers/RestAPI/v3/seller/SellerController.php:352 now routes a bank change through PayoutService::recordBankChange(), the same path the web profile screen uses",
   "admin": "None",
   "seller_web": "Manage",
   "flutter": "Manage",
   "analytics": "None",
   "monitor": "None",
   "dev_portal": "Partial",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Seller",
-  "verdict": "ORPHAN",
-  "note": "Ruled: a defect belonging to Developer on the v3 path. The web path calls PayoutService::recordBankChange, which writes the before/after audit row and arms the 24-hour cooling window; SellerController.php:352 writes the same columns directly and does neither, so a payout redirect performed from the phone is both unrecorded and undelayed."
+  "verdict": "FIXED",
+  "note": "Ruled: a defect belonging to Developer on the v3 path. The web path calls PayoutService::recordBankChange, which writes the before/after audit row and arms the 24-hour cooling window; SellerController.php:352 writes the same columns directly and does neither, so a payout redirect performed from the phone is both unrecorded and undelayed. RESOLVED. The app path wrote the four bank columns directly and neither recorded the before/after nor armed the cooling window, so a payout redirect performed from the phone left no trace and no delay behind it."
  },
  {
   "capability": "Mark a payout failed, or retry one a bank bounced",
   "area": "finance",
-  "backend": "app/Models/VendorPayoutRequest.php:19 STATUS_FAILED; rendered at resources/views/admin-views/marketplace/payouts.blade.php:8; no route sets it — routes/admin/routes.php:566-573 offers approve, mark-paid and reject only",
-  "admin": "None",
+  "backend": "app/Services/Marketplace/PayoutService.php markFailed() and reissue(), on Admin → Marketplace → Payouts",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
   "monitor": "None",
   "dev_portal": "Partial",
-  "audit": "Partial",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the Admin payout queue. VendorPayoutRequest::STATUS_FAILED exists and payouts.blade.php:8 colours the badge, but a grep of every STATUS_FAILED write shows only bulk jobs, automation actions and webhook deliveries setting it — nothing ever marks a payout failed, so a bounced transfer stays 'paid' and the seller is never made whole."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the Admin payout queue. VendorPayoutRequest::STATUS_FAILED exists and payouts.blade.php:8 colours the badge, but a grep of every STATUS_FAILED write shows only bulk jobs, automation actions and webhook deliveries setting it — nothing ever marks a payout failed, so a bounced transfer stays 'paid' and the seller is never made whole. RESOLVED. Marking failed is allowed from approved, processing AND paid, because a bank bounce arrives days after the payment was recorded — which is exactly the case the old status set had no answer for. The money returns as a credit rather than a status flip on the debit, so the ledger carries a line saying it came back; re-sending opens a NEW request naming the one it replaces, because a payout row whose history reads requested → paid → failed → paid is a row nobody can audit."
  },
  {
   "capability": "Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times",
   "area": "finance",
-  "backend": "None found. Searched routes/admin/routes.php, app/Http/Controllers/Admin/Marketplace/PayoutController.php, app/Services/Marketplace/PayoutService.php, app/Services/Marketplace/SettlementEngine.php and config/ for a schedule, threshold or hold-period setting; bootstrap/app.php:147 ($schedule->command('marketplace:settle --release')->dailyAt('02:00')); command at app/Console/Commands/RunVendorSettlements.php:25; bootstrap/app.php:155 ($schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')); command app/Console/Commands/EvaluateSellerSla.php; also manual 'evaluate all' button at resources/views/admin-views/marketplace/sla.blade.php:17; bootstrap/app.php:140 (cart:remind-abandoned everyThirtyMinutes) and :151 (--stage=2 dailyAt('10:00')); signed recovery link expiry at app/Console/Commands/SendAbandonedCartReminders.php:134 (now()->addDays(30))",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php finance group (payout_holding_days, payout_minimum_amount, payout_dual_control_amount, payout_bank_change_freeze_hours, reconciliation_lookback_days), edited on Admin → Marketplace → Settlements",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "Metrics",
   "monitor": "Health",
   "dev_portal": "N/A",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy. RESOLVED for the terms. The scheduled TIMES (settlement release at 02:00, SLA evaluation at 03:00, cart reminders) remain in app/Console/ScheduleDefinition.php and are documented INTERNAL BY DESIGN: they are visible on Monitoring → Scheduler with their next run, and moving a cron hour is an operations change rather than a payment term."
  },
  {
   "capability": "How far back a seller's finance reconciliation looks, and how many example rows it shows",
@@ -227,8 +227,8 @@
  {
   "capability": "Diagnose a payment gateway that is switched on but cannot take a payment",
   "area": "finance",
-  "backend": "app/Console/Commands/PaymentGatewayCheck.php:27 `payment:check`; reads addon_settings live_values/test_values against the row's mode column",
-  "admin": "None",
+  "backend": "app/Services/Payments/GatewayReadiness.php, read by both `php artisan payment:check` and the banner on Admin → 3rd Party → Payment Methods",
+  "admin": "View",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
@@ -236,8 +236,8 @@
   "dev_portal": "N/A",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on Admin → Third-party → Payment methods as a check button or a banner. Credentials live in addon_settings as separate live_values/test_values blobs and the controllers read only the blob matching the row's mode, so a shop can show a green, fully-filled gateway that refuses every payment; payment:check names the blank field and no screen ever runs it."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on Admin → Third-party → Payment methods as a check button or a banner. Credentials live in addon_settings as separate live_values/test_values blobs and the controllers read only the blob matching the row's mode, so a shop can show a green, fully-filled gateway that refuses every payment; payment:check names the blank field and no screen ever runs it. RESOLVED. One service behind both, so the shell and the page can never disagree about which gateway is broken; a gateway that is correctly configured but pointed at test mode is called out separately, because that is the difference between taking money and rehearsing."
  },
  {
   "capability": "Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived",
@@ -272,17 +272,17 @@
  {
   "capability": "Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates",
   "area": "finance",
-  "backend": "business_settings key `currency_model`, read 35× including app/Utils/currency.php:53,:78,:116,:158,:181, app/Traits/OrderEditManager.php:804 and app/Http/Controllers/Admin/Settings/CurrencyController.php:222,:245",
-  "admin": "View",
+  "backend": "app/Http/Controllers/Admin/Settings/CurrencyController.php::updateCurrencyModel() on the existing Currency screen",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "View",
   "analytics": "None",
   "monitor": "None",
   "dev_portal": "Partial",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the existing Admin Currency screen, which already reads and displays it. 35 branch sites including every conversion in app/Utils/currency.php depend on it and the only writer is the installer, so the audited bulk exchange-rate editor can be maintaining rates the platform will never apply."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the existing Admin Currency screen, which already reads and displays it. 35 branch sites including every conversion in app/Utils/currency.php depend on it and the only writer is the installer, so the audited bulk exchange-rate editor can be maintaining rates the platform will never apply. RESOLVED. 35 branch sites read it and only the installer ever wrote it, so the shape of the whole money model was fixed at install and the audited bulk exchange-rate editor beside it could be maintaining rates the platform would never apply."
  },
  {
   "capability": "Vendor\\PaymentInformationController — a payment-details controller with no route",
@@ -302,17 +302,17 @@
  {
   "capability": "Payment success and abandonment rate",
   "area": "finance",
-  "backend": "app/Services/Analytics/Analytics.php:163-186 paymentAttempted maps outcome 'started' onto AnalyticsEvent::PAYMENT_STARTED; no caller in the codebase passes 'started' (only 'succeeded' at OrderManager.php:1660 and 'failed' at app/Utils/module-helper.php:125)",
+  "backend": "app/Http/Controllers/Customer/PaymentController.php emits paymentAttempted(outcome: 'started') at the moment the shopper is handed to the gateway",
   "admin": "None",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer to emit. payment_started is in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and verified here: the only three callers of paymentAttempted pass 'succeeded' or 'failed' and never 'started', so a shopper who left the gateway before it answered is invisible and the platform has no payment success rate at all."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer to emit. payment_started is in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and verified here: the only three callers of paymentAttempted pass 'succeeded' or 'failed' and never 'started', so a shopper who left the gateway before it answered is invisible and the platform has no payment success rate at all. RESOLVED. The event was in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and nothing emitted it — so a shopper who left at the gateway was invisible and no abandonment rate existed."
  },
  {
   "capability": "Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report",

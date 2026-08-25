@@ -106,6 +106,50 @@ class PayoutController extends BaseController
         return back();
     }
 
+    /**
+     * A transfer the bank sent back.
+     *
+     * STATUS_FAILED existed on the model and the badge was already coloured for it; nothing in the
+     * application set it, so a bounced payout stayed marked PAID with money the seller never got.
+     * The reservation goes back to available, because a failed transfer means the money never left.
+     */
+    public function markFailed(int $id): RedirectResponse
+    {
+        $request = VendorPayoutRequest::find($id);
+
+        if (!$request) {
+            ToastMagic::error(translate('payout_not_found'));
+
+            return back();
+        }
+
+        $this->payoutService->markFailed($request, request('note'))
+            ? ToastMagic::success(translate('the_payout_was_marked_failed_and_the_money_is_back_in_the_sellers_available_balance'))
+            : ToastMagic::error(translate('only_an_approved_processing_or_paid_payout_can_be_marked_failed'));
+
+        return back();
+    }
+
+    /** Send a failed payout again — a fresh request, because the reservation was released. */
+    public function reissue(int $id): RedirectResponse
+    {
+        $request = VendorPayoutRequest::find($id);
+
+        if (!$request) {
+            ToastMagic::error(translate('payout_not_found'));
+
+            return back();
+        }
+
+        $result = $this->payoutService->reissue($request);
+
+        ($result['ok'] ?? false)
+            ? ToastMagic::success(translate('a_new_payout_request_was_opened') . ' — ' . $result['request']->reference)
+            : ToastMagic::error(translate($result['reason'] ?? 'that_payout_could_not_be_sent_again'));
+
+        return back();
+    }
+
     public function reject(int $id): RedirectResponse
     {
         $request = $this->findOpen($id);

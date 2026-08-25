@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\ThirdParty;
 
 use App\Contracts\Repositories\BusinessSettingRepositoryInterface;
+use App\Services\Payments\GatewayReadiness;
 use App\Contracts\Repositories\CurrencyRepositoryInterface;
 use App\Contracts\Repositories\OfflinePaymentMethodRepositoryInterface;
 use App\Contracts\Repositories\SettingRepositoryInterface;
@@ -72,6 +73,12 @@ class PaymentMethodController extends BaseController
             'cashOnDelivery' => getWebConfig(name: 'cash_on_delivery'),
             'digitalPayment' => getWebConfig(name: 'digital_payment'),
             'offlinePayment' => getWebConfig(name: 'offline_payment'),
+            // A gateway can be switched on, look fully filled in on this page, and refuse every
+            // payment — because the keys were typed into the mode that is switched off, and each
+            // controller reads only the blob matching the row's mode. The check existed as
+            // `php artisan payment:check` and nowhere a merchant would ever look.
+            'brokenGateways' => app(GatewayReadiness::class)->broken(),
+            'rehearsingGateways' => app(GatewayReadiness::class)->rehearsing(),
         ]);
     }
 

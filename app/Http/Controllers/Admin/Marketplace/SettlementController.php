@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Marketplace;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Platform\PolicyRegistry;
+use App\Services\Platform\Policy;
 use App\Models\BusinessSetting;
 use App\Models\VendorLedgerEntry;
 use App\Models\VendorSettlement;
@@ -51,6 +53,12 @@ class SettlementController extends BaseController
             'counts' => $this->statusCounts(),
             'waiting' => $this->waitingToSettle(),
             'makerChecker' => (bool) getWebConfig(name: 'settlement_maker_checker'),
+            // The marketplace's payment terms, on the page that owns settlement. They sat as a
+            // constant, a settings key nothing wrote and two values with no home at all, so
+            // changing what the platform promises its sellers about when they are paid was a
+            // deploy.
+            'terms' => app(Policy::class)->all('finance'),
+            'termFields' => PolicyRegistry::GROUPS['finance']['policies'],
         ]);
     }
 
@@ -65,6 +73,16 @@ class SettlementController extends BaseController
         clearWebConfigCacheKeys();
 
         ToastMagic::success($enabled ? translate('separation_of_duties_enabled') : translate('separation_of_duties_disabled'));
+
+        return back();
+    }
+
+    /** The payment-terms block on this page, saved through the policy service so it is audited. */
+    public function updateTerms(Request $request, Policy $policy): RedirectResponse
+    {
+        $policy->save($request->validate($policy->rules('finance')));
+
+        ToastMagic::success(translate('the_payment_terms_were_saved'));
 
         return back();
     }

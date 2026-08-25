@@ -14,22 +14,28 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 333 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 339 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 78 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 66 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 58 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (333)
+## CONNECTED TO ADMIN (339)
 
 The marketplace operator manages or oversees it.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | finance | Admin | payout_dual_control_amount in app/Services/Platform/PolicyRegistry.php, read by app/Services/Marketplace/PayoutService.php::dualControlAmount() and applied by openApprovalIfLarge(); edited on Admin → Marketplace → Settlements under Payment terms |
+| 24-hour payout freeze after a seller changes their bank details | finance | Admin | payout_bank_change_freeze_hours in app/Services/Platform/PolicyRegistry.php, read by PayoutService::bankChangeFreezeHours() and applied in recordBankChange() |
+| Mark a payout failed, or retry one a bank bounced | finance | Admin | app/Services/Marketplace/PayoutService.php markFailed() and reissue(), on Admin → Marketplace → Payouts |
+| Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | finance | Admin | app/Services/Platform/PolicyRegistry.php finance group (payout_holding_days, payout_minimum_amount, payout_dual_control_amount, payout_bank_change_freeze_hours, reconciliation_lookback_days), edited on Admin → Marketplace → Settlements |
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | finance | Admin | app/Services/Platform/PolicyRegistry.php (reconciliation_lookback_days) read at app/Services/Marketplace/SellerReconciliationService.php:305 |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | finance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_finance_grace_hours, default 6), read at app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:51; LOOKBACK_DAYS = 90 and LIMIT = 200 remain sweep bounds |
+| Diagnose a payment gateway that is switched on but cannot take a payment | finance | Admin | app/Services/Payments/GatewayReadiness.php, read by both `php artisan payment:check` and the banner on Admin → 3rd Party → Payment Methods |
+| Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | finance | Admin | app/Http/Controllers/Admin/Settings/CurrencyController.php::updateCurrencyModel() on the existing Currency screen |
 | Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | monitoring | Admin | app/Services/Monitoring/Support/MonitoringSettings.php retentionDays() plus the existing threshold map, all editable at Monitoring → Settings via app/Services/Monitoring/Operations/MonitoringConfiguration.php |
 | Low-stock threshold used by the seller API and the Flutter app | inventory | Admin | app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:42 (LOW_STOCK_THRESHOLD = 5) used at :69 and :73; mirrored in the Flutter app at /home/user/sillercenter-syria-cosmatics/lib/features/inventory/domain/models/inventory_models.dart:32 (lowStockThreshold ?? 5) |
 | What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | inventory | Admin | app/Services/Platform/PolicyRegistry.php inventory group (stock_cover_critical_days, stock_cover_low_days, stock_cover_raise_days, stock_cover_opportunity_days, stock_velocity_days) read through app/Services/Marketplace/StockPolicy.php by InventoryRiskProducer.php:42, app/Services/SellerCenter/Lists/InventoryList.php and app/Services/SellerCenter/Automation/Opportunities.php |
@@ -949,7 +955,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (66)
+## ORPHAN (58)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -989,42 +995,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Monitor, Dev Portal
 - Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem.
 
-**Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers**  
-`finance` · owner: Admin  
-- Backend — app/Services/Marketplace/PayoutService.php:152 openApprovalIfLarge(..., int $requiredApprovals = 2); threshold read from setting 'payout_dual_control_threshold' at app/Http/Controllers/Vendor/Marketplace/PayoutController.php:79 and app/Http/Controllers/RestAPI/v3/seller/SellerPayoutController.php:109; app/Http/Controllers/Vendor/Marketplace/PayoutController.php:79 and app/Http/Controllers/RestAPI/v3/seller/SellerPayoutController.php:109 read business_settings key `payout_dual_control_threshold` via getWebConfig(); when >0 they call PayoutService::openApprovalIfLarge()
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs on Admin → Marketplace → Settlements, beside the maker-checker toggle that already has a screen. Verified by repo-wide grep — payout_dual_control_threshold appears at exactly two read sites and no writer — so it defaults to 0, dual control is off on every install, and arming it is a hand-written database row; the required approver count of 2 is a default argument as well.
-
-**24-hour payout freeze after a seller changes their bank details**  
-`finance` · owner: Admin  
-- Backend — app/Services/Marketplace/PayoutService.php:37 (const COOLING_HOURS = 24), applied at app/Services/Marketplace/PayoutService.php:306 recordBankChange(), enforced in requestPayout(); no setting key exists
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings next to the payout queue. It is the platform's anti-account-takeover hold and the length is exactly what a risk team retunes after an incident, yet PayoutService.php:37 is a class constant with no setting key.
-
-**Changing the shop's bank / payout account from the Flutter app or the v3 API**  
-`finance` · owner: Seller  
-- Backend — app/Http/Controllers/RestAPI/v3/seller/SellerController.php:352 seller_info_update(), writing bank_name/branch/account_no/holder_name at :364-375; route routes/rest_api/v3/seller.php:93 PUT /api/v3/seller/seller-update; Flutter caller /home/user/sillercenter-syria-cosmatics/lib/features/bank_info/domain/repositories/bank_info_repository.dart:19
-- No surface on — Admin, Analytics, Monitor
-- Ruled: a defect belonging to Developer on the v3 path. The web path calls PayoutService::recordBankChange, which writes the before/after audit row and arms the 24-hour cooling window; SellerController.php:352 writes the same columns directly and does neither, so a payout redirect performed from the phone is both unrecorded and undelayed.
-
-**Mark a payout failed, or retry one a bank bounced**  
-`finance` · owner: Admin  
-- Backend — app/Models/VendorPayoutRequest.php:19 STATUS_FAILED; rendered at resources/views/admin-views/marketplace/payouts.blade.php:8; no route sets it — routes/admin/routes.php:566-573 offers approve, mark-paid and reject only
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs on the Admin payout queue. VendorPayoutRequest::STATUS_FAILED exists and payouts.blade.php:8 colours the badge, but a grep of every STATUS_FAILED write shows only bulk jobs, automation actions and webhook deliveries setting it — nothing ever marks a payout failed, so a bounced transfer stays 'paid' and the seller is never made whole.
-
-**Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times**  
-`finance` · owner: Admin  
-- Backend — None found. Searched routes/admin/routes.php, app/Http/Controllers/Admin/Marketplace/PayoutController.php, app/Services/Marketplace/PayoutService.php, app/Services/Marketplace/SettlementEngine.php and config/ for a schedule, threshold or hold-period setting; bootstrap/app.php:147 ($schedule->command('marketplace:settle --release')->dailyAt('02:00')); command at app/Console/Commands/RunVendorSettlements.php:25; bootstrap/app.php:155 ($schedule->command('marketplace:evaluate-sla')->dailyAt('03:00')); command app/Console/Commands/EvaluateSellerSla.php; also manual 'evaluate all' button at resources/views/admin-views/marketplace/sla.blade.php:17; bootstrap/app.php:140 (cart:remind-abandoned everyThirtyMinutes) and :151 (--stage=2 dailyAt('10:00')); signed recovery link expiry at app/Console/Commands/SendAbandonedCartReminders.php:134 (now()->addDays(30))
-- No surface on — Admin
-- Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy.
-
-**Diagnose a payment gateway that is switched on but cannot take a payment**  
-`finance` · owner: Admin  
-- Backend — app/Console/Commands/PaymentGatewayCheck.php:27 `payment:check`; reads addon_settings live_values/test_values against the row's mode column
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs on Admin → Third-party → Payment methods as a check button or a banner. Credentials live in addon_settings as separate live_values/test_values blobs and the controllers read only the blob matching the row's mode, so a shop can show a green, fully-filled gateway that refuses every payment; payment:check names the blank field and no screen ever runs it.
-
 **Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived**  
 `finance` · owner: Admin  
 - Backend — Declared unmeasurable at app/Services/Monitoring/Panels/PaymentsPanel.php:2039-2073 unrecorded(), returned from data() at :203 — payment_started (:2046), gateway_latency (:2051), webhook_receipts (:2056), payment_request_outcome (:2061), payment_request_order_link (:2066) — each naming the exact file that would have to produce it
@@ -1036,18 +1006,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Detection exists as read-only findings in PaymentsPanel.php:1507 (duplicate settlements), :1565 (paid order with no settlement row), :1677 (commission mismatch); the settlement run itself is marketplace:settle at bootstrap/app.php:147
 - No surface on — Seller Web, Analytics, Monitor
 - Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section.
-
-**Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates**  
-`finance` · owner: Admin  
-- Backend — business_settings key `currency_model`, read 35× including app/Utils/currency.php:53,:78,:116,:158,:181, app/Traits/OrderEditManager.php:804 and app/Http/Controllers/Admin/Settings/CurrencyController.php:222,:245
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs on the existing Admin Currency screen, which already reads and displays it. 35 branch sites including every conversion in app/Utils/currency.php depend on it and the only writer is the installer, so the audited bulk exchange-rate editor can be maintaining rates the platform will never apply.
-
-**Payment success and abandonment rate**  
-`finance` · owner: Developer  
-- Backend — app/Services/Analytics/Analytics.php:163-186 paymentAttempted maps outcome 'started' onto AnalyticsEvent::PAYMENT_STARTED; no caller in the codebase passes 'started' (only 'succeeded' at OrderManager.php:1660 and 'failed' at app/Utils/module-helper.php:125)
-- No surface on — Admin, Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer to emit. payment_started is in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and verified here: the only three callers of paymentAttempted pass 'succeeded' or 'failed' and never 'started', so a shopper who left the gateway before it answered is invisible and the platform has no payment success rate at all.
 
 **Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report**  
 `analytics` · owner: Developer  

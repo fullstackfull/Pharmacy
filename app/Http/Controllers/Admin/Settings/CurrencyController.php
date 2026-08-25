@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Settings;
 
 use App\Contracts\Repositories\BusinessSettingRepositoryInterface;
+use App\Services\AuditLogger;
 use App\Contracts\Repositories\CurrencyRepositoryInterface;
 use App\Contracts\Repositories\SettingRepositoryInterface;
 use App\Enums\GlobalConstant;
@@ -234,6 +235,43 @@ class CurrencyController extends BaseController
         session()->forget('currency_symbol');
         session()->forget('currency_exchange_rate');
         ToastMagic::success(translate('System_Default_currency_updated_successfully'));
+        return redirect()->route('admin.system-setup.currency.view');
+    }
+
+    /**
+     * Single-currency or multi-currency, with exchange rates.
+     *
+     * The most consequential setting on this screen and the only one it could not change: 35 branch
+     * sites depend on `currency_model`, including every conversion in app/Utils/currency.php, and
+     * the only writer was the installer. So a marketplace that started single-currency was one
+     * forever, and the audited bulk exchange-rate editor beside it could be maintaining rates the
+     * platform would never apply.
+     */
+    public function updateCurrencyModel(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'currency_model' => 'required|in:multi_currency,single_currency',
+        ]);
+
+        $before = getWebConfig(name: 'currency_model');
+
+        $this->businessSettingRepo->updateWhere(
+            params: ['type' => 'currency_model'],
+            data: ['value' => $validated['currency_model']],
+        );
+
+        clearWebConfigCacheKeys();
+        cacheRemoveByType(type: 'business_settings');
+        session()->forget(['usd', 'default', 'system_default_currency_info', 'currency_code', 'currency_symbol', 'currency_exchange_rate']);
+
+        app(AuditLogger::class)->record(
+            action: 'settings.currency_model_updated',
+            before: ['currency_model' => $before],
+            after: ['currency_model' => $validated['currency_model']],
+        );
+
+        ToastMagic::success(translate('the_currency_model_was_updated'));
+
         return redirect()->route('admin.system-setup.currency.view');
     }
 
