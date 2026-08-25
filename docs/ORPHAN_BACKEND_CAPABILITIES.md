@@ -15,15 +15,15 @@ says so and why.
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
 | CONNECTED TO ADMIN | 350 | The marketplace operator manages or oversees it. |
-| CONNECTED TO SELLER | 79 | The seller manages it, in the panel or the app. |
+| CONNECTED TO SELLER | 81 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER | 4 | Owned by whoever maintains the code; no product surface is appropriate. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 28 | Its health and its failures are visible to an operator. |
-| FIXED | 33 | Was an orphan. The surface, the writer or the fix now exists, and the record says what was built. |
+| FIXED | 34 | Was an orphan. The surface, the writer or the fix now exists, and the record says what was built. |
 | INTERNAL BY DESIGN | 54 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | NOT BUILT | 6 | No backend exists to be orphaned. A product gap with a named owner, not a missing screen. |
 | DEPRECATED | 20 | Present in code, no longer part of the product. |
-| ORPHAN | 5 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 2 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
 ## CONNECTED TO ADMIN (350)
 
@@ -382,12 +382,14 @@ The marketplace operator manages or oversees it.
 | Storefront content blocks — announcement bar, features section, company reliability badges, social media links | platform | Admin | `announcement` at app/Http/Controllers/Admin/Settings/BusinessSettingsController.php:476 (routes/admin/routes.php:1681); `company_reliability` at routes/admin/routes.php:1634; features section at :1672; social media at app/Http/Controllers/Admin/Settings/SocialMediaSettingsController.php |
 | Stock clearance sale setup — the platform's own clearance campaign and whether vendor clearance offers appear on the homepage | pricing | Admin | app/Repositories/StockClearanceSetupRepository.php with business_settings `stock_clearance_vendor_offer_in_homepage` written at app/Http/Controllers/Admin/Promotion/ClearanceSaleVendorOfferController.php:102 and priority keys at ClearanceSalePrioritySetupController.php:51-55 |
 
-## CONNECTED TO SELLER (79)
+## CONNECTED TO SELLER (81)
 
 The seller manages it, in the panel or the app.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| The seller's own account health and SLA standing | compliance | Seller | SLA is evaluated by app/Services/Marketplace/SlaService.php via command marketplace:evaluate-sla (bootstrap/app.php:155); the nav entries seller.performance.index, .health, .sla, seller.appeals.index at app/Services/SellerCenter/Navigation.php:161-163,196 are unrouted |
+| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | compliance | Seller | Counts only: app/Services/SellerCenter/Counts.php:56-58 (brands_expiring, compliance_action, brands_pending) feeding nav badges; the seller Compliance page it badges (Navigation.php:167 'seller.compliance.index') has no route in routes/seller/routes.php and is filtered out at Navigation.php:230; breaches ledger at Marketplace/SlaService.php with admin/marketplace/sla (routes/admin/routes.php:697) |
 | The seller's web view of their own audit trail | security | Seller | app/Http/Controllers/Seller/AuditController.php on route seller.audit.index (the name the navigation registry has reserved since Wave 1), scoped by app/Services/Marketplace/SellerAuditTrailService.php |
 | Creating, editing, repointing or deleting a seller's outbound webhook | integrations | Seller | app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | catalog | Seller | app/Http/Controllers/Admin/Marketplace/SellerOperationsController.php bulkJobs; app/Services/Marketplace/Bulk/SellerBulkJobService.php; routes/admin/routes.php:648; cron seller:run-stuck-bulk-jobs bootstrap/app.php:188; app/Services/Marketplace/Bulk/SellerBulkJobService.php:106 'seller.bulk_job_queued', :238 'seller.bulk_job_finished'; per-item price writes go through a model save at app/Services/Marketplace/Bulk/BulkPriceOperation.php:101 (so the price observer fires) and stock through app/Services/Marketplace/Bulk/BulkStockOperation.php:77; routes routes/rest_api/v3/seller.php:677-678; app/Console/Commands/RunStuckSellerBulkJobs.php:25 `seller:run-stuck-bulk-jobs`; scheduled bootstrap/app.php:188 every minute; app/Jobs/RunSellerBulkJob.php:25 (tries=1, timeout=900, failed() writes status=failed at lines 49-59); dispatched from app/Services/Marketplace/Bulk/SellerBulkJobService.php:112; |
@@ -549,9 +551,15 @@ Its health and its failures are visible to an operator.
 | Synthetic journey probe — fetch a real storefront page and assert its status and content | monitoring | Admin | app/Services/Monitoring/Checks/SyntheticCheck.php:25 reading the `synthetics` key of monitoring_settings; results into monitoring_check_results (kind=synthetic) |
 | Alert rule evaluation — compare every enabled rule against the last minute, once a minute | monitoring | System | app/Services/Monitoring/Alerting/AlertEvaluator.php:43; app/Console/Commands/MonitoringEvaluate.php:16; scheduled bootstrap/app.php:216 everyMinute |
 
-## FIXED (33)
+## FIXED (34)
 
 Was an orphan. The surface, the writer or the fix now exists, and the record says what was built.
+
+**Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail**  
+`platform` · owner: Seller  
+- Backend — app/Services/SellerCenter/Navigation.php:35-199 declares 51 route destinations; routes/seller/routes.php:50-113 builds 14 routes; the Route::has() guard at Navigation.php:225-230 drops the other 41 (verified: returns, refunds, warehouse, all 6 finance, all 4 pricing, shipments/picking/packing, integrations x4, team/roles, security, audit, compliance, brands x2, performance x3, reports/exports x3, advertising, approvals, cases, incidents, appeals, bulk-jobs, action center)
+- No surface on — Admin, Analytics, Monitor
+- Fixed across Waves 1-6: the rail resolved 10 of its 51 designed destinations when this work started and resolves 55 today - orders, products, inventory, automation, fulfilment, returns, refunds, warehouse, bulk jobs, the action centre, the whole finance group, pricing, performance, compliance, brands, incidents and approvals. The 15 that remain are Wave 7 (team, roles, security, integrations) and Wave 8 (reports, exports, scheduled operations), plus advertising, cases and appeals, which have no backend to connect to and are recorded separately as NOT BUILT. Route::has() still drops an unrouted destination silently, so a partly-built rail never shows a broken link.
 
 **Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering**  
 `platform` · owner: Developer  
@@ -1242,15 +1250,9 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (5)
+## ORPHAN (2)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
-
-**Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail**  
-`platform` · owner: Seller  
-- Backend — app/Services/SellerCenter/Navigation.php:35-199 declares 51 route destinations; routes/seller/routes.php:50-113 builds 14 routes; the Route::has() guard at Navigation.php:225-230 drops the other 41 (verified: returns, refunds, warehouse, all 6 finance, all 4 pricing, shipments/picking/packing, integrations x4, team/roles, security, audit, compliance, brands x2, performance x3, reports/exports x3, advertising, approvals, cases, incidents, appeals, bulk-jobs, action center)
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs to the Seller Center web panel. The registry is the design of record and the route table is one fifth of it, so a seller sees a menu that silently omits every capability the phone app already has; the drop is invisible from inside the product because a missing route removes the item rather than erroring.
 
 **Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle**  
 `returns` · owner: Admin  
@@ -1263,16 +1265,4 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Effectively none. checkout_shipping_set is recorded from the payment page alongside address and payment in one breath (Web/WebController.php:404-406), so it measures reaching checkout, not choosing a shipping method; the only shipping figure recorded anywhere is shipping_cost inside the order_placed properties JSON (OrderManager.php:1652), which no rollup reads. Shipping zones (routes/admin/routes.php:759) and rates are configured but never counted.; None. app/Services/Marketplace/FulfillmentService.php stamps packed/shipped timestamps on an overlay record and admin/marketplace/fulfillments (routes/admin/routes.php:742) lists them; AnalyticsEvent::ORDER_DELIVERED exists (Analytics.php:213) but only reaches the 'event' dimension — no delivery-time or dispatch-time metric is computed anywhere, and SLA metrics are cancellation/return/refund/rating only (SlaService.php:24).
 - No surface on — Analytics, Monitor, Dev Portal
 - Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
-
-**The seller's own account health and SLA standing**  
-`compliance` · owner: Seller  
-- Backend — SLA is evaluated by app/Services/Marketplace/SlaService.php via command marketplace:evaluate-sla (bootstrap/app.php:155); the nav entries seller.performance.index, .health, .sla, seller.appeals.index at app/Services/SellerCenter/Navigation.php:161-163,196 are unrouted
-- No surface on — Seller Web, Flutter App, Analytics, Dev Portal
-- Ruled: belongs in the Seller Center. The platform evaluates every approved seller against SLA policy daily and writes audited breaches, and no client renders account health — the seller sees a scorecard number and never the standing, the breach, or the deadline they are being judged against.
-
-**Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time**  
-`compliance` · owner: Seller  
-- Backend — Counts only: app/Services/SellerCenter/Counts.php:56-58 (brands_expiring, compliance_action, brands_pending) feeding nav badges; the seller Compliance page it badges (Navigation.php:167 'seller.compliance.index') has no route in routes/seller/routes.php and is filtered out at Navigation.php:230; breaches ledger at Marketplace/SlaService.php with admin/marketplace/sla (routes/admin/routes.php:697)
-- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
 

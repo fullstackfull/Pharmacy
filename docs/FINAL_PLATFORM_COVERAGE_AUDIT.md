@@ -69,17 +69,14 @@ Every capability in this domain is reachable by the surface that owns it.
 
 Backend: 22 capabilities
 Admin: 21 of 22 covered
-Seller Web: 11 of 22 covered
+Seller Web: 13 of 22 covered
 Flutter App: 13 of 19 covered
 Analytics: 2 of 22 covered
 Monitor: 4 of 22 covered
 Dev Portal: 13 of 21 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (2):
-
-- **The seller's own account health and SLA standing** — assigned to Seller, no surface yet. Ruled: belongs in the Seller Center. The platform evaluates every approved seller against SLA policy daily and writes audited breaches, and no client renders account health — the seller sees a scorecard number and never the standing, the breach, or the deadline they are being judged against.
-- **Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time** — assigned to Seller, no surface yet. Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
+Every capability in this domain is reachable by the surface that owns it.
 
 ## FINANCE
 
@@ -171,16 +168,15 @@ Every capability in this domain is reachable by the surface that owns it.
 
 Backend: 122 capabilities
 Admin: 94 of 122 covered
-Seller Web: 20 of 122 covered
+Seller Web: 21 of 122 covered
 Flutter App: 24 of 66 covered
 Analytics: 17 of 119 covered
 Monitor: 19 of 122 covered
 Dev Portal: 83 of 108 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (2):
+Incomplete — the owner cannot reach it (1):
 
-- **Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail** — assigned to Seller, no surface yet. Ruled: belongs to the Seller Center web panel. The registry is the design of record and the route table is one fifth of it, so a seller sees a menu that silently omits every capability the phone app already has; the drop is invisible from inside the product because a missing route removes the item rather than erroring.
 - **Deployments — which build started running when, with migrations run and errors before and after** — owned by an integrator, with nothing in the Developer Portal. Empty until the deploy script calls the command — deploy.sh does not — and its error comparison reads monitoring_errors, which has no writer, so the before/after error counts are structurally zero.
 
 ## PRICING

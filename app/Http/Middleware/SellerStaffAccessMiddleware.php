@@ -117,7 +117,24 @@ class SellerStaffAccessMiddleware
             // Money. `analytics` is the shop's own numbers — the same screen the API already serves
             // this staff member under finance.view. It was absent from this map, so deny-by-default
             // 403'd every staff member on the web page while their token reached the identical data.
-            'transaction', 'report', 'analytics' => 'finance.view',
+            'transaction', 'report', 'analytics', 'finance' => 'finance.view',
+
+            // Wave 4's fulfilment screens. Reading a return, a refund or the warehouse is order and
+            // catalogue work; moving a return or advancing a fulfilment changes stock, and the
+            // routes declare that split too.
+            'returns', 'refunds', 'shipments', 'picking', 'packing' => $isWrite ? 'orders.manage' : 'orders.view',
+            'warehouse', 'bulk-jobs', 'pricing' => $isWrite ? 'products.manage' : 'products.view',
+
+            // Everything waiting for this shop. Allowed to any active staff for the same reason the
+            // cockpit is: it shows them what is already theirs to see, and each entry links to a
+            // screen that gates itself.
+            'actions' => self::ALLOW,
+
+            // Wave 6's trust screens. A shop's own standing, its brand authorisations and the
+            // issues that escalated are things any active staff member should be able to read —
+            // the same reasoning as the cockpit, and each write beyond them is gated on its route.
+            'performance', 'compliance', 'brands', 'incidents' => self::ALLOW,
+            'approvals' => 'staff.manage',
 
             // Delivery team is an order-fulfilment concern.
             'delivery-man' => 'orders.manage',

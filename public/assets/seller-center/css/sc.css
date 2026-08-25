@@ -1168,6 +1168,18 @@
     background: var(--color-surface);
     border-radius: var(--radius-sm);
 }
+/* A short form that lives inside a card: its fields and its one action on one line, wrapping to
+   several on a narrow screen rather than shrinking the inputs below a usable width. */
+.sc-form-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-block: 10px;
+}
+.sc-form-row + .sc-form-row { border-top: 1px solid var(--color-divider); }
+.sc-form-row .sc-field { flex: 1 1 200px; min-width: 0; }
+
 /* A form's actions stay reachable without scrolling back up a long builder. */
 .sc-form-footer {
     position: sticky;
@@ -1342,6 +1354,8 @@
 .sc-view-only { display: inline-flex; }
 
 @media print {
-    .sc-rail, .sc-panel, .sc-topbar, .sc-toolbar, .sc-pager, .sc-mobile-nav { display: none !important; }
+    /* `sc-no-print` marks a control the printed page has no use for — a date filter on a statement
+       somebody is about to file is furniture, not information. */
+    .sc-rail, .sc-panel, .sc-topbar, .sc-toolbar, .sc-pager, .sc-mobile-nav, .sc-no-print { display: none !important; }
     .sc { height: auto; overflow: visible; }
 }

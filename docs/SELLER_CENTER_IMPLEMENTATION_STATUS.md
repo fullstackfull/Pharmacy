@@ -34,9 +34,9 @@ when it comes, is a decision taken per screen, not a side effect (PART 15).
 | 1 | Foundation — tokens, shell, component library, table + filter system, status renderers, states, RTL | **Done** | `b969dd21` |
 | 2 | Core seller operations — Home, Control Tower, Issue Center, Orders, Order detail, Products, Inventory, Movement ledger | **Done** | `e5125f33`, `53085acb` |
 | 3 | Automation — rules, builder, history + undo, opportunities | **Done** (scheduled operations deferred, see below) | — |
-| 4 | Fulfilment — shipments, exceptions, picking, packing, warehouse operations | Not started | — |
-| 5 | Finance — overview, ledger, payout detail, statements, reconciliation, fee simulator | Not started | — |
-| 6 | Trust — performance, account health, brand registry, claims, compliance | Not started | — |
+| 4 | Fulfilment — returns, refunds, shipments, exceptions, picking, packing, warehouse, bulk jobs, action centre | **Done** | — |
+| 5 | Finance — overview, transactions, payouts, statements, reconciliation, fees, pricing | **Done** | — |
+| 6 | Trust — performance, account health, SLA, compliance, brand registry, brand protection, incidents, approvals | **Done** (cases and appeals are NOT BUILT, see below) | — |
 | 7 | Enterprise — team, roles, approvals, audit log, security centre, cases, appeals | Not started | — |
 | 8 | Platform — reports, exports, bulk operations, connected apps, API credentials, webhooks | Not started | — |
 
@@ -163,6 +163,103 @@ Taken from PART 21 and `13-implementation-priority.md`; a wave is not done until
 
 ## Open
 
-- Waves 3–8, in the order above.
+- Waves 7–8, in the order above.
 - Per-wave Flutter audits (PART 11) and the cross-client parity tests of PART 16 — a setting written from one
   client is visible in the other, a permission denied in one is denied in the other.
+
+---
+
+## Wave 4 — Fulfilment
+
+**Screens** — `/vendor/returns` and its detail page, `/vendor/refunds`, `/vendor/shipments` with `/picking`,
+`/packing` and `/exceptions`, `/vendor/warehouse`, `/vendor/bulk-jobs` and its receipt page, and
+`/vendor/actions`.
+
+Two list services carry the wave: `ReturnList` (views, summary buckets, the ledger lines a return produced)
+and `FulfilmentList` (stages, the late test, dispatch time). Both were written against the services the v3
+seller API already calls — `ReturnLogisticsService`, `FulfillmentService` — so the phone and the panel cannot
+disagree about what a return is or when a fulfilment is late.
+
+**Where the numbers come from.** Lateness is not a constant in a template: it reads
+`app(Policy::class)->int('shipping_silent_hours')`, the same key `ShippingExceptionProducer` raises issues
+from, so a marketplace that changes its threshold changes both at once. Dispatch time is null while a
+fulfilment is still open rather than zero — an order that has not shipped has no dispatch time, and rendering
+it as `0h` would read as instant.
+
+**Refunds is read-only by design.** The decision belongs to the marketplace; showing the seller a button that
+would be refused is worse than showing them the queue and where each request stands.
+
+11 tests for the wave.
+
+---
+
+## Wave 5 — Finance
+
+**Screens** — `/vendor/finance` and, under it, `transactions`, `statements`, `payouts`, `reconciliation` and
+`fees`, plus `/vendor/pricing` and its history.
+
+**The rule this wave exists to hold.** The buckets above the table are the WHOLE account and are not narrowed
+by the filter under them. A seller reading last week still needs to know what they can withdraw today, and an
+"available" figure that silently meant "available, of last week's entries" would be worse than no figure —
+it is a number they would act on. Two tests hold it from both sides: the withdrawable figure ignores the
+range, and the range totals follow it.
+
+Everything reads `VendorLedger` and `SellerLedgerStatementService`, so the balance on the phone, the balance
+on this screen and the balance the marketplace settles against are one number.
+
+**Requesting a payout still happens on the classic page.** `/vendor/business-settings/payouts` has a working
+form that reserves against the ledger atomically; a second form writing the same reservation is how a seller
+ends up with two requests against one balance. The Seller Center links to it rather than duplicating it.
+
+6 tests for the wave.
+
+---
+
+## Wave 6 — Trust
+
+**Screens** — `/vendor/performance`, `/vendor/performance/health`, `/vendor/performance/sla`,
+`/vendor/compliance`, `/vendor/brands`, `/vendor/brands/protection`, `/vendor/incidents` and
+`/vendor/approvals`.
+
+This wave renders a record the platform had already been keeping and no client had ever shown. SLA was
+evaluated daily against every approved seller and wrote audited breaches; the seller saw a scorecard number
+and never the standing, the breach, or the deadline they were being judged against.
+
+**What each screen is careful about.**
+
+- **Performance** prints the marketplace's ceiling beside each rate, so a number is a position rather than a
+  statistic. A shop with no orders and no reviews is `new` — never good, never at risk: judging a seller who
+  has not traded yet would be noise presented as a verdict. An unrated shop shows `—`, not zero stars.
+- **Account health** is what the marketplace concludes and what it would take to change it — the record a
+  suspension would have to rest on.
+- **SLA** shows every line crossed and every line cleared, with the timestamps it opened and closed on. A
+  cleared breach stays on the page: a record that only shows current problems cannot show improvement.
+- **Compliance** reads verification, brand authorisation and open breaches together for the first time, and
+  trends breaches by month over the last quarter. A count is a headline; a trend answers whether things are
+  getting better.
+- **Brand protection** counts what a revocation would cost in listings, from the seller's own catalogue, via
+  `BrandRegistryService::brandExposure`. Not "you have an unclaimed brand" — "forty-one listings sit on it".
+  Where enforcement is off, the screen says so and reframes the figure as what *would* be at risk.
+- **Incidents** is not a second issue queue. The Issue Center is what is open now; this is what was left long
+  enough that the platform promoted it. Escalation only climbs, and one step at a time, so a row here measures
+  elapsed silence rather than severity.
+- **Approvals** is read-only, deliberately: the approver is by definition not the requester. Its value is
+  knowing a decision is queued and how far from released it is — `1 of 2`, not "in progress".
+
+**Two pieces of shared logic rather than two controller queries.** `SellerInsight::scopeEscalated()` and
+`ApprovalEngine::forSubjects()` exist so the v3 API gets the same answers when these reach the phone. The
+approvals lookup resolves the shop's own payout requests first and asks the engine about those — narrower
+than "every approval mentioning this shop", and narrower is correct: a marketplace-wide settlement approval
+is not one seller's to read.
+
+**Data honesty (PART 14).** Every one of these screens degrades to a stated reason rather than to an empty
+table when its backing table is absent: "the brand registry is not running on this marketplace — nothing is
+being withheld, there is no registry to read". A seller cannot tell a broken page from an empty one, and
+saying which is the difference between a bug report and a fact.
+
+10 tests for the wave, all three languages seeded (en / sy / sa).
+
+**Navigation** — the rail resolved 10 of its 51 designed destinations when this work started and resolves 55
+today. The 15 that remain are Wave 7 (team, roles, security, integrations), Wave 8 (reports, exports,
+scheduled operations), and advertising, cases and appeals, which have no backend behind them and are recorded
+as NOT BUILT rather than deferred.

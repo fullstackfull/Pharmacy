@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 522 |
+| Fully connected to a surface | 525 |
 | Internal by design | 54 |
 | Deprecated | 20 |
-| **Orphaned — no owner, no surface** | **5** |
+| **Orphaned — no owner, no surface** | **2** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -163,8 +163,8 @@ the whole point of the document, so it is never blurred.
 | Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | Manage | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | How much notice a seller gets before a verification document expires (45 days) | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | NOT BUILT |
-| The seller's own account health and SLA standing | Oversight | **None** | **None** | **None** | Failures | **None** | Yes | Seller | ORPHAN |
-| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | Oversight | **None** | **None** | **None** | **None** | **None** | Partial | Seller | ORPHAN |
+| The seller's own account health and SLA standing | Oversight | Performance, Account health, SLA | **None** | **None** | Failures | **None** | Yes | Seller | CONNECTED TO SELLER |
+| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | Oversight | Compliance, Brand registry, Brand protection, Incidents, Approvals | **None** | **None** | **None** | **None** | Partial | Seller | CONNECTED TO SELLER |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | SLA policy — maximum cancellation, return and refund rates, minimum rating, processing deadline | Configure | View | View | Metrics | Failures | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Seller KYC — which documents are required, whether payouts are gated on them, and reviewing what a seller submits | Approve | Submit | Submit | Events | **None** | Full | Partial | Admin | CONNECTED TO ADMIN |
@@ -481,7 +481,7 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail | **None** | **None** | Manage | **None** | **None** | Full | No | Seller | ORPHAN |
+| Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail | **None** | 55 of the registry's destinations routed | Manage | **None** | **None** | Full | No | Seller | FIXED |
 | Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering | View | View | N/A | **None** | **None** | Full | No | Developer | FIXED |
 | Installer and software updater — the first-run wizard and the file-based update flow | **None** | **None** | N/A | **None** | **None** | Documented | No | Developer | INTERNAL BY DESIGN |
 | routes/shared.php and routes/test.php — route files no provider ever loads | **None** | **None** | N/A | **None** | **None** | N/A | No | Developer | DEPRECATED |

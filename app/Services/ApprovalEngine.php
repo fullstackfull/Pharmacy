@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalRequest;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -32,6 +33,29 @@ class ApprovalEngine
 {
     public function __construct(private readonly AuditLogger $audit)
     {
+    }
+
+    /**
+     * Every approval opened against a known set of subjects, newest first.
+     *
+     * An approval carries a subject rather than a party, so a requester who wants to know why their
+     * request is sitting still can only be answered by resolving their own subjects first and asking
+     * about those. That is narrower than "every approval mentioning this party", and narrower is
+     * correct: an approval about a marketplace-wide settlement is not one seller's to read.
+     *
+     * @param  array<int, int|string>  $subjectIds
+     * @return Collection<int, ApprovalRequest>
+     */
+    public function forSubjects(string $subjectType, array $subjectIds): Collection
+    {
+        if ($subjectIds === [] || !Schema::hasTable('approval_requests')) {
+            return collect();
+        }
+
+        return ApprovalRequest::where('subject_type', $subjectType)
+            ->whereIn('subject_id', $subjectIds)
+            ->orderByDesc('id')
+            ->get();
     }
 
     /**
