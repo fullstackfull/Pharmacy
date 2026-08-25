@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\Marketplace\CategoryGovernanceService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -77,7 +78,7 @@ class CatalogIntegrityProducer implements InsightProducer
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_MEDIUM,
             title: 'insight_duplicate_barcodes',
-            body: null,
+            body: Copy::choice('insight_body_duplicate_barcodes_one', 'insight_body_duplicate_barcodes', $duplicates->count()),
             entityType: 'catalog_check',
             entityId: 'duplicate_barcode',
             metric: $duplicates->count(),
@@ -133,7 +134,11 @@ class CatalogIntegrityProducer implements InsightProducer
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_MEDIUM,
             title: 'insight_missing_required_attributes',
-            body: null,
+            // Names the attribute where there is one, so the seller knows what to fix without
+            // opening the product first — "Missing required attribute: SPF value", never "Error".
+            body: Copy::choice('insight_body_missing_attributes_one', 'insight_body_missing_attributes', count($incomplete), [
+                'attribute' => translate((string) (reset($incomplete)[0] ?? '')),
+            ]),
             entityType: 'catalog_check',
             entityId: 'missing_attributes',
             metric: count($incomplete),

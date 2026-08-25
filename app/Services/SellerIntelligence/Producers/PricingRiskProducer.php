@@ -4,6 +4,7 @@ namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\ProductPriceChange;
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -77,7 +78,14 @@ class PricingRiskProducer implements InsightProducer
                 title: $change->new_price < $change->previous_price
                     ? 'insight_price_dropped_sharply'
                     : 'insight_price_rose_sharply',
-                body: null,
+                // The number and the cause, in one sentence: what it was, what it is now, and who
+                // moved it — which is most of the answer to "was this deliberate".
+                body: Copy::line('insight_body_price_moved', [
+                    'from' => $change->previous_price,
+                    'to' => $change->new_price,
+                    'percent' => round($ratio * 100, 1),
+                    'source' => translate((string) $change->source),
+                ]),
                 entityType: 'product',
                 entityId: $change->product_id,
                 metric: round($ratio * 100, 1),
@@ -139,7 +147,9 @@ class PricingRiskProducer implements InsightProducer
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_HIGH,
             title: 'insight_price_below_cost',
-            body: null,
+            body: Copy::choice('insight_body_below_cost_one', 'insight_body_below_cost', $products->count(), [
+                'value' => $exposure,
+            ]),
             entityType: 'pricing_check',
             entityId: 'below_cost',
             metric: $products->count(),

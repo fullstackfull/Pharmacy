@@ -5,6 +5,7 @@ namespace App\Services\SellerIntelligence\Producers;
 use App\Models\Order;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
 use App\Services\Marketplace\SlaService;
@@ -76,7 +77,10 @@ class OrderSlaProducer implements InsightProducer
                 type: self::TYPE,
                 severity: $isLate ? 'critical' : 'high',
                 title: $isLate ? 'insight_order_late' : 'insight_order_due_soon',
-                body: "#{$order->id}",
+                body: Copy::line(
+                    $isLate ? 'insight_body_order_late' : 'insight_body_order_due_soon',
+                    ['order' => '#' . $order->id, 'elapsed' => Copy::duration((int) round(abs($hoursLeft) * 60))],
+                ),
                 entityType: 'order',
                 entityId: $order->id,
                 metric: round($hoursLeft, 2),

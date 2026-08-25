@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -116,7 +117,17 @@ class StaleInventoryProducer implements InsightProducer
             type: self::TYPE,
             severity: $severity,
             title: $title,
-            body: null,
+            // The sentence with the number and the cause. A card whose body restates its own title
+            // says nothing twice — and the capital clause is dropped rather than printed as a dash
+            // when no cost was recorded, because "holding — in stock" is not a sentence.
+            body: $tiedUp
+                ? Copy::choice('insight_body_stale_inventory_one', 'insight_body_stale_inventory', count($products), [
+                    'days' => self::STALE_DAYS,
+                    'value' => $tiedUp,
+                ])
+                : Copy::choice('insight_body_stale_inventory_one_no_cost', 'insight_body_stale_inventory_no_cost', count($products), [
+                    'days' => self::STALE_DAYS,
+                ]),
             entityType: 'product_group',
             entityId: $kind,
             metric: count($products),

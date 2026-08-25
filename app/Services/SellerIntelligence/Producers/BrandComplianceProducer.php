@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\Marketplace\BrandRegistryService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -61,7 +62,10 @@ class BrandComplianceProducer implements InsightProducer
                 // While the marketplace is only reporting, this is a deadline; once it is refusing,
                 // the listings are already unsellable.
                 title: $enforcing ? 'insight_brand_listings_blocked' : 'insight_brand_not_claimed',
-                body: $exposure['brand_name'],
+                body: Copy::line('insight_body_brand', [
+                    'brand' => $exposure['brand_name'],
+                    'count' => $exposure['products'],
+                ]),
                 entityType: 'brand',
                 entityId: $exposure['brand_id'],
                 metric: $exposure['products'],

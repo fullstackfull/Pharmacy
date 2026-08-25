@@ -4,6 +4,7 @@ namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\ReturnShipment;
 use App\Models\SellerInsight;
+use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -68,14 +69,17 @@ class ReturnsRiskProducer implements InsightProducer
             ]);
 
         foreach ($waiting as $request) {
-            $waitingHours = round(now()->diffInMinutes($request->created_at) / 60, 1);
+            $waitingHours = round(\Illuminate\Support\Carbon::parse($request->created_at)->diffInMinutes(now()) / 60, 1);
 
             yield new InsightDraft(
                 sellerId: $sellerId,
                 type: self::TYPE,
                 severity: SellerInsight::SEVERITY_HIGH,
                 title: 'insight_refund_response_overdue',
-                body: "#{$request->order_id}",
+                body: Copy::line('insight_body_refund_overdue', [
+                    'order' => '#' . $request->order_id,
+                    'elapsed' => Copy::duration((int) round($waitingHours * 60)),
+                ]),
                 entityType: 'refund_request',
                 entityId: $request->id,
                 metric: $waitingHours,
@@ -121,7 +125,9 @@ class ReturnsRiskProducer implements InsightProducer
             type: self::TYPE,
             severity: SellerInsight::SEVERITY_MEDIUM,
             title: 'insight_returns_awaiting_processing',
-            body: null,
+            body: Copy::choice('insight_body_returns_waiting_one', 'insight_body_returns_waiting', $stuck->count(), [
+                'hours' => self::PROCESSING_HOURS,
+            ]),
             entityType: 'return_group',
             entityId: 'awaiting_processing',
             metric: $stuck->count(),
@@ -130,7 +136,7 @@ class ReturnsRiskProducer implements InsightProducer
             category: SellerInsight::CATEGORY_RETURNS,
             affectedCount: $stuck->count(),
             signals: new ImpactSignals(affectedCount: $stuck->count()),
-            metadata: ['count' => $stuck->count(), 'oldest_hours' => round(now()->diffInMinutes($stuck->first()->created_at) / 60, 1)],
+            metadata: ['count' => $stuck->count(), 'oldest_hours' => round(\Illuminate\Support\Carbon::parse($stuck->first()->created_at)->diffInMinutes(now()) / 60, 1)],
         );
     }
 }
