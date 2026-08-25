@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Contracts\Repositories\CustomerRepositoryInterface;
+use App\Contracts\Repositories\LoyaltyPointTransactionRepositoryInterface;
 use App\Contracts\Repositories\OrderDetailRepositoryInterface;
 use App\Contracts\Repositories\OrderDetailsRewardsRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
@@ -16,6 +17,7 @@ use App\Exports\RefundRequestExport;
 use App\Http\Controllers\BaseController;
 use App\Http\Requests\Vendor\RefundStatusRequest;
 use App\Repositories\VendorRepository;
+use App\Services\Marketplace\ReturnLogisticsService;
 use App\Services\RefundStatusService;
 use App\Traits\CustomerTrait;
 use Devrabiul\ToastMagic\Facades\ToastMagic;
@@ -41,6 +43,10 @@ class RefundController extends BaseController
         private readonly OrderRepositoryInterface               $orderRepo,
         private readonly VendorRepositoryInterface              $vendorRepo,
         private readonly OrderDetailsRewardsRepositoryInterface $orderDetailsRewardsRepo,
+        // Used when a refund settles an order that earned loyalty points. It was read without ever
+        // being injected, so that path was a fatal rather than a refund.
+        private readonly LoyaltyPointTransactionRepositoryInterface $loyaltyPointTransactionRepo,
+        private readonly ReturnLogisticsService                 $returnLogistics,
     )
     {
     }
@@ -179,6 +185,17 @@ class RefundController extends BaseController
                     'change_by' => 'seller',
                 ]
             );
+            // Approving a refund on a physical product means goods are coming back. The seller app
+            // has opened the return for that since it shipped; the panel did not, so the same
+            // decision taken at a desk gave the money back and quietly lost the units too.
+            if ($request['refund_status'] == 'approved') {
+                $this->returnLogistics->openForApprovedRefund(
+                    refund: $refund,
+                    orderDetails: $orderDetails,
+                    sellerId: $vendorId,
+                );
+            }
+
             $order = $this->orderRepo->getFirstWhere(params: ['id' => $refund['order_id']]);
             event(new RefundEvent(status: $request['refund_status'], order: $order, refund: $refund, orderDetails: $orderDetails));
             return response()->json(['message' => translate('refund_status_updated') . '!!']);

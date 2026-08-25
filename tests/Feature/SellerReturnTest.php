@@ -34,8 +34,9 @@ class SellerReturnTest extends TestCase
         parent::setUp();
 
         foreach ([
-            'return_shipments', 'stock_movements', 'order_details', 'products', 'sellers',
-            'translations', 'vendor_ledger_entries', 'business_settings', 'audit_logs',
+            'return_shipments', 'stock_movements', 'order_details', 'refund_requests', 'orders',
+            'products', 'sellers', 'translations', 'vendor_ledger_entries', 'business_settings',
+            'audit_logs',
         ] as $table) {
             Schema::dropIfExists($table);
         }
@@ -78,7 +79,25 @@ class SellerReturnTest extends TestCase
             $table->unsignedBigInteger('product_id')->nullable();
             $table->unsignedBigInteger('seller_id')->nullable();
             $table->integer('qty')->default(1);
+            $table->text('product_details')->nullable();
             $table->boolean('is_stock_decreased')->default(1);
+            $table->timestamps();
+        });
+        // The refund observer that decides whether a webhook is owed reads the order behind it.
+        Schema::create('orders', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('seller_id')->nullable();
+            $table->string('seller_is', 20)->default('seller');
+            $table->timestamps();
+        });
+        Schema::create('refund_requests', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->unsignedBigInteger('order_details_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->string('status', 30)->default('pending');
+            $table->text('refund_reason')->nullable();
             $table->timestamps();
         });
         Schema::create('stock_movements', function (Blueprint $table) {
@@ -335,6 +354,60 @@ class SellerReturnTest extends TestCase
         $this->assertSame($first->id, $second->id);
         $this->assertSame(1, ReturnShipment::count());
         $this->assertSame(42, (int) $first->refund_request_id);
+    }
+
+    public function test_the_same_refund_opens_the_same_return_whichever_surface_approved_it(): void
+    {
+        // The panel and the app take the same decision, so it must have the same consequence. It
+        // did not: the app opened the return and the panel did not, so a refund approved at a desk
+        // gave the customer their money and quietly lost the seller their units.
+        $returns = app(ReturnLogisticsService::class);
+
+        $line = new \App\Models\OrderDetail();
+        $line->forceFill([
+            'order_id' => 1, 'product_id' => 7, 'seller_id' => 1, 'qty' => 2,
+            'product_details' => json_encode(['product_type' => 'physical']),
+        ])->save();
+
+        $refund = new \App\Models\RefundRequest();
+        $refund->forceFill([
+            'order_id' => 1, 'order_details_id' => $line->id, 'customer_id' => 3,
+            'product_id' => 7, 'status' => 'approved', 'refund_reason' => 'Damaged',
+        ])->save();
+
+        $fromTheApp = $returns->openForApprovedRefund($refund, $line, sellerId: 1);
+        $fromThePanel = $returns->openForApprovedRefund($refund, $line, sellerId: 1);
+
+        $this->assertNotNull($fromTheApp);
+        $this->assertSame($fromTheApp->id, $fromThePanel->id, 'the second approval must not open a second return');
+        $this->assertSame(1, ReturnShipment::where('refund_request_id', $refund->id)->count());
+        $this->assertSame(2, (int) $fromTheApp->qty);
+    }
+
+    public function test_a_digital_product_never_opens_a_return(): void
+    {
+        $line = new \App\Models\OrderDetail();
+        $line->forceFill([
+            'order_id' => 2, 'product_id' => 9, 'seller_id' => 1, 'qty' => 1,
+            'product_details' => json_encode(['product_type' => 'digital']),
+        ])->save();
+
+        $refund = new \App\Models\RefundRequest();
+        $refund->forceFill(['order_id' => 2, 'order_details_id' => $line->id, 'status' => 'approved'])->save();
+
+        // Nothing is coming back, and an RMA for it would be a return that can never be received.
+        $this->assertNull(app(ReturnLogisticsService::class)->openForApprovedRefund($refund, $line, sellerId: 1));
+        $this->assertSame(0, ReturnShipment::where('refund_request_id', $refund->id)->count());
+    }
+
+    public function test_a_refund_that_is_not_there_is_not_a_crash(): void
+    {
+        $returns = app(ReturnLogisticsService::class);
+
+        // Both callers hold these as nullable models, and this must never be the thing that fails
+        // a refund the customer is already owed.
+        $this->assertNull($returns->openForApprovedRefund(null, null, sellerId: 1));
+        $this->assertNull($returns->openForApprovedRefund(new \App\Models\RefundRequest(), null, sellerId: 1));
     }
 
     public function test_none_of_it_is_reachable_without_a_credential(): void

@@ -136,11 +136,19 @@ class RouteServiceProvider extends ServiceProvider
      */
 
     /**
-     * The Seller Center (`/seller`), the panel the seller operates the shop from.
+     * The Seller Center, the redesigned screens the seller operates the shop from.
      *
-     * Loaded before the web routes so its own prefix wins over any catch-all the storefront
-     * declares, and separate from the classic vendor panel so that panel keeps working untouched
-     * while the redesign lands wave by wave.
+     * Mounted on `/vendor` beside the classic panel rather than on a prefix of its own, because
+     * there is one seller panel and not two.
+     *
+     * **Loaded after the classic panel, deliberately.** Both files mount on the same prefix, and
+     * the first matching route wins — so this order is what makes the redesign additive: a new
+     * screen here can never shadow a page that already works. The reverse order would mean every
+     * route added to a later wave silently taking over whatever classic URL it happened to
+     * resemble. `SellerCenterRouteCollisionTest` holds the line.
+     *
+     * Still before the web routes, so the panel's prefix wins over any catch-all the storefront
+     * declares.
      */
     protected function mapSellerCenterRoutes(): void
     {

@@ -2,6 +2,8 @@
 
 namespace App\Services\Marketplace;
 
+use App\Models\OrderDetail;
+use App\Models\RefundRequest;
 use App\Models\ReturnShipment;
 use App\Models\StockMovement;
 use App\Services\AuditLogger;
@@ -196,6 +198,60 @@ class ReturnLogisticsService
             by: $by,
             byType: $byType,
         );
+    }
+
+    /**
+     * Open the return an approved refund implies, from whichever surface approved it.
+     *
+     * The decision to refund is the same decision whether it was taken in the panel or in the app,
+     * so its consequences have to be the same too. Written here rather than in either controller
+     * because it was in one of them and not the other, which meant a refund approved at a desk lost
+     * the goods and the same refund approved on a phone did not.
+     *
+     * Only for a physical product: a digital item has nothing to send back, and an RMA for one would
+     * be a return that can never be received. Never allowed to fail the refund it follows — the
+     * customer's money moving matters more than the paperwork about the goods.
+     */
+    public function openForApprovedRefund(
+        ?RefundRequest $refund,
+        ?OrderDetail $orderDetails,
+        int|string $sellerId,
+        string $byType = 'seller',
+    ): ?ReturnShipment {
+        // Both are nullable because both callers hold them as `?Model`. A refund that is not there
+        // has no goods to ask about, and this must never be the thing that fails a refund.
+        if (!$refund || !$orderDetails) {
+            return null;
+        }
+
+        $product = json_decode($orderDetails->product_details ?? '', true);
+
+        if (($product['product_type'] ?? 'physical') !== 'physical') {
+            return null;
+        }
+
+        try {
+            return $this->authorizeForRefund(
+                refundRequestId: $refund->id,
+                data: [
+                    'order_id' => $refund->order_id,
+                    'order_details_id' => $refund->order_details_id,
+                    'product_id' => $refund->product_id ?? $orderDetails->product_id,
+                    'seller_id' => $sellerId,
+                    'qty' => max(1, (int) $orderDetails->qty),
+                    'reason' => $refund->refund_reason,
+                    // Whether the goods can be sold again is a decision for whoever opens the box,
+                    // not for the moment the refund was approved.
+                    'restock' => true,
+                ],
+                by: $sellerId,
+                byType: $byType,
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return null;
+        }
     }
 
     private function nextReference(): string

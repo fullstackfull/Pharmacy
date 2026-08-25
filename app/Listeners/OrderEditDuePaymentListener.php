@@ -2,7 +2,7 @@
 
 namespace App\Listeners;
 
-use App\Events\OrderEditEvent;
+use App\Events\OrderEditDuePaymentEvent;
 use App\Traits\EmailTemplateTrait;
 use App\Traits\PushNotificationTrait;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,14 +31,14 @@ class OrderEditDuePaymentListener implements ShouldQueue
     /**
      * Handle the event.
      */
-    public function handle(OrderEditEvent $event): void
+    public function handle(OrderEditDuePaymentEvent $event): void
     {
         if ($event->notification) {
             $this->sendNotification($event);
         }
     }
 
-    private function sendNotification(OrderEditEvent $event): void
+    private function sendNotification(OrderEditDuePaymentEvent $event): void
     {
         $key = $event->notification->key;
         $type = $event->notification->type;
