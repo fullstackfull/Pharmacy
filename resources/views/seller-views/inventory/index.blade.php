@@ -90,7 +90,7 @@
                 @php($daily = $velocity[$product->id] ?? 0.0)
                 @php($cover = $list->coverage($available, $daily))
                 @php($state = $list->stateFor($available, $cover, $summary['threshold']))
-                <x-sc.tr :href="url('vendor/products/edit/' . $product->id)" :id="$product->id">
+                <x-sc.tr :href="url('vendor/products/update/' . $product->id)" :id="$product->id">
                     <x-sc.td class="sc-code">{{ $product->code ?: '—' }}</x-sc.td>
                     <x-sc.td>{{ $product->getRawOriginal('name') }}</x-sc.td>
                     <x-sc.td num :tone="$available <= 0 ? 'critical' : null">{{ number_format($available) }}</x-sc.td>
@@ -106,7 +106,7 @@
                     </x-sc.td>
                     <x-sc.td><x-sc.badge :status="$state['state']" /></x-sc.td>
                     <x-sc.td action>
-                        <a class="sc-btn sc-btn--ghost sc-btn--sm" href="{{ url('vendor/products/edit/' . $product->id) }}">
+                        <a class="sc-btn sc-btn--ghost sc-btn--sm" href="{{ url('vendor/products/update/' . $product->id) }}">
                             {{ $available <= 0 ? translate('restock') : translate('adjust') }}
                         </a>
                     </x-sc.td>
@@ -118,7 +118,7 @@
                     @php($available = (int) $product->current_stock)
                     @php($cover = $list->coverage($available, $velocity[$product->id] ?? 0.0))
                     @php($state = $list->stateFor($available, $cover, $summary['threshold']))
-                    <x-sc.entity-card :title="$product->getRawOriginal('name')" :href="url('vendor/products/edit/' . $product->id)"
+                    <x-sc.entity-card :title="$product->getRawOriginal('name')" :href="url('vendor/products/update/' . $product->id)"
                                       :figure="number_format($available)"
                                       :meta="\App\Services\SellerCenter\Copy::line('sku_and_cover', [
                                           'sku' => $product->code ?: '—',

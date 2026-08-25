@@ -62,19 +62,19 @@
         </button>
         <div class="sc-menu" id="sc-user-menu" hidden style="inset-inline-end:0;top:34px;min-width:220px">
             <div class="sc-menu__group">{{ trim(($scSeller->f_name ?? '') . ' ' . ($scSeller->l_name ?? '')) }} · {{ $scRoleLabel ?? translate('owner') }}</div>
-            <a class="sc-menu__item" href="{{ url('vendor/profile/view') }}"><x-sc.icon name="user" :size="14" />{{ translate('my_profile') }}</a>
+            <a class="sc-menu__item" href="{{ url('vendor/profile/index') }}"><x-sc.icon name="user" :size="14" />{{ translate('my_profile') }}</a>
             @if ($scSettingsUrl = \App\Services\SellerCenter\Shell::route('seller.settings.index'))
                 <a class="sc-menu__item" href="{{ $scSettingsUrl }}"><x-sc.icon name="translate" :size="14" />{{ translate('language_and_numerals') }}</a>
                 <a class="sc-menu__item" href="{{ $scSettingsUrl }}?section=notifications"><x-sc.icon name="bell" :size="14" />{{ translate('notification_preferences') }}</a>
             @endif
             <button type="button" class="sc-menu__item" data-sc-shortcuts><x-sc.icon name="keyboard" :size="14" />{{ translate('keyboard_shortcuts') }}</button>
             <div class="sc-menu__sep"></div>
-            <a class="sc-menu__item sc-menu__item--danger" href="{{ url('vendor/auth/logout') }}"><x-sc.icon name="sign-out" :size="14" />{{ translate('sign_out') }}</a>
+            <a class="sc-menu__item sc-menu__item--danger" href="{{ route('vendor.auth.logout') }}"><x-sc.icon name="sign-out" :size="14" />{{ translate('sign_out') }}</a>
         </div>
     </div>
 
     <div class="sc-menu" id="sc-store-menu" hidden style="inset-inline-start:14px;top:48px;min-width:240px">
-        <a class="sc-menu__item" href="{{ url('vendor/shop/view') }}"><x-sc.icon name="storefront" :size="14" />{{ translate('store_profile') }}</a>
+        <a class="sc-menu__item" href="{{ url('vendor/shop/index') }}"><x-sc.icon name="storefront" :size="14" />{{ translate('store_profile') }}</a>
         @if ($scStoreSettingsUrl = \App\Services\SellerCenter\Shell::route('seller.settings.index'))
             <a class="sc-menu__item" href="{{ $scStoreSettingsUrl }}?section=store"><x-sc.icon name="gear-six" :size="14" />{{ translate('store_settings') }}</a>
         @endif
