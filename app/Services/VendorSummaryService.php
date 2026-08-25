@@ -76,7 +76,14 @@ class VendorSummaryService
      * those — while the tax number, the certificate and the seller's onboarding
      * state do not.
      */
-    private function summarizeShop(object|array $shop): array
+    /**
+     * One shop as a shopper may see it.
+     *
+     * Public because a shop is also presented on its own — a home-page showcase is one store, not
+     * a list — and the answer to "what may a customer see about this shop" must be the same
+     * wherever it is asked.
+     */
+    public function summarizeShop(object|array $shop): array
     {
         return [
             'id' => data_get($shop, 'id'),
@@ -102,6 +109,12 @@ class VendorSummaryService
             'vacation_end_date' => data_get($shop, 'vacation_end_date'),
             'vacation_duration_type' => data_get($shop, 'vacation_duration_type'),
             'vacation_note' => data_get($shop, 'vacation_note'),
+
+            // Present only where the caller resolved them; a showcase carries them, a raw Shop
+            // row does not, and a zero invented here would read as a verdict nobody gave.
+            'average_rating' => data_get($shop, 'average_rating'),
+            'review_count' => data_get($shop, 'review_count'),
+            'products_count' => data_get($shop, 'products_count'),
 
             'created_at' => data_get($shop, 'created_at'),
             'updated_at' => data_get($shop, 'updated_at'),

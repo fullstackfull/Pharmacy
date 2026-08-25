@@ -13,6 +13,7 @@ use App\Services\Theme\ThemeDelivery;
 use App\Services\Theme\ThemePreviewToken;
 use App\Services\Theme\ThemeSourceMap;
 use App\Services\Theme\ViewerContext;
+use App\Services\VendorSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -52,6 +53,7 @@ class ThemeSectionController extends Controller
         private readonly ThemeDelivery $delivery,
         private readonly ThemePreviewToken $previews,
         private readonly ExperiencePageService $pages,
+        private readonly VendorSummaryService $vendorSummary,
     ) {
     }
 
@@ -274,7 +276,8 @@ class ThemeSectionController extends Controller
         return [
             'id' => $section['id'],
             'type' => $section['type'],
-            'settings' => $this->absolutize($this->forPhone($section['settings'] ?? [])),
+            'settings' => $this->absolutize(
+                $this->withResolved($section['type'], $this->forPhone($section['settings'] ?? []))),
             'blocks' => array_map(fn (array $block) => [
                 'id' => $block['id'],
                 'type' => $block['type'],
@@ -283,6 +286,30 @@ class ThemeSectionController extends Controller
             'cards' => $this->cardsFor($section, $blocks, $bannerBacked),
             'source' => $this->sources->for($section['type'], $section['settings'] ?? [], $blocks),
         ];
+    }
+
+    /**
+     * Settings a phone cannot work out for itself.
+     *
+     * A showcase stores the shop as an id, and every fact a card needs about that shop — its name,
+     * its mark, its cover, what its buyers rate it — lives behind a lookup the app has no endpoint
+     * for. Rather than invent one, the shop travels with the section, as the customer-safe summary
+     * every other vendor payload already uses; nothing private crosses over.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    private function withResolved(string $type, array $settings): array
+    {
+        if ($type !== 'vendor_showcase') {
+            return $settings;
+        }
+
+        $showcase = $this->resolver->vendorShowcase($settings);
+
+        return $showcase === null
+            ? $settings
+            : $settings + ['shop' => $this->vendorSummary->summarizeShop($showcase['shop'])];
     }
 
     /**
