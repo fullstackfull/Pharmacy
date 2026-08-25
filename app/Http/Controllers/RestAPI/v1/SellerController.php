@@ -99,28 +99,28 @@ class SellerController extends Controller
         $sellers = $this->seller->when($type == 'top', function ($query) {
             return $query->whereHas('orders');
         })
-            ->approved()->with(['shop', 'orders', 'product.reviews' => function ($query) {
-                $query->active();
-            }])
+            ->approved()->with(['shop'])
             ->withCount(['orders', 'product' => function ($query) {
                 $query->active();
             }])
+            // The card needs two numbers about this seller's reviews, so ask the
+            // database for the two numbers. Loading every product and every
+            // review of every seller to add them up in PHP — and then discarding
+            // the rows — is the same answer at a fraction of the cost.
+            ->withCount(['productReviews as rating_count' => function ($query) {
+                $query->where('reviews.status', 1);
+            }])
+            ->withSum(['productReviews as total_rating' => function ($query) {
+                $query->where('reviews.status', 1);
+            }], 'rating')
             ->get()
             ->each(function ($seller) {
                 $seller['temporary_close'] = (int)$seller?->shop?->temporary_close ?? 0;
-                $seller->product?->map(function ($product) {
-                    $product['rating'] = $product?->reviews?->where('status', 1)->pluck('rating')->sum();
-                    $product['rating_count'] = $product->reviews?->where('status', 1)->count();
-                    $product['rating_count'] = $product->reviews?->where('status', 1)->count();
-                });
-                $seller['total_rating'] = $seller?->product->pluck('rating')->sum();
-                $seller['rating_count'] = $seller->product->pluck('rating_count')->sum();
-                $seller['review_count'] = $seller->product->pluck('rating_count')->sum();
+                $seller['total_rating'] = (float)($seller->total_rating ?? 0);
+                $seller['rating_count'] = (int)($seller->rating_count ?? 0);
+                $seller['review_count'] = $seller['rating_count'];
                 $seller['average_rating'] = $seller['total_rating'] / ($seller['rating_count'] == 0 ? 1 : $seller['rating_count']);
                 $seller->is_vacation_mode_now = checkVendorAbility(type: 'vendor', status: 'vacation_status', vendor: $seller?->shop);
-
-                unset($seller['product']);
-                unset($seller['orders']);
             });
 
         $inhouseProducts = Product::active()->with(['reviews', 'rating'])
