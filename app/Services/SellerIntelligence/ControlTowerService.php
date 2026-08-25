@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence;
 
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -142,7 +143,7 @@ class ControlTowerService
 
         // Read once and sliced in memory. Nine sections against the same rows is nine queries
         // otherwise, on a page a seller opens all day.
-        return SellerInsight::forSeller($sellerId)->open()->worstFirst()->limit(500)->get();
+        return SellerInsight::forSeller($sellerId)->open()->worstFirst()->limit(app(Policy::class)->int('limit_control_tower_rows'))->get();
     }
 
     /** @return Collection<int, SellerInsight> */

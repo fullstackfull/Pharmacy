@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
+use App\Services\Platform\PasswordPolicy;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use App\Services\DeveloperPortal\ApiDoc;
@@ -202,7 +203,7 @@ class SellerSecurityController extends Controller
         $validator = validator($request->all(), [
             'name' => 'required|string|max:120',
             'email' => 'required|email|max:191',
-            'password' => 'required|string|min:6|max:100',
+            'password' => app(PasswordPolicy::class)->ruleString(),
             'seller_role_id' => 'nullable|integer',
         ]);
 
@@ -246,7 +247,7 @@ class SellerSecurityController extends Controller
             'name' => 'required|string|max:120',
             'seller_role_id' => 'nullable|integer',
             'status' => 'nullable|in:active,inactive',
-            'password' => 'nullable|string|min:6|max:100',
+            'password' => app(PasswordPolicy::class)->ruleString(required: false),
         ]);
 
         if ($validator->fails()) {

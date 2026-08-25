@@ -3,6 +3,7 @@
 namespace App\Services\SellerCenter;
 
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use App\Services\Marketplace\SellerPrincipal;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -178,13 +179,18 @@ class Counts
             return null;
         }
 
+        $noticeDays = app(Policy::class)->int('compliance_expiry_notice_days');
+
         return (int) DB::table('seller_verification_documents')
             ->where('seller_id', $sellerId)
-            ->where(function ($query) {
+            // How much warning a seller gets is the marketplace's promise, not a literal in a
+            // badge query — a pharmacy licence and a tax certificate are not renewed on the same
+            // notice.
+            ->where(function ($query) use ($noticeDays) {
                 $query->whereIn('status', ['rejected', 'expired', 'more_information_required'])
-                    ->orWhere(function ($expiring) {
+                    ->orWhere(function ($expiring) use ($noticeDays) {
                         $expiring->whereNotNull('expires_at')
-                            ->whereBetween('expires_at', [now(), now()->addDays(45)]);
+                            ->whereBetween('expires_at', [now(), now()->addDays($noticeDays)]);
                     });
             })
             ->count();

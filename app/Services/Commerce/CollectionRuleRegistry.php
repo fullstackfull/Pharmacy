@@ -2,6 +2,8 @@
 
 namespace App\Services\Commerce;
 
+use App\Services\Platform\Policy;
+
 /**
  * The only fields and operators a collection rule may use (§20–22).
  *
@@ -13,8 +15,9 @@ namespace App\Services\Commerce;
  */
 class CollectionRuleRegistry
 {
-    /** Rules per collection, so a pathological save cannot compile an unbounded WHERE chain. */
-    public const MAX_RULES = 12;
+    public function __construct(private readonly Policy $policy)
+    {
+    }
 
     private const NUMERIC_OPERATORS = [
         'equals', 'not_equals', 'greater_than', 'greater_than_or_equal',
@@ -70,7 +73,14 @@ class CollectionRuleRegistry
         $clean = [];
         $errors = [];
 
-        foreach (array_slice(array_values($rows), 0, self::MAX_RULES) as $index => $row) {
+        // Refused, not truncated. Slicing the tail off meant an admin who went one over the limit
+        // saw the rest saved and was never told what had been dropped.
+        $limit = $this->policy->int('commerce_max_collection_rules');
+        if (count($rows) > $limit) {
+            return ['rules' => [], 'errors' => ['rules:at_most_' . $limit]];
+        }
+
+        foreach (array_values($rows) as $index => $row) {
             $label = 'rule_' . ($index + 1);
 
             if (!is_array($row)) {

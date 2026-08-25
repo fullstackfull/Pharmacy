@@ -122,7 +122,7 @@ Route::controller(FirebaseController::class)->group(function () {
 
 
 // Rate limited: captcha was removed by product decision, so this is now the brute-force barrier.
-Route::group(['prefix' => 'login', 'middleware' => ['throttle:20,1']], function () {
+Route::group(['prefix' => 'login', 'middleware' => ['throttle:auth']], function () {
     Route::get('{loginUrl}', [LoginController::class, 'index']);
     Route::post('/', [LoginController::class, 'login'])->name('login');
 });

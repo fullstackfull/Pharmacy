@@ -86,17 +86,29 @@ class PolicyRegistry
             'help' => 'one_definition_of_low_stock_read_by_the_briefing_the_inventory_screen_and_the_opportunity_cards',
             'icon' => 'inventory',
             'policies' => [
-                'stock_cover_low_days' => [
-                    'type' => 'int', 'default' => 7, 'min' => 1, 'max' => 180,
-                    'label' => 'days_of_cover_below_which_stock_is_called_low',
-                ],
+                // One ladder, in days of remaining cover, rather than four numbers in four classes.
+                // The steps are different actions, not different opinions: colour the row red, colour
+                // it amber, interrupt the seller in the briefing, suggest a restock as an opportunity.
                 'stock_cover_critical_days' => [
                     'type' => 'decimal', 'default' => 1.0, 'min' => 0.1, 'max' => 60,
                     'label' => 'days_of_cover_below_which_stock_is_called_critical',
                 ],
+                'stock_cover_low_days' => [
+                    'type' => 'decimal', 'default' => 3.0, 'min' => 0.1, 'max' => 90,
+                    'label' => 'days_of_cover_below_which_stock_is_called_low',
+                ],
+                'stock_cover_raise_days' => [
+                    'type' => 'decimal', 'default' => 7.0, 'min' => 0.1, 'max' => 180,
+                    'label' => 'days_of_cover_below_which_a_restock_is_raised_in_the_briefing',
+                ],
+                'stock_cover_opportunity_days' => [
+                    'type' => 'decimal', 'default' => 14.0, 'min' => 0.1, 'max' => 365,
+                    'label' => 'days_of_cover_below_which_a_restock_is_offered_as_an_opportunity',
+                ],
                 'stock_velocity_days' => [
-                    'type' => 'int', 'default' => 14, 'min' => 1, 'max' => 180,
+                    'type' => 'int', 'default' => 14, 'min' => 1, 'max' => 365,
                     'label' => 'days_of_sales_used_to_work_out_how_fast_stock_moves',
+                    'help' => 'every_cover_figure_on_every_screen_is_measured_over_this_window',
                 ],
                 'stock_stale_days' => [
                     'type' => 'int', 'default' => 90, 'min' => 7, 'max' => 730,
@@ -288,21 +300,13 @@ class PolicyRegistry
             'icon' => 'wallet',
             'policies' => [
                 'payout_holding_days' => [
-                    'type' => 'int', 'default' => 7, 'min' => 0, 'max' => 180,
+                    'type' => 'int', 'default' => 0, 'min' => 0, 'max' => 180,
                     'label' => 'days_an_earning_is_held_before_it_becomes_available',
+                    'help' => 'a_floor_on_top_of_the_category_return_window_zero_leaves_the_return_window_alone',
                 ],
                 'payout_minimum_amount' => [
                     'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 1000000,
                     'label' => 'smallest_balance_a_seller_may_request_a_payout_for',
-                ],
-                'payout_dual_control_amount' => [
-                    'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 100000000,
-                    'label' => 'payout_amount_above_which_a_second_approver_is_required',
-                    'help' => 'zero_switches_the_second_approver_off',
-                ],
-                'payout_bank_change_freeze_hours' => [
-                    'type' => 'int', 'default' => 24, 'min' => 0, 'max' => 720,
-                    'label' => 'hours_payouts_are_frozen_after_a_seller_changes_their_bank_details',
                 ],
                 'reconciliation_lookback_days' => [
                     'type' => 'int', 'default' => 30, 'min' => 1, 'max' => 730,

@@ -1104,7 +1104,11 @@ class OrderManager
                 // claims only `available`) would settle the GROSS earning and withdrawable (balance −
                 // pending) would add the pending commission debit back — the marketplace would collect no
                 // commission and the seller could draw the gross. Same timestamp => both mature as one.
-                $availableAt = now()->addDays(max(0, $returnWindowDays));
+                // The category's return window, or the marketplace's own minimum hold if that is
+                // longer. Two marketplaces settling the same catalogue may promise different terms,
+                // and the term is the platform's to state rather than the category's to imply.
+                $holdingFloorDays = app(\App\Services\Platform\Policy::class)->int('payout_holding_days');
+                $availableAt = now()->addDays(max(0, $returnWindowDays, $holdingFloorDays));
 
                 $ledger->record(
                     sellerId: $sellerId,

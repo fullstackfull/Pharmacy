@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Jobs\DeliverSellerWebhook;
+use App\Services\Platform\Policy;
 use App\Models\SellerWebhook;
 use App\Models\SellerWebhookDelivery;
 use App\Services\AuditLogger;
@@ -44,15 +45,22 @@ class SellerWebhookDispatcher
         'payout.status_changed',
     ];
 
-    /** Attempts before an individual delivery is given up on. */
-    public const MAX_ATTEMPTS = 5;
-
-    private const TIMEOUT_SECONDS = 8;
-
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly OutboundUrlGuard $guard,
+        private readonly Policy $policy,
     ) {
+    }
+
+    /**
+     * How many attempts a seller's endpoint gets before the event is lost.
+     *
+     * Exposed because it is a promise the marketplace makes about delivery, and both the seller's
+     * integration screen and the retry sweep have to state the same number.
+     */
+    public function maxAttempts(): int
+    {
+        return $this->policy->int('webhook_max_attempts');
     }
 
     /**
@@ -155,7 +163,7 @@ class SellerWebhookDispatcher
                 // HMAC over the exact bytes sent, so the receiver verifies what it actually got
                 // rather than a re-serialisation of it that may differ by a space.
                 'X-Seller-Signature' => hash_hmac('sha256', $body, $webhook->secret),
-            ])->timeout(self::TIMEOUT_SECONDS)->withBody($body, 'application/json')->post($webhook->url);
+            ])->timeout($this->policy->int('webhook_timeout_seconds'))->withBody($body, 'application/json')->post($webhook->url);
         } catch (Throwable $exception) {
             $this->recordFailure($webhook, $delivery, null, $exception->getMessage());
 
@@ -188,7 +196,7 @@ class SellerWebhookDispatcher
         ?int $status,
         ?string $error,
     ): void {
-        $exhausted = $delivery->attempts >= self::MAX_ATTEMPTS;
+        $exhausted = $delivery->attempts >= $this->policy->int('webhook_max_attempts');
 
         $delivery->forceFill([
             'status' => $exhausted ? SellerWebhookDelivery::STATUS_FAILED : SellerWebhookDelivery::STATUS_PENDING,
@@ -200,7 +208,7 @@ class SellerWebhookDispatcher
             // Backing off in powers of two: a server that is briefly overloaded should not be
             // hammered by the retry, and one that is down for an hour should still be reached when
             // it comes back.
-            'next_attempt_at' => $exhausted ? null : now()->addMinutes(2 ** $delivery->attempts),
+            'next_attempt_at' => $exhausted ? null : now()->addMinutes($this->policy->int('webhook_backoff_minutes') * (2 ** ($delivery->attempts - 1))),
         ])->save();
 
         $failures = $webhook->consecutive_failures + 1;

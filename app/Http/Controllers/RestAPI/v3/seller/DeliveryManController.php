@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
+use App\Services\Platform\PasswordPolicy;
 use App\Http\Requests\API\v3\DeliveryManAddRequest;
 use App\Models\DeliveryMan;
 use App\Models\Order;
@@ -100,7 +101,7 @@ class DeliveryManController extends Controller
 
         if ($request->password) {
             $validator = Validator::make($request->all(), [
-                'password' => 'required|min:8|same:confirm_password'
+                'password' => 'same:confirm_password|' . app(PasswordPolicy::class)->ruleString(),
             ]);
         }
         $delivery_man = DeliveryMan::where(['id' => $id, 'seller_id' => $seller->id])->first();

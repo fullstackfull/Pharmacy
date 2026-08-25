@@ -3,6 +3,7 @@
 namespace App\Services\Commerce;
 
 use App\Models\ExperienceCampaign;
+use App\Services\Platform\Policy;
 use App\Services\Theme\SectionRegistry;
 
 /**
@@ -16,8 +17,6 @@ use App\Services\Theme\SectionRegistry;
  */
 class CampaignRules
 {
-    public const MAX_OVERRIDES = 8;
-
     /** Where an override may land on the page — positions, because a page is an ordered list. */
     public const SLOTS = ['hero', 'top', 'middle', 'bottom'];
 
@@ -29,8 +28,10 @@ class CampaignRules
         'hero_banner', 'promotional_banner', 'banner_strip', 'product_slider', 'flash_deal', 'spacer',
     ];
 
-    public function __construct(private readonly SectionRegistry $registry)
-    {
+    public function __construct(
+        private readonly SectionRegistry $registry,
+        private readonly Policy $policy,
+    ) {
     }
 
     /**
@@ -47,7 +48,14 @@ class CampaignRules
         $errors = [];
         $slotsSeen = [];
 
-        foreach (array_slice(array_values($rows), 0, self::MAX_OVERRIDES) as $index => $row) {
+        // Refused, not truncated. Slicing the tail off meant an admin who went one over the limit
+        // saw the rest saved and was never told what had been dropped.
+        $limit = $this->policy->int('commerce_max_campaign_overrides');
+        if (count($rows) > $limit) {
+            return ['overrides' => [], 'errors' => ['overrides:at_most_' . $limit]];
+        }
+
+        foreach (array_values($rows) as $index => $row) {
             $label = 'override_' . ($index + 1);
 
             $slot = is_array($row) && is_string($row['slot'] ?? null) ? $row['slot'] : '';

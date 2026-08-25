@@ -393,7 +393,7 @@ Route::group(['namespace' => 'Customer', 'prefix' => 'customer', 'as' => 'custom
 
         Route::controller(CustomerAuthController::class)->group(function () {
             Route::get('login', 'loginView')->name('login');
-            Route::post('login', 'loginSubmit')->middleware('throttle:20,1');
+            Route::post('login', 'loginSubmit')->middleware('throttle:auth');
             Route::get('login/verify-account', 'loginVerifyPhone')->name('login.verify-account');
             Route::post('login/verify-account/submit', 'verifyAccount')->name('login.verify-account.submit');
             Route::get('login/update-info', 'updateInfo')->name('login.update-info');

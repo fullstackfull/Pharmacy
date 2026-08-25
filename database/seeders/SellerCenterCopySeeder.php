@@ -1030,6 +1030,22 @@ class SellerCenterCopySeeder extends Seeder
         ],
 
         // ── admin · the platform policy registry ──────────────────────────
+        'a_floor_on_top_of_the_category_return_window_zero_leaves_the_return_window_alone' => [
+            'A floor on top of the category return window — zero leaves the return window alone',
+            'حدّ أدنى فوق نافذة إرجاع الفئة — القيمة صفر تترك نافذة الإرجاع كما هي',
+        ],
+        'days_of_cover_below_which_a_restock_is_raised_in_the_briefing' => [
+            'Days of cover below which a restock is raised in the briefing',
+            'أيام التغطية التي يُرفع دونها تنبيه إعادة التخزين في الملخّص',
+        ],
+        'days_of_cover_below_which_a_restock_is_offered_as_an_opportunity' => [
+            'Days of cover below which a restock is offered as an opportunity',
+            'أيام التغطية التي يُعرض دونها إعادة التخزين كفرصة',
+        ],
+        'every_cover_figure_on_every_screen_is_measured_over_this_window' => [
+            'Every cover figure on every screen is measured over this window',
+            'كل أرقام التغطية في كل الشاشات تُقاس على هذه النافذة',
+        ],
         'access_policy' => [
             'Access policy',
             'سياسة الوصول',

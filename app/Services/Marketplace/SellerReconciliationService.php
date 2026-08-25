@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\VendorLedgerEntry;
+use App\Services\Platform\Policy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -302,7 +303,7 @@ class SellerReconciliationService
      */
     private function window(?string $from, ?string $to): array
     {
-        $start = $this->parse($from) ?? now()->subDays(30);
+        $start = $this->parse($from) ?? now()->subDays(app(Policy::class)->int('reconciliation_lookback_days'));
         $end = $this->parse($to) ?? now();
 
         return $start->lessThanOrEqualTo($end)

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Requests\Request;
+use App\Services\Platform\Policy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\RateLimiter;
@@ -179,10 +180,22 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * Configure the rate limiters for the application.
      */
+    /**
+     * The two limiters the whole platform throttles by.
+     *
+     * Both used to be literals — `throttle:20,1` repeated across six route files and a global
+     * `perMinute(3000)` that v1's own routes described as "effectively none". Tightening the login
+     * limiter while under attack is a posture change an operator makes in minutes, so it is a
+     * setting, read at request time rather than baked into the route table at boot.
+     */
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('global', function (Request $request) {
-            return Limit::perMinute(3000);
+            return Limit::perMinute(app(Policy::class)->int('api_requests_per_minute'));
+        });
+
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(app(Policy::class)->int('auth_attempts_per_minute'))->by($request->ip());
         });
     }
 }

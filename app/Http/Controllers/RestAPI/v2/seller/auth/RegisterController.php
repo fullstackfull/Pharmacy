@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\RestAPI\v2\seller\auth;
 use App\Http\Controllers\Controller;
+use App\Services\Platform\PasswordPolicy;
 use App\Models\Seller;
 use App\Models\Shop;
 use App\Utils\Helpers;
@@ -23,7 +24,7 @@ class RegisterController extends Controller
             'l_name'        => 'required',
             'shop_name'     => 'required',
             'phone'         => 'required',
-            'password'      => 'required|min:8',
+            'password' => app(PasswordPolicy::class)->ruleString(),
             'image'         => 'required|mimes: jpg,jpeg,png,,gif',
             'logo'          => 'required|mimes: jpg,jpeg,png,,gif',
             'banner'        => 'required|mimes: jpg,jpeg,png,,gif',

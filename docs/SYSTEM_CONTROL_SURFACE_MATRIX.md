@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 436 |
+| Fully connected to a surface | 450 |
 | Internal by design | 52 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **100** |
+| **Orphaned — no owner, no surface** | **86** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -80,7 +80,7 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Commerce campaigns, segments and experiments are absent from the admin sidebar | Configure | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | ORPHAN |
-| How many variants a storefront experiment may run, and how many rules a segment or campaign may carry | Configure | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | ORPHAN |
+| How many variants a storefront experiment may run, and how many rules a segment or campaign may carry | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | **None** | View | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
 | Scheduled operations — timed price changes, timed activations, campaign starts | **None** | **None** | **None** | **None** | **None** | **None** | No | Seller | ORPHAN |
 | Whether a seller's automation rules and bulk jobs are actually succeeding | Oversight | View | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
@@ -126,8 +126,8 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | 44 AI auto-fill routes serving the Auction module, which is not installed | **None** | **None** | **None** | **None** | **None** | Partial | No | Developer | DEPRECATED |
 | Approve or deny a seller's listing from the classic product screen | Approve | View | View | **None** | **None** | **None** | No | Admin | ORPHAN |
-| The listing quality bar (a score under 70 is raised for improvement) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
-| Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep | Configure | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | ORPHAN |
+| The listing quality bar (a score under 70 is raised for improvement) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
+| Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts | **None** | **None** | N/A | Events | Failures | N/A | No | Admin | ORPHAN |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | Oversight | **None** | Manage | **None** | Failures | Full | Yes | Seller | CONNECTED TO SELLER |
 | Product moderation queue with per-product history | Approve | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
@@ -161,11 +161,11 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | Manage | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
-| How much notice a seller gets before a verification document expires (45 days) | **None** | View | View | **None** | **None** | **None** | No | Admin | ORPHAN |
+| How much notice a seller gets before a verification document expires (45 days) | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | The seller's own account health and SLA standing | Oversight | **None** | **None** | **None** | Failures | **None** | Yes | Seller | ORPHAN |
 | Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | Oversight | **None** | **None** | **None** | **None** | **None** | Partial | Seller | ORPHAN |
-| Seller health tiers — the good / watch / at-risk bands on the admin scorecard | View | View | View | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Seller health tiers — the good / watch / at-risk bands on the admin scorecard | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | SLA policy — maximum cancellation, return and refund rates, minimum rating, processing deadline | Configure | View | View | Metrics | Failures | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Seller KYC — which documents are required, whether payouts are gated on them, and reviewing what a seller submits | Approve | Submit | Submit | Events | **None** | Full | Partial | Admin | CONNECTED TO ADMIN |
 | Arm the KYC-required-for-payout gate and the required document list | Configure | **None** | **None** | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -192,7 +192,7 @@ the whole point of the document, so it is never blurred.
 | Changing the shop's bank / payout account from the Flutter app or the v3 API | **None** | Manage | Manage | **None** | **None** | Partial | No | Seller | ORPHAN |
 | Mark a payout failed, or retry one a bank bounced | **None** | View | View | **None** | **None** | Partial | Partial | Admin | ORPHAN |
 | Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | **None** | View | View | Metrics | Health | N/A | No | Admin | ORPHAN |
-| How far back a seller's finance reconciliation looks, and how many example rows it shows | Oversight | **None** | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| How far back a seller's finance reconciliation looks, and how many example rows it shows | Manage | **None** | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | Manage | View | View | **None** | Failures | Documented | No | Admin | CONNECTED TO ADMIN |
 | Diagnose a payment gateway that is switched on but cannot take a payment | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
@@ -258,7 +258,7 @@ the whole point of the document, so it is never blurred.
 | Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | Oversight | **None** | Manage | **None** | **None** | **None** | Partial | Developer | ORPHAN |
 | Portal sections that render a placeholder — models and enums, integrations, and portal settings | **None** | **None** | N/A | **None** | Health | **None** | No | Developer | ORPHAN |
 | Creating, editing, repointing or deleting a seller's outbound webhook | Oversight | **None** | Manage | **None** | Failures | Full | Partial | Seller | ORPHAN |
-| Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | Oversight | View | View | **None** | Failures | Documented | Yes | Admin | ORPHAN |
+| Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | Manage | View | View | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Which AI model writes seller content, and how creative it is allowed to be | Configure | Submit | Submit | **None** | **None** | **None** | No | Admin | ORPHAN |
 | AI provider credentials — the API key and organisation id the AI module runs on | Configure | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | ShareThis social sharing on the product detail page | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | DEPRECATED |
@@ -302,8 +302,8 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Whether a shop runs multi-warehouse stock and batch/expiry tracking | **None** | View | View | **None** | **None** | **None** | No | Admin | DEPRECATED |
 | Low-stock threshold used by the seller API and the Flutter app | Configure | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
-| What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
-| When unsold stock is called dead capital (90 days, at least 3 units) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
+| When unsold stock is called dead capital (90 days, at least 3 units) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line | Configure | Manage | Manage | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Limited stock list and restock requests | Oversight | View | View | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
 | Inventory adjustments with reason codes and a movement log | Configure | **None** | Manage | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
@@ -488,7 +488,7 @@ the whole point of the document, so it is never blurred.
 | Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
 | Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard) | **None** | View | N/A | Metrics | **None** | **None** | No | System | INTERNAL BY DESIGN |
 | Request-shaping guards — ingest rate limits, list page sizes, per-screen bulk-action caps, the report date-range ceiling and the automation rule-scope limit | View | View | View | Metrics | Alerts | Documented | No | System | INTERNAL BY DESIGN |
-| Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | Oversight | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Storefront theme preview link lifetime (60 minutes, never more than 24 hours) | Configure | **None** | N/A | **None** | **None** | **None** | Yes | System | INTERNAL BY DESIGN |
 | Paid advertising and sponsored placement — ad slots, budgets, billing | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Feature flags and gradual rollout | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
@@ -609,7 +609,7 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Mass product updates written through the query builder bypass the price observer | Configure | **None** | **None** | **None** | **None** | **None** | No | Developer | ORPHAN |
-| What counts as a suspicious price swing (more than half the previous price within 48 hours) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| What counts as a suspicious price swing (more than half the previous price within 48 hours) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Coupons, and the promotional discount surfaces beside them (flash deals, deal of the day, featured deals, clearance offers) | Configure | Manage | Manage | Metrics | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Flash deals, deal of the day and featured deals | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Clearance sale with vendor offers and priority setup | Approve | Manage | Manage | Metrics | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
@@ -648,8 +648,8 @@ the whole point of the document, so it is never blurred.
 | Business settings — the several hundred DB-driven switches the whole platform boots from | Configure | **None** | View | **None** | Health | **None** | No | Admin | ORPHAN |
 | reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | **None** | **None** | **None** | **None** | Health | **None** | No | Admin | ORPHAN |
 | Which channel a customer password reset is sent through — email or SMS OTP | **None** | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
-| Minimum password length — 6 characters on some surfaces and 8 on others | **None** | **None** | **None** | **None** | **None** | Documented | No | Admin | ORPHAN |
-| Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | **None** | **None** | **None** | **None** | Alerts | Documented | No | Admin | ORPHAN |
+| Minimum password length — 6 characters on some surfaces and 8 on others | Manage | **None** | **None** | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
+| Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | Manage | **None** | **None** | **None** | Alerts | Documented | No | Admin | CONNECTED TO ADMIN |
 | Seller staff reaching the shop's own analytics page | **None** | **None** | View | Metrics | **None** | Documented | No | Seller Staff | ORPHAN |
 | The authentication requirement the portal reports for the v2 seller API | View | **None** | N/A | **None** | **None** | Full | No | Developer | ORPHAN |
 | The permission scope an endpoint requires, and which endpoints a seller-issued API key may call | View | **None** | Manage | **None** | **None** | Partial | No | Developer | ORPHAN |
@@ -694,7 +694,7 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Registering a second courier — credentials, rates, labels and tracking per carrier | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
 | Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness | Oversight | Manage | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
-| How long a shipment may go without courier movement before it is raised as an exception (72 hours) | **None** | View | View | **None** | **None** | Documented | No | Admin | ORPHAN |
+| How long a shipment may go without courier movement before it is raised as an exception (72 hours) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Shipping zones — destination-based rate rules that override the flat shipping cost | Configure | **None** | **None** | **None** | **None** | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Carrier configuration for Delivery Syria — base URL, hub, pickup point, secret and webhook tokens | Configure | **None** | **None** | **None** | Failures | **None** | No | Admin | CONNECTED TO ADMIN |
 | Shipping methods and shipping responsibility (admin vs seller) | Configure | Manage | **None** | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |

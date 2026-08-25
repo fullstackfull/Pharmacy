@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Services\Marketplace\InventoryService;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Models\SellerInsight;
+use App\Services\Marketplace\StockPolicy;
 use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightProducer;
 use App\Services\SellerIntelligence\Severity\ImpactSignals;
@@ -24,11 +25,6 @@ class InventoryRiskProducer implements InsightProducer
 {
     public const TYPE = 'INVENTORY_RISK';
 
-    /** Below this many days of remaining supply, a moving product is worth flagging. */
-    private const DAYS_OF_SUPPLY_THRESHOLD = 7;
-
-    private const LOOKBACK_DAYS = 30;
-
     public function type(): string
     {
         return self::TYPE;
@@ -40,8 +36,15 @@ class InventoryRiskProducer implements InsightProducer
             return [];
         }
 
+        // The window and the threshold are the marketplace's, and they are the same ones the
+        // inventory screen this finding links to measures with — a briefing that disagreed with the
+        // screen it sent the seller to taught them to distrust both.
+        $stockPolicy = app(StockPolicy::class);
+        $lookbackDays = $stockPolicy->velocityDays();
+        $raiseUnderDays = $stockPolicy->coverBands()['raise'];
+
         $stockLimit = app(InventoryService::class)->stockLimitFor($sellerId);
-        $sales = $this->recentSales($sellerId);
+        $sales = $this->recentSales($sellerId, $lookbackDays);
 
         $products = Product::query()
             ->where(['added_by' => 'seller', 'user_id' => $sellerId, 'product_type' => 'physical'])
@@ -52,19 +55,19 @@ class InventoryRiskProducer implements InsightProducer
             $sold = (float) ($sales[$product->id] ?? 0);
             $stock = (int) $product->current_stock;
 
-            // A product that has not sold in a month is not urgent, however little is left of it.
+            // A product that has not sold inside the window is not urgent, however little is left.
             if ($sold <= 0 && $stock > 0) {
                 continue;
             }
 
-            $perDay = $sold / self::LOOKBACK_DAYS;
+            $perDay = $sold / $lookbackDays;
             $daysLeft = $perDay > 0 ? $stock / $perDay : null;
 
-            if ($daysLeft !== null && $daysLeft > self::DAYS_OF_SUPPLY_THRESHOLD) {
+            if ($daysLeft !== null && $daysLeft > $raiseUnderDays) {
                 continue;
             }
 
-            // A month at the current rate, which is what a stockout actually costs.
+            // One window's sales at the current rate, which is what a stockout actually costs.
             $revenueAtRisk = round($sold * (float) $product->unit_price, 2);
 
             yield new InsightDraft(
@@ -79,7 +82,7 @@ class InventoryRiskProducer implements InsightProducer
                     ? Copy::line('insight_body_out_of_stock', [
                         'product' => $product->getRawOriginal('name'),
                         'sold' => $sold,
-                        'days' => self::LOOKBACK_DAYS,
+                        'days' => $lookbackDays,
                     ])
                     : Copy::line('insight_body_running_out', [
                         'product' => $product->getRawOriginal('name'),
@@ -111,13 +114,13 @@ class InventoryRiskProducer implements InsightProducer
     }
 
     /** Units of each product actually delivered in the lookback window. */
-    private function recentSales(int|string $sellerId): array
+    private function recentSales(int|string $sellerId, int $lookbackDays): array
     {
         return DB::table('order_details')
             ->join('products', 'products.id', '=', 'order_details.product_id')
             ->where(['products.added_by' => 'seller', 'products.user_id' => $sellerId])
             ->where('order_details.delivery_status', 'delivered')
-            ->where('order_details.created_at', '>=', now()->subDays(self::LOOKBACK_DAYS))
+            ->where('order_details.created_at', '>=', now()->subDays($lookbackDays))
             ->groupBy('order_details.product_id')
             // Aliased, then plucked by that alias: pluck reads a property off the result row, so a
             // raw expression as the column name finds nothing.

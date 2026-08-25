@@ -3,6 +3,7 @@
 namespace App\Services\SellerCenter\Automation;
 
 use App\Models\Product;
+use App\Services\Marketplace\StockPolicy;
 use App\Services\Analytics\AnalyticsEvent;
 use App\Services\SellerCenter\Copy;
 use App\Services\SellerCenter\Shell;
@@ -29,11 +30,15 @@ use Illuminate\Support\Facades\Schema;
  */
 class Opportunities
 {
-    /** The window every opportunity is measured over. */
-    public const WINDOW_DAYS = 14;
+    public function __construct(private readonly StockPolicy $stock)
+    {
+    }
 
-    /** Cover below which a fast seller is at risk of running out. */
-    private const COVER_DAYS_AT_RISK = 14;
+    /** The window every opportunity is measured over — the same one the inventory screen uses. */
+    public function windowDays(): int
+    {
+        return $this->stock->velocityDays();
+    }
 
     /** How many products a card may name before it stops listing them. */
     private const SAMPLE = 20;
@@ -43,7 +48,7 @@ class Opportunities
      */
     public function for(int $sellerId): array
     {
-        $from = Carbon::now()->subDays(self::WINDOW_DAYS);
+        $from = Carbon::now()->subDays($this->windowDays());
 
         return array_values(array_filter([
             $this->stockRiskOnFastSellers($sellerId, $from),
@@ -88,9 +93,9 @@ class Opportunities
             ->get(['id', 'name', 'current_stock']);
 
         $atRisk = $products->filter(function (Product $product) use ($sold) {
-            $perDay = (float) $sold[$product->id] / self::WINDOW_DAYS;
+            $perDay = (float) $sold[$product->id] / $this->windowDays();
 
-            return $perDay > 0 && ((float) $product->current_stock / $perDay) < self::COVER_DAYS_AT_RISK;
+            return $perDay > 0 && ((float) $product->current_stock / $perDay) < $this->stock->coverBands()['opportunity'];
         });
 
         if ($atRisk->isEmpty()) {
@@ -102,8 +107,8 @@ class Opportunities
             'title' => translate('opportunity_fast_sellers_at_stock_risk'),
             'count' => $atRisk->count(),
             'evidence' => Copy::line('opportunity_stock_risk_evidence', [
-                'days' => self::WINDOW_DAYS,
-                'cover' => self::COVER_DAYS_AT_RISK,
+                'days' => $this->windowDays(),
+                'cover' => $this->stock->coverBands()['opportunity'],
             ]),
             'action' => [
                 'label' => translate('review_stock'),
@@ -167,7 +172,7 @@ class Opportunities
             'key' => 'high_traffic_low_conversion',
             'title' => translate('opportunity_high_traffic_low_conversion'),
             'count' => count($productIds),
-            'evidence' => Copy::line('opportunity_conversion_evidence', ['days' => self::WINDOW_DAYS]),
+            'evidence' => Copy::line('opportunity_conversion_evidence', ['days' => $this->windowDays()]),
             'action' => [
                 'label' => translate('review_products'),
                 'href' => Shell::route('seller.products.index', [

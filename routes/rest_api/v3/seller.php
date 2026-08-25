@@ -48,7 +48,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'middleware' => ['api_lang']], function () {
     // Rate limited: seller login / OTP / password reset are brute-force targets.
-    Route::group(['prefix' => 'auth', 'namespace' => 'auth', 'middleware' => ['throttle:20,1']], function () {
+    Route::group(['prefix' => 'auth', 'namespace' => 'auth', 'middleware' => ['throttle:auth']], function () {
 
         Route::controller(VendorLoginController::class)->group(function () {
             Route::post('login', 'login');

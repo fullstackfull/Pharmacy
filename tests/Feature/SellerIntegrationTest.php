@@ -425,7 +425,7 @@ class SellerIntegrationTest extends TestCase
     {
         Http::fake(['*' => Http::response('no', 500)]);
         $webhook = $this->webhook();
-        $delivery = $this->delivery($webhook, ['attempts' => SellerWebhookDispatcher::MAX_ATTEMPTS - 1]);
+        $delivery = $this->delivery($webhook, ['attempts' => app(SellerWebhookDispatcher::class)->maxAttempts() - 1]);
 
         app(SellerWebhookDispatcher::class)->attempt($delivery);
 

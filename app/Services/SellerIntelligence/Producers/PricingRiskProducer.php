@@ -4,6 +4,7 @@ namespace App\Services\SellerIntelligence\Producers;
 
 use App\Models\ProductPriceChange;
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use App\Services\SellerCenter\Copy;
 use App\Services\SellerIntelligence\InsightDraft;
 use App\Services\SellerIntelligence\InsightProducer;
@@ -30,12 +31,6 @@ class PricingRiskProducer implements InsightProducer
 {
     public const TYPE = 'PRICING_RISK';
 
-    /** A single change larger than this share of the old price is worth confirming. */
-    private const EXTREME_CHANGE_RATIO = 0.5;
-
-    /** Only recent changes: a price set three months ago has been confirmed by three months of trading. */
-    private const RECENT_HOURS = 48;
-
     private const LIMIT = 100;
 
     public function type(): string
@@ -56,10 +51,16 @@ class PricingRiskProducer implements InsightProducer
             return;
         }
 
+        // What counts as extreme is the marketplace's call, not one ratio for every category: a
+        // half-price move is a clearance on one shelf and a mispricing on the next.
+        $policy = app(Policy::class);
+        $extremeRatio = $policy->float('catalog_price_swing_ratio');
+        $recentHours = $policy->int('catalog_price_swing_hours');
+
         $changes = ProductPriceChange::where('seller_id', $sellerId)
             ->whereNotNull('previous_price')
             ->where('previous_price', '>', 0)
-            ->where('created_at', '>=', now()->subHours(self::RECENT_HOURS))
+            ->where('created_at', '>=', now()->subHours($recentHours))
             ->orderByDesc('id')
             ->limit(self::LIMIT)
             ->get();
@@ -67,7 +68,7 @@ class PricingRiskProducer implements InsightProducer
         foreach ($changes as $change) {
             $ratio = abs($change->new_price - $change->previous_price) / $change->previous_price;
 
-            if ($ratio < self::EXTREME_CHANGE_RATIO) {
+            if ($ratio < $extremeRatio) {
                 continue;
             }
 
@@ -100,7 +101,7 @@ class PricingRiskProducer implements InsightProducer
                 category: SellerInsight::CATEGORY_PRICING,
                 // Stops being raised once the change is no longer recent: a price left standing has
                 // been confirmed by the seller not changing it back.
-                expiresAt: $change->created_at->copy()->addHours(self::RECENT_HOURS),
+                expiresAt: $change->created_at->copy()->addHours($recentHours),
                 signals: new ImpactSignals(affectedCount: 1),
                 metadata: [
                     'previous_price' => $change->previous_price,

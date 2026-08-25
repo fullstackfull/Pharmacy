@@ -197,8 +197,8 @@
  {
   "capability": "How far back a seller's finance reconciliation looks, and how many example rows it shows",
   "area": "finance",
-  "backend": "app/Services/Marketplace/SellerReconciliationService.php:305 (now()->subDays(30) default when no range given) and :36 (const SAMPLE_SIZE = 20)",
-  "admin": "Oversight",
+  "backend": "app/Services/Platform/PolicyRegistry.php (reconciliation_lookback_days) read at app/Services/Marketplace/SellerReconciliationService.php:305",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "View",
   "analytics": "None",
@@ -206,8 +206,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. The 30-day default silently bounds how far back a seller can chase a missing payment, which is wrong for any marketplace settling monthly."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. The 30-day default silently bounds how far back a seller can chase a missing payment, which is wrong for any marketplace settling monthly. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders)",
@@ -392,8 +392,8 @@
  {
   "capability": "What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover)",
   "area": "inventory",
-  "backend": "app/Services/SellerIntelligence/Producers/InventoryRiskProducer.php:28 (DAYS_OF_SUPPLY_THRESHOLD = 7), :30 (LOOKBACK_DAYS = 30); app/Services/SellerCenter/Lists/InventoryList.php:26 (VELOCITY_DAYS = 14), :29 (COVERAGE_CRITICAL_DAYS = 1.0), :30 (COVERAGE_LOW_DAYS = 3.0), applied at :182-196 stateFor(); route routes/seller/routes.php:75 seller.inventory.index; app/Services/SellerCenter/Automation/Opportunities.php:33 (WINDOW_DAYS = 14), :36 (COVER_DAYS_AT_RISK = 14), :39 (SAMPLE = 20); route routes/seller/routes.php:106 seller.opportunities.index",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php inventory group (stock_cover_critical_days, stock_cover_low_days, stock_cover_raise_days, stock_cover_opportunity_days, stock_velocity_days) read through app/Services/Marketplace/StockPolicy.php by InventoryRiskProducer.php:42, app/Services/SellerCenter/Lists/InventoryList.php and app/Services/SellerCenter/Automation/Opportunities.php",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -401,14 +401,14 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings beside the stock_limit reorder level that already exists. The API's fifth definition has since been folded into that setting, but the insight producer, the Seller Center inventory list and the opportunity cards still each carry their own numbers, so the same shop reports different low-stock counts in the daily briefing, the inventory screen and the opportunity cards."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings beside the stock_limit reorder level that already exists. The API's fifth definition has since been folded into that setting, but the insight producer, the Seller Center inventory list and the opportunity cards still each carry their own numbers, so the same shop reports different low-stock counts in the daily briefing, the inventory screen and the opportunity cards. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited. One ordered ladder now — four different actions, never four disagreeing opinions — and ONE velocity window: the briefing's 30-day rate was narrowed to the 14 days the inventory screen it links to already used, so a finding and the screen behind it can no longer quote different cover."
  },
  {
   "capability": "When unsold stock is called dead capital (90 days, at least 3 units)",
   "area": "inventory",
-  "backend": "app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:35 (STALE_DAYS = 90), :38 (MINIMUM_UNITS = 3), :40 (LIMIT = 200)",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php (stock_stale_days, stock_stale_minimum_units) read at app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:50-51",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -416,8 +416,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Policy settings that already exist for automation. The seller-facing automation rule for the same idea lets the seller pick 7-365 days, so the platform's own judgement is stricter and unmovable while the seller's is configurable."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the Policy settings that already exist for automation. The seller-facing automation rule for the same idea lets the seller pick 7-365 days, so the platform's own judgement is stricter and unmovable while the seller's is configurable. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon",
@@ -437,8 +437,8 @@
  {
   "capability": "How much notice a seller gets before a verification document expires (45 days)",
   "area": "compliance",
-  "backend": "app/Services/SellerCenter/Counts.php:187 (whereBetween('expires_at', [now(), now()->addDays(45)])) feeding the seller.compliance badge in app/Services/SellerCenter/Navigation.php",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php (compliance_expiry_notice_days) read at app/Services/SellerCenter/Counts.php:181",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -446,8 +446,8 @@
   "dev_portal": "None",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the seller-verification settings page that already configures which documents are required and whether KYC gates payouts. Today it is an inline literal inside a badge-count query."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the seller-verification settings page that already configures which documents are required and whether KYC gates payouts. Today it is an inline literal inside a badge-count query. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through",
@@ -497,8 +497,8 @@
  {
   "capability": "The listing quality bar (a score under 70 is raised for improvement)",
   "area": "catalog",
-  "backend": "app/Services/SellerIntelligence/Producers/ListingQualityProducer.php:33 (QUALITY_BAR = 70), :35 (REQUEST_STATUS_DENIED = 2)",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php (catalog_quality_bar) read at app/Services/SellerIntelligence/Producers/ListingQualityProducer.php:61",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -506,14 +506,14 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. A catalogue quality bar is exactly what a marketplace raises as its listings mature, and here only a deploy can move it."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. A catalogue quality bar is exactly what a marketplace raises as its listings mature, and here only a deploy can move it. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep",
   "area": "catalog",
-  "backend": "app/Services/Commerce/MerchandisingRules.php:19-22 and :31 (MAX_CHAIN); app/Services/Commerce/CollectionRuleRegistry.php:17 (MAX_RULES = 12); app/Services/Commerce/CollectionResolver.php:32 (POOL_FACTOR = 3)",
-  "admin": "Configure",
+  "backend": "app/Services/Platform/PolicyRegistry.php commerce group (commerce_max_pins, commerce_max_exclusions, commerce_max_boosts, commerce_max_boost_weight, commerce_max_chain, commerce_max_collection_rules) read at app/Services/Commerce/MerchandisingRules.php and CollectionRuleRegistry.php",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Metrics",
@@ -521,14 +521,14 @@
   "dev_portal": "None",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings for Commerce. A merchandiser curating a large seasonal collection hits 12 pins or 20 boosts and the save is refused with no route other than a deploy."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings for Commerce. A merchandiser curating a large seasonal collection hits 12 pins or 20 boosts and the save is refused with no route other than a deploy. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "How many variants a storefront experiment may run, and how many rules a segment or campaign may carry",
   "area": "automation",
-  "backend": "app/Services/Commerce/ExperimentRules.php:18 (MAX_VARIANTS = 4) applied at :39; app/Services/Commerce/SegmentRules.php:15 (MAX_RULES = 8); app/Services/Commerce/CampaignRules.php:19 (MAX_OVERRIDES = 8); reach cache app/Services/Commerce/ExperimentReach.php:23-24 (CACHE_TTL 300, RANGE_DAYS 30)",
-  "admin": "Configure",
+  "backend": "app/Services/Platform/PolicyRegistry.php (commerce_max_variants, commerce_max_segment_rules, commerce_max_campaign_overrides) read at app/Services/Commerce/ExperimentRules.php, SegmentRules.php and CampaignRules.php",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Metrics",
@@ -536,8 +536,8 @@
   "dev_portal": "None",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings for Commerce. How many variants a marketplace may test at once is a traffic-constrained product decision, and variants beyond the fourth are silently sliced off rather than refused."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings for Commerce. How many variants a marketplace may test at once is a traffic-constrained product decision, and variants beyond the fourth are silently sliced off rather than refused. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited. Also fixed the silent truncation: going one over a limit is refused and named (`variants:at_most_4`) instead of the tail being sliced off without a word."
  },
  {
   "capability": "Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard)",
@@ -587,8 +587,8 @@
  {
   "capability": "What counts as a suspicious price swing (more than half the previous price within 48 hours)",
   "area": "pricing",
-  "backend": "app/Services/SellerIntelligence/Producers/PricingRiskProducer.php:34 (EXTREME_CHANGE_RATIO = 0.5), :37 (RECENT_HOURS = 48), :39 (LIMIT = 100); recorded by app/Services/Marketplace/PriceChangeRecorder.php",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php (catalog_price_swing_ratio, catalog_price_swing_hours) read at app/Services/SellerIntelligence/Producers/PricingRiskProducer.php:57-58",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -596,8 +596,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in the Policy settings. One ratio is applied to the whole catalogue, and what is extreme for a pharmacy line is normal for clearance."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in the Policy settings. One ratio is applied to the whole catalogue, and what is extreme for a pharmacy line is normal for clearance. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands)",
@@ -722,8 +722,8 @@
  {
   "capability": "How long a shipment may go without courier movement before it is raised as an exception (72 hours)",
   "area": "shipping",
-  "backend": "app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:31 (SILENT_HOURS = 72), :34 (STOP_AFTER_DAYS = 30), :36 (LIMIT = 200)",
-  "admin": "None",
+  "backend": "app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -731,8 +731,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings, per carrier. Courier silence tolerance differs by carrier and country and there is no per-carrier or global setting anywhere."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings, per carrier. Courier silence tolerance differs by carrier and country and there is no per-carrier or global setting anywhere. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Inbound courier status webhook — POST /api/delivery-syria/orders/update-status",
@@ -812,8 +812,8 @@
  {
   "capability": "Seller health tiers — the good / watch / at-risk bands on the admin scorecard",
   "area": "compliance",
-  "backend": "app/Services/Marketplace/SellerScorecardService.php:104 (at_risk: cancel>0.15, return>0.10, refund>0.15, strikes>=3, rating<3.0) and :110 (watch: cancel>0.05, return>0.05, refund>0.05, strikes>=1, rating<4.0); surfaced at routes/admin/routes.php:657",
-  "admin": "View",
+  "backend": "app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -821,8 +821,8 @@
   "dev_portal": "None",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs with the SLA thresholds that are already admin-configurable. The bands label every seller on the scorecard, are invisible to the operator, and silently disagree with the SLA page sitting beside them — an admin can set a 0.10 return ceiling while the watch band fires at 0.05 regardless."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs with the SLA thresholds that are already admin-configurable. The bands label every seller on the scorecard, are invisible to the operator, and silently disagree with the SLA page sitting beside them — an admin can set a 0.10 return ceiling while the watch band fires at 0.05 regardless. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Reporting how much traffic went unmeasured because of Do Not Track or missing consent",
@@ -1037,8 +1037,8 @@
  {
   "capability": "Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep",
   "area": "platform",
-  "backend": "app/Services/SellerIntelligence/ControlTowerService.php:27 (TODAY_HOURS = 24), :30 (SECTION_LIMIT = 20), :145 (limit(500)), :157 (resolved within subDays(7)); route routes/seller/routes.php:58 seller.control-tower and app/Http/Controllers/RestAPI/v3/seller/SellerControlTowerController.php; app/Services/SellerAutomation/AutomationEngine.php:39 (SWEEP_LIMIT = 200); sweep scheduled every fifteen minutes at bootstrap/app.php:176 (seller:run-automation); app/Services/Marketplace/SellerAuditTrailService.php:30 (const MAX_ROWS = 200); surfaced via app/Http/Controllers/RestAPI/v3/seller/SellerSecurityController.php and the Seller Center security screens; app/Services/Marketplace/SellerOperationsOverview.php:33 (PREVIEW_ROWS = 10), :162 (issuesBySeller(int $limit = 20)) called with limit 200 at :197, and per-page 25 defaults at :126, :143, :248, :289, :303, :342, :355; app/Services/SellerIntellig",
-  "admin": "Oversight",
+  "backend": "app/Services/Platform/PolicyRegistry.php platform group (limit_automation_sweep, limit_audit_rows, limit_control_tower_rows, limit_admin_seller_rollup) read at AutomationEngine.php, SellerAuditTrailService.php, ControlTowerService.php and SellerOperationsOverview.php",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -1046,8 +1046,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer to report, and to Admin to raise. Unlike the request guards above these change the answer without saying so: past 200 active rules some sellers' automation simply never runs, past 200 sellers the admin's cross-seller issue rollup is partial, and past 200 rows a seller cannot page further back through their own audit trail — and no screen anywhere prints 'showing 200 of N'."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs to Developer to report, and to Admin to raise. Unlike the request guards above these change the answer without saying so: past 200 active rules some sellers' automation simply never runs, past 200 sellers the admin's cross-seller issue rollup is partial, and past 200 rows a seller cannot page further back through their own audit trail — and no screen anywhere prints 'showing 200 of N'. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires",
@@ -1502,8 +1502,8 @@
  {
   "capability": "Minimum password length — 6 characters on some surfaces and 8 on others",
   "area": "security",
-  "backend": "min:6 at app/Http/Controllers/RestAPI/v3/seller/auth/LoginController.php:60, app/Http/Controllers/RestAPI/v2/seller/auth/LoginController.php:21, app/Http/Controllers/Vendor/Marketplace/SellerStaffController.php:81 and :104, app/Http/Controllers/RestAPI/v1/auth/CustomerAPIAuthController.php:51; min:8 at app/Http/Controllers/RestAPI/v2/seller/auth/RegisterController.php:26, app/Http/Controllers/RestAPI/v1/auth/ForgotPasswordController.php:178, app/Http/Controllers/RestAPI/v2/seller/auth/ForgotPasswordController.php:116; no central rule (app/Rules holds only DisallowedExtension.php)",
-  "admin": "None",
+  "backend": "app/Services/Platform/PasswordPolicy.php over the password_minimum_length policy, used by every validator where a password is CHOSEN (registration, reset, staff and deliveryman creation, on web and API); sign-in validators are deliberately excluded so raising the minimum cannot lock out an existing account",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "None",
   "analytics": "None",
@@ -1511,14 +1511,14 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings as one rule. Password policy is the most commonly retuned security control and here it is scattered across a dozen validators that do not agree with each other (app/Rules contains only DisallowedExtension.php), so a seller can register under an 8-character rule and then reset their password to 6."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings as one rule. Password policy is the most commonly retuned security control and here it is scattered across a dozen validators that do not agree with each other (app/Rules contains only DisallowedExtension.php), so a seller can register under an 8-character rule and then reset their password to 6. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited. The two minimums are one: 8 characters everywhere, settable."
  },
  {
   "capability": "Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally",
   "area": "security",
-  "backend": "routes/rest_api/v3/seller.php:51, routes/rest_api/v2/api.php:118 and :135, routes/rest_api/v1/api.php:103, routes/admin/routes.php:125, routes/web/routes.php:396 (throttle:20,1); email verification throttle:6,1 at app/Http/Controllers/Auth/VerificationController.php:40; app/Providers/RouteServiceProvider.php:185 (Limit::perMinute(3000))",
-  "admin": "None",
+  "backend": "app/Providers/RouteServiceProvider.php:182 defines the `auth` and `global` limiters from the auth_attempts_per_minute and api_requests_per_minute policies; the six route files now use `throttle:auth` rather than a repeated literal",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "None",
   "analytics": "None",
@@ -1526,8 +1526,8 @@
   "dev_portal": "Documented",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. Tightening the login throttle under attack is a posture change an operator makes in minutes, and here it is six route files and a deploy; routes/rest_api/v1/api.php openly comments that the global 3000/min limiter is 'effectively none'."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. Tightening the login throttle under attack is a posture change an operator makes in minutes, and here it is six route files and a deploy; routes/rest_api/v1/api.php openly comments that the global 3000/min limiter is 'effectively none'. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Seller staff reaching the shop's own analytics page",
@@ -1697,8 +1697,8 @@
  {
   "capability": "Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout",
   "area": "integrations",
-  "backend": "app/Services/Marketplace/SellerWebhookDispatcher.php:48 (MAX_ATTEMPTS = 5), :50 (TIMEOUT_SECONDS = 8), :203 (next_attempt_at = now()->addMinutes(2 ** $delivery->attempts)); retried by bootstrap/app.php:182 (seller:retry-webhooks everyFiveMinutes)",
-  "admin": "Oversight",
+  "backend": "app/Services/Platform/PolicyRegistry.php (webhook_max_attempts, webhook_timeout_seconds, webhook_backoff_minutes) read at app/Services/Marketplace/SellerWebhookDispatcher.php",
+  "admin": "Manage",
   "seller_web": "View",
   "flutter": "View",
   "analytics": "None",
@@ -1706,8 +1706,8 @@
   "dev_portal": "Documented",
   "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings. Retry count and backoff decide how long a seller's ERP outage can last before order events are lost forever — five attempts over roughly 31 minutes — and no operator can extend that delivery guarantee without a deploy."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings. Retry count and backoff decide how long a seller's ERP outage can last before order events are lost forever — five attempts over roughly 31 minutes — and no operator can extend that delivery guarantee without a deploy. RESOLVED: declared in app/Services/Platform/PolicyRegistry.php, read through app/Services/Platform/Policy.php and edited on Admin → Settings → Platform Policies, where it is bounded, labelled and audited."
  },
  {
   "capability": "Which AI model writes seller content, and how creative it is allowed to be",

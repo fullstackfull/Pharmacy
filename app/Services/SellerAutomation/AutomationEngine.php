@@ -3,6 +3,7 @@
 namespace App\Services\SellerAutomation;
 
 use App\Models\Product;
+use App\Services\Platform\Policy;
 use App\Models\ProductPriceChange;
 use App\Models\SellerAutomationAction;
 use App\Models\SellerAutomationRule;
@@ -35,9 +36,6 @@ use Throwable;
  */
 class AutomationEngine
 {
-    /** How many rules one sweep will look at, so a scheduled run stays bounded. */
-    public const SWEEP_LIMIT = 200;
-
     public function __construct(
         private readonly AutomationRegistry $registry,
         private readonly AuditLogger $audit,
@@ -140,11 +138,15 @@ class AutomationEngine
      *
      * @return array<int, SellerAutomationRun>
      */
-    public function runDue(int|string|null $sellerId = null, int $limit = self::SWEEP_LIMIT): array
+    public function runDue(int|string|null $sellerId = null, ?int $limit = null): array
     {
         if (!Schema::hasTable('seller_automation_rules')) {
             return [];
         }
+
+        // Past this many active rules some sellers' automation simply never runs, and nothing said
+        // so. The number is the marketplace's to raise as it grows rather than a constant here.
+        $limit ??= app(Policy::class)->int('limit_automation_sweep');
 
         $rules = SellerAutomationRule::where('status', SellerAutomationRule::STATUS_ACTIVE)
             ->when($sellerId !== null, fn ($query) => $query->where('seller_id', $sellerId))

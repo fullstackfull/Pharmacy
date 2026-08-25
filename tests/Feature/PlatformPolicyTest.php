@@ -112,10 +112,10 @@ class PlatformPolicyTest extends TestCase
     public function test_an_unusable_value_falls_back_to_the_default(): void
     {
         $this->set('stock_cover_low_days', 'sometimes');
-        $this->assertSame(7, $this->policy()->int('stock_cover_low_days'));
+        $this->assertSame(3.0, $this->policy()->float('stock_cover_low_days'));
 
         $this->set('stock_cover_low_days', '');
-        $this->assertSame(7, $this->policy()->int('stock_cover_low_days'));
+        $this->assertSame(3.0, $this->policy()->float('stock_cover_low_days'));
     }
 
     public function test_an_unknown_policy_is_a_programming_error_not_a_silent_null(): void

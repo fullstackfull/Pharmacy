@@ -46,7 +46,7 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
 
     Route::group(['prefix' => 'vendor', 'as' => 'vendor.'], function () {
         // Rate limited: captcha removed by product decision — this is now the brute-force barrier.
-        Route::group(['prefix' => 'auth', 'as' => 'auth.', 'middleware' => ['throttle:20,1']], function () {
+        Route::group(['prefix' => 'auth', 'as' => 'auth.', 'middleware' => ['throttle:auth']], function () {
             Route::controller(LoginController::class)->group(function () {
                 Route::get('login', 'getLoginView');
                 Route::post('login', 'login')->name('login');
@@ -76,7 +76,7 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
         // Seller staff sign-in (Phase 3, Stage A). A staff member signs in with their own credentials
         // and is logged in as their parent seller; SellerStaffAccessMiddleware then scopes what they may
         // do. Rate limited like the owner login — this is the brute-force barrier.
-        Route::group(['prefix' => 'staff-auth', 'as' => 'staff-auth.', 'middleware' => ['throttle:20,1']], function () {
+        Route::group(['prefix' => 'staff-auth', 'as' => 'staff-auth.', 'middleware' => ['throttle:auth']], function () {
             Route::controller(StaffLoginController::class)->group(function () {
                 Route::get('login', 'getLoginView')->name('login');
                 Route::post('login', 'login')->name('login.submit');

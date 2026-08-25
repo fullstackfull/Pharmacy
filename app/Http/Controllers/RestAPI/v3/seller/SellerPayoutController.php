@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
+use App\Services\Platform\Policy;
 use App\Models\Currency;
 use App\Models\VendorPayoutRequest;
 use App\Services\DeveloperPortal\ApiDoc;
@@ -83,7 +84,7 @@ class SellerPayoutController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:' . max(0.01, app(Policy::class)->float('payout_minimum_amount')),
             'method' => 'nullable|string|max:40',
             'payout_currency' => 'nullable|string|max:10',
         ]);

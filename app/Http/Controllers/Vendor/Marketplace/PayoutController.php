@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor\Marketplace;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Platform\Policy;
 use App\Models\VendorPayoutRequest;
 use App\Services\Marketplace\PayoutService;
 use App\Services\Marketplace\VendorLedger;
@@ -52,7 +53,7 @@ class PayoutController extends BaseController
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:' . max(0.01, app(Policy::class)->float('payout_minimum_amount')),
             'method' => 'nullable|string|max:40',
             'payout_currency' => 'nullable|string|max:10',
         ]);

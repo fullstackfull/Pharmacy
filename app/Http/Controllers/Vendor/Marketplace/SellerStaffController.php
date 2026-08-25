@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor\Marketplace;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Platform\PasswordPolicy;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use App\Services\Marketplace\SellerPermissionService;
@@ -78,7 +79,7 @@ class SellerStaffController extends BaseController
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'email' => 'required|email|max:191',
-            'password' => 'required|string|min:6|max:100',
+            'password' => app(PasswordPolicy::class)->ruleString(),
             'seller_role_id' => 'nullable|integer',
         ]);
 
@@ -101,7 +102,7 @@ class SellerStaffController extends BaseController
             'name' => 'required|string|max:120',
             'seller_role_id' => 'nullable|integer',
             'status' => 'nullable|in:active,inactive',
-            'password' => 'nullable|string|min:6|max:100',
+            'password' => app(PasswordPolicy::class)->ruleString(required: false),
         ]);
 
         try {
