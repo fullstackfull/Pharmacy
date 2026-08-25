@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Jobs\RebuildProductSearchIndex;
+use App\Services\AuditLogger;
 use App\Services\Monitoring\MonitoringNavigation;
 use App\Services\Monitoring\MonitoringPermissionService;
 use App\Services\Monitoring\Panels\PanelRegistry;
@@ -83,6 +85,40 @@ class MonitoringController extends BaseController
             // a fabricated zero on thirty-two pages, which is the one thing this system must not do.
             'pulse' => $this->panels->pulse(),
         ]);
+    }
+
+    /**
+     * Ask for the search index to be rebuilt.
+     *
+     * The one write on this page, and the reason it exists: a bulk import writes product rows
+     * without going through the model save path the index observer listens on, so a large import
+     * leaves search answering from a stale index and, until now, only shell access could fix it.
+     *
+     * Queued rather than run here — a rebuild walks the whole catalogue in chunks and outlives a
+     * request — and gated on the settings capability rather than on merely being able to read the
+     * page, because it is work the operator is asking the server to do.
+     */
+    public function rebuildSearchIndex(Request $request, AuditLogger $audit): RedirectResponse
+    {
+        if (!$this->permissions->canEditSettings()) {
+            ToastMagic::error(translate('access_Denied') . '!');
+
+            return redirect()->route('admin.monitoring.section', ['section' => 'search']);
+        }
+
+        $actor = auth('admin')->user();
+        RebuildProductSearchIndex::dispatch($actor?->name ?? $actor?->email);
+
+        $audit->record(
+            action: 'platform.search_index_rebuild_requested',
+            context: ['queue' => config('queue.default')],
+        );
+
+        // Said plainly because it is true: the request is queued, and a shop with no queue worker
+        // running will see nothing happen. The page names the command for that case.
+        ToastMagic::success(translate('the_rebuild_has_been_queued'));
+
+        return redirect()->route('admin.monitoring.section', ['section' => 'search']);
     }
 
     /**

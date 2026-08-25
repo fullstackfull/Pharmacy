@@ -52,6 +52,7 @@ class PanelRegistry
         'payments' => PaymentsPanel::class,
         'orders' => OrderIntegrityPanel::class,
         'inventory' => InventoryIntegrityPanel::class,
+        'search' => SearchIndexPanel::class,
         'integrations' => IntegrationsPanel::class,
         'apis' => ApisPanel::class,
         'web-vitals' => WebVitalsPanel::class,
