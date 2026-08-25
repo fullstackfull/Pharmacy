@@ -143,5 +143,15 @@ class ScheduleDefinition
         | a change log that can never exist.
         */
         $schedule->command('api:snapshot')->weeklyOn(1, '04:10')->withoutOverlapping();
+
+        /*
+        | The transactional delivery log.
+        |
+        | The frequent pass closes messages the transport never came back about, so an operator
+        | reads "failed" rather than a "pending" that will never move. The nightly one prunes: this
+        | is a support aid with a shelf life, not a permanent archive of what was said to customers.
+        */
+        $schedule->command('notifications:sweep')->everyTenMinutes()->withoutOverlapping();
+        $schedule->command('notifications:sweep --prune')->dailyAt('03:40')->withoutOverlapping();
     }
 }

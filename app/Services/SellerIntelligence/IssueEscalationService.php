@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence;
 
 use App\Models\SellerInsight;
+use App\Services\Platform\Policy;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Schema;
 
@@ -50,6 +51,30 @@ class IssueEscalationService
     /** No issue is promoted more than this many times, however long it stands. */
     public const MAX_ESCALATION_LEVEL = 3;
 
+    /**
+     * The ladder in force, from the settings page.
+     *
+     * This is the marketplace's enforcement posture toward its sellers — how long a problem may
+     * stand before the platform raises the pressure — and it was three numbers in a class constant.
+     *
+     * @return array<string, int>
+     */
+    public static function promoteAfterHours(): array
+    {
+        $policy = app(Policy::class);
+
+        return [
+            SellerInsight::SEVERITY_LOW => $policy->int('issue_promote_low_hours'),
+            SellerInsight::SEVERITY_MEDIUM => $policy->int('issue_promote_medium_hours'),
+            SellerInsight::SEVERITY_HIGH => $policy->int('issue_promote_high_hours'),
+        ];
+    }
+
+    public static function maxEscalationLevel(): int
+    {
+        return app(Policy::class)->int('issue_max_escalation_level');
+    }
+
     /** @var array<string, string> */
     private const NEXT_SEVERITY = [
         SellerInsight::SEVERITY_LOW => SellerInsight::SEVERITY_MEDIUM,
@@ -79,7 +104,7 @@ class IssueEscalationService
             // Somebody is on it. Escalating would punish a seller for saying so.
             ->whereIn('status', [SellerInsight::STATUS_DETECTED, SellerInsight::STATUS_OPEN])
             ->where('severity', '!=', SellerInsight::SEVERITY_CRITICAL)
-            ->where('escalation_level', '<', self::MAX_ESCALATION_LEVEL)
+            ->where('escalation_level', '<', self::maxEscalationLevel())
             ->when($sellerId !== null, fn ($query) => $query->where('seller_id', $sellerId))
             ->orderBy('id')
             ->limit(1000)
@@ -120,7 +145,7 @@ class IssueEscalationService
 
     private function hasStoodLongEnough(SellerInsight $issue): bool
     {
-        $threshold = self::PROMOTE_AFTER_HOURS[$issue->severity] ?? null;
+        $threshold = self::promoteAfterHours()[$issue->severity] ?? null;
 
         if ($threshold === null) {
             return false;

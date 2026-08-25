@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
+use App\Services\Marketplace\InventoryService;
 use App\Contracts\Repositories\AuthorRepositoryInterface;
 use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\DigitalProductAuthorRepositoryInterface;
@@ -1775,10 +1776,24 @@ class ProductController extends Controller
             'user_id' => $request->seller->id,
         ]);
         if ($product) {
-            $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [
-                'current_stock' => $request['current_stock'],
-                'variation' => $request['variation'],
-            ]);
+            // The API twin of the panel's quick stock box, through the same inventory service, so
+            // a stock change made from the phone leaves the same reason, movement row and audit
+            // line as one made from the browser.
+            $result = app(InventoryService::class)->setStock(
+                productId: $request['product_id'],
+                newStock: (int) $request['current_stock'],
+                reason: 'manual_stock_edit',
+                alongside: ['variation' => $request['variation']],
+                by: $request->seller->id,
+                byType: 'seller',
+                scope: ['added_by' => 'seller', 'user_id' => $request->seller->id],
+            );
+
+            if (!$result['ok']) {
+                return response()->json(['message' => translate($result['reason'])], 403);
+            }
+
+            cacheRemoveByType(type: 'products');
             $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
             $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
 
@@ -2152,11 +2167,21 @@ class ProductController extends Controller
         ]);
 
         if ($product && $request['current_stock'] >= 0) {
-            $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: [
-                'current_stock' => $request['current_stock'],
-                'variation' => $request['variation'],
-            ]);
+            $result = app(InventoryService::class)->setStock(
+                productId: $request['product_id'],
+                newStock: (int) $request['current_stock'],
+                reason: 'manual_stock_edit',
+                alongside: ['variation' => $request['variation']],
+                by: $request->seller->id,
+                byType: 'seller',
+                scope: ['added_by' => 'seller', 'user_id' => $request->seller->id],
+            );
 
+            if (!$result['ok']) {
+                return response()->json(['message' => translate($result['reason'])], 403);
+            }
+
+            cacheRemoveByType(type: 'products');
             $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
             $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
 

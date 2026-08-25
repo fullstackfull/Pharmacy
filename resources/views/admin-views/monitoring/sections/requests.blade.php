@@ -284,6 +284,49 @@
     </x-k.card>
 @endforeach
 
+{{-- The long history.
+
+     Everything above is folded from monitoring_request_buckets, which is pruned at monitoring's own
+     retention — so "were we slower in June" cannot be asked of it at all. Three scheduled runs a day
+     have been maintaining exactly that history in telemetry_daily, and no screen has ever read it:
+     a quarter of the telemetry scheduler's budget producing output nobody could look at. --}}
+@php($history = $panel['history'])
+<x-k.card :title="translate('daily_history')">
+    @if ($history['state'] === 'ok')
+        <div class="k-table-wrap">
+            <table class="k-table k-table--compact">
+                <thead><tr>
+                    <th>{{ translate('date') }}</th>
+                    <th class="k-table__num">{{ translate('web_requests') }}</th>
+                    <th class="k-table__num">{{ translate('api_requests') }}</th>
+                    <th class="k-table__num">{{ translate('visitors') }}</th>
+                    <th class="k-table__num">{{ translate('server_errors') }}</th>
+                    <th class="k-table__num">{{ translate('average_response_time') }}</th>
+                </tr></thead>
+                <tbody>
+                @foreach ($history['rows'] as $row)
+                    <tr>
+                        <td>{{ $row['date'] }}</td>
+                        <td class="k-table__num k-num">{{ number_format($row['web']) }}</td>
+                        <td class="k-table__num k-num">{{ number_format($row['api']) }}</td>
+                        <td class="k-table__num k-num">{{ number_format($row['visitors']) }}</td>
+                        <td class="k-table__num k-num">{{ number_format($row['errors']) }}</td>
+                        <td class="k-table__num k-num">{{ $row['avg_ms'] === null ? '—' : $row['avg_ms'] . ' ms' }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    @elseif ($history['state'] === 'unavailable')
+        <p class="mon-note mon-note--critical">{{ translate('this_could_not_be_read') }}: {{ $history['message'] ?? '' }}</p>
+    @else
+        <x-k.empty icon="reports"
+                   :title="translate('no_daily_history_has_been_rolled_up_yet')"
+                   :text="translate('telemetry_rollup_writes_one_row_per_day_per_channel_the_first_appears_after_its_next_run')" />
+    @endif
+    <p class="mon-note">{{ translate('source') }}: <code>{{ $history['source'] }}</code></p>
+</x-k.card>
+
 <p class="mon-note">
     {{ translate('every_figure_on_this_page_is_read_from') }} <code>monitoring_request_buckets</code>,
     {{ translate('folded_per_minute_per_route_percentiles_are_interpolated_from_the_stored_latency_histogram_not_from_sampled_requests') }}

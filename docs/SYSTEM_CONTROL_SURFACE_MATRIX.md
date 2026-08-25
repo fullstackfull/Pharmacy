@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 493 |
-| Internal by design | 53 |
-| Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **42** |
+| Fully connected to a surface | 527 |
+| Internal by design | 54 |
+| Deprecated | 20 |
+| **Orphaned — no owner, no surface** | **0** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -28,15 +28,15 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | Full | Yes | Developer | FIXED |
-| Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through | View | Manage | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
+| Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through | View | Manage | View | **None** | **None** | Documented | Yes | Admin | NOT BUILT |
 | Reporting how much traffic went unmeasured because of Do Not Track or missing consent | View | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
-| Seller report builder, saved report definitions and an exports centre | **None** | **None** | View | Metrics | **None** | Full | No | Seller | ORPHAN |
+| Seller report builder, saved report definitions and an exports centre | **None** | Manage | View | Metrics | **None** | Full | No | Seller | NOT BUILT |
 | Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | Full | No | Developer | FIXED |
 | Pipeline health counters — events written, and events dropped because a request overflowed the buffer | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
-| The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason | View | **None** | **None** | Events | **None** | **None** | No | Admin | ORPHAN |
+| The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason | View | **None** | **None** | Full | **None** | **None** | No | Admin | FIXED |
 | Saving an analytics report configuration to come back to | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | DEPRECATED |
-| Daily history of request volume, visitors, errors and API load (telemetry_daily) | **None** | **None** | N/A | Metrics | Failures | **None** | No | Developer | ORPHAN |
+| Daily history of request volume, visitors, errors and API load (telemetry_daily) | **None** | **None** | N/A | Metrics | Full | **None** | No | Developer | FIXED |
 | Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | Manage | **None** | N/A | Metrics | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Tracked marketing campaigns (UTM links, short links, QR codes) | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | In-house and vendor product sale reports | Oversight | View | View | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -79,12 +79,12 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Commerce campaigns, segments and experiments are absent from the admin sidebar | Configure | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | ORPHAN |
+| Commerce campaigns, segments and experiments are absent from the admin sidebar | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | How many variants a storefront experiment may run, and how many rules a segment or campaign may carry | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
-| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | **None** | View | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Scheduled operations — timed price changes, timed activations, campaign starts | **None** | **None** | **None** | **None** | **None** | **None** | No | Seller | ORPHAN |
-| Whether a seller's automation rules and bulk jobs are actually succeeding | Oversight | View | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
-| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | View | **None** | N/A | Events | **None** | N/A | Partial | Admin | ORPHAN |
+| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | Manage | View | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| Scheduled operations — timed price changes, timed activations, campaign starts | **None** | **None** | **None** | **None** | **None** | **None** | No | Seller | NOT BUILT |
+| Whether a seller's automation rules and bulk jobs are actually succeeding | Oversight | View | View | **None** | Full | **None** | Partial | Admin | CONNECTED TO ADMIN |
+| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | Manage | **None** | N/A | Events | **None** | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Seller automation oversight: stop a rule that is damaging a catalogue | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Abandoned cart recovery settings and reminder emails | Configure | **None** | **None** | Events | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
 | AI drafting of product copy — title, description, general setup, pricing, variations, SEO, image analysis | Configure | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
@@ -108,7 +108,7 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Create, rename or delete a brand in the catalogue | Configure | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Create, rename or delete a brand in the catalogue | Configure | **None** | View | **None** | **None** | Partial | Yes | Admin | FIXED |
 | Brand registry: decide who may sell under a brand, on documentary evidence | Approve | **None** | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Brand enforcement switch: turn the brand registry from a report into a refusal | Configure | **None** | **None** | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Brand catalogue (the brand list itself, distinct from the brand registry) | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -125,10 +125,10 @@ the whole point of the document, so it is never blurred.
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | 44 AI auto-fill routes serving the Auction module, which is not installed | **None** | **None** | **None** | **None** | **None** | Partial | No | Developer | DEPRECATED |
-| Approve or deny a seller's listing from the classic product screen | Approve | View | View | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Approve or deny a seller's listing from the classic product screen | Approve | View | View | **None** | **None** | **None** | Yes | Admin | FIXED |
 | The listing quality bar (a score under 70 is raised for improvement) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Merchandising limits per collection — 12 pins, 100 exclusions, 20 boosts, boost weight up to 1000, fallback chains 5 deep | Manage | **None** | N/A | Metrics | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
-| Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts | **None** | **None** | N/A | Events | Failures | N/A | No | Admin | ORPHAN |
+| Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts | Manage | **None** | N/A | Events | Full | N/A | No | Admin | CONNECTED TO MONITOR |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | Oversight | **None** | Manage | **None** | Failures | Full | Yes | Seller | CONNECTED TO SELLER |
 | Product moderation queue with per-product history | Approve | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Legacy vendor product approval (approve / deny) on the product list | Approve | Submit | Submit | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -162,9 +162,9 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | Manage | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | How much notice a seller gets before a verification document expires (45 days) | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
-| Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
-| The seller's own account health and SLA standing | Oversight | **None** | **None** | **None** | Failures | **None** | Yes | Seller | ORPHAN |
-| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | Oversight | **None** | **None** | **None** | **None** | **None** | Partial | Seller | ORPHAN |
+| Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | NOT BUILT |
+| The seller's own account health and SLA standing | Oversight | Performance, Account health, SLA | **None** | **None** | Failures | **None** | Yes | Seller | CONNECTED TO SELLER |
+| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | Oversight | Compliance, Brand registry, Brand protection, Incidents, Approvals | **None** | **None** | **None** | **None** | Partial | Seller | CONNECTED TO SELLER |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | Manage | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | SLA policy — maximum cancellation, return and refund rates, minimum rating, processing deadline | Configure | View | View | Metrics | Failures | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Seller KYC — which documents are required, whether payouts are gated on them, and reviewing what a seller submits | Approve | Submit | Submit | Events | **None** | Full | Partial | Admin | CONNECTED TO ADMIN |
@@ -195,8 +195,8 @@ the whole point of the document, so it is never blurred.
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | Manage | **None** | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | Manage | View | View | **None** | Failures | Documented | No | Admin | CONNECTED TO ADMIN |
 | Diagnose a payment gateway that is switched on but cannot take a payment | View | **None** | N/A | **None** | **None** | N/A | No | Admin | CONNECTED TO ADMIN |
-| Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
-| Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches | View | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
+| Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | Full | N/A | No | Admin | FIXED |
+| Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches | View | **None** | N/A | **None** | Full | N/A | No | Admin | FIXED |
 | Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | Manage | **None** | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Vendor\PaymentInformationController — a payment-details controller with no route | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
 | Payment success and abandonment rate | **None** | **None** | N/A | **None** | **None** | Full | No | Developer | FIXED |
@@ -227,7 +227,7 @@ the whole point of the document, so it is never blurred.
 | Delivery man wallet, cash collection and withdrawal approval | Oversight | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
 | Legacy balance withdrawal request against the seller wallet | Approve | Manage | Manage | Events | **None** | Partial | No | Seller | CONNECTED TO ADMIN |
 | Ledger payout — request the withdrawable balance, which reserves it, and cancel a pending request | Approve | Manage | Manage | Events | **None** | Documented | Yes | Seller | CONNECTED TO ADMIN |
-| Account statement — the shop's ledger line by line with the running balance each entry left behind, exportable | View | **None** | View | **None** | **None** | Documented | No | Seller | CONNECTED TO SELLER |
+| Account statement — the shop's ledger line by line with the running balance each entry left behind, exportable | View | View | View | **None** | **None** | Documented | No | Seller | CONNECTED TO SELLER |
 | Where the shop's money is sent — bank / withdrawal method details, default selection | Configure | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
 | Settlements — the marketplace calculating what it owes each seller and releasing it | Configure | **None** | **None** | **None** | Failures | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | VAT / tax report for the shop | Configure | View | View | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
@@ -251,7 +251,7 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
 | Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
-| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
+| Seller webhook delivery failure visibility | Oversight | View | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
 | Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Full | No | Developer | INTERNAL BY DESIGN |
 | Seller mobile API v2 — the previous seller app's entire surface, still routed | **None** | **None** | **None** | **None** | Health | Partial | No | Developer | DEPRECATED |
 | API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Full | No | Admin | CONNECTED TO DEVELOPER |
@@ -273,7 +273,7 @@ the whole point of the document, so it is never blurred.
 | API console: send a live request from the portal | Configure | **None** | **None** | **None** | **None** | Full | Yes | Developer | CONNECTED TO DEVELOPER PORTAL |
 | OpenAPI and Postman collection download | View | **None** | **None** | **None** | **None** | Full | No | Developer | CONNECTED TO DEVELOPER PORTAL |
 | API snapshot history and manifest rebuild | Oversight | **None** | **None** | **None** | **None** | Full | No | Developer | CONNECTED TO DEVELOPER PORTAL |
-| API keys the shop issues — mint a scoped key, see where each was last used, revoke one | Oversight | **None** | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
+| API keys the shop issues — mint a scoped key, see where each was last used, revoke one | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Webhooks the shop registers — create, enable, disable, delete, send a test, read the delivery log | Oversight | **None** | Manage | **None** | Failures | Documented | Yes | Seller | CONNECTED TO SELLER |
 | The catalogue of webhook events a shop can subscribe to | **None** | **None** | View | **None** | **None** | Documented | No | Developer | CONNECTED TO DEVELOPER PORTAL |
 | Advertising and marketplace campaigns a seller could join | Configure | **None** | **None** | Events | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
@@ -304,7 +304,7 @@ the whole point of the document, so it is never blurred.
 | Low-stock threshold used by the seller API and the Flutter app | Configure | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | When unsold stock is called dead capital (90 days, at least 3 units) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
-| Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line | Configure | Manage | Manage | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line | Configure | Manage | Manage | **None** | **None** | **None** | Yes | Admin | FIXED |
 | Limited stock list and restock requests | Oversight | View | View | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
 | Inventory adjustments with reason codes and a movement log | Configure | **None** | Manage | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
 | Batch and expiry tracking with write-off | Configure | **None** | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
@@ -332,21 +332,21 @@ the whole point of the document, so it is never blurred.
 | Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | Manage | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO ADMIN |
 | Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | Manage | **None** | N/A | N/A | Alerts | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Queue job outcomes measured at the worker — processed count, runtime and failures per queue | View | **None** | N/A | N/A | Alerts | N/A | No | System | CONNECTED TO MONITOR |
-| Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved | View | **None** | N/A | **None** | Full | **None** | No | Developer | FIXED |
 | Defining the customer journeys the synthetic prober fetches | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it | Manage | **None** | N/A | N/A | **None** | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Writing a human note onto the monitoring timeline | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Recording that a backup ran and that a restore was tested | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Recording a deployment, and comparing performance either side of it | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Changing a monitoring threshold, retention window, sampling rate or SLA target | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
-| Machine-readable JSON feed of every monitoring section | View | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
-| Prometheus scrape endpoint and OTLP trace export | **None** | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
+| Machine-readable JSON feed of every monitoring section | View | **None** | N/A | N/A | **None** | Full | No | Developer | FIXED |
+| Prometheus scrape endpoint and OTLP trace export | Configure | **None** | N/A | N/A | Full | Full | No | Developer | FIXED |
 | The Integrations page's statement about what outbound instrumentation exists | View | **None** | N/A | N/A | **None** | N/A | No | Developer | DEPRECATED |
 | Legacy single-page monitoring dashboard | **None** | **None** | N/A | N/A | N/A | N/A | No | Developer | DEPRECATED |
-| Blast radius — how many sellers a failure is affecting | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
-| Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps | View | **None** | **None** | **None** | **None** | Documented | No | Developer | ORPHAN |
-| Seeing which scheduled tasks are defined, and when each runs next | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
-| Retrying, forgetting or flushing a failed queue job | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
+| Blast radius — how many sellers a failure is affecting | View | **None** | N/A | **None** | Full | N/A | No | Admin | FIXED |
+| Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps | View | **None** | Full | **None** | Full | Documented | No | Developer | FIXED |
+| Seeing which scheduled tasks are defined, and when each runs next | View | **None** | N/A | **None** | Failures | N/A | No | Admin | FIXED |
+| Retrying, forgetting or flushing a failed queue job | View | **None** | N/A | **None** | Failures | N/A | Yes | Admin | FIXED |
 | Request debugger — look up an X-Request-Id and see what happened | **None** | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO DEVELOPER |
 | Marketplace incidents: acknowledge, assign and resolve an operational incident | View | **None** | **None** | **None** | Alerts | Partial | No | System | CONNECTED TO MONITOR |
 | Seller-facing issue register (Control Tower issues seen from the marketplace side) | Oversight | View | View | **None** | **None** | Partial | Partial | Admin | CONNECTED TO ADMIN |
@@ -427,10 +427,10 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push | Configure | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
+| Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push | Manage | **None** | N/A | **None** | Full | N/A | Yes | Admin | FIXED |
 | Email the seller that an order arrived for them | **None** | **None** | N/A | **None** | **None** | N/A | No | Developer | DEPRECATED |
 | SendEmailJob — a queued mail job nothing dispatches | **None** | **None** | N/A | **None** | Failures | N/A | No | Developer | DEPRECATED |
-| Email template mail tester | View | **None** | **None** | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Email template mail tester | View | **None** | **None** | **None** | **None** | Partial | No | Admin | FIXED |
 | Newsletter subscribers | View | **None** | **None** | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Send a push notification to customers | Oversight | **None** | **None** | Events | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Push notification message templates and Firebase setup | Configure | **None** | View | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -450,10 +450,10 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | ORPHAN |
+| vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
 | What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
-| Which order states remain editable, and which remain cancellable | Configure | Manage | Manage | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Minimum number of items required before a customer may check out | **None** | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Which order states remain editable, and which remain cancellable | Configure | Manage | Manage | **None** | **None** | **None** | No | Admin | FIXED |
+| Minimum number of items required before a customer may check out | Configure | **None** | View | **None** | **None** | Partial | No | Admin | FIXED |
 | Fulfilment workflow overlay (pick / pack / ship) | Configure | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Order list, detail and status changes (single and bulk) | Oversight | Manage | Manage | Metrics | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
 | Edit an order after placement (add, remove, reprice lines) | Configure | Manage | Manage | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -481,18 +481,18 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail | **None** | **None** | Manage | **None** | **None** | Full | No | Seller | ORPHAN |
-| Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering | View | View | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
-| Installer and software updater — the first-run wizard and the file-based update flow | **None** | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail | **None** | 55 of the registry's destinations routed | Manage | **None** | **None** | Full | No | Seller | FIXED |
+| Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering | View | View | N/A | **None** | **None** | Full | No | Developer | FIXED |
+| Installer and software updater — the first-run wizard and the file-based update flow | **None** | **None** | N/A | **None** | **None** | Documented | No | Developer | INTERNAL BY DESIGN |
 | routes/shared.php and routes/test.php — route files no provider ever loads | **None** | **None** | N/A | **None** | **None** | N/A | No | Developer | DEPRECATED |
-| Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix | View | **None** | N/A | **None** | **None** | Documented | No | Developer | FIXED |
 | Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard) | **None** | View | N/A | Metrics | **None** | **None** | No | System | INTERNAL BY DESIGN |
 | Request-shaping guards — ingest rate limits, list page sizes, per-screen bulk-action caps, the report date-range ceiling and the automation rule-scope limit | View | View | View | Metrics | Alerts | Documented | No | System | INTERNAL BY DESIGN |
 | Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Storefront theme preview link lifetime (60 minutes, never more than 24 hours) | Configure | **None** | N/A | **None** | **None** | **None** | Yes | System | INTERNAL BY DESIGN |
-| Paid advertising and sponsored placement — ad slots, budgets, billing | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Feature flags and gradual rollout | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Duplicate addon manager mounted at /admin/addon | Configure | **None** | **None** | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Paid advertising and sponsored placement — ad slots, budgets, billing | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | NOT BUILT |
+| Feature flags and gradual rollout | Manage | **None** | **None** | **None** | **None** | **None** | Yes | Admin | FIXED |
+| Duplicate addon manager mounted at /admin/addon | Manage | **None** | **None** | **None** | **None** | Partial | No | Admin | FIXED |
 | Legacy v1 advanced search | **None** | **None** | **None** | **None** | **None** | Partial | No | Admin | DEPRECATED |
 | Retired theme-installer URL | **None** | **None** | **None** | **None** | **None** | Partial | No | Admin | INTERNAL BY DESIGN |
 | Auction feature — master switch, commission, entry fee, claim window, visibility durations and the per-seller permission | Configure | **None** | View | **None** | **None** | Partial | No | Admin | DEPRECATED |
@@ -608,7 +608,7 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Mass product updates written through the query builder bypass the price observer | Configure | **None** | **None** | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Mass product updates written through the query builder bypass the price observer | Configure | **None** | **None** | **None** | **None** | **None** | No | Developer | FIXED |
 | What counts as a suspicious price swing (more than half the previous price within 48 hours) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Coupons, and the promotional discount surfaces beside them (flash deals, deal of the day, featured deals, clearance offers) | Configure | Manage | Manage | Metrics | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Flash deals, deal of the day and featured deals | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
@@ -628,8 +628,8 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle | Oversight | View | View | Events | **None** | **None** | Partial | Admin | ORPHAN |
-| Approve or reject a customer refund | Approve | Manage | Manage | Events | **None** | Partial | No | Admin | ORPHAN |
+| Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle | Oversight | View | View | Metrics | **None** | **None** | Partial | Admin | FIXED |
+| Approve or reject a customer refund | Approve | Manage | Manage | Events | **None** | Partial | Yes | Admin | FIXED |
 | The returns response promise — 48 hours to answer a return request, 72 hours to process it | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Global return / refund policy (refund day limit, wallet refunds) | Configure | View | View | **None** | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | RMA / returns logistics queue (authorize, in-transit, receive, reject) | Configure | **None** | Manage | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
@@ -663,7 +663,7 @@ the whole point of the document, so it is never blurred.
 | Admin authentication and logout | Configure | Manage | Manage | **None** | Health | Partial | No | Admin | CONNECTED TO ADMIN |
 | Seller staff and roles — define a role, grant permissions, add and remove team members | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Sign a staff member out of every session, and see who last accessed the shop | **None** | **None** | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
-| The shop's own audit trail — what was done in this shop, by whom, with the before and after | Oversight | **None** | View | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
+| The shop's own audit trail — what was done in this shop, by whom, with the before and after | Oversight | View | View | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Seller staff sign-in with their own credentials | **None** | Manage | **None** | **None** | **None** | **None** | No | Seller Staff | CONNECTED TO SELLER |
 | Stripping passwords, OTPs, tokens and card numbers out of anything an instrumentation call attaches to an event | View | **None** | N/A | **None** | **None** | **None** | No | System | INTERNAL BY DESIGN |
 | Five separate permissions over analytics: read, export, campaign links, individual journeys, collection settings | Configure | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
@@ -692,8 +692,8 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Registering a second courier — credentials, rates, labels and tracking per carrier | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness | Oversight | Manage | View | **None** | **None** | **None** | Partial | Admin | ORPHAN |
+| Registering a second courier — credentials, rates, labels and tracking per carrier | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | NOT BUILT |
+| Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness | Oversight | Manage | View | Metrics | **None** | **None** | Partial | Admin | FIXED |
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | Manage | View | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Shipping zones — destination-based rate rules that override the flat shipping cost | Configure | **None** | **None** | **None** | **None** | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Carrier configuration for Delivery Syria — base URL, hub, pickup point, secret and webhook tokens | Configure | **None** | **None** | **None** | Failures | **None** | No | Admin | CONNECTED TO ADMIN |

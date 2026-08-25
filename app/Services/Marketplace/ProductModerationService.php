@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Schema;
  *   rejected       -> request_status 2  (denied; a resubmit is a new pending)
  *   needs_changes  -> request_status 2  (denied, but the seller is told what to fix and may resubmit)
  *   suspended      -> status 0          (an approved product taken offline; request_status untouched)
+ *   returned_to_review -> request_status 0  (an approval taken back; the listing waits in the queue again)
  *
  * Every decision is written to the unified audit log, so product governance shares the same trail as
  * settlements and payouts rather than keeping a private one.
@@ -33,6 +34,8 @@ class ProductModerationService
     public const ACTION_REJECTED = 'rejected';
     public const ACTION_NEEDS_CHANGES = 'needs_changes';
     public const ACTION_SUSPENDED = 'suspended';
+    /** An approval taken back: the listing returns to the pending queue rather than being denied. */
+    public const ACTION_RETURNED_TO_REVIEW = 'returned_to_review';
 
     /** The structured reasons a moderator can cite, from the spec's own list. */
     public const REASONS = [
@@ -63,6 +66,18 @@ class ProductModerationService
     public function needsChanges(int|string $productId, array $reasonCodes = [], ?string $note = null): ?ProductModerationEvent
     {
         return $this->decide($productId, self::ACTION_NEEDS_CHANGES, newRequestStatus: 2, reasonCodes: $reasonCodes, note: $note);
+    }
+
+    /**
+     * Undo an approval without denying the listing.
+     *
+     * The classic product screen's approve control is a toggle, so "un-approve" is a real decision an
+     * operator makes and it had no name here — which is why that screen wrote the column directly and
+     * left no history. Back to pending, not to denied: the seller is not being told no.
+     */
+    public function returnToReview(int|string $productId, ?string $note = null): ?ProductModerationEvent
+    {
+        return $this->decide($productId, self::ACTION_RETURNED_TO_REVIEW, newRequestStatus: 0, note: $note);
     }
 
     /** Take an already-approved product offline without denying it. Toggles `status`, not request_status. */

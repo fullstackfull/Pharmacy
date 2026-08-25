@@ -80,6 +80,83 @@ class InventoryService
     }
 
     /**
+     * Set a product's stock to an absolute figure, and leave a trail for it.
+     *
+     * The quick stock box on both product lists wrote `current_stock` straight through the query
+     * builder: no reason, no movement row, no audit line — a second stock-writing path that
+     * disagreed with this one about whether a change is traceable. Two such paths do not stay
+     * consistent; they drive `current_stock` and the movement ledger apart, and the trail then
+     * cannot say why the shelf moved.
+     *
+     * Absolute rather than a delta because that is what the box actually is: somebody counted the
+     * shelf and is typing what they found. The delta is derived under the row lock, so the movement
+     * line is right even if another process adjusted the same product a moment earlier.
+     *
+     * `$alongside` carries columns that belong to the same edit — the variation blob the box also
+     * rewrites — so the stock and its variants move in one transaction rather than two.
+     *
+     * @param  array<string, mixed>  $alongside
+     * @return array{ok: bool, reason?: string, balance_after?: int, delta?: int}
+     */
+    public function setStock(
+        int|string $productId,
+        int $newStock,
+        string $reason,
+        array $alongside = [],
+        ?string $note = null,
+        int|string|null $by = null,
+        string $byType = 'admin',
+        array $scope = [],
+    ): array {
+        if (!Schema::hasTable('products')) {
+            return ['ok' => false, 'reason' => 'products_unavailable'];
+        }
+        if ($newStock < 0) {
+            return ['ok' => false, 'reason' => 'stock_cannot_be_negative'];
+        }
+
+        return DB::transaction(function () use ($productId, $newStock, $reason, $alongside, $note, $by, $byType, $scope) {
+            $product = DB::table('products')->where('id', $productId)->where($scope)->lockForUpdate()->first();
+            if (!$product) {
+                return ['ok' => false, 'reason' => 'product_not_found'];
+            }
+
+            $current = (int) $product->current_stock;
+            $delta = $newStock - $current;
+
+            DB::table('products')->where('id', $productId)->where($scope)->update(
+                array_merge($alongside, ['current_stock' => $newStock, 'updated_at' => now()]),
+            );
+
+            // A recount that found exactly what the system already believed is not a movement, but
+            // it IS worth an audit line: "somebody checked and it was right" is a fact about the
+            // shelf, and a silent no-op looks identical to a change that failed.
+            if ($delta !== 0) {
+                $this->record(
+                    productId: $productId,
+                    type: StockMovement::TYPE_ADJUSTMENT,
+                    qtyChange: $delta,
+                    balanceAfter: $newStock,
+                    reason: $reason,
+                    note: $note,
+                    sellerId: $product->user_id ?? null,
+                    createdBy: $by,
+                    createdByType: $byType,
+                );
+            }
+
+            $this->audit?->record(
+                action: 'inventory.stock_set',
+                subject: ['type' => 'product', 'id' => $productId],
+                before: ['current_stock' => $current],
+                after: ['current_stock' => $newStock, 'reason' => $reason],
+            );
+
+            return ['ok' => true, 'balance_after' => $newStock, 'delta' => $delta];
+        });
+    }
+
+    /**
      * Append a movement for a stock change that has already been applied elsewhere. Non-throwing —
      * used by the procurement receipt path, where a failed log write must never roll back a receipt.
      */

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\GlobalConstant;
 use Illuminate\Support\Facades\Event;
+use App\Listeners\Notifications\RecordMailDelivery;
 use App\Listeners\Security\RecordAuthenticationEvents;
 use App\Models\BusinessPage;
 use App\Models\BusinessSetting;
@@ -24,6 +25,8 @@ use App\Traits\CacheManagerTrait;
 use App\Traits\FileManagerTrait;
 use App\Traits\ThemeHelper;
 use App\Services\AuditLogger;
+use App\Services\Notifications\DeliveryLog;
+use App\Services\Payments\GatewayJournal;
 use App\Services\SellerIntelligence\Producers\BrandComplianceProducer;
 use App\Services\SellerIntelligence\Producers\CatalogIntegrityProducer;
 use App\Services\SellerIntelligence\Producers\FinanceIntegrityProducer;
@@ -146,6 +149,14 @@ class AppServiceProvider extends ServiceProvider
         // One measurement of each seller's size per sweep, shared by every detector.
         $this->app->singleton(SellerBaselineProvider::class);
 
+        // One instance, because a resend has to read back the row the send it triggered wrote —
+        // the mail listener and the resender are two objects looking at the same attempt.
+        $this->app->singleton(DeliveryLog::class);
+
+        // One instance, because the callback receipt is written at the end of a request using what
+        // the controller decided during it — arrival and outcome have to meet on the same object.
+        $this->app->singleton(GatewayJournal::class);
+
         $loader = AliasLoader::getInstance();
         $loader->alias('Helper', \App\Utils\Helpers::class);
         $loader->alias('Madzipper', \Madnest\Madzipper\Madzipper::class);
@@ -164,6 +175,10 @@ class AppServiceProvider extends ServiceProvider
         // in bootstrap/providers.php — the application relies on listener auto-discovery, and
         // discovery only finds `handle` and `__invoke`, never a subscriber's own method names.
         Event::subscribe(RecordAuthenticationEvents::class);
+
+        // Every email this platform sends, recorded on the framework's own mail events — the only
+        // seam that covers all twenty-three transactional listeners without editing any of them.
+        Event::subscribe(RecordMailDelivery::class);
 
         if (!in_array(request()->ip(), ['127.0.0.1', '::1']) && env('FORCE_HTTPS')) {
             \URL::forceScheme('https');

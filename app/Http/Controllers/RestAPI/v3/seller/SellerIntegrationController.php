@@ -3,20 +3,18 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Http\Controllers\Controller;
-use App\Services\AuditLogger;
 use App\Http\Middleware\SellerApiAuthMiddleware;
-use App\Jobs\DeliverSellerWebhook;
 use App\Models\SellerApiKey;
 use App\Models\SellerWebhook;
 use App\Models\SellerWebhookDelivery;
 use App\Services\DeveloperPortal\ApiDoc;
 use App\Services\Marketplace\SellerApiKeyService;
+use App\Services\Marketplace\SellerIntegrationService;
 use App\Services\Marketplace\SellerPermissionService;
 use App\Services\Marketplace\SellerPrincipal;
 use App\Services\Marketplace\SellerWebhookDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 /**
  * Keys and webhooks: how a seller's own systems talk to the marketplace, and it to them.
@@ -31,6 +29,7 @@ class SellerIntegrationController extends Controller
     public function __construct(
         private readonly SellerApiKeyService $apiKeys,
         private readonly SellerPermissionService $permissions,
+        private readonly SellerIntegrationService $integrations,
     ) {
     }
 
@@ -175,7 +174,7 @@ class SellerIntegrationController extends Controller
             'webhooks' => SellerWebhook::where('seller_id', $request->seller->id)
                 ->orderByDesc('id')
                 ->get()
-                ->map(fn (SellerWebhook $webhook) => $this->presentWebhook($webhook))
+                ->map(fn (SellerWebhook $webhook) => $this->integrations->present($webhook))
                 ->values(),
         ], 200);
     }
@@ -198,37 +197,16 @@ class SellerIntegrationController extends Controller
             return $refusal;
         }
 
-        $validator = validator($request->all(), $this->webhookRules());
+        $result = $this->integrations->createWebhook($request->seller->id, $request->all());
 
-        if ($validator->fails()) {
-            return $this->refuse($validator->errors()->toArray());
+        if (!$result['ok']) {
+            return $this->refuse($result['errors']);
         }
-
-        if ($refusal = $this->refuseDestination((string) $request['url'])) {
-            return $refusal;
-        }
-
-        $secret = Str::random(48);
-
-        $webhook = SellerWebhook::create([
-            'seller_id' => $request->seller->id,
-            'name' => $request['name'],
-            'url' => $request['url'],
-            'events' => array_values(array_intersect($request['events'], SellerWebhookDispatcher::EVENTS)),
-            'secret' => $secret,
-            'status' => SellerWebhook::STATUS_ACTIVE,
-        ]);
-
-        // Where a shop's order and payout events are sent. Only the two paths that switch an
-        // endpoint OFF were audited — the dispatcher's auto-disable and the admin kill switch — so
-        // creating one, or repointing a live one at a new destination, wrote nothing at all. That
-        // is the shape an exfiltration of a shop's event stream would take.
-        $this->recordWebhookChange('created', $webhook, after: ['url' => $webhook->url, 'events' => $webhook->events]);
 
         return response()->json([
             'message' => translate('webhook_created'),
-            'webhook' => $this->presentWebhook($webhook),
-            'secret' => $secret,
+            'webhook' => $this->integrations->present($result['webhook']),
+            'secret' => $result['secret'],
         ], 201);
     }
 
@@ -256,29 +234,15 @@ class SellerIntegrationController extends Controller
             return $this->notFound('webhook_not_found');
         }
 
-        $validator = validator($request->all(), $this->webhookRules());
+        $result = $this->integrations->updateWebhook($webhook, $request->all());
 
-        if ($validator->fails()) {
-            return $this->refuse($validator->errors()->toArray());
+        if (!$result['ok']) {
+            return $this->refuse($result['errors']);
         }
-
-        $before = ['url' => $webhook->url, 'events' => $webhook->events, 'status' => $webhook->status];
-
-        $webhook->forceFill([
-            'name' => $request['name'],
-            'url' => $request['url'],
-            'events' => array_values(array_intersect($request['events'], SellerWebhookDispatcher::EVENTS)),
-            'status' => SellerWebhook::STATUS_ACTIVE,
-            'consecutive_failures' => 0,
-            'disabled_at' => null,
-            'disabled_reason' => null,
-        ])->save();
-
-        $this->recordWebhookChange('repointed', $webhook, $before, ['url' => $webhook->url, 'events' => $webhook->events]);
 
         return response()->json([
             'message' => translate('webhook_updated'),
-            'webhook' => $this->presentWebhook($webhook),
+            'webhook' => $this->integrations->present($result['webhook']),
         ], 200);
     }
 
@@ -306,26 +270,15 @@ class SellerIntegrationController extends Controller
             return $this->notFound('webhook_not_found');
         }
 
-        $status = (string) $request->get('status');
+        $result = $this->integrations->setWebhookStatus($webhook, (string) $request->get('status'));
 
-        if (!in_array($status, SellerWebhook::SELLER_SETTABLE_STATUSES, true)) {
-            return $this->refuse(['status' => translate('webhook_status_not_settable')]);
+        if (!$result['ok']) {
+            return $this->refuse($result['errors']);
         }
-
-        $before = ['status' => $webhook->status];
-
-        $webhook->forceFill([
-            'status' => $status,
-            'consecutive_failures' => $status === SellerWebhook::STATUS_ACTIVE ? 0 : $webhook->consecutive_failures,
-            'disabled_at' => null,
-            'disabled_reason' => null,
-        ])->save();
-
-        $this->recordWebhookChange('status_changed', $webhook, $before, ['status' => $status]);
 
         return response()->json([
             'message' => translate('webhook_updated'),
-            'webhook' => $this->presentWebhook($webhook),
+            'webhook' => $this->integrations->present($result['webhook']),
         ], 200);
     }
 
@@ -352,9 +305,7 @@ class SellerIntegrationController extends Controller
             return $this->notFound('webhook_not_found');
         }
 
-        $this->recordWebhookChange('deleted', $webhook, ['url' => $webhook->url, 'events' => $webhook->events]);
-
-        $webhook->delete();
+        $this->integrations->deleteWebhook($webhook);
 
         return response()->json(['message' => translate('webhook_deleted')], 200);
     }
@@ -384,25 +335,15 @@ class SellerIntegrationController extends Controller
             return $this->notFound('webhook_not_found');
         }
 
-        $event = (string) $request->get('event', SellerWebhookDispatcher::EVENTS[0]);
+        $result = $this->integrations->queueTest($webhook, (string) $request->get('event', SellerWebhookDispatcher::EVENTS[0]));
 
-        if (!in_array($event, SellerWebhookDispatcher::EVENTS, true)) {
-            return $this->refuse(['event' => translate('webhook_unknown_event')]);
+        if (!$result['ok']) {
+            return $this->refuse($result['errors']);
         }
-
-        $delivery = SellerWebhookDelivery::create([
-            'webhook_id' => $webhook->id,
-            'seller_id' => $request->seller->id,
-            'event' => $event,
-            'payload' => ['test' => true],
-            'status' => SellerWebhookDelivery::STATUS_PENDING,
-        ]);
-
-        DeliverSellerWebhook::dispatch($delivery->id);
 
         return response()->json([
             'message' => translate('webhook_test_queued'),
-            'delivery_id' => $delivery->id,
+            'delivery_id' => $result['delivery']->id,
         ], 202);
     }
 
@@ -443,57 +384,6 @@ class SellerIntegrationController extends Controller
                 'created_at' => $delivery->created_at,
             ])->all(),
         ], 200);
-    }
-
-    /**
-     * Refuse a destination the platform must not dial.
-     *
-     * Validation can only say the string looks like an https URL. Whether it points at the cloud
-     * metadata service or an internal admin panel is a question about the resolved address, and it
-     * belongs here rather than in a rule string.
-     */
-    private function refuseDestination(string $url): ?JsonResponse
-    {
-        $verdict = app(SellerWebhookDispatcher::class)->mayDial($url);
-
-        if ($verdict['allowed']) {
-            return null;
-        }
-
-        return response()->json(['errors' => [
-            ['code' => 'url', 'message' => translate('webhook_url_' . $verdict['reason'])],
-        ]], 403);
-    }
-
-    private function webhookRules(): array
-    {
-        return [
-            'name' => 'required|string|max:120',
-            // https only: a signed delivery over plain http is signed plaintext, and the payload
-            // carries order and payout details.
-            'url' => 'required|url|starts_with:https://|max:500',
-            'events' => 'required|array|min:1',
-            'events.*' => 'string|in:' . implode(',', SellerWebhookDispatcher::EVENTS),
-        ];
-    }
-
-    private function presentWebhook(SellerWebhook $webhook): array
-    {
-        return [
-            'id' => $webhook->id,
-            'name' => $webhook->name,
-            'url' => $webhook->url,
-            'events' => $webhook->events ?? [],
-            'status' => $webhook->status,
-            'consecutive_failures' => $webhook->consecutive_failures,
-            'last_success_at' => $webhook->last_success_at,
-            'last_failure_at' => $webhook->last_failure_at,
-            'disabled_at' => $webhook->disabled_at,
-            'disabled_reason' => $webhook->disabled_reason,
-            // An endpoint nothing has been sent to has not earned a green tick.
-            'never_called' => $webhook->last_success_at === null && $webhook->last_failure_at === null,
-            'created_at' => $webhook->created_at,
-        ];
     }
 
     /** @return array<int, string> */
@@ -554,25 +444,6 @@ class SellerIntegrationController extends Controller
         $principal = $request->attributes->get(SellerApiAuthMiddleware::PRINCIPAL);
 
         return $principal instanceof SellerPrincipal ? $principal : SellerPrincipal::owner($request->seller);
-    }
-    /**
-     * One line per change to where a shop's events are sent.
-     *
-     * The URL is recorded in full on both sides. A repoint is the one webhook change that matters
-     * to a fraud review, and "the endpoint changed" without the two addresses is not a finding.
-     *
-     * @param  array<string, mixed>|null  $before
-     * @param  array<string, mixed>|null  $after
-     */
-    private function recordWebhookChange(string $event, SellerWebhook $webhook, ?array $before = null, ?array $after = null): void
-    {
-        app(AuditLogger::class)->record(
-            action: 'integration.webhook_' . $event,
-            subject: $webhook,
-            before: $before,
-            after: $after,
-            context: ['seller_id' => $webhook->seller_id, 'name' => $webhook->name],
-        );
     }
 
 }

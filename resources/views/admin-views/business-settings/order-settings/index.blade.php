@@ -246,6 +246,33 @@
                                            value="{{ usdToDefaultCurrency($freeDeliveryOverAmountSeller) ?? 0 }}">
                                 </div>
                             </div>
+
+                            {{-- The checkout item floor. It was seeded at install, read in exactly one
+                                 place and shipped to all three mobile apps in /api/v1/config — and
+                                 written by nothing, so the apps enforced a rule the operator could
+                                 neither see nor change. --}}
+                            @php($minimumOrderLimit = (int) getWebConfig('minimum_order_limit'))
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label class="form-label" for="minimum_order_limit">
+                                        {{ translate('Minimum_Items_Per_Order') }}
+                                        <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right"
+                                              data-bs-title="{{ translate('the_fewest_items_a_customer_may_check_out_with_zero_means_no_limit') }}">
+                                            <i class="fi fi-sr-info"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" class="form-control" min="0" max="1000"
+                                           name="minimum_order_limit" id="minimum_order_limit"
+                                           placeholder="{{ translate('ex') . ': ' . '1' }}"
+                                           value="{{ $minimumOrderLimit }}">
+                                    {{-- Said out loud rather than left to be discovered: this value
+                                         reaches the three mobile apps through /api/v1/config and is
+                                         enforced there. The web checkout does not read it. --}}
+                                    <small class="text-muted">
+                                        {{ translate('this_limit_is_enforced_by_the_mobile_apps_the_web_checkout_does_not_read_it') }}
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -30,6 +30,7 @@ class AnalyticsNavigation
         'funnel' => ['label' => 'funnel', 'group' => 'commerce', 'hint' => 'from_a_visit_to_an_order_and_where_it_is_lost'],
         'revenue' => ['label' => 'revenue', 'group' => 'commerce', 'hint' => 'orders_average_order_value_and_what_each_source_earned'],
         'timing' => ['label' => 'timing', 'group' => 'commerce', 'hint' => 'the_hours_and_days_this_shop_is_actually_busy'],
+        'fulfilment' => ['label' => 'fulfilment_and_returns', 'group' => 'commerce', 'hint' => 'how_long_shipping_takes_what_comes_back_and_what_is_refunded'],
 
         'events' => ['label' => 'event_explorer', 'group' => 'data', 'hint' => 'every_recorded_event_by_name_and_volume'],
         'journeys' => ['label' => 'journeys', 'group' => 'data', 'hint' => 'what_one_visitor_did_in_order'],

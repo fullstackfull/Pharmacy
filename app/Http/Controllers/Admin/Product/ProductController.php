@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Product;
 
+use App\Services\Marketplace\ProductModerationService;
+use App\Services\Marketplace\InventoryService;
 use App\Contracts\Repositories\AttributeRepositoryInterface;
 use App\Contracts\Repositories\AuthorRepositoryInterface;
 use App\Contracts\Repositories\BannerRepositoryInterface;
@@ -818,7 +820,27 @@ class ProductController extends BaseController
 
         if ($stockCount >= 0) {
             $product = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
-            $this->productRepo->updateByParams(params: ['id' => $request['product_id']], data: $dataArray);
+
+            // Through the inventory service rather than straight at the column. This box used to
+            // write current_stock with no reason, no movement row and no audit line — a second
+            // stock-writing path that disagreed with the first about whether a change is traceable,
+            // which is how current_stock and the movement ledger drift apart.
+            $result = app(InventoryService::class)->setStock(
+                productId: $request['product_id'],
+                newStock: (int) $stockCount,
+                reason: 'manual_stock_edit',
+                alongside: ['variation' => $dataArray['variation']],
+                by: auth('admin')->id(),
+                byType: 'admin',
+            );
+
+            if (!$result['ok']) {
+                ToastMagic::error(translate($result['reason']));
+
+                return back();
+            }
+
+            cacheRemoveByType(type: 'products');
             $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']]);
             $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
 
@@ -929,13 +951,21 @@ class ProductController extends BaseController
 
     public function deny(ProductDenyRequest $request): JsonResponse
     {
+        // The legacy columns this screen has always written — the storefront and all three apps read
+        // request_status, so it still has to be right — and then the decision itself, through the
+        // moderation service, which is where the reason, the history event and the audit line live.
+        // Before this, whether a listing decision was recorded at all depended on which of two
+        // screens the operator happened to open.
         $dataArray = [
-            'request_status' => 2,
             'status' => 0,
             'featured' => 0,
             'denied_note' => $request['denied_note'],
         ];
         $this->productRepo->update(id: $request['id'], data: $dataArray);
+        app(ProductModerationService::class)->reject(
+            productId: $request['id'],
+            note: $request['denied_note'],
+        );
         $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['id']]);
         $vendor = $this->sellerRepo->getFirstWhere(params: ['id' => $product['user_id']]);
         if ($vendor['cm_firebase_token']) {
@@ -947,10 +977,15 @@ class ProductController extends BaseController
     public function approveStatus(Request $request): JsonResponse
     {
         $product = $this->productRepo->getFirstWhereWithoutGlobalScope(params: ['id' => $request['id']]);
-        $dataArray = [
-            'request_status' => ($product['request_status'] == 0) ? 1 : 0
-        ];
-        $this->productRepo->update(id: $request['id'], data: $dataArray);
+
+        // A toggle, so both directions are real decisions: approving a listing, and taking that
+        // approval back. Both go through the moderation service, which syncs request_status, writes
+        // the history event and records who decided — none of which this screen used to do.
+        $moderation = app(ProductModerationService::class);
+        (int) $product['request_status'] === 0
+            ? $moderation->approve(productId: $request['id'])
+            : $moderation->returnToReview(productId: $request['id']);
+
         $vendor = $this->sellerRepo->getFirstWhere(params: ['id' => $product['user_id']]);
         if ($vendor['cm_firebase_token']) {
             ProductRequestStatusUpdateEvent::dispatch('product_request_approved_message', 'seller', $vendor['app_language'] ?? getDefaultLanguage(), $vendor['cm_firebase_token']);

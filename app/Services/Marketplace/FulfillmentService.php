@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\OrderFulfillment;
+use App\Services\Analytics\Analytics;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Schema;
 
@@ -95,7 +96,40 @@ class FulfillmentService
             after: ['status' => $toStatus],
         );
 
+        if ($toStatus === OrderFulfillment::STATUS_SHIPPED) {
+            $this->measureDispatch($fulfillment);
+        }
+
         return ['ok' => true, 'fulfillment' => $fulfillment];
+    }
+
+    /**
+     * How long this one took, recorded where it happened.
+     *
+     * `shipped_at` has been stamped on every fulfilment since this service was written and nothing
+     * ever subtracted it from anything, so the platform enforced a dispatch SLA it could not
+     * measure. The hours travel on the event; the fulfilment report reads the same two timestamps
+     * directly, so either can be checked against the other.
+     *
+     * Never the reason a dispatch fails: a shipment the funnel did not see is still shipped.
+     */
+    private function measureDispatch(OrderFulfillment $fulfillment): void
+    {
+        try {
+            $opened = $fulfillment->created_at;
+            $shipped = $fulfillment->shipped_at;
+
+            app(Analytics::class)->orderDispatched(
+                fulfillmentId: (int) $fulfillment->id,
+                orderId: $fulfillment->order_id,
+                sellerId: $fulfillment->seller_id,
+                hoursToDispatch: $opened && $shipped && $shipped->greaterThanOrEqualTo($opened)
+                    ? round($opened->diffInMinutes($shipped) / 60, 2)
+                    : null,
+            );
+        } catch (\Throwable) {
+            // Measurement is a description of what happened, not part of it.
+        }
     }
 
     public function assign(OrderFulfillment $fulfillment, int|string|null $userId): array

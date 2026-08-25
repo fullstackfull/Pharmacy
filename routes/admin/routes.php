@@ -135,12 +135,21 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         Route::post('replace', [\App\Http\Controllers\Admin\V2SidebarPinController::class, 'replace'])->name('replace');
     });
 
-    Route::get('component', function () {
-        return view('layouts.admin.component');
-    });
-    Route::get('component-snippets', function () {
-        return view('layouts.admin.component-snippets');
-    });
+    /*
+    | Component galleries and the Kohl design-system page.
+    |
+    | Development surfaces, not operational ones: they render every primitive on one page so a change
+    | to the design system is reviewable in the real admin shell, in light and dark and in both
+    | directions, rather than discovered later on a production screen.
+    |
+    | Registered only when the application is in debug mode. They were three live URLs any panel user
+    | could open, two of them without even a route name — harmless to look at, and exactly the kind
+    | of thing that has no owner and no reason to be reachable on a shop taking orders.
+    */
+    if (config('app.debug')) {
+        Route::view('component', 'layouts.admin.component')->name('component');
+        Route::view('component-snippets', 'layouts.admin.component-snippets')->name('component-snippets');
+    }
 
     Route::controller(AdvancedSearchController::class)->group(function () {
         Route::get('advanced-search', 'getSearch')->name('advanced-search');
@@ -208,10 +217,28 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('{group}', 'index')->name('group');
         });
 
-    // Kohl design-system gallery. Every primitive on one page, so a change to the
-    // system is reviewable in the real admin shell — in light/dark and LTR/RTL —
-    // rather than discovered later on a production screen.
-    Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
+    /*
+    | Feature flags: a change that can be turned on for some of the shop rather than all of it.
+    |
+    | The only lever this platform had was publishing or unpublishing a whole addon module, so every
+    | change went live for everyone at the same moment and the only way back was a deployment.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Settings\FeatureFlagController::class)
+        ->prefix('settings/feature-flags')->name('settings.feature-flags.')->middleware('module:system_settings')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            // Writes, so they are POSTs: both change what the shop does for real people.
+            Route::post('/', 'update')->name('update');
+            Route::post('delete', 'destroy')->name('delete');
+        });
+
+    // Kohl design-system gallery. Every primitive on one page, so a change to the system is
+    // reviewable in the real admin shell — in light/dark and LTR/RTL — rather than discovered later
+    // on a production screen. Debug-only, with the two component galleries above: a development
+    // surface that is reachable on a live shop is a surface with no owner.
+    if (config('app.debug')) {
+        Route::view('design-system', 'admin-views.kohl.gallery')->name('design-system');
+    }
 
     /*
     | Developer portal: the live API surface for the app teams, the vendor app and any outside
@@ -909,6 +936,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
     });
 
     Route::group(['prefix' => 'transaction', 'as' => 'transaction.', 'middleware' => ['module:reports']], function () {
+        /*
+        | Payment transactions by customer, with an Excel export.
+        |
+        | The controller and its Blade have existed all along with no route in front of them, so the
+        | screen was unreachable and its export button called a route name that does not exist. A
+        | capability with a controller, a view and no way in is the audit's ZERO ORPHAN case in its
+        | purest form: built, paid for, and invisible.
+        */
+        Route::controller(\App\Http\Controllers\Admin\TransactionController::class)->group(function () {
+            Route::get('list', 'list')->name('list');
+            Route::get('transaction-export', 'export')->name('transaction-export');
+        });
+
         Route::controller(TransactionReportController::class)->group(function () {
             Route::get('order-transaction-list', 'order_transaction_list')->name('order-transaction-list');
             Route::get('pdf-order-wise-transaction', 'pdf_order_wise_transaction')->name('pdf-order-wise-transaction');
@@ -1048,6 +1088,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('update-status', 'updateStatus')->name('update-status');
             Route::post('resend-notification', 'resendNotification')->name('resend-notification');
         });
+
+        // The delivery record for every transactional message the platform sends, and the one
+        // action on it. Resending is a send, so it is a POST rather than a link a browser can
+        // prefetch, and it is audited.
+        Route::controller(\App\Http\Controllers\Admin\Notification\DeliveryLogController::class)->group(function () {
+            Route::get('deliveries', 'index')->name('deliveries');
+            Route::post('deliveries/{id}/resend', 'resend')->name('deliveries.resend')->whereNumber('id');
+        });
     });
 
     Route::group(['prefix' => 'support-ticket', 'as' => 'support-ticket.', 'middleware' => ['module:people']], function () {
@@ -1134,16 +1182,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
         });
     });
 
-    Route::group(['prefix' => 'addon', 'as' => 'addon.'], function () {
-        Route::controller(AddonController::class)->group(function () {
-            Route::get('', 'index')->name('index');
-            Route::post('publish', 'publish')->name('publish');
-            Route::post('activation', 'activation')->name('activation');
-            Route::post('upload', 'upload')->name('upload');
-            Route::post('delete', 'delete')->name('delete');
-        });
-    });
-
+    /*
+    | The addon manager used to be mounted twice: here at /admin/addon and again under
+    | system-setup. Same controller, same five actions — including UPLOAD and DELETE — and this copy
+    | sat outside the themes_and_addons module gate, so a role denied addon management could still
+    | upload or remove one. It was linked from no view and no menu. The gated twin below is
+    | canonical; this one is gone.
+    */
     Route::group(['prefix' => 'system-setup', 'as' => 'system-setup.'], function () {
 
         Route::group(['middleware' => ['module:themes_and_addons']], function () {

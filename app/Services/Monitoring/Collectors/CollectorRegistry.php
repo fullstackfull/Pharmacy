@@ -33,6 +33,9 @@ class CollectorRegistry
         'energy' => EnergyCollector::class,
         'ssl' => SslCollector::class,
         'webserver' => WebServerCollector::class,
+        // The money-losing conditions the payments page detects and could not publish, so no alert
+        // rule could ever be written against them.
+        'finance' => FinanceIntegrityCollector::class,
     ];
 
     /** @var array<string, Collector> */

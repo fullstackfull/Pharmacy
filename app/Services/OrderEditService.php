@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Commerce\OrderStatePolicy;
 use App\Traits\ProductTrait;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -385,10 +386,12 @@ class OrderEditService
 
     public function checkIsOrderEditable(object|array $order, string|null $type = 'admin'): array
     {
-        if (($order->order_type != 'default_type') || (!in_array($order->order_status, ['pending', 'confirmed']) && in_array($order->order_status, ['processing', 'out_for_delivery', 'delivered', 'returned', 'failed', 'canceled']))) {
+        // The editable states were an inline array here and the rule was repeated in two more
+        // files, so moving the line meant a code change in three places that could disagree.
+        if ($order->order_type != 'default_type' || !app(OrderStatePolicy::class)->isEditable($order->order_status)) {
             return [
                 'status' => false,
-                'message' => translate('Order can only be edited when the order status is Pending or Confirmed.'),
+                'message' => translate('this_order_can_no_longer_be_edited_in_its_current_status'),
             ];
         }
 

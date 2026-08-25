@@ -203,7 +203,7 @@ class CampaignResolver
 
     private function serving(): bool
     {
-        if (!config('commerce.enabled', true)) {
+        if (!app(CommerceExperience::class)->enabled()) {
             return false;
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Services\Commerce\OrderStatePolicy;
 use App\Contracts\Repositories\BusinessSettingRepositoryInterface;
 use App\Contracts\Repositories\OrderDetailsRewardsRepositoryInterface;
 use App\Contracts\Repositories\OrderStatusHistoryRepositoryInterface;
@@ -883,7 +884,10 @@ class UserProfileController extends Controller
             Toastr::error(translate('order_not_found'));
             return back();
         }
-        if ($order['payment_method'] == 'cash_on_delivery' && $order['order_status'] == 'pending') {
+        // Which states a customer may cancel from is a marketplace's own rule and is now one
+        // declaration; the payment condition beside it is not a policy but an accounting fact —
+        // money already taken is never undone by this button.
+        if ($order['payment_method'] == 'cash_on_delivery' && app(OrderStatePolicy::class)->customerMayCancel($order['order_status'])) {
             OrderManager::getStockUpdateOnOrderStatusChange($order, 'canceled');
             $orderStatusHistoryData = $this->orderStatusHistoryService->getOrderHistoryData(orderId: $id, userId: auth('customer')->id(), userType: 'customer', status: 'canceled');
             $this->orderStatusHistoryRepo->add($orderStatusHistoryData);

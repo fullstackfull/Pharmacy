@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Product;
 
+use App\Services\AuditLogger;
 use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\SeoMetaInfoRepositoryInterface;
@@ -74,7 +75,18 @@ class BrandController extends BaseController
         $data = [
             'status' => $request->get('status', 0),
         ];
+        $brand = $this->brandRepo->getFirstWhere(params: ['id' => $request['id']]);
         $this->brandRepo->update(id: $request['id'], data: $data);
+        // The brand registry audits every claim decision; the CRUD that creates and deletes the
+        // brands those claims point at recorded nothing, so the trail could say who was granted a
+        // brand and never who created or removed it.
+        app(AuditLogger::class)->record(
+            action: 'brand.status_changed',
+            subject: ['type' => 'brand', 'id' => $request['id']],
+            before: ['status' => $brand['status'] ?? null],
+            after: ['status' => (int) $data['status']],
+        );
+
         return response()->json(['success' => 1, 'message' => translate('status_updated_successfully')], 200);
     }
 
@@ -88,6 +100,13 @@ class BrandController extends BaseController
         $brandService->deleteImage(data: $brand);
         $this->translationRepo->delete(model: 'App\Models\Brand', id: $request['id']);
         $this->brandRepo->delete(params: ['id' => $request['id']]);
+        // Recorded with what it was, not just its id: the row is gone by the time anybody reads
+        // this line, so a name here is the only way the trail stays readable.
+        app(AuditLogger::class)->record(
+            action: 'brand.deleted',
+            subject: ['type' => 'brand', 'id' => $request['id']],
+            before: ['name' => $brand['name'] ?? null, 'products_moved_to' => $request['brand_id']],
+        );
         ToastMagic::success(translate('brand_deleted_successfully'));
         return redirect()->back();
     }
@@ -105,6 +124,11 @@ class BrandController extends BaseController
         app(\App\Services\EntityPageBannerService::class)->sync(entity: 'brand', resourceId: (int) $savedBrand->id, image: $request->file('page_banner'));
 
         updateSetupGuideCacheKey(key: 'brand_setup', panel: 'admin');
+        app(AuditLogger::class)->record(
+            action: 'brand.created',
+            subject: $savedBrand,
+            after: ['name' => $savedBrand->name ?? null],
+        );
         ToastMagic::success(translate('brand_added_successfully'));
         return redirect()->route('admin.brand.list');
     }
@@ -126,6 +150,12 @@ class BrandController extends BaseController
         app(\App\Services\EntityPageBannerService::class)->sync(entity: 'brand', resourceId: (int) $brand->id, image: $request->file('page_banner'));
 
         updateSetupGuideCacheKey(key: 'brand_setup', panel: 'admin');
+        app(AuditLogger::class)->record(
+            action: 'brand.updated',
+            subject: ['type' => 'brand', 'id' => $request['id']],
+            before: ['name' => $brand->name ?? null, 'slug' => $oldSlug],
+            after: ['name' => $dataArray['name'] ?? null, 'slug' => $dataArray['slug'] ?? $oldSlug],
+        );
         ToastMagic::success(translate('brand_updated_successfully'));
         return redirect()->route('admin.brand.list');
     }

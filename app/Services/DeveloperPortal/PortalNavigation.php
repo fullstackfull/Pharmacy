@@ -54,6 +54,9 @@ class PortalNavigation
         'health' => ['label' => 'api_health', 'group' => 'operations', 'hint' => 'traffic_errors_and_latency_per_endpoint'],
         'webhooks' => ['label' => 'webhooks', 'group' => 'operations', 'hint' => 'inbound_and_outbound_event_delivery', 'requires' => 'webhooks'],
         'integrations' => ['label' => 'integrations', 'group' => 'operations', 'hint' => 'the_external_services_this_shop_depends_on'],
+        // Real endpoints outside the api/ prefix, so no generator that reads the route table finds
+        // them. Undocumented, they were a monitoring API nobody knew this shop served.
+        'feeds' => ['label' => 'telemetry_feeds', 'group' => 'operations', 'hint' => 'machine_readable_monitoring_metrics_and_traces'],
         'quality' => ['label' => 'documentation_quality', 'group' => 'operations', 'hint' => 'what_is_undocumented_and_what_is_unclassified'],
         'settings' => ['label' => 'portal_settings', 'group' => 'operations', 'hint' => 'visibility_versions_and_snapshots'],
     ];

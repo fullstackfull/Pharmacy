@@ -374,6 +374,86 @@ class Analytics
         ));
     }
 
+    /**
+     * A return was authorised: goods are expected back.
+     *
+     * The event stream had one refund-shaped name on it and it fired on an order status change, so
+     * "refund_requested" counted orders that were marked returned or failed and never counted a
+     * refund request. These four are raised where the thing actually happens, which is the only
+     * place a measurement can be honest about what it counted.
+     */
+    public function returnAuthorized(int $returnId, ?int $orderId, ?int $sellerId, ?string $reason, int $quantity): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::RETURN_AUTHORIZED,
+            entityType: 'return_shipment',
+            entityId: (string) $returnId,
+            vendorId: $sellerId,
+            properties: array_filter([
+                'order_id' => $orderId,
+                'reason' => $reason,
+                'qty' => $quantity,
+            ], static fn ($value) => $value !== null && $value !== ''),
+            dedupeKey: "return:{$returnId}:authorized",
+        ));
+    }
+
+    /** The goods arrived, and whether they went back on the shelf. */
+    public function returnReceived(int $returnId, ?int $sellerId, bool $restocked, int $quantity): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::RETURN_RECEIVED,
+            entityType: 'return_shipment',
+            entityId: (string) $returnId,
+            vendorId: $sellerId,
+            properties: ['restocked' => $restocked, 'qty' => $quantity],
+            dedupeKey: "return:{$returnId}:received",
+        ));
+    }
+
+    /**
+     * A refund reached a decision.
+     *
+     * The outcome is a property rather than two event names, because "how many refunds were
+     * decided" and "how many were approved" are both questions, and splitting the name makes the
+     * first one a sum somebody has to remember to do.
+     */
+    public function refundSettled(int $refundRequestId, string $outcome, ?float $amount, ?int $sellerId = null): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::REFUND_SETTLED,
+            entityType: 'refund_request',
+            entityId: (string) $refundRequestId,
+            vendorId: $sellerId,
+            value: $amount,
+            currency: $this->currency(),
+            properties: ['outcome' => $outcome],
+            dedupeKey: "refund:{$refundRequestId}:{$outcome}",
+        ));
+    }
+
+    /**
+     * An order was handed to a carrier, with how long that took.
+     *
+     * The hours travel on the event so the funnel can answer "did dispatch get slower this week"
+     * without joining back to the fulfilment table — and the fulfilment report reads the timestamps
+     * directly, so the two can be checked against each other.
+     */
+    public function orderDispatched(int $fulfillmentId, ?int $orderId, ?int $sellerId, ?float $hoursToDispatch): void
+    {
+        $this->recorder->record(new AnalyticsEvent(
+            name: AnalyticsEvent::ORDER_DISPATCHED,
+            entityType: 'order_fulfillment',
+            entityId: (string) $fulfillmentId,
+            vendorId: $sellerId,
+            properties: array_filter([
+                'order_id' => $orderId,
+                'hours_to_dispatch' => $hoursToDispatch,
+            ], static fn ($value) => $value !== null),
+            dedupeKey: "fulfilment:{$fulfillmentId}:dispatched",
+        ));
+    }
+
     /** A seller submitted a KYC document for review. */
     public function kycSubmitted(int $sellerId, int $documentId, string $documentType): void
     {

@@ -28,6 +28,7 @@
     $findings = $panel['findings'];
     $declines = $panel['declines'];
     $unrecorded = $panel['unrecorded'];
+    $callbacks = $panel['callbacks'];
     $scans = $panel['scans'];
 
     $stateTitle = static fn (string $state) => match ($state) {
@@ -562,6 +563,48 @@
         @endif
     </x-k.card>
 @endforeach
+
+{{-- Did the gateway call back at all.
+
+     The question this page could not answer: a callback that never arrived and one that arrived and
+     was rejected were the same absence of a row, so it could name the symptom — money captured with
+     no order — and never the cause. "Ignored" is kept apart from "failed" on purpose: a callback
+     nothing acted on is a different incident from one that decided against the payment, and it is
+     fixed somewhere else. --}}
+<x-k.card :title="translate('gateway_callbacks_received')">
+    @if ($callbacks['state'] === 'ok')
+        <div class="k-table-wrap">
+            <table class="k-table k-table--compact">
+                <thead><tr>
+                    <th>{{ translate('gateway') }}</th>
+                    <th class="k-table__num">{{ translate('succeeded') }}</th>
+                    <th class="k-table__num">{{ translate('failed') }}</th>
+                    <th class="k-table__num">{{ translate('acted_on_by_nothing') }}</th>
+                    <th>{{ translate('last_callback') }}</th>
+                </tr></thead>
+                <tbody>
+                @foreach ($callbacks['rows'] as $row)
+                    <tr>
+                        <td><code>{{ $row['gateway'] }}</code></td>
+                        <td class="k-table__num">{{ $row['success'] }}</td>
+                        <td class="k-table__num">{{ $row['failure'] }}</td>
+                        <td class="k-table__num">{{ $row['ignored'] }}</td>
+                        <td>{{ $row['last_seen_at'] }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    @elseif ($callbacks['state'] === 'unavailable')
+        <p class="mon-note mon-note--critical">{{ translate('this_could_not_be_read') }}: {{ $callbacks['message'] ?? '' }}</p>
+    @else
+        {{-- An empty table on a shop that took money in this window is itself the finding. --}}
+        <x-k.empty icon="plug"
+                   :title="translate('no_gateway_callback_landed_in_this_window')"
+                   :text="translate('a_shop_that_took_a_card_payment_in_this_window_and_has_no_row_here_has_a_callback_that_never_arrived')" />
+    @endif
+    <p class="mon-note">{{ translate('source') }}: <code>{{ $callbacks['source'] }}</code></p>
+</x-k.card>
 
 {{-- Not measurements this page chose to leave out — measurements nothing on this deployment takes.
      Drawn as readings with their reason so the gap is a task rather than an empty cell somebody

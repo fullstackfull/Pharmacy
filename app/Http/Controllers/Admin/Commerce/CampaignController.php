@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Commerce;
 
 use App\Http\Controllers\BaseController;
+use App\Services\Commerce\CommerceExperience;
 use App\Models\ExperienceCampaign;
 use App\Models\ExperiencePage;
 use App\Models\Theme;
@@ -45,7 +46,7 @@ class CampaignController extends BaseController
 
         return view('admin-views.commerce.campaigns', [
             'ready'     => $ready,
-            'enabled'   => (bool) config('commerce.enabled', true),
+            'enabled'   => app(CommerceExperience::class)->enabled(),
             // How many shoppers each campaign's overlay actually reached (30d): the number that
             // answers "did the campaign work" on the same screen that runs it.
             'reach'     => app(\App\Services\Theme\SectionReach::class),

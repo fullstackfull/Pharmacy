@@ -6,6 +6,7 @@ use App\Models\OrderDetail;
 use App\Models\RefundRequest;
 use App\Models\ReturnShipment;
 use App\Models\StockMovement;
+use App\Services\Analytics\Analytics;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -56,6 +57,14 @@ class ReturnLogisticsService
             subject: ['type' => 'return_shipment', 'id' => $rma->id],
             after: ['reference' => $rma->reference, 'product_id' => $rma->product_id, 'qty' => $rma->qty],
         );
+
+        $this->measure(fn () => app(Analytics::class)->returnAuthorized(
+            returnId: (int) $rma->id,
+            orderId: $rma->order_id,
+            sellerId: $rma->seller_id,
+            reason: $rma->reason,
+            quantity: (int) $rma->qty,
+        ));
 
         return $rma;
     }
@@ -142,6 +151,13 @@ class ReturnLogisticsService
                 subject: ['type' => 'return_shipment', 'id' => $rma->id],
                 after: ['restocked' => $restocked, 'balance_after' => $balanceAfter],
             );
+
+            $this->measure(fn () => app(Analytics::class)->returnReceived(
+                returnId: (int) $rma->id,
+                sellerId: $rma->seller_id,
+                restocked: $restocked,
+                quantity: (int) $rma->qty,
+            ));
 
             return ['ok' => true, 'return' => $rma->fresh(), 'restocked' => $restocked, 'balance_after' => $balanceAfter];
         });
@@ -251,6 +267,21 @@ class ReturnLogisticsService
             report($exception);
 
             return null;
+        }
+    }
+
+    /**
+     * Record a measurement, and never let it be the reason a return fails.
+     *
+     * The RMA moves goods and stock. Analytics describes what happened afterwards, and a
+     * description that throws must not undo the thing it was describing.
+     */
+    private function measure(callable $record): void
+    {
+        try {
+            $record();
+        } catch (\Throwable) {
+            // A return the funnel did not see is still a return.
         }
     }
 

@@ -1029,6 +1029,104 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── platform · issue policy, commerce switch and sweep health ──────
+        'seller_issue_policy' => [
+            'Seller issue policy',
+            'سياسة مشكلات البائعين',
+        ],
+        'how_a_problem_is_scored_when_it_is_escalated_and_how_often_a_seller_may_be_interrupted' => [
+            'How a problem is scored, when it is escalated, and how often a seller may be interrupted',
+            'كيف تُسجَّل درجة المشكلة، ومتى تُصعَّد، وكم مرة يُقاطَع البائع',
+        ],
+        'score_at_which_an_issue_is_critical' => [
+            'Score at which an issue is critical',
+            'الدرجة التي تصبح عندها المشكلة حرجة',
+        ],
+        'score_at_which_an_issue_is_high' => [
+            'Score at which an issue is high',
+            'الدرجة التي تصبح عندها المشكلة مرتفعة',
+        ],
+        'score_at_which_an_issue_is_medium' => [
+            'Score at which an issue is medium',
+            'الدرجة التي تصبح عندها المشكلة متوسطة',
+        ],
+        'hours_a_low_issue_may_stand_before_it_is_promoted' => [
+            'Hours a low issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المنخفضة قبل تصعيدها',
+        ],
+        'hours_a_medium_issue_may_stand_before_it_is_promoted' => [
+            'Hours a medium issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المتوسطة قبل تصعيدها',
+        ],
+        'hours_a_high_issue_may_stand_before_it_is_promoted' => [
+            'Hours a high issue may stand before it is promoted',
+            'ساعات بقاء المشكلة المرتفعة قبل تصعيدها',
+        ],
+        'how_many_times_one_issue_may_be_promoted' => [
+            'How many times one issue may be promoted',
+            'كم مرة يمكن تصعيد المشكلة الواحدة',
+        ],
+        'hours_between_interruptions_of_the_same_seller' => [
+            'Hours between interruptions of the same seller',
+            'الساعات بين مقاطعة وأخرى للبائع نفسه',
+        ],
+        'the_difference_between_a_useful_alert_and_the_reason_a_seller_switches_notifications_off' => [
+            'The difference between a useful alert and the reason a seller switches notifications off',
+            'الفرق بين تنبيه مفيد وسبب إيقاف البائع للإشعارات',
+        ],
+        'the_storefront_personalisation_engine_is_running' => [
+            'The storefront personalisation engine is running',
+            'محرّك تخصيص الواجهة يعمل',
+        ],
+        'off_means_collections_fall_back_to_their_catalogue_ordering_and_no_campaign_segment_or_experiment_logic_runs' => [
+            'Off means collections fall back to their catalogue ordering, and no campaign, segment or experiment logic runs',
+            'الإيقاف يعني عودة المجموعات إلى ترتيب الكتالوج، وتوقّف منطق الحملات والشرائح والتجارب',
+        ],
+        'what_the_seller_sweeps_did' => [
+            'What the seller sweeps did',
+            'ما فعلته جولات البائعين',
+        ],
+        'automation_runs' => [
+            'Automation runs',
+            'جولات الأتمتة',
+        ],
+        'runs_that_failed' => [
+            'Runs that failed',
+            'الجولات الفاشلة',
+        ],
+        'bulk_jobs' => [
+            'Bulk jobs',
+            'المهام الجماعية',
+        ],
+        'jobs_that_failed' => [
+            'Jobs that failed',
+            'المهام الفاشلة',
+        ],
+        'jobs_stuck_over_an_hour' => [
+            'Jobs stuck over an hour',
+            'مهام عالقة أكثر من ساعة',
+        ],
+        'the_seller_work_ledgers_could_not_be_read' => [
+            'The seller work ledgers could not be read',
+            'تعذّرت قراءة سجلات عمل البائعين',
+        ],
+        'Collections' => [
+            'Collections',
+            'المجموعات',
+        ],
+        'Campaigns' => [
+            'Campaigns',
+            'الحملات',
+        ],
+        'Segments' => [
+            'Segments',
+            'الشرائح',
+        ],
+        'Experiments' => [
+            'Experiments',
+            'التجارب',
+        ],
+
         // ── analytics · privacy settings, data quality and the fold ────────
         'analytics_and_privacy' => [
             'Analytics and privacy',
@@ -2555,6 +2653,2882 @@ class SellerCenterCopySeeder extends Seeder
         'allowed' => [
             'Allowed',
             'المسموح',
+        ],
+        // Telemetry feeds — the machine-readable surfaces the Developer Portal now documents.
+        'telemetry_feeds' => [
+            'Telemetry Feeds',
+            'تدفّقات القياس',
+        ],
+        'machine_readable_monitoring_metrics_and_traces' => [
+            'Machine-readable monitoring, metrics and traces',
+            'مراقبة ومقاييس وتتبّعات بصيغة تقرأها الأنظمة',
+        ],
+        'machine_readable_feeds' => [
+            'Machine-readable feeds',
+            'التدفّقات التي تقرأها الأنظمة',
+        ],
+        'endpoints_for_collectors_rather_than_for_people' => [
+            'Endpoints meant for collectors rather than for people. None of them sit under the api/ prefix, so no generated document finds them on its own.',
+            'نقاط نهاية مُعدّة للأنظمة الجامعة لا للبشر. لا يقع أي منها تحت البادئة api/، لذا لا يعثر عليها أي مستند مُولَّد تلقائيًا.',
+        ],
+        'monitoring_json' => [
+            'Monitoring sections as JSON',
+            'أقسام المراقبة بصيغة JSON',
+        ],
+        'the_same_payload_the_page_renders_so_the_two_can_never_disagree' => [
+            'The same payload the page renders, so the feed and the screen can never disagree.',
+            'نفس البيانات التي تعرضها الصفحة، فلا يمكن أن يختلف التدفّق عن الشاشة.',
+        ],
+        'admin_session_and_the_sections_own_permission' => [
+            'Admin session, plus the section\'s own permission',
+            'جلسة المشرف، إضافةً إلى صلاحية القسم نفسه',
+        ],
+        'prometheus' => [
+            'Prometheus scrape',
+            'استخلاص Prometheus',
+        ],
+        'bearer_token_from_monitoring_prometheus_token' => [
+            'Bearer token from MONITORING_PROMETHEUS_TOKEN',
+            'رمز Bearer من MONITORING_PROMETHEUS_TOKEN',
+        ],
+        'gauges_for_the_last_complete_minute_never_labelled_by_route_or_id' => [
+            'Gauges for the last complete minute, never labelled by route or id.',
+            'مؤشّرات للدقيقة المكتملة الأخيرة، دون أي وسم بالمسار أو المعرّف.',
+        ],
+        'set_monitoring_prometheus_true_and_a_monitoring_prometheus_token' => [
+            'Set MONITORING_PROMETHEUS=true and a MONITORING_PROMETHEUS_TOKEN to switch it on.',
+            'اضبط MONITORING_PROMETHEUS=true مع MONITORING_PROMETHEUS_TOKEN لتشغيله.',
+        ],
+        'otlp_traces' => [
+            'OTLP trace export',
+            'تصدير التتبّعات بصيغة OTLP',
+        ],
+        'whatever_otel_exporter_otlp_headers_carries' => [
+            'Whatever OTEL_EXPORTER_OTLP_HEADERS carries',
+            'ما يحمله OTEL_EXPORTER_OTLP_HEADERS',
+        ],
+        'outbound_this_shop_posts_finished_traces_to_your_collector' => [
+            'Outbound: this shop posts finished traces to your collector.',
+            'صادر: يُرسل هذا المتجر التتبّعات المنتهية إلى نظامك الجامع.',
+        ],
+        'set_otel_exporter_otlp_endpoint_to_your_collector' => [
+            'Set OTEL_EXPORTER_OTLP_ENDPOINT to your collector to switch it on.',
+            'اضبط OTEL_EXPORTER_OTLP_ENDPOINT على نظامك الجامع لتشغيله.',
+        ],
+        'monitoring_sections_available_as_json' => [
+            'Monitoring sections available as JSON',
+            'أقسام المراقبة المتاحة بصيغة JSON',
+        ],
+        'append_json_1_to_any_monitoring_section_url' => [
+            'Append ?json=1 to any monitoring section URL, or send Accept: application/json.',
+            'أضف ‎?json=1‎ إلى رابط أي قسم مراقبة، أو أرسل Accept: application/json.',
+        ],
+        'feed' => [
+            'Feed',
+            'التدفّق',
+        ],
+        'format' => [
+            'Format',
+            'الصيغة',
+        ],
+        'preview_the_test_mail' => [
+            'Preview the test mail',
+            'معاينة بريد الاختبار',
+        ],
+        // The transactional delivery log.
+        'notification_delivery_log' => [
+            'Notification Delivery Log',
+            'سجل تسليم الإشعارات',
+        ],
+        'delivery_log' => [
+            'Delivery Log',
+            'سجل التسليم',
+        ],
+        'every_transactional_email_sms_and_push_this_shop_tried_to_send' => [
+            'Every transactional email, SMS and push this shop tried to send — and whether it arrived',
+            'كل بريد ورسالة نصية وإشعار معاملات حاول المتجر إرساله — وهل وصل أم لا',
+        ],
+        'delivered' => [
+            'Delivered',
+            'تم التسليم',
+        ],
+        'not_confirmed' => [
+            'Not confirmed',
+            'غير مؤكّد',
+        ],
+        'last_24_hours' => [
+            'Last 24 hours',
+            'آخر ٢٤ ساعة',
+        ],
+        'an_email_address_or_a_phone_number' => [
+            'An email address or a phone number',
+            'بريد إلكتروني أو رقم هاتف',
+        ],
+        'send_again' => [
+            'Send again',
+            'إرسال مرة أخرى',
+        ],
+        'resent_from' => [
+            'Resent from',
+            'أُعيد إرساله من',
+        ],
+        'no_message_has_been_sent_yet' => [
+            'No message has been sent yet.',
+            'لم تُرسل أي رسالة بعد.',
+        ],
+        'the_message_was_sent_again' => [
+            'The message was sent again.',
+            'تم إرسال الرسالة مرة أخرى.',
+        ],
+        'the_message_could_not_be_sent' => [
+            'The message could not be sent.',
+            'تعذّر إرسال الرسالة.',
+        ],
+        'a_one_time_code_cannot_be_sent_again' => [
+            'A one-time code cannot be sent again',
+            'لا يمكن إعادة إرسال رمز لمرة واحدة',
+        ],
+        'an_sms_carries_a_one_time_code_that_has_already_expired' => [
+            'An SMS carries a one-time code that has already expired, so sending it again would deliver a secret that no longer works.',
+            'تحمل الرسالة النصية رمزًا لمرة واحدة انتهت صلاحيته، فإعادة إرساله تُسلّم رمزًا لم يعد يعمل.',
+        ],
+        'this_record_has_no_recipient_to_send_to' => [
+            'This record has no recipient to send to.',
+            'لا يحتوي هذا السجل على مستلم لإرساله إليه.',
+        ],
+        'this_message_was_not_stored_in_full_so_it_cannot_be_sent_again' => [
+            'This message was not stored in full, so it cannot be sent again.',
+            'لم تُحفظ هذه الرسالة كاملة، لذا لا يمكن إعادة إرسالها.',
+        ],
+        'this_push_has_no_stored_payload_to_send_again' => [
+            'This push has no stored payload to send again.',
+            'لا يوجد محتوى محفوظ لهذا الإشعار لإعادة إرساله.',
+        ],
+        'days_of_transactional_message_history_to_keep' => [
+            'Days of transactional message history to keep',
+            'عدد أيام الاحتفاظ بسجل رسائل المعاملات',
+        ],
+        'the_delivery_log_is_a_support_aid_with_a_shelf_life_not_an_archive_of_what_was_said_to_customers' => [
+            'The delivery log is a support aid with a shelf life, not a permanent archive of what was said to customers.',
+            'سجل التسليم أداة دعم لها مدة صلاحية، وليس أرشيفًا دائمًا لما قيل للعملاء.',
+        ],
+        'minutes_before_an_unconfirmed_message_counts_as_failed' => [
+            'Minutes before an unconfirmed message counts as failed',
+            'عدد الدقائق قبل اعتبار الرسالة غير المؤكّدة فاشلة',
+        ],
+        'a_send_the_transport_never_came_back_about_reads_as_still_going_until_this_elapses' => [
+            'A send the transport never came back about reads as "still going" until this elapses.',
+            'الإرسال الذي لم يعد منه ناقل الرسائل بجواب يُقرأ على أنه «قيد التنفيذ» حتى انقضاء هذه المدة.',
+        ],
+        // Blast radius — how many sellers a failure is reaching.
+        'sellers_affected' => [
+            'Sellers affected',
+            'البائعون المتأثرون',
+        ],
+        'occurrences_on_a_signed_in_seller' => [
+            'occurrences on a signed-in seller',
+            'حالة وقعت لبائع مسجّل الدخول',
+        ],
+        'not_measured' => [
+            'Not measured',
+            'غير مقيس',
+        ],
+        'what_this_figure_cannot_see' => [
+            'What this figure cannot see',
+            'ما لا يستطيع هذا الرقم رؤيته',
+        ],
+        'the_blast_radius_could_not_be_read' => [
+            'The blast radius could not be read',
+            'تعذّرت قراءة نطاق التأثير',
+        ],
+        'request_buckets_are_keyed_by_route_pattern_so_they_stay_bounded_as_the_marketplace_grows' => [
+            'Request counters are keyed by route pattern so they stay bounded as the marketplace grows, so traffic cannot be attributed to a seller.',
+            'تُفهرَس عدّادات الطلبات بنمط المسار كي تبقى محدودة مع نمو السوق، لذا لا يمكن نسب حركة المرور إلى بائع بعينه.',
+        ],
+        'a_queued_job_records_its_queue_and_class_not_whose_work_it_was' => [
+            'A queued job records its queue and its class, not whose work it was.',
+            'تُسجّل المهمة في الطابور اسم الطابور وصنفها، لا صاحب العمل الذي تخصّه.',
+        ],
+        'an_outbound_call_is_attributed_to_the_service_it_reached_not_to_a_seller' => [
+            'An outbound call is attributed to the service it reached, not to a seller.',
+            'يُنسب النداء الصادر إلى الخدمة التي وصل إليها، لا إلى بائع.',
+        ],
+        'requests' => [
+            'Requests',
+            'الطلبات',
+        ],
+        'queues' => [
+            'Queues',
+            'الطوابير',
+        ],
+        'dependencies' => [
+            'Dependencies',
+            'الاعتماديات',
+        ],
+        // Order state policy and the checkout item floor.
+        'order_states_that_can_still_be_edited' => [
+            'Order states that can still be edited',
+            'حالات الطلب التي ما زال يمكن تعديلها',
+        ],
+        'editing_rebuilds_the_order_lines_and_the_stock_behind_them_so_states_past_dispatch_are_normally_left_out' => [
+            'Editing rebuilds the order lines and the stock behind them, so states past dispatch are normally left out.',
+            'يعيد التعديل بناء بنود الطلب والمخزون خلفها، لذا تُستبعد عادةً الحالات التي تلي الإرسال.',
+        ],
+        'order_states_a_customer_may_cancel_from' => [
+            'Order states a customer may cancel from',
+            'حالات الطلب التي يمكن للعميل الإلغاء منها',
+        ],
+        'payment_rules_still_apply_on_top_money_already_taken_is_never_undone_by_this_button' => [
+            'Payment rules still apply on top: money already taken is never undone by this button.',
+            'تبقى قواعد الدفع سارية فوق ذلك: لا يُلغى المال المحصَّل مسبقًا بهذا الزر.',
+        ],
+        'this_order_can_no_longer_be_edited_in_its_current_status' => [
+            'This order can no longer be edited in its current status.',
+            'لم يعد بالإمكان تعديل هذا الطلب في حالته الحالية.',
+        ],
+        'Minimum_Items_Per_Order' => [
+            'Minimum Items Per Order',
+            'الحد الأدنى لعدد الأصناف في الطلب',
+        ],
+        'the_fewest_items_a_customer_may_check_out_with_zero_means_no_limit' => [
+            'The fewest items a customer may check out with. Zero means no limit.',
+            'أقل عدد أصناف يمكن للعميل إتمام الشراء به. الصفر يعني بلا حد.',
+        ],
+        'this_limit_is_enforced_by_the_mobile_apps_the_web_checkout_does_not_read_it' => [
+            'This limit is enforced by the mobile apps; the web checkout does not read it.',
+            'تطبّق تطبيقات الجوال هذا الحد؛ أما إتمام الشراء عبر الويب فلا يقرأه.',
+        ],
+        // Gateway callback receipts.
+        'gateway_callbacks_received' => [
+            'Gateway callbacks received',
+            'استدعاءات بوابات الدفع الواردة',
+        ],
+        'acted_on_by_nothing' => [
+            'Acted on by nothing',
+            'لم يُتّخذ عليها أي إجراء',
+        ],
+        'last_callback' => [
+            'Last callback',
+            'آخر استدعاء',
+        ],
+        'no_gateway_callback_landed_in_this_window' => [
+            'No gateway callback landed in this window',
+            'لم يصل أي استدعاء من بوابة دفع في هذه الفترة',
+        ],
+        'a_shop_that_took_a_card_payment_in_this_window_and_has_no_row_here_has_a_callback_that_never_arrived' => [
+            'A shop that took a card payment in this window and has no row here has a callback that never arrived.',
+            'المتجر الذي تلقّى دفعة ببطاقة في هذه الفترة ولا يوجد له سجل هنا لديه استدعاء لم يصل أبدًا.',
+        ],
+        'succeeded' => [
+            'Succeeded',
+            'نجحت',
+        ],
+        // The daily request history, from the rollup nothing was reading.
+        'daily_history' => [
+            'Daily History',
+            'السجل اليومي',
+        ],
+        'web_requests' => [
+            'Web requests',
+            'طلبات الويب',
+        ],
+        'api_requests' => [
+            'API requests',
+            'طلبات الواجهة البرمجية',
+        ],
+        'server_errors' => [
+            'Server errors',
+            'أخطاء الخادم',
+        ],
+        'average_response_time' => [
+            'Average response time',
+            'متوسط زمن الاستجابة',
+        ],
+        'no_daily_history_has_been_rolled_up_yet' => [
+            'No daily history has been rolled up yet',
+            'لم يُجمَّع أي سجل يومي بعد',
+        ],
+        'telemetry_rollup_writes_one_row_per_day_per_channel_the_first_appears_after_its_next_run' => [
+            'The telemetry rollup writes one row per day per channel; the first appears after its next run.',
+            'يكتب تجميع القياسات صفًا واحدًا لكل يوم ولكل قناة؛ يظهر الأول بعد التشغيل التالي.',
+        ],
+        // Order attributes — the facts every order carried and nothing reported.
+        'what_each_order_looked_like' => [
+            'What Each Order Looked Like',
+            'كيف بدا كل طلب',
+        ],
+        'orders_with_a_coupon' => [
+            'Orders with a coupon',
+            'الطلبات التي استخدمت قسيمة',
+        ],
+        'guest_orders' => [
+            'Guest orders',
+            'طلبات الزوار',
+        ],
+        'average_shipping_cost' => [
+            'Average shipping cost',
+            'متوسط تكلفة الشحن',
+        ],
+        'share' => [
+            'Share',
+            'الحصة',
+        ],
+        'read_from_the_most_recent_orders_in_this_window_not_all_of_them' => [
+            'Read from the most recent orders in this window, not from all of them.',
+            'مقروء من أحدث الطلبات في هذه الفترة، لا من جميعها.',
+        ],
+        'no_orders_in_this_window' => [
+            'No orders in this window',
+            'لا توجد طلبات في هذه الفترة',
+        ],
+        // ── wave 5 · finance and pricing ─────────────────────────────────
+        'your_balance_and_what_it_is_made_of' => [
+            'Your Balance, and What It Is Made Of',
+            'رصيدك وممّ يتكوّن',
+        ],
+        'one_ledger_read_six_ways_every_figure_here_is_the_same_number_the_app_reads' => [
+            'One ledger read six ways. Every figure here is the same number the app reads.',
+            'دفتر واحد يُقرأ بست طرق. كل رقم هنا هو نفسه الذي يقرأه التطبيق.',
+        ],
+        'every_movement' => [
+            'Every movement',
+            'كل الحركات',
+        ],
+        'you_can_withdraw' => [
+            'You can withdraw',
+            'يمكنك سحب',
+        ],
+        'pending' => [
+            'Pending',
+            'معلّق',
+        ],
+        'earned_and_still_inside_the_return_window' => [
+            'Earned, and still inside the return window',
+            'مُكتسَب ولا يزال ضمن مهلة الإرجاع',
+        ],
+        'matured_and_not_yet_claimed' => [
+            'Matured, and not yet claimed',
+            'استحقّ ولم يُطلَب بعد',
+        ],
+        'held_against_a_payout_you_have_asked_for' => [
+            'Held against a payout you have asked for',
+            'محجوز مقابل سحب طلبته',
+        ],
+        'money_that_has_reached_you' => [
+            'Money that has reached you',
+            'مال وصل إليك',
+        ],
+        'a_cooling_period_is_in_force' => [
+            'A cooling period is in force',
+            'هناك فترة تهدئة سارية',
+        ],
+        'your_bank_details_changed_recently_so_payouts_are_paused_until_the_marketplaces_window_has_passed' => [
+            'Your bank details changed recently, so payouts are paused until the marketplace\'s window has passed.',
+            'تغيّرت بياناتك المصرفية مؤخرًا، لذا أُوقفت السحوبات حتى انقضاء المهلة التي يحدّدها السوق.',
+        ],
+        'the_last_few_movements' => [
+            'The last few movements',
+            'آخر الحركات',
+        ],
+        'see_all' => [
+            'See all',
+            'عرض الكل',
+        ],
+        'your_ledger_is_empty' => [
+            'Your ledger is empty',
+            'دفترك فارغ',
+        ],
+        'the_first_entry_appears_when_an_order_of_yours_is_delivered' => [
+            'The first entry appears when an order of yours is delivered.',
+            'يظهر القيد الأول عند تسليم أحد طلباتك.',
+        ],
+        'does_it_add_up' => [
+            'Does It Add Up',
+            'هل الحساب متوازن',
+        ],
+        'check_your_delivered_lines_against_what_was_credited_to_you' => [
+            'Check your delivered lines against what was credited to you.',
+            'قارن بنودك المُسلَّمة بما قُيّد لصالحك.',
+        ],
+        'run_the_check' => [
+            'Run the check',
+            'نفّذ الفحص',
+        ],
+        'what_does_the_marketplace_take' => [
+            'What Does the Marketplace Take',
+            'كم يأخذ السوق',
+        ],
+        'work_out_the_commission_on_a_line_before_you_price_it' => [
+            'Work out the commission on a line before you price it.',
+            'احسب العمولة على بند قبل أن تسعّره.',
+        ],
+        'open_the_fee_calculator' => [
+            'Open the fee calculator',
+            'افتح حاسبة الرسوم',
+        ],
+        'each_line_carries_the_balance_it_left_behind_so_the_account_can_be_followed_in_both_directions' => [
+            'Each line carries the balance it left behind, so the account can be followed in both directions.',
+            'يحمل كل سطر الرصيد الذي خلّفه، فيمكن تتبّع الحساب في الاتجاهين.',
+        ],
+        'the_whole_account_not_this_filter' => [
+            'The whole account, not this filter',
+            'الحساب كاملًا، لا هذا المرشّح',
+        ],
+        'in_this_range' => [
+            'In this range',
+            'ضمن هذا النطاق',
+        ],
+        'n_entries' => [
+            ':count entries',
+            ':count قيدًا',
+        ],
+        'credited' => [
+            'Credited',
+            'دائن',
+        ],
+        'debited' => [
+            'Debited',
+            'مدين',
+        ],
+        'what_it_was' => [
+            'What it was',
+            'ما هو',
+        ],
+        'from' => [
+            'From',
+            'من',
+        ],
+        'to' => [
+            'To',
+            'إلى',
+        ],
+        'apply' => [
+            'Apply',
+            'تطبيق',
+        ],
+        'clear' => [
+            'Clear',
+            'مسح',
+        ],
+        'in' => [
+            'In',
+            'وارد',
+        ],
+        'out' => [
+            'Out',
+            'صادر',
+        ],
+        'balance_after' => [
+            'Balance after',
+            'الرصيد بعدها',
+        ],
+        'traces_to' => [
+            'Traces to',
+            'يعود إلى',
+        ],
+        'no_movements_match_these_filters' => [
+            'No movements match these filters',
+            'لا توجد حركات تطابق هذه المرشحات',
+        ],
+        'what_you_have_asked_for_and_where_each_request_has_got_to' => [
+            'What you have asked for, and where each request has got to.',
+            'ما طلبته، وإلى أين وصل كل طلب.',
+        ],
+        'request_a_payout' => [
+            'Request a payout',
+            'اطلب سحبًا',
+        ],
+        'net_of_anything_already_in_flight' => [
+            'Net of anything already in flight',
+            'صافيًا بعد خصم ما هو قيد التنفيذ',
+        ],
+        'you_have_not_asked_for_a_payout_yet' => [
+            'You have not asked for a payout yet',
+            'لم تطلب سحبًا بعد',
+        ],
+        'a_request_reserves_the_amount_so_it_cannot_be_spent_twice' => [
+            'A request reserves the amount, so it cannot be spent twice.',
+            'يحجز الطلب المبلغ كي لا يُصرف مرتين.',
+        ],
+        'method' => [
+            'Method',
+            'الطريقة',
+        ],
+        'requested' => [
+            'Requested',
+            'تاريخ الطلب',
+        ],
+        'delivered_lines_against_credits_between_x_and_y' => [
+            'Delivered lines against credits, between :from and :to',
+            'البنود المُسلَّمة مقابل القيود الدائنة، بين :from و:to',
+        ],
+        'your_books_reconcile' => [
+            'Your books reconcile',
+            'دفاترك متوازنة',
+        ],
+        'something_did_not_carry_through' => [
+            'Something did not carry through',
+            'شيء ما لم يُستكمل',
+        ],
+        'every_delivered_line_produced_an_earning_and_every_earning_reached_your_ledger' => [
+            'Every delivered line produced an earning, and every earning reached your ledger.',
+            'أنتج كل بند مُسلَّم عائدًا، ووصل كل عائد إلى دفترك.',
+        ],
+        'a_matching_total_is_not_enough_a_missing_earning_and_an_extra_credit_can_cancel_each_other_out' => [
+            'A matching total is not enough: a missing earning and an extra credit can cancel each other out.',
+            'تطابق الإجمالي ليس كافيًا: عائد مفقود وقيد دائن زائد قد يلغي أحدهما الآخر.',
+        ],
+        'delivered' => [
+            'Delivered',
+            'مُسلَّم',
+        ],
+        'n_orders_worth_x' => [
+            'across :count orders, worth :value',
+            'عبر :count طلبًا بقيمة :value',
+        ],
+        'earnings_recorded' => [
+            'Earnings recorded',
+            'العوائد المسجّلة',
+        ],
+        'after_n_commission' => [
+            'after :value commission',
+            'بعد عمولة :value',
+        ],
+        'credited_to_your_ledger' => [
+            'Credited to your ledger',
+            'المُقيَّد في دفترك',
+        ],
+        'delivered_lines_with_no_earning' => [
+            'Delivered lines with no earning',
+            'بنود مُسلَّمة بلا عائد',
+        ],
+        'none' => [
+            'None',
+            'لا شيء',
+        ],
+        'every_delivered_line_produced_an_earning' => [
+            'Every delivered line produced an earning.',
+            'أنتج كل بند مُسلَّم عائدًا.',
+        ],
+        'n_lines_worth_x_completed_and_nothing_was_recorded_as_owed_to_you' => [
+            ':count sales worth :value completed, and nothing was recorded as owed to you.',
+            'اكتملت :count عملية بيع بقيمة :value، ولم يُسجَّل شيء كمستحق لك.',
+        ],
+        'n_units_at_x' => [
+            ':count units at :value',
+            ':count وحدة بسعر :value',
+        ],
+        'earnings_that_never_reached_the_ledger' => [
+            'Earnings that never reached the ledger',
+            'عوائد لم تصل إلى الدفتر',
+        ],
+        'every_earning_was_credited' => [
+            'Every earning was credited.',
+            'قُيّد كل عائد.',
+        ],
+        'n_earnings_worth_x_were_recorded_and_never_credited_to_your_balance' => [
+            ':count earnings worth :value were recorded and never credited to your balance.',
+            'سُجِّلت :count عائدًا بقيمة :value ولم تُقيَّد في رصيدك.',
+        ],
+        'statement' => [
+            'Statement',
+            'كشف الحساب',
+        ],
+        'the_same_ledger_read_as_a_document_rather_than_as_a_list' => [
+            'The same ledger, read as a document rather than as a list.',
+            'الدفتر نفسه، مقروءًا كمستند لا كقائمة.',
+        ],
+        'print' => [
+            'Print',
+            'طباعة',
+        ],
+        'summary' => [
+            'Summary',
+            'الملخّص',
+        ],
+        'entries' => [
+            'Entries',
+            'القيود',
+        ],
+        'net' => [
+            'Net',
+            'الصافي',
+        ],
+        'currency' => [
+            'Currency',
+            'العملة',
+        ],
+        'nothing_in_this_range' => [
+            'Nothing in this range',
+            'لا شيء ضمن هذا النطاق',
+        ],
+        'widen_the_dates_to_see_more' => [
+            'Widen the dates to see more.',
+            'وسّع المدى الزمني لعرض المزيد.',
+        ],
+        'showing_the_most_recent_n_entries_in_this_range' => [
+            'Showing the most recent :count entries in this range.',
+            'يُعرض أحدث :count قيد ضمن هذا النطاق.',
+        ],
+        'the_line_you_are_pricing' => [
+            'The line you are pricing',
+            'البند الذي تسعّره',
+        ],
+        'product_id' => [
+            'Product ID',
+            'معرّف المنتج',
+        ],
+        'optional_leave_blank_to_price_a_hypothetical_line' => [
+            'Optional. Leave blank to price a hypothetical line.',
+            'اختياري. اتركه فارغًا لتسعير بند افتراضي.',
+        ],
+        'unit_price' => [
+            'Unit price',
+            'سعر الوحدة',
+        ],
+        'quantity' => [
+            'Quantity',
+            'الكمية',
+        ],
+        'discount_per_unit' => [
+            'Discount per unit',
+            'الخصم لكل وحدة',
+        ],
+        'work_it_out' => [
+            'Work it out',
+            'احسبها',
+        ],
+        'gross' => [
+            'Gross',
+            'الإجمالي',
+        ],
+        'commission' => [
+            'Commission',
+            'العمولة',
+        ],
+        'effective_rate' => [
+            'Effective rate',
+            'النسبة الفعلية',
+        ],
+        'nothing_to_take_a_share_of' => [
+            'Nothing to take a share of',
+            'لا يوجد ما تُقتطع منه حصة',
+        ],
+        'you_receive' => [
+            'You receive',
+            'تستلم',
+        ],
+        'the_rule_that_applied' => [
+            'The rule that applied',
+            'القاعدة التي طُبِّقت',
+        ],
+        'rule' => [
+            'Rule',
+            'القاعدة',
+        ],
+        'scope' => [
+            'Scope',
+            'النطاق',
+        ],
+        'commissionable_amount' => [
+            'Commissionable amount',
+            'المبلغ الخاضع للعمولة',
+        ],
+        'what_this_figure_does_not_cover' => [
+            'What this figure does not cover',
+            'ما لا يشمله هذا الرقم',
+        ],
+        'enter_a_price_to_see_what_the_marketplace_takes' => [
+            'Enter a price to see what the marketplace takes',
+            'أدخل سعرًا لترى كم يأخذ السوق',
+        ],
+        'the_commission_rules_are_the_marketplaces_this_shows_which_one_applies_to_your_line' => [
+            'The commission rules are the marketplace\'s. This shows which one applies to your line.',
+            'قواعد العمولة تخصّ السوق. وهذه الشاشة تبيّن أيّها ينطبق على بندك.',
+        ],
+        'your_price_floor' => [
+            'Your Price Floor',
+            'حدّك الأدنى للسعر',
+        ],
+        'the_lowest_you_are_prepared_to_go_and_what_happens_when_something_tries_to_go_lower' => [
+            'The lowest you are prepared to go, and what happens when something tries to go lower.',
+            'أدنى سعر تقبله، وما يحدث حين يحاول شيء النزول تحته.',
+        ],
+        'price_history' => [
+            'Price history',
+            'سجل الأسعار',
+        ],
+        'the_price_floor_is_not_available_on_this_installation' => [
+            'The price floor is not available on this installation',
+            'حدّ السعر الأدنى غير متاح على هذا التركيب',
+        ],
+        'the_pricing_policy_table_has_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The pricing policy table has not been created. Ask the marketplace to run its migrations.',
+            'لم يُنشأ جدول سياسة التسعير. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'set_the_floor' => [
+            'Set the floor',
+            'حدّد الحد الأدنى',
+        ],
+        'minimum_margin_percent' => [
+            'Minimum margin (%)',
+            'الحد الأدنى للهامش (٪)',
+        ],
+        'your_share_after_the_marketplaces_commission_leave_blank_for_no_margin_rule' => [
+            'Your share after the marketplace\'s commission. Leave blank for no margin rule.',
+            'حصتك بعد عمولة السوق. اتركه فارغًا لعدم اعتماد قاعدة هامش.',
+        ],
+        'minimum_price' => [
+            'Minimum price',
+            'الحد الأدنى للسعر',
+        ],
+        'an_absolute_floor_whatever_the_margin_works_out_to' => [
+            'An absolute floor, whatever the margin works out to.',
+            'حدّ مطلق مهما كانت نتيجة حساب الهامش.',
+        ],
+        'enforcement' => [
+            'Enforcement',
+            'الإلزام',
+        ],
+        'when_off_a_price_below_the_floor_is_flagged_and_still_saved_when_on_it_is_refused' => [
+            'When off, a price below the floor is flagged and still saved. When on, it is refused.',
+            'عند الإيقاف، يُعلَّم السعر الأقل من الحد ويُحفظ رغم ذلك. وعند التفعيل، يُرفض.',
+        ],
+        'refuse_prices_below_the_floor' => [
+            'Refuse prices below the floor',
+            'ارفض الأسعار دون الحد الأدنى',
+        ],
+        'your_price_floor_was_saved' => [
+            'Your price floor was saved.',
+            'تم حفظ حدّك الأدنى للسعر.',
+        ],
+        'what_has_moved_recently' => [
+            'What has moved recently',
+            'ما الذي تغيّر مؤخرًا',
+        ],
+        'no_price_has_moved_yet' => [
+            'No price has moved yet',
+            'لم يتغيّر أي سعر بعد',
+        ],
+        'every_change_is_recorded_here_whoever_or_whatever_made_it' => [
+            'Every change is recorded here, whoever — or whatever — made it.',
+            'يُسجَّل كل تغيير هنا، أيًّا كان من أجراه أو ما أجراه.',
+        ],
+        'first_listed_at_x' => [
+            'first listed at :value',
+            'عُرض أول مرة بسعر :value',
+        ],
+        'price_history_is_not_available_on_this_installation' => [
+            'Price history is not available on this installation',
+            'سجل الأسعار غير متاح على هذا التركيب',
+        ],
+        'the_price_change_table_has_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The price-change table has not been created. Ask the marketplace to run its migrations.',
+            'لم يُنشأ جدول تغييرات الأسعار. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'who_moved_this_price_and_when_on_a_catalogue_several_people_and_three_automations_can_write_to' => [
+            'Who moved this price and when, on a catalogue several people and three automations can write to.',
+            'من غيّر هذا السعر ومتى، في كتالوج يكتب فيه عدة أشخاص وثلاث أتمتات.',
+        ],
+        'n_price_changes' => [
+            ':count price changes',
+            ':count تغييرًا في الأسعار',
+        ],
+        'changed_by' => [
+            'Changed by',
+            'غُيِّر بواسطة',
+        ],
+        'who' => [
+            'Who',
+            'من',
+        ],
+        'no_changes_match_these_filters' => [
+            'No changes match these filters',
+            'لا توجد تغييرات تطابق هذه المرشحات',
+        ],
+        'return_updated' => [
+            'The return was updated.',
+            'تم تحديث المرتجع.',
+        ],
+        // ── wave 4 · fulfilment ──────────────────────────────────────────
+        'returns_coming_back' => [
+            'Returns Coming Back',
+            'المرتجعات العائدة',
+        ],
+        'a_refund_gives_back_the_money_a_return_is_how_the_units_come_home' => [
+            'A refund gives back the money. A return is how the units come home.',
+            'الاسترداد يعيد المال. أما المرتجع فهو الطريقة التي تعود بها القطع إليك.',
+        ],
+        'returns_are_not_available_on_this_installation' => [
+            'Returns are not available on this installation',
+            'المرتجعات غير متاحة على هذا التركيب',
+        ],
+        'the_return_tables_have_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The return tables have not been created. Ask the marketplace to run its migrations.',
+            'لم تُنشأ جداول المرتجعات. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'open_returns' => [
+            'Open returns',
+            'مرتجعات مفتوحة',
+        ],
+        'authorized_in_transit_or_arrived' => [
+            'Authorized, in transit or arrived',
+            'مُصرَّح بها أو في الطريق أو وصلت',
+        ],
+        'on_their_way_back_to_you' => [
+            'On their way back to you',
+            'في طريق عودتها إليك',
+        ],
+        'awaiting_your_decision' => [
+            'Awaiting your decision',
+            'بانتظار قرارك',
+        ],
+        'arrived_and_not_yet_restocked_or_refused' => [
+            'Arrived, and not yet restocked or refused',
+            'وصلت ولم تُعَد إلى المخزون ولم تُرفض بعد',
+        ],
+        'units_back_in_stock' => [
+            'Units back in stock',
+            'قطع عادت إلى المخزون',
+        ],
+        'restocked_and_sellable_again' => [
+            'Restocked and sellable again',
+            'أُعيدت إلى المخزون وأصبحت قابلة للبيع',
+        ],
+        'n_returns_are_waiting_on_you' => [
+            ':count returns are waiting on you',
+            ':count مرتجعًا بانتظارك',
+        ],
+        'every_unit_here_is_stock_you_have_already_paid_for_and_cannot_sell' => [
+            'Every unit here is stock you have already paid for and cannot sell.',
+            'كل قطعة هنا مخزون دفعت ثمنه ولا تستطيع بيعه.',
+        ],
+        'review_them' => [
+            'Review them',
+            'راجعها',
+        ],
+        'n_returns' => [
+            ':count returns',
+            ':count مرتجعًا',
+        ],
+        'reference_order_or_tracking' => [
+            'Reference, order or tracking',
+            'المرجع أو الطلب أو رقم التتبّع',
+        ],
+        'nothing_has_come_back_yet' => [
+            'Nothing has come back yet',
+            'لم يعد أي شيء بعد',
+        ],
+        'when_a_refund_is_approved_a_return_opens_here_so_the_units_can_be_restocked' => [
+            'When a refund is approved, a return opens here so the units can be restocked.',
+            'عند الموافقة على استرداد، يُفتح مرتجع هنا لتعود القطع إلى المخزون.',
+        ],
+        'no_returns_match_these_filters' => [
+            'No returns match these filters',
+            'لا توجد مرتجعات تطابق هذه المرشحات',
+        ],
+        'product_no_longer_listed' => [
+            'Product no longer listed',
+            'المنتج لم يعد معروضًا',
+        ],
+        'return_for_order_n' => [
+            'Return for order :order',
+            'مرتجع للطلب :order',
+        ],
+        'the_return' => [
+            'The return',
+            'المرتجع',
+        ],
+        'tracking_number' => [
+            'Tracking number',
+            'رقم التتبّع',
+        ],
+        'note' => [
+            'Note',
+            'ملاحظة',
+        ],
+        'what_the_refund_did_to_your_balance' => [
+            'What the refund did to your balance',
+            'أثر الاسترداد على رصيدك',
+        ],
+        'no_ledger_lines_for_this_return' => [
+            'No ledger lines for this return',
+            'لا توجد قيود دفترية لهذا المرتجع',
+        ],
+        'lines_appear_once_the_refund_itself_is_settled' => [
+            'Lines appear once the refund itself is settled.',
+            'تظهر القيود بعد تسوية الاسترداد نفسه.',
+        ],
+        'what_happens_next' => [
+            'What happens next',
+            'ما الخطوة التالية',
+        ],
+        'who_is_bringing_it_back' => [
+            'Who is bringing it back',
+            'من يعيدها',
+        ],
+        'mark_on_its_way' => [
+            'Mark on its way',
+            'وسمها كأنها في الطريق',
+        ],
+        'put_these_units_back_into_stock' => [
+            'Put these units back into stock',
+            'أعد هذه القطع إلى المخزون',
+        ],
+        'mark_received' => [
+            'Mark received',
+            'وسمها كمستلمة',
+        ],
+        'reason_for_refusing' => [
+            'Reason for refusing',
+            'سبب الرفض',
+        ],
+        'a_refusal_the_customer_cannot_be_told_the_grounds_for_is_not_a_decision' => [
+            'A refusal the customer cannot be told the grounds for is not a decision.',
+            'الرفض الذي لا يمكن إخبار العميل بأسبابه ليس قرارًا.',
+        ],
+        'refuse_this_return' => [
+            'Refuse this return',
+            'ارفض هذا المرتجع',
+        ],
+        'refunds_on_your_orders' => [
+            'Refunds on Your Orders',
+            'الاستردادات على طلباتك',
+        ],
+        'the_marketplace_decides_a_refund_this_is_where_you_watch_yours' => [
+            'The marketplace decides a refund. This is where you watch yours.',
+            'السوق هو من يبتّ في الاسترداد. وهنا تتابع ما يخصّك.',
+        ],
+        'refunds_are_not_available_on_this_installation' => [
+            'Refunds are not available on this installation',
+            'الاستردادات غير متاحة على هذا التركيب',
+        ],
+        'the_refund_tables_have_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The refund tables have not been created. Ask the marketplace to run its migrations.',
+            'لم تُنشأ جداول الاسترداد. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'awaiting_a_decision' => [
+            'Awaiting a decision',
+            'بانتظار قرار',
+        ],
+        'raised_and_not_yet_ruled_on' => [
+            'Raised, and not yet ruled on',
+            'مرفوع ولم يُبتّ فيه بعد',
+        ],
+        'approved' => [
+            'Approved',
+            'موافَق عليه',
+        ],
+        'agreed_and_not_yet_paid_back' => [
+            'Agreed, and not yet paid back',
+            'تمت الموافقة ولم يُسدَّد بعد',
+        ],
+        'refunded' => [
+            'Refunded',
+            'مُسترَد',
+        ],
+        'money_returned_to_the_customer' => [
+            'Money returned to the customer',
+            'مال أُعيد إلى العميل',
+        ],
+        'value_refunded' => [
+            'Value refunded',
+            'قيمة المُسترَد',
+        ],
+        'settled_refunds_only' => [
+            'Settled refunds only',
+            'الاستردادات المسوّاة فقط',
+        ],
+        'a_refund_is_ruled_on_by_the_marketplace_when_one_is_approved_a_return_opens_so_your_units_can_come_back' => [
+            'A refund is ruled on by the marketplace. When one is approved a return opens, so your units can come back.',
+            'يبتّ السوق في الاسترداد. وعند الموافقة يُفتح مرتجع كي تعود قطعك إليك.',
+        ],
+        'n_refunds' => [
+            ':count refunds',
+            ':count استردادًا',
+        ],
+        'order_number' => [
+            'Order number',
+            'رقم الطلب',
+        ],
+        'no_refunds_on_your_orders' => [
+            'No refunds on your orders',
+            'لا توجد استردادات على طلباتك',
+        ],
+        'a_refund_request_appears_here_the_moment_a_customer_raises_one' => [
+            'A refund request appears here the moment a customer raises one.',
+            'يظهر طلب الاسترداد هنا فور تقديم العميل له.',
+        ],
+        'no_refunds_match_these_filters' => [
+            'No refunds match these filters',
+            'لا توجد استردادات تطابق هذه المرشحات',
+        ],
+        'amount' => [
+            'Amount',
+            'المبلغ',
+        ],
+        'paid_by' => [
+            'Paid by',
+            'وسيلة الدفع',
+        ],
+        'raised' => [
+            'Raised',
+            'تاريخ الرفع',
+        ],
+        'the_work_between_paid_and_on_its_way' => [
+            'The work between paid and on its way',
+            'العمل الواقع بين الدفع والانطلاق',
+        ],
+        'all_fulfilments' => [
+            'All Fulfilments',
+            'كل عمليات التجهيز',
+        ],
+        'to_pick' => [
+            'To pick',
+            'للانتقاء',
+        ],
+        'to_pack' => [
+            'To pack',
+            'للتغليف',
+        ],
+        'stalled' => [
+            'Stalled',
+            'متوقّفة',
+        ],
+        'fulfilments_that_have_stalled' => [
+            'Fulfilments That Have Stalled',
+            'عمليات التجهيز المتوقّفة',
+        ],
+        'fulfilment_is_not_available_on_this_installation' => [
+            'Fulfilment is not available on this installation',
+            'التجهيز غير متاح على هذا التركيب',
+        ],
+        'the_fulfilment_table_has_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The fulfilment table has not been created. Ask the marketplace to run its migrations.',
+            'لم يُنشأ جدول التجهيز. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'opened_and_not_yet_picked' => [
+            'Opened and not yet picked',
+            'فُتحت ولم تُنتقَ بعد',
+        ],
+        'picked_and_waiting_to_be_packed' => [
+            'Picked and waiting to be packed',
+            'انتُقيت وتنتظر التغليف',
+        ],
+        'ready_to_hand_over' => [
+            'Ready to hand over',
+            'جاهزة للتسليم',
+        ],
+        'packed_and_waiting_for_a_carrier' => [
+            'Packed and waiting for a carrier',
+            'مغلَّفة وتنتظر شركة الشحن',
+        ],
+        'no_movement_for_over_n_hours' => [
+            'No movement for over :count hours',
+            'بلا حركة منذ أكثر من :count ساعة',
+        ],
+        'n_fulfilments_have_stalled' => [
+            ':count fulfilments have stalled',
+            'توقّفت :count عملية تجهيز',
+        ],
+        'the_marketplace_measures_lateness_from_the_last_thing_that_happened_not_from_when_the_order_was_placed' => [
+            'The marketplace measures lateness from the last thing that happened, not from when the order was placed.',
+            'يقيس السوق التأخير من آخر حدث وقع، لا من لحظة تقديم الطلب.',
+        ],
+        'see_them' => [
+            'See them',
+            'اعرضها',
+        ],
+        'n_fulfilments' => [
+            ':count fulfilments',
+            ':count عملية تجهيز',
+        ],
+        'no_fulfilment_work_right_now' => [
+            'No fulfilment work right now',
+            'لا يوجد عمل تجهيز الآن',
+        ],
+        'a_fulfilment_opens_when_an_order_is_ready_to_be_picked' => [
+            'A fulfilment opens when an order is ready to be picked.',
+            'تُفتح عملية التجهيز عندما يصبح الطلب جاهزًا للانتقاء.',
+        ],
+        'nothing_has_stalled' => [
+            'Nothing has stalled',
+            'لم تتوقّف أي عملية',
+        ],
+        'every_open_fulfilment_has_moved_within_the_marketplaces_window' => [
+            'Every open fulfilment has moved within the marketplace\'s window.',
+            'تحرّكت كل عملية تجهيز مفتوحة ضمن المهلة التي يحدّدها السوق.',
+        ],
+        'no_fulfilments_match_these_filters' => [
+            'No fulfilments match these filters',
+            'لا توجد عمليات تجهيز تطابق هذه المرشحات',
+        ],
+        'waiting' => [
+            'Waiting',
+            'الانتظار',
+        ],
+        'dispatch_time' => [
+            'Dispatch time',
+            'زمن الإرسال',
+        ],
+        'n_hours' => [
+            ':count hours',
+            ':count ساعة',
+        ],
+        'mark_picking' => [
+            'Start picking',
+            'ابدأ الانتقاء',
+        ],
+        'mark_packed' => [
+            'Mark packed',
+            'وسمها كمُغلَّفة',
+        ],
+        'mark_ready' => [
+            'Mark ready',
+            'وسمها كجاهزة',
+        ],
+        'mark_shipped' => [
+            'Mark shipped',
+            'وسمها كمشحونة',
+        ],
+        'fulfilment_updated' => [
+            'Fulfilment updated.',
+            'تم تحديث عملية التجهيز.',
+        ],
+        'fulfilment_could_not_be_updated' => [
+            'This fulfilment could not be updated.',
+            'تعذّر تحديث عملية التجهيز.',
+        ],
+        'where_your_stock_is' => [
+            'Where Your Stock Is',
+            'أين يوجد مخزونك',
+        ],
+        'current_stock_says_how_much_you_have_this_says_where_it_is' => [
+            'Current stock says how much you have. This says where it is.',
+            'المخزون الحالي يخبرك بالكمية. وهذه الشاشة تخبرك بمكانها.',
+        ],
+        'warehouses_are_not_available_on_this_installation' => [
+            'Warehouses are not available on this installation',
+            'المستودعات غير متاحة على هذا التركيب',
+        ],
+        'the_warehouse_tables_have_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The warehouse tables have not been created. Ask the marketplace to run its migrations.',
+            'لم تُنشأ جداول المستودعات. اطلب من السوق تشغيل ترحيلات قاعدة البيانات.',
+        ],
+        'you_have_no_locations_yet' => [
+            'You have no locations yet',
+            'ليس لديك مواقع بعد',
+        ],
+        'with_one_location_every_unit_is_simply_in_stock_add_a_second_and_this_screen_tells_you_which_one_to_pick_from' => [
+            'With one location every unit is simply in stock. Add a second and this screen tells you which one to pick from.',
+            'بموقع واحد تكون كل قطعة ببساطة في المخزون. أضف موقعًا ثانيًا لتخبرك هذه الشاشة من أيهما تنتقي.',
+        ],
+        'default_location' => [
+            'Default location',
+            'الموقع الافتراضي',
+        ],
+        'units_held_here' => [
+            'Units held here',
+            'قطع محفوظة هنا',
+        ],
+        'units_placed_in_a_location_plus_units_unallocated_always_equal_what_you_have_moving_stock_between_locations_never_changes_the_total' => [
+            'Units placed in a location plus units unallocated always equal what you have. Moving stock between locations never changes the total.',
+            'القطع الموضوعة في المواقع زائد القطع غير المخصّصة تساوي دائمًا ما تملكه. ونقل المخزون بين المواقع لا يغيّر الإجمالي أبدًا.',
+        ],
+        'name_or_sku' => [
+            'Name or SKU',
+            'الاسم أو رمز الصنف',
+        ],
+        'on_hand' => [
+            'On hand',
+            'المتوفّر',
+        ],
+        'unallocated' => [
+            'Unallocated',
+            'غير مخصّص',
+        ],
+        'no_physical_products_to_place' => [
+            'No physical products to place',
+            'لا توجد منتجات مادية لتوزيعها',
+        ],
+        'only_physical_products_occupy_a_location' => [
+            'Only physical products occupy a location.',
+            'المنتجات المادية وحدها تشغل موقعًا.',
+        ],
+        'no_products_match_this_search' => [
+            'No products match this search',
+            'لا توجد منتجات تطابق هذا البحث',
+        ],
+        'showing_the_first_n_products_by_name' => [
+            'Showing the first :count products by name.',
+            'يُعرض أول :count منتج حسب الاسم.',
+        ],
+        'nav_bulk_jobs' => [
+            'Bulk Jobs',
+            'المهام الجماعية',
+        ],
+        'nav_warehouse' => [
+            'Warehouse',
+            'المستودع',
+        ],
+        'bulk_changes_you_have_run' => [
+            'Bulk Changes You Have Run',
+            'التغييرات الجماعية التي نفّذتها',
+        ],
+        'what_was_asked_for_what_happened_to_each_row_and_why_anything_was_refused' => [
+            'What was asked for, what happened to each row, and why anything was refused.',
+            'ما طُلب، وما حدث لكل صف، وسبب رفض ما رُفض.',
+        ],
+        'n_jobs' => [
+            ':count jobs',
+            ':count مهمة',
+        ],
+        'you_have_not_run_a_bulk_change_yet' => [
+            'You have not run a bulk change yet',
+            'لم تنفّذ تغييرًا جماعيًا بعد',
+        ],
+        'a_bulk_change_leaves_a_receipt_here_so_a_job_that_reports_done_can_still_be_checked' => [
+            'A bulk change leaves a receipt here, so a job that reports "done" can still be checked.',
+            'يترك التغيير الجماعي إيصالًا هنا، فتبقى المهمة التي تقول «تمّ» قابلة للتحقّق.',
+        ],
+        'no_jobs_match_these_filters' => [
+            'No jobs match these filters',
+            'لا توجد مهام تطابق هذه المرشحات',
+        ],
+        'what_it_changed' => [
+            'What it changed',
+            'ما الذي غيّرته',
+        ],
+        'applied' => [
+            'Applied',
+            'طُبِّق',
+        ],
+        'refused' => [
+            'Refused',
+            'مرفوض',
+        ],
+        'run' => [
+            'Run',
+            'التنفيذ',
+        ],
+        'job_n_run_on' => [
+            'Job :id, run on :when',
+            'المهمة :id، نُفِّذت في :when',
+        ],
+        'rows_asked_for' => [
+            'Rows asked for',
+            'الصفوف المطلوبة',
+        ],
+        'each_one_with_its_reason_below' => [
+            'Each one with its reason below',
+            'كل واحد منها مع سببه أدناه',
+        ],
+        'n_rows_were_refused' => [
+            ':count rows were refused',
+            'رُفض :count صفًا',
+        ],
+        'the_job_ran_to_the_end_these_rows_did_not_do_what_was_asked_and_the_reason_is_beside_each_one' => [
+            'The job ran to the end. These rows did not do what was asked, and the reason is beside each one.',
+            'اكتملت المهمة حتى النهاية. هذه الصفوف لم تنفّذ ما طُلب، والسبب مذكور بجانب كل منها.',
+        ],
+        'what_was_asked_for' => [
+            'What was asked for',
+            'ما الذي طُلب',
+        ],
+        'rows_that_were_refused' => [
+            'Rows that were refused',
+            'الصفوف المرفوضة',
+        ],
+        'nothing_was_refused' => [
+            'Nothing was refused',
+            'لم يُرفض شيء',
+        ],
+        'every_row_this_job_touched_did_what_was_asked' => [
+            'Every row this job touched did what was asked.',
+            'كل صف مسّته هذه المهمة نفّذ ما طُلب.',
+        ],
+        'row' => [
+            'Row',
+            'الصف',
+        ],
+        'everything_waiting_for_you' => [
+            'Everything Waiting for You',
+            'كل ما ينتظرك',
+        ],
+        'worst_first_each_with_the_one_thing_to_do_about_it' => [
+            'Worst first, each with the one thing to do about it.',
+            'الأشدّ أولًا، ومع كل بند إجراء واحد لمعالجته.',
+        ],
+        'nothing_at_this_level' => [
+            'Nothing at this level',
+            'لا شيء عند هذا المستوى',
+        ],
+        'try_another_level_or_clear_the_filter' => [
+            'Try another level, or clear the filter.',
+            'جرّب مستوى آخر أو امسح المرشّح.',
+        ],
+        'nothing_needs_your_attention' => [
+            'Nothing needs your attention',
+            'لا شيء يحتاج انتباهك',
+        ],
+        'this_screen_only_ever_shows_things_drawn_from_your_real_records' => [
+            'This screen only ever shows things drawn from your real records.',
+            'لا تعرض هذه الشاشة سوى ما هو مستخرج من سجلاتك الفعلية.',
+        ],
+        'what_it_is_costing' => [
+            'What it is costing',
+            'ما يكلّفه هذا',
+        ],
+        'open_the_order' => [
+            'Open the order',
+            'افتح الطلب',
+        ],
+        'open_the_product' => [
+            'Open the product',
+            'افتح المنتج',
+        ],
+        'dismiss' => [
+            'Dismiss',
+            'إخفاء',
+        ],
+        'dismissed' => [
+            'Dismissed.',
+            'تم الإخفاء.',
+        ],
+        'order_attributes_are_read_from_the_events_recorded_when_an_order_is_placed' => [
+            'Order attributes are read from the events recorded when an order is placed.',
+            'تُقرأ خصائص الطلب من الأحداث المسجّلة لحظة إنشائه.',
+        ],
+        // Feature flags.
+        'feature_flags' => [
+            'Feature Flags',
+            'مفاتيح المزايا',
+        ],
+        'Feature_Flags' => [
+            'Feature Flags',
+            'مفاتيح المزايا',
+        ],
+        'turn_a_change_on_for_some_of_the_marketplace_before_all_of_it' => [
+            'Turn a change on for some of the marketplace before all of it',
+            'شغّل تغييرًا لجزء من السوق قبل تعميمه على الجميع',
+        ],
+        'add_or_update_a_flag' => [
+            'Add or update a flag',
+            'إضافة مفتاح أو تحديثه',
+        ],
+        'flag_key' => [
+            'Flag key',
+            'مفتاح المزية',
+        ],
+        'this_must_match_exactly_what_the_code_asks_for' => [
+            'This must match exactly what the code asks for.',
+            'يجب أن يطابق تمامًا ما تطلبه الشيفرة.',
+        ],
+        'rollout_percentage' => [
+            'Rollout percentage',
+            'نسبة الطرح',
+        ],
+        'always_on_for_these_sellers' => [
+            'Always on for these sellers',
+            'مُفعّل دائمًا لهؤلاء البائعين',
+        ],
+        'the_pilot_group_these_shops_are_in_whatever_the_percentage_says' => [
+            'The pilot group: these shops are in whatever the percentage says.',
+            'المجموعة التجريبية: هذه المتاجر مشمولة مهما كانت النسبة.',
+        ],
+        'switched_on' => [
+            'Switched on',
+            'مُفعّل',
+        ],
+        'off_means_off_for_everyone_including_the_pilot_group' => [
+            'Off means off for everyone, including the pilot group.',
+            'الإيقاف يعني الإيقاف للجميع، بمن فيهم المجموعة التجريبية.',
+        ],
+        'flags_on_this_installation' => [
+            'Flags on this installation',
+            'المفاتيح على هذا التركيب',
+        ],
+        'no_flag_has_been_created_yet_a_flag_that_does_not_exist_is_off' => [
+            'No flag has been created yet. A flag that does not exist is off',
+            'لم يُنشأ أي مفتاح بعد. المفتاح غير الموجود يُعدّ مُطفأً',
+        ],
+        'rollout' => [
+            'Rollout',
+            'الطرح',
+        ],
+        'pilot_group' => [
+            'Pilot group',
+            'المجموعة التجريبية',
+        ],
+        'the_flag_was_saved' => [
+            'The flag was saved.',
+            'تم حفظ المفتاح.',
+        ],
+        'the_flag_was_removed' => [
+            'The flag was removed.',
+            'تمت إزالة المفتاح.',
+        ],
+        'that_flag_does_not_exist' => [
+            'That flag does not exist.',
+            'هذا المفتاح غير موجود.',
+        ],
+        'a_flag_key_is_lowercase_letters_numbers_dots_dashes_and_underscores' => [
+            'A flag key is lowercase letters, numbers, dots, dashes and underscores.',
+            'مفتاح المزية يتكوّن من أحرف صغيرة وأرقام ونقاط وشرطات وشرطات سفلية.',
+        ],
+        'the_feature_flag_table_has_not_been_created_on_this_installation' => [
+            'The feature flag table has not been created on this installation.',
+            'لم يُنشأ جدول مفاتيح المزايا على هذا التركيب.',
+        ],
+
+        // ── Wave 6 — Trust: performance, account health, SLA, compliance, brands, incidents,
+        // approvals. The vocabulary here is deliberately plain: every sentence on these screens is
+        // read by a seller who is worried, and a euphemism reads as evasion.
+        'nav_trust' => [
+            'Trust',
+            'الثقة',
+        ],
+        'how_this_shop_is_performing' => [
+            'How this shop is performing',
+            'أداء هذا المتجر',
+        ],
+        'the_same_metrics_the_marketplace_reads_derived_by_the_same_code' => [
+            'The same metrics the marketplace reads, derived by the same code.',
+            'المقاييس نفسها التي يقرأها السوق، ومشتقّة من الشيفرة نفسها.',
+        ],
+        'tier_new' => [
+            'Not enough activity to judge',
+            'النشاط غير كافٍ للحكم',
+        ],
+        'tier_new_explained' => [
+            'A shop that has not traded yet is neither good nor at risk. These figures start to mean something once orders and reviews arrive.',
+            'المتجر الذي لم يبِع بعد ليس جيّدًا ولا معرّضًا للخطر. تبدأ هذه الأرقام بالدلالة بعد وصول الطلبات والتقييمات.',
+        ],
+        'tier_good' => [
+            'In good standing',
+            'وضع جيّد',
+        ],
+        'tier_good_explained' => [
+            'Every measure is inside the marketplace\'s limits. Nothing here is being held against this shop.',
+            'كل المقاييس ضمن حدود السوق. لا شيء هنا يُحتسب على هذا المتجر.',
+        ],
+        'tier_watch' => [
+            'Being watched',
+            'تحت المراقبة',
+        ],
+        'tier_watch_explained' => [
+            'At least one measure has moved close to a limit. Nothing has been withdrawn, and acting now is what keeps it that way.',
+            'اقترب مقياس واحد على الأقل من الحدّ. لم يُسحب أي شيء، والتصرّف الآن هو ما يبقي الأمر كذلك.',
+        ],
+        'tier_at_risk' => [
+            'At risk',
+            'معرّض للخطر',
+        ],
+        'tier_at_risk_explained' => [
+            'A measure is past the marketplace\'s limit. This is the record any suspension would rest on, so it is the record to change.',
+            'تجاوز أحد المقاييس حدّ السوق. هذا هو السجل الذي يستند إليه أي إيقاف، وهو السجل الواجب تغييره.',
+        ],
+        'fulfilment_rate' => [
+            'Fulfilment rate',
+            'نسبة الإتمام',
+        ],
+        'delivered_out_of_everything_ordered' => [
+            'Delivered, out of everything ordered.',
+            'المُسلَّم من إجمالي ما طُلب.',
+        ],
+        'cancellation_rate' => [
+            'Cancellation rate',
+            'نسبة الإلغاء',
+        ],
+        'average_rating' => [
+            'Average rating',
+            'متوسّط التقييم',
+        ],
+        'n_delivered' => [
+            ':count delivered',
+            ':count مُسلَّم',
+        ],
+        'from_n_reviews' => [
+            'From :count reviews',
+            'من :count تقييم',
+        ],
+        'ceiling_is_x' => [
+            'Ceiling is :value',
+            'الحدّ الأقصى :value',
+        ],
+        'lines_you_are_currently_over' => [
+            'Lines you are currently over',
+            'الحدود التي تتجاوزها حاليًا',
+        ],
+        'x_against_a_limit_of_y' => [
+            ':actual against a limit of :limit',
+            ':actual مقابل حدّ :limit',
+        ],
+        'what_would_clear_this' => [
+            'What would clear this',
+            'ما الذي يُنهي هذا',
+        ],
+        'what_the_marketplace_concludes_and_what_it_would_take_to_change_it' => [
+            'What the marketplace concludes, and what it would take to change it.',
+            'ما يخلص إليه السوق، وما يلزم لتغييره.',
+        ],
+        'this_is_the_record_a_suspension_would_have_to_rest_on' => [
+            'This is the record a suspension would have to rest on.',
+            'هذا هو السجل الذي يجب أن يستند إليه أي إيقاف.',
+        ],
+        'you_were_at' => [
+            'You were at',
+            'كنت عند',
+        ],
+        'the_marketplaces_ceiling' => [
+            'The marketplace\'s ceiling',
+            'الحدّ الأقصى لدى السوق',
+        ],
+        'measure' => [
+            'Measure',
+            'المقياس',
+        ],
+        'you' => [
+            'You',
+            'أنت',
+        ],
+        'the_line' => [
+            'The line',
+            'الحدّ',
+        ],
+        'standing' => [
+            'Standing',
+            'الحالة',
+        ],
+        'currently_over_a_line' => [
+            'Currently over a line',
+            'يتجاوز الحدّ حاليًا',
+        ],
+        'not_measured_yet' => [
+            'Not measured yet',
+            'لم يُقَس بعد',
+        ],
+        'not_set' => [
+            'Not set',
+            'غير محدّد',
+        ],
+        'every_line_you_are_measured_against' => [
+            'Every line you are measured against',
+            'كل حدّ تُقاس به',
+        ],
+        'how_long_you_have_to_get_an_order_moving' => [
+            'How long you have to get an order moving',
+            'المهلة المتاحة لتحريك الطلب',
+        ],
+        'the_clock_runs_only_while_the_order_still_needs_something_from_you' => [
+            'The clock runs only while the order still needs something from you.',
+            'لا تعمل الساعة إلا ما دام الطلب ينتظر شيئًا منك.',
+        ],
+        'processing_window' => [
+            'Processing window',
+            'مهلة المعالجة',
+        ],
+        'every_line_crossed_and_every_line_cleared' => [
+            'Every line crossed, and every line cleared',
+            'كل حدّ تُجووِز وكل حدّ عاد إلى وضعه',
+        ],
+        'a_breach_is_opened_when_a_measure_goes_past_the_marketplaces_limit_and_cleared_when_it_comes_back' => [
+            'A breach is opened when a measure goes past the marketplace\'s limit, and cleared when it comes back inside it.',
+            'يُفتح التجاوز عندما يتخطّى المقياس حدّ السوق، ويُغلق عندما يعود إلى داخله.',
+        ],
+        'you_have_never_crossed_a_line' => [
+            'You have never crossed a line',
+            'لم تتجاوز أي حدّ من قبل',
+        ],
+        'opened' => [
+            'Opened',
+            'فُتح',
+        ],
+        'cleared' => [
+            'Cleared',
+            'أُغلق',
+        ],
+        'sla_tracking_is_not_available_on_this_installation' => [
+            'SLA tracking is not available on this installation.',
+            'تتبّع اتفاقية مستوى الخدمة غير متاح على هذا التركيب.',
+        ],
+        'the_breach_table_has_not_been_created_ask_the_marketplace_to_run_its_migrations' => [
+            'The breach table has not been created. Ask the marketplace to run its migrations.',
+            'لم يُنشأ جدول التجاوزات. اطلب من السوق تنفيذ ترحيلات قاعدة البيانات.',
+        ],
+        'everything_the_marketplace_could_act_on' => [
+            'Everything the marketplace could act on',
+            'كل ما يمكن للسوق التصرّف بناءً عليه',
+        ],
+        'three_things_can_cost_a_shop_its_listings_and_they_are_read_together_for_the_first_time_here' => [
+            'Three things can cost a shop its listings, and they are read together here for the first time.',
+            'ثلاثة أمور قد تكلّف المتجر عروضه، وتُقرأ هنا معًا لأول مرة.',
+        ],
+        'identity_verification' => [
+            'Identity verification',
+            'التحقّق من الهوية',
+        ],
+        'no_documents_on_file' => [
+            'No documents on file',
+            'لا مستندات محفوظة',
+        ],
+        'verification_gates_payouts_it_does_not_gate_selling' => [
+            'Verification gates payouts. It does not gate selling.',
+            'التحقّق يشترط للسحوبات، لا للبيع.',
+        ],
+        'expires_on_x' => [
+            'Expires on :date',
+            'ينتهي في :date',
+        ],
+        'brand_authorisation' => [
+            'Brand authorisation',
+            'تفويض العلامة التجارية',
+        ],
+        'you_hold_no_brand_claims' => [
+            'You hold no brand claims',
+            'لا تملك أي مطالبات علامة تجارية',
+        ],
+        'brand_enforcement_is_on_so_a_claim_is_needed_before_listing_under_a_brand' => [
+            'Brand enforcement is on, so a claim is needed before listing under a brand.',
+            'تطبيق العلامات مفعَّل، لذا تلزم مطالبة قبل العرض تحت أي علامة.',
+        ],
+        'brand_enforcement_is_off_on_this_marketplace_today' => [
+            'Brand enforcement is off on this marketplace today.',
+            'تطبيق العلامات معطَّل في هذا السوق اليوم.',
+        ],
+        'n_brands_you_are_not_authorised_for' => [
+            ':count brands you are not authorised for',
+            ':count علامة غير مفوَّض لها',
+        ],
+        'brand_enforcement_is_on_listings_under_an_unauthorised_brand_can_be_taken_down' => [
+            'Brand enforcement is on. Listings under an unauthorised brand can be taken down.',
+            'تطبيق العلامات مفعَّل. يمكن سحب العروض تحت علامة غير مفوَّضة.',
+        ],
+        'see_what_is_exposed' => [
+            'See what is exposed',
+            'اطّلع على المعرَّض للخطر',
+        ],
+        'you_are_inside_every_line' => [
+            'You are inside every line',
+            'أنت ضمن كل الحدود',
+        ],
+        'nothing_here_is_being_held_against_you_today' => [
+            'Nothing here is being held against you today.',
+            'لا شيء هنا يُحتسب عليك اليوم.',
+        ],
+        'breaches_over_the_last_quarter' => [
+            'Breaches over the last quarter',
+            'التجاوزات خلال الربع الأخير',
+        ],
+        'nothing_to_trend' => [
+            'Nothing to trend',
+            'لا شيء لعرض اتجاهه',
+        ],
+        'no_line_has_been_crossed_in_the_last_ninety_days' => [
+            'No line has been crossed in the last ninety days.',
+            'لم يُتجاوز أي حدّ خلال التسعين يومًا الماضية.',
+        ],
+        'brands_this_shop_may_sell_under' => [
+            'Brands this shop may sell under',
+            'العلامات التي يجوز لهذا المتجر البيع تحتها',
+        ],
+        'a_claim_is_approved_by_a_person_reading_documents_never_by_time_passing' => [
+            'A claim is approved by a person reading documents — never by time passing.',
+            'تُعتمَد المطالبة بقراءة شخص للمستندات، لا بمرور الوقت.',
+        ],
+        'the_brand_registry_is_not_running_on_this_marketplace' => [
+            'The brand registry is not running on this marketplace',
+            'سجلّ العلامات لا يعمل في هذا السوق',
+        ],
+        'nothing_is_being_withheld_there_is_no_registry_to_read' => [
+            'Nothing is being withheld — there is no registry to read.',
+            'لا شيء محجوب عنك، فلا يوجد سجلّ لقراءته.',
+        ],
+        'claims_are_still_recorded_and_reviewed_and_will_apply_the_day_enforcement_is_turned_on' => [
+            'Claims are still recorded and reviewed, and will apply the day enforcement is turned on.',
+            'ما زالت المطالبات تُسجَّل وتُراجَع، وستُطبَّق يوم تفعيل الإلزام.',
+        ],
+        'all_claims' => [
+            'All claims',
+            'كل المطالبات',
+        ],
+        'current_authorisations' => [
+            'Current authorisations',
+            'التفويضات السارية',
+        ],
+        'claim_type' => [
+            'Claim type',
+            'نوع المطالبة',
+        ],
+        'documents' => [
+            'Documents',
+            'المستندات',
+        ],
+        'expires' => [
+            'Expires',
+            'ينتهي',
+        ],
+        'submitted' => [
+            'Submitted',
+            'أُرسلت',
+        ],
+        'no_expiry' => [
+            'No expiry',
+            'بلا انتهاء',
+        ],
+        'brand_n' => [
+            'Brand :id',
+            'العلامة :id',
+        ],
+        'a_claim_is_needed_only_for_a_brand_you_do_not_own_outright' => [
+            'A claim is needed only for a brand you do not own outright.',
+            'المطالبة لازمة فقط لعلامة لا تملكها ملكية كاملة.',
+        ],
+        'no_current_authorisation' => [
+            'No current authorisation',
+            'لا تفويض ساري',
+        ],
+        'an_authorisation_is_an_approved_claim_that_has_not_expired' => [
+            'An authorisation is an approved claim that has not expired.',
+            'التفويض هو مطالبة معتمدة لم تنتهِ صلاحيتها.',
+        ],
+        'authorized_reseller' => [
+            'Authorised reseller',
+            'موزّع مفوَّض',
+        ],
+        'distributor' => [
+            'Distributor',
+            'موزّع',
+        ],
+        'what_a_revocation_would_cost' => [
+            'What a revocation would cost',
+            'ما يكلّفه سحب التفويض',
+        ],
+        'counted_in_listings_from_your_own_catalogue_not_described_in_the_abstract' => [
+            'Counted in listings from your own catalogue, not described in the abstract.',
+            'محسوب بعدد العروض من كتالوجك نفسه، لا موصوفًا بشكل مجرّد.',
+        ],
+        'brands_you_list_under' => [
+            'Brands you list under',
+            'العلامات التي تعرض تحتها',
+        ],
+        'counted_from_the_products_in_your_catalogue' => [
+            'Counted from the products in your catalogue.',
+            'محسوبة من المنتجات في كتالوجك.',
+        ],
+        'brands_you_are_not_authorised_for' => [
+            'Brands you are not authorised for',
+            'علامات غير مفوَّض لها',
+        ],
+        'enforcement_is_on' => [
+            'Enforcement is on',
+            'الإلزام مفعَّل',
+        ],
+        'enforcement_is_off' => [
+            'Enforcement is off',
+            'الإلزام معطَّل',
+        ],
+        'listings_that_would_be_affected' => [
+            'Listings that would be affected',
+            'العروض التي ستتأثّر',
+        ],
+        'the_listings_sitting_under_those_brands' => [
+            'The listings sitting under those brands.',
+            'العروض القائمة تحت تلك العلامات.',
+        ],
+        'these_listings_are_not_at_risk_today_this_is_what_would_be_at_risk_if_enforcement_were_turned_on' => [
+            'These listings are not at risk today. This is what would be at risk if enforcement were turned on.',
+            'هذه العروض ليست معرّضة للخطر اليوم. هذا ما سيكون معرّضًا لو فُعِّل الإلزام.',
+        ],
+        'listings' => [
+            'Listings',
+            'العروض',
+        ],
+        'your_claim' => [
+            'Your claim',
+            'مطالبتك',
+        ],
+        'no_claim' => [
+            'No claim',
+            'لا مطالبة',
+        ],
+        'you_may_list_under_this_brand' => [
+            'You may list under this brand',
+            'يجوز لك العرض تحت هذه العلامة',
+        ],
+        'you_may_not_list_under_this_brand' => [
+            'You may not list under this brand',
+            'لا يجوز لك العرض تحت هذه العلامة',
+        ],
+        'none_of_your_listings_carry_a_brand' => [
+            'None of your listings carry a brand',
+            'لا تحمل أي من عروضك علامة تجارية',
+        ],
+        'brand_exposure_is_counted_from_the_brand_set_on_each_product' => [
+            'Brand exposure is counted from the brand set on each product.',
+            'يُحسب التعرّض للعلامات من العلامة المحدّدة على كل منتج.',
+        ],
+        'issues_that_were_left_long_enough_to_climb' => [
+            'Issues that were left long enough to climb',
+            'مشكلات تُركت مدة كافية لتتصاعد',
+        ],
+        'escalation_only_ever_climbs_and_one_step_at_a_time_so_a_row_here_measures_silence_not_severity' => [
+            'Escalation only ever climbs, and one step at a time, so a row here measures silence rather than severity.',
+            'التصعيد يرتفع فقط، وخطوة واحدة في كل مرة، لذا يقيس السطر هنا مدّة الصمت لا شدّة المشكلة.',
+        ],
+        'issue_detection_is_not_running_on_this_marketplace' => [
+            'Issue detection is not running on this marketplace',
+            'كشف المشكلات لا يعمل في هذا السوق',
+        ],
+        'nothing_is_being_withheld_there_is_no_issue_store_to_read' => [
+            'Nothing is being withheld — there is no issue store to read.',
+            'لا شيء محجوب عنك، فلا يوجد مخزن مشكلات لقراءته.',
+        ],
+        'escalated_to' => [
+            'Escalated to',
+            'صُعِّدت إلى',
+        ],
+        'open_for' => [
+            'Open for',
+            'مفتوحة منذ',
+        ],
+        'level_n' => [
+            'Level :level',
+            'المستوى :level',
+        ],
+        'nothing_has_escalated' => [
+            'Nothing has escalated',
+            'لم يتصاعد أي شيء',
+        ],
+        'every_issue_this_shop_has_had_was_answered_before_the_platform_promoted_it' => [
+            'Every issue this shop has had was answered before the platform promoted it.',
+            'كل مشكلة واجهها هذا المتجر عولجت قبل أن ترفعها المنصّة.',
+        ],
+        'act_on_these_before_the_marketplace_does' => [
+            'Act on these before the marketplace does.',
+            'تصرّف بشأنها قبل أن يتصرّف السوق.',
+        ],
+        'your_requests_waiting_on_the_marketplace' => [
+            'Your requests waiting on the marketplace',
+            'طلباتك بانتظار السوق',
+        ],
+        'read_only_by_design_the_approver_is_by_definition_not_the_requester' => [
+            'Read-only by design: the approver is, by definition, not the requester.',
+            'للقراءة فقط بحكم التصميم: المُوافِق ليس مقدّم الطلب بالتعريف.',
+        ],
+        'dual_control_is_not_running_on_this_marketplace' => [
+            'Dual control is not running on this marketplace',
+            'الرقابة المزدوجة لا تعمل في هذا السوق',
+        ],
+        'nothing_is_being_withheld_there_is_no_approval_queue_to_read' => [
+            'Nothing is being withheld — there is no approval queue to read.',
+            'لا شيء محجوب عنك، فلا يوجد طابور موافقات لقراءته.',
+        ],
+        'one_request_is_waiting_on_a_second_approver' => [
+            'One request is waiting on a second approver',
+            'طلب واحد بانتظار مُوافِق ثانٍ',
+        ],
+        'n_requests_are_waiting_on_a_second_approver' => [
+            ':count requests are waiting on a second approver',
+            ':count طلبات بانتظار مُوافِق ثانٍ',
+        ],
+        'a_payout_above_the_marketplaces_threshold_needs_a_second_person_to_release_it' => [
+            'A payout above the marketplace\'s threshold needs a second person to release it.',
+            'السحب الذي يتجاوز حدّ السوق يحتاج شخصًا ثانيًا للإفراج عنه.',
+        ],
+        'what_is_waiting' => [
+            'What is waiting',
+            'ما الذي ينتظر',
+        ],
+        'approvals_collected' => [
+            'Approvals collected',
+            'الموافقات المجمّعة',
+        ],
+        'decided' => [
+            'Decided',
+            'تقرّر في',
+        ],
+        'payout_x' => [
+            'Payout :reference',
+            'سحب :reference',
+        ],
+        'payout_n' => [
+            'Payout #:id',
+            'سحب رقم :id',
+        ],
+        'x_of_y' => [
+            ':collected of :required',
+            ':collected من :required',
+        ],
+        'nothing_of_yours_is_waiting_on_an_approval' => [
+            'Nothing of yours is waiting on an approval',
+            'لا شيء من طلباتك بانتظار موافقة',
+        ],
+        'only_a_payout_above_the_marketplaces_threshold_opens_one' => [
+            'Only a payout above the marketplace\'s threshold opens one.',
+            'لا يفتح موافقة إلا سحب يتجاوز حدّ السوق.',
+        ],
+
+        // ── Wave 7 — Enterprise: team, roles, the access review and integrations. Two audiences
+        // share these screens — an owner reviewing who can do what, and a developer wiring up a
+        // system — so the wording stays concrete on both sides: what a credential can do, and what
+        // happens when it is taken away.
+        'nav_organization' => [
+            'Organization',
+            'المنظومة',
+        ],
+        'nav_platform' => [
+            'Platform',
+            'المنصّة',
+        ],
+        'nav_api_keys' => [
+            'API keys',
+            'مفاتيح الواجهة البرمجية',
+        ],
+        'nav_integrations' => [
+            'Integrations',
+            'التكاملات',
+        ],
+        'who_works_in_this_shop' => [
+            'Who works in this shop',
+            'مَن يعمل في هذا المتجر',
+        ],
+        'and_what_each_of_them_may_do' => [
+            'And what each of them may do.',
+            'وما يجوز لكل منهم فعله.',
+        ],
+        'people_with_access' => [
+            'People with access',
+            'أشخاص لديهم صلاحية دخول',
+        ],
+        'n_accounts_in_total' => [
+            ':count accounts in total',
+            ':count حساب إجمالًا',
+        ],
+        'roles_defined' => [
+            'Roles defined',
+            'الأدوار المعرَّفة',
+        ],
+        'a_role_is_a_set_of_permissions_a_person_is_given' => [
+            'A role is a set of permissions a person is given.',
+            'الدور مجموعة صلاحيات تُمنح لشخص.',
+        ],
+        'permissions_available' => [
+            'Permissions available',
+            'الصلاحيات المتاحة',
+        ],
+        'set_by_the_marketplace_not_by_the_shop' => [
+            'Set by the marketplace, not by the shop.',
+            'يحدّدها السوق، لا المتجر.',
+        ],
+        'manage_team' => [
+            'Manage team',
+            'إدارة الفريق',
+        ],
+        'manage_roles' => [
+            'Manage roles',
+            'إدارة الأدوار',
+        ],
+        'add_someone' => [
+            'Add someone',
+            'إضافة شخص',
+        ],
+        'you_are_the_only_person_here' => [
+            'You are the only person here',
+            'أنت الشخص الوحيد هنا',
+        ],
+        'staff_sign_in_with_their_own_credentials_and_see_only_what_their_role_allows' => [
+            'Staff sign in with their own credentials and see only what their role allows.',
+            'يسجّل الموظفون الدخول ببياناتهم الخاصة ولا يرون إلا ما يسمح به دورهم.',
+        ],
+        'no_role_no_access' => [
+            'No role — no access',
+            'بلا دور — بلا صلاحية',
+        ],
+        'last_signed_in' => [
+            'Last signed in',
+            'آخر تسجيل دخول',
+        ],
+        'never' => [
+            'Never',
+            'أبدًا',
+        ],
+        'role' => [
+            'Role',
+            'الدور',
+        ],
+        'signed_in' => [
+            'Signed in',
+            'مسجَّل الدخول',
+        ],
+        'signed_in_now' => [
+            'Signed in now',
+            'مسجَّل الدخول الآن',
+        ],
+        'what_each_role_actually_grants' => [
+            'What each role actually grants',
+            'ما يمنحه كل دور فعليًا',
+        ],
+        'a_grid_is_the_only_form_in_which_two_roles_that_are_the_same_role_are_visible' => [
+            'A grid is the only form in which two roles that are the same role become visible.',
+            'الجدول الشبكي هو الشكل الوحيد الذي يُظهر أن دورين مختلفَي الاسم هما دور واحد.',
+        ],
+        'permission' => [
+            'Permission',
+            'الصلاحية',
+        ],
+        'n_people' => [
+            ':count people',
+            ':count أشخاص',
+        ],
+        'no_roles_defined' => [
+            'No roles defined',
+            'لا أدوار معرَّفة',
+        ],
+        'until_a_role_exists_only_you_can_act_as_this_shop' => [
+            'Until a role exists, only you can act as this shop.',
+            'إلى أن يوجد دور، لا يستطيع أحد سواك التصرّف باسم هذا المتجر.',
+        ],
+        'create_a_role' => [
+            'Create a role',
+            'إنشاء دور',
+        ],
+        'one_role_is_held_by_nobody' => [
+            'One role is held by nobody',
+            'دور واحد لا يحمله أحد',
+        ],
+        'n_roles_are_held_by_nobody' => [
+            ':count roles are held by nobody',
+            ':count أدوار لا يحملها أحد',
+        ],
+        'who_can_act_as_this_shop' => [
+            'Who can act as this shop',
+            'مَن يستطيع التصرّف باسم هذا المتجر',
+        ],
+        'read_from_the_credentials_themselves_rather_than_from_a_list_of_accounts' => [
+            'Read from the credentials themselves, rather than from a list of accounts.',
+            'مقروء من بيانات الاعتماد نفسها، لا من قائمة حسابات.',
+        ],
+        'people_who_can_sign_in' => [
+            'People who can sign in',
+            'أشخاص يمكنهم تسجيل الدخول',
+        ],
+        'n_hold_a_live_session' => [
+            ':count hold a live session',
+            ':count لديهم جلسة نشطة',
+        ],
+        'api_keys_that_still_work' => [
+            'API keys that still work',
+            'مفاتيح ما زالت تعمل',
+        ],
+        'a_key_acts_as_the_whole_shop_within_its_scopes' => [
+            'A key acts as the whole shop, within its scopes.',
+            'المفتاح يتصرّف باسم المتجر كله، ضمن نطاقاته.',
+        ],
+        'recorded_actions' => [
+            'Recorded actions',
+            'الإجراءات المسجَّلة',
+        ],
+        'everything_done_in_this_shops_name' => [
+            'Everything done in this shop\'s name.',
+            'كل ما تم باسم هذا المتجر.',
+        ],
+        'people' => [
+            'People',
+            'الأشخاص',
+        ],
+        'keys' => [
+            'Keys',
+            'المفاتيح',
+        ],
+        'unnamed' => [
+            'Unnamed',
+            'بلا اسم',
+        ],
+        'full_access' => [
+            'Full access',
+            'صلاحية كاملة',
+        ],
+        'manage' => [
+            'Manage',
+            'إدارة',
+        ],
+        'no_key_can_act_as_this_shop' => [
+            'No key can act as this shop',
+            'لا مفتاح يستطيع التصرّف باسم هذا المتجر',
+        ],
+        'revoked_and_expired_keys_are_left_out_a_key_that_cannot_act_is_not_an_answer_to_who_can' => [
+            'Revoked and expired keys are left out. A key that cannot act is not an answer to who can.',
+            'المفاتيح الملغاة والمنتهية غير مدرجة. المفتاح الذي لا يستطيع التصرّف ليس جوابًا على سؤال مَن يستطيع.',
+        ],
+        'last_used_on_x' => [
+            'Last used on :date',
+            'آخر استخدام في :date',
+        ],
+        'never_used' => [
+            'Never used',
+            'لم يُستخدم قط',
+        ],
+        'everything' => [
+            'Everything',
+            'كل شيء',
+        ],
+        'trail_seller_staff' => [
+            'Team',
+            'الفريق',
+        ],
+        'trail_seller_automation' => [
+            'Automation',
+            'الأتمتة',
+        ],
+        'trail_integration' => [
+            'Integrations',
+            'التكاملات',
+        ],
+        'trail_payout' => [
+            'Payouts',
+            'السحوبات',
+        ],
+        'trail_product' => [
+            'Catalogue',
+            'الكتالوج',
+        ],
+        'showing_the_most_recent_n_of_m' => [
+            'Showing the most recent :shown of :total',
+            'عرض أحدث :shown من :total',
+        ],
+        'nothing_has_been_recorded_yet' => [
+            'Nothing has been recorded yet',
+            'لم يُسجَّل شيء بعد',
+        ],
+        'actions_taken_by_you_or_your_staff_appear_here_as_they_happen' => [
+            'Actions taken by you or your staff appear here as they happen.',
+            'تظهر هنا الإجراءات التي تقوم بها أنت أو موظفوك فور حدوثها.',
+        ],
+        'nothing_in_this_area' => [
+            'Nothing in this area',
+            'لا شيء في هذا المجال',
+        ],
+        'choose_everything_to_see_the_whole_trail' => [
+            'Choose "Everything" to see the whole trail.',
+            'اختر «كل شيء» لعرض السجل كاملًا.',
+        ],
+        'on_what' => [
+            'On what',
+            'على ماذا',
+        ],
+        'the_platform' => [
+            'The platform',
+            'المنصّة',
+        ],
+        'how_your_systems_talk_to_this_marketplace' => [
+            'How your systems talk to this marketplace',
+            'كيف تتحدّث أنظمتك إلى هذا السوق',
+        ],
+        'and_how_it_talks_back_to_them' => [
+            'And how it talks back to them.',
+            'وكيف يردّ عليها.',
+        ],
+        'nav_integration_health' => [
+            'Delivery health',
+            'حالة التسليم',
+        ],
+        'one_endpoint_was_switched_off' => [
+            'One endpoint was switched off',
+            'أُوقف مقصد واحد',
+        ],
+        'n_endpoints_were_switched_off' => [
+            ':count endpoints were switched off',
+            'أُوقفت :count مقاصد',
+        ],
+        'an_endpoint_that_stops_answering_is_switched_off_rather_than_retried_for_ever' => [
+            'An endpoint that stops answering is switched off rather than retried for ever. Nothing is being delivered to it.',
+            'المقصد الذي يتوقّف عن الاستجابة يُوقَف بدل إعادة المحاولة إلى الأبد. لا يُسلَّم إليه شيء.',
+        ],
+        'one_endpoint_is_failing' => [
+            'One endpoint is failing',
+            'مقصد واحد يفشل',
+        ],
+        'n_endpoints_are_failing' => [
+            ':count endpoints are failing',
+            ':count مقاصد تفشل',
+        ],
+        'deliveries_are_being_retried_an_endpoint_is_switched_off_after_ten_failures_in_a_row' => [
+            'Deliveries are being retried. An endpoint is switched off after ten failures in a row.',
+            'تُعاد محاولة التسليم. يُوقَف المقصد بعد عشرة إخفاقات متتالية.',
+        ],
+        'keys_that_still_work' => [
+            'Keys that still work',
+            'مفاتيح ما زالت تعمل',
+        ],
+        'keys_ever_issued' => [
+            'Keys ever issued',
+            'المفاتيح الصادرة إجمالًا',
+        ],
+        'a_key_acts_as_the_whole_shop_within_its_scopes_and_is_shown_once_when_issued' => [
+            'A key acts as the whole shop within its scopes, and is shown once when issued.',
+            'المفتاح يتصرّف باسم المتجر كله ضمن نطاقاته، ويُعرض مرة واحدة عند إصداره.',
+        ],
+        'endpoints_receiving_events' => [
+            'Endpoints receiving events',
+            'مقاصد تستقبل الأحداث',
+        ],
+        'endpoints_switched_off' => [
+            'Endpoints switched off',
+            'مقاصد مُوقَفة',
+        ],
+        'events_you_can_subscribe_to' => [
+            'Events you can subscribe to',
+            'أحداث يمكنك الاشتراك بها',
+        ],
+        'events_this_marketplace_raises' => [
+            'Events this marketplace raises',
+            'الأحداث التي يطلقها هذا السوق',
+        ],
+        'copy_this_key_now' => [
+            'Copy this key now',
+            'انسخ هذا المفتاح الآن',
+        ],
+        'it_is_shown_once_and_stored_only_as_a_hash_if_you_lose_it_issue_another_and_revoke_this_one' => [
+            'It is shown once and stored only as a hash. If you lose it, issue another and revoke this one.',
+            'يُعرض مرة واحدة ويُخزَّن كبصمة فقط. إن فقدته، أصدر غيره وألغِ هذا.',
+        ],
+        'issue_a_key' => [
+            'Issue a key',
+            'إصدار مفتاح',
+        ],
+        'what_this_key_is_for_so_it_can_be_recognised_later' => [
+            'What this key is for, so it can be recognised later.',
+            'الغرض من هذا المفتاح، ليُعرَف لاحقًا.',
+        ],
+        'optional_a_key_with_no_expiry_works_until_it_is_revoked' => [
+            'Optional. A key with no expiry works until it is revoked.',
+            'اختياري. المفتاح بلا تاريخ انتهاء يعمل حتى يُلغى.',
+        ],
+        'what_it_may_do' => [
+            'What it may do',
+            'ما يجوز له فعله',
+        ],
+        'a_key_can_never_be_given_more_than_the_person_issuing_it_holds' => [
+            'A key can never be given more than the person issuing it holds.',
+            'لا يُمنح المفتاح أكثر مما يملكه مُصدِره.',
+        ],
+        'no_keys_yet' => [
+            'No keys yet',
+            'لا مفاتيح بعد',
+        ],
+        'a_key_lets_your_own_systems_read_and_write_here_without_a_person_signing_in' => [
+            'A key lets your own systems read and write here without a person signing in.',
+            'يتيح المفتاح لأنظمتك القراءة والكتابة هنا دون تسجيل دخول شخص.',
+        ],
+        'nothing_a_key_with_no_scopes_can_read_nothing' => [
+            'Nothing — a key with no scopes can read nothing',
+            'لا شيء — المفتاح بلا نطاقات لا يقرأ شيئًا',
+        ],
+        'last_used' => [
+            'Last used',
+            'آخر استخدام',
+        ],
+        'revoke_this_key_anything_using_it_stops_working_on_its_very_next_request' => [
+            'Revoke this key? Anything using it stops working on its very next request.',
+            'إلغاء هذا المفتاح؟ سيتوقّف كل ما يستخدمه عند طلبه التالي مباشرة.',
+        ],
+        'where_this_marketplace_sends_your_shops_events' => [
+            'Where this marketplace sends your shop\'s events.',
+            'إلى أين يرسل هذا السوق أحداث متجرك.',
+        ],
+        'copy_this_signing_secret_now' => [
+            'Copy this signing secret now',
+            'انسخ مفتاح التوقيع الآن',
+        ],
+        'every_delivery_is_signed_with_it_verify_the_signature_or_anybody_can_post_to_your_endpoint' => [
+            'Every delivery is signed with it. Verify the signature, or anybody can post to your endpoint.',
+            'كل عملية تسليم مُوقَّعة به. تحقّق من التوقيع، وإلا استطاع أي أحد الإرسال إلى مقصدك.',
+        ],
+        'add_an_endpoint' => [
+            'Add an endpoint',
+            'إضافة مقصد',
+        ],
+        'destination' => [
+            'Destination',
+            'المقصد',
+        ],
+        'https_only_a_signed_delivery_over_plain_http_is_signed_plaintext' => [
+            'https only. A signed delivery over plain http is signed plaintext, and the payload carries order and payout details.',
+            'https فقط. التسليم المُوقَّع عبر http عادي هو نصّ ظاهر مُوقَّع، والحمولة تحمل تفاصيل الطلبات والسحوبات.',
+        ],
+        'subscribed_to' => [
+            'Subscribed to',
+            'مشترك بـ',
+        ],
+        'an_endpoint_receives_only_the_events_it_asked_for' => [
+            'An endpoint receives only the events it asked for.',
+            'لا يستقبل المقصد إلا الأحداث التي طلبها.',
+        ],
+        'nothing_is_being_told_about_your_events' => [
+            'Nothing is being told about your events',
+            'لا شيء يُبلَّغ بأحداثك',
+        ],
+        'add_an_endpoint_and_this_marketplace_will_post_to_it_as_things_happen' => [
+            'Add an endpoint and this marketplace will post to it as things happen.',
+            'أضف مقصدًا وسيرسل إليه هذا السوق فور وقوع الأحداث.',
+        ],
+        'health' => [
+            'Health',
+            'الحالة',
+        ],
+        'nothing_sent_yet' => [
+            'Nothing sent yet',
+            'لم يُرسَل شيء بعد',
+        ],
+        'n_failures_in_a_row' => [
+            ':count failures in a row',
+            ':count إخفاقات متتالية',
+        ],
+        'last_delivered_x' => [
+            'Last delivered :date',
+            'آخر تسليم :date',
+        ],
+        'send_a_test' => [
+            'Send a test',
+            'إرسال اختبار',
+        ],
+        'remove_this_endpoint_its_deliveries_stay_removing_it_does_not_un_send_them' => [
+            'Remove this endpoint? Its deliveries stay — removing it does not un-send them.',
+            'إزالة هذا المقصد؟ تبقى عمليات التسليم — إزالته لا تلغي ما أُرسل.',
+        ],
+        'what_was_sent_and_what_came_back' => [
+            'What was sent, and what came back',
+            'ما أُرسل وما عاد',
+        ],
+        'every_attempt_kept_whether_it_worked_or_not' => [
+            'Every attempt, kept whether it worked or not.',
+            'كل محاولة محفوظة، سواء نجحت أم لا.',
+        ],
+        'endpoint_n' => [
+            'Endpoint #:id',
+            'المقصد رقم :id',
+        ],
+        'next_attempt_x' => [
+            'Next attempt :date',
+            'المحاولة التالية :date',
+        ],
+        'what_came_back' => [
+            'What came back',
+            'ما عاد',
+        ],
+        'no_response' => [
+            'No response',
+            'لا استجابة',
+        ],
+        'nothing_has_been_sent_yet' => [
+            'Nothing has been sent yet',
+            'لم يُرسَل شيء بعد',
+        ],
+        'deliveries_appear_here_as_events_happen_in_your_shop' => [
+            'Deliveries appear here as events happen in your shop.',
+            'تظهر عمليات التسليم هنا فور وقوع الأحداث في متجرك.',
+        ],
+        'no_deliveries_match_these_filters' => [
+            'No deliveries match these filters',
+            'لا عمليات تسليم تطابق هذه المرشّحات',
+        ],
+        'choose_everything_to_see_them_all' => [
+            'Choose "Everything" to see them all.',
+            'اختر «كل شيء» لعرضها كلها.',
+        ],
+        'event' => [
+            'Event',
+            'الحدث',
+        ],
+        'list_separator' => [
+            ',',
+            '،',
+        ],
+        // The permission catalogue, named in the seller's language rather than in the code's.
+        'products.view' => [
+            'View products',
+            'عرض المنتجات',
+        ],
+        'products.manage' => [
+            'Manage products',
+            'إدارة المنتجات',
+        ],
+        'orders.view' => [
+            'View orders',
+            'عرض الطلبات',
+        ],
+        'orders.manage' => [
+            'Manage orders',
+            'إدارة الطلبات',
+        ],
+        'inventory.manage' => [
+            'Manage inventory',
+            'إدارة المخزون',
+        ],
+        'promotions.manage' => [
+            'Manage promotions',
+            'إدارة العروض',
+        ],
+        'finance.view' => [
+            'View finance',
+            'عرض المالية',
+        ],
+        'payouts.request' => [
+            'Request payouts',
+            'طلب السحوبات',
+        ],
+        'reviews.view' => [
+            'View reviews',
+            'عرض التقييمات',
+        ],
+        'shop_settings.manage' => [
+            'Manage shop settings',
+            'إدارة إعدادات المتجر',
+        ],
+        'staff.manage' => [
+            'Manage the team',
+            'إدارة الفريق',
+        ],
+        'promotions' => [
+            'Promotions',
+            'العروض',
+        ],
+        'reviews' => [
+            'Reviews',
+            'التقييمات',
+        ],
+        'revoked' => [
+            'Revoked',
+            'مُلغى',
+        ],
+
+        // ── Wave 8 — Platform: reports and exports. The period is named on every screen and on
+        // every download card, because a spreadsheet with the wrong dates in it is indistinguishable
+        // from a correct one until somebody acts on it.
+        'nav_order_report' => [
+            'Order report',
+            'تقرير الطلبات',
+        ],
+        'nav_product_report' => [
+            'Product report',
+            'تقرير المنتجات',
+        ],
+        'nav_stock_report' => [
+            'Stock report',
+            'تقرير المخزون',
+        ],
+        'what_this_shop_did' => [
+            'What this shop did',
+            'ما قام به هذا المتجر',
+        ],
+        'three_reports_under_one_period_so_they_can_be_read_against_each_other' => [
+            'Three reports under one period, so they can be read against each other.',
+            'ثلاثة تقارير ضمن فترة واحدة، لتُقرأ في مقابل بعضها.',
+        ],
+        'period' => [
+            'Period',
+            'الفترة',
+        ],
+        'used_only_with_a_custom_period' => [
+            'Used only with a custom period.',
+            'تُستخدم فقط مع فترة مخصّصة.',
+        ],
+        'covering_x_to_y' => [
+            'Covering :from to :to',
+            'تغطي من :from إلى :to',
+        ],
+        'today' => [
+            'Today',
+            'اليوم',
+        ],
+        'this_week' => [
+            'This week',
+            'هذا الأسبوع',
+        ],
+        'this_month' => [
+            'This month',
+            'هذا الشهر',
+        ],
+        'this_year' => [
+            'This year',
+            'هذه السنة',
+        ],
+        'custom_date' => [
+            'A period I choose',
+            'فترة أحدّدها',
+        ],
+        'still_moving' => [
+            'Still moving',
+            'قيد التنفيذ',
+        ],
+        'cancelled_or_returned' => [
+            'Cancelled or returned',
+            'مُلغى أو مُرتجع',
+        ],
+        'settled' => [
+            'Settled',
+            'مُسوّى',
+        ],
+        'still_due' => [
+            'Still due',
+            'ما زال مستحقًا',
+        ],
+        'nothing_delivered_in_this_period' => [
+            'Nothing delivered in this period',
+            'لم يُسلَّم شيء في هذه الفترة',
+        ],
+        'the_chart_plots_delivered_orders_only' => [
+            'The chart plots delivered orders only.',
+            'يرسم المخطّط الطلبات المُسلَّمة فقط.',
+        ],
+        'awaiting_approval' => [
+            'Awaiting approval',
+            'بانتظار الموافقة',
+        ],
+        'rejected' => [
+            'Rejected',
+            'مرفوض',
+        ],
+        'units_sold' => [
+            'Units sold',
+            'الوحدات المباعة',
+        ],
+        'sold_for' => [
+            'Sold for',
+            'قيمة المبيعات',
+        ],
+        'discount_given' => [
+            'Discount given',
+            'الخصم الممنوح',
+        ],
+        'less_x_in_discount' => [
+            'Less :amount in discount',
+            'ناقص :amount خصمًا',
+        ],
+        'how_you_were_paid' => [
+            'How you were paid',
+            'كيف حصلت على المال',
+        ],
+        'cash' => [
+            'Cash',
+            'نقدًا',
+        ],
+        'wallet' => [
+            'Wallet',
+            'المحفظة',
+        ],
+        'offline' => [
+            'Offline payment',
+            'دفع خارج المنصّة',
+        ],
+        'digital' => [
+            'Digital payment',
+            'دفع إلكتروني',
+        ],
+        'returned' => [
+            'Returned to the customer',
+            'أُعيد إلى الزبون',
+        ],
+        'stock_carries_no_period_a_level_is_what_it_is_now' => [
+            'Stock carries no period: a level is what it is now.',
+            'لا فترة للمخزون: المستوى هو ما هو عليه الآن.',
+        ],
+        'every_order_in_the_period_with_what_the_marketplace_took' => [
+            'Every order in the period, with what the marketplace took.',
+            'كل طلب في الفترة، مع ما اقتطعه السوق.',
+        ],
+        'order_amount' => [
+            'Order amount',
+            'قيمة الطلب',
+        ],
+        'placed' => [
+            'Placed',
+            'تاريخ الطلب',
+        ],
+        'search_by_order_number' => [
+            'Search by order number',
+            'ابحث برقم الطلب',
+        ],
+        'no_orders_in_this_period' => [
+            'No orders in this period',
+            'لا طلبات في هذه الفترة',
+        ],
+        'choose_a_wider_period_to_see_more' => [
+            'Choose a wider period to see more.',
+            'اختر فترة أوسع لعرض المزيد.',
+        ],
+        'no_orders_match_that_search' => [
+            'No orders match that search',
+            'لا طلبات تطابق هذا البحث',
+        ],
+        'the_search_matches_an_order_number' => [
+            'The search matches an order number.',
+            'يطابق البحث رقم الطلب.',
+        ],
+        'what_is_listed_what_sold_and_what_it_earned' => [
+            'What is listed, what sold, and what it earned.',
+            'ما هو معروض، وما بِيع، وما حقّقه.',
+        ],
+        'listed' => [
+            'Listed',
+            'تاريخ العرض',
+        ],
+        'search_products' => [
+            'Search products',
+            'ابحث في المنتجات',
+        ],
+        'nothing_was_listed_in_this_period' => [
+            'Nothing was listed in this period',
+            'لم يُعرض شيء في هذه الفترة',
+        ],
+        'the_period_filters_on_when_a_product_was_listed_not_on_when_it_sold' => [
+            'The period filters on when a product was listed, not on when it sold.',
+            'تُصفّي الفترة حسب وقت عرض المنتج، لا وقت بيعه.',
+        ],
+        'no_products_match_that_search' => [
+            'No products match that search',
+            'لا منتجات تطابق هذا البحث',
+        ],
+        'low_is_anything_at_or_below_x_units' => [
+            'Low is anything at or below :limit units',
+            'المنخفض هو ما يساوي :limit وحدة أو أقل',
+        ],
+        'every_category' => [
+            'Every category',
+            'كل الفئات',
+        ],
+        'order_by' => [
+            'Order by',
+            'الترتيب حسب',
+        ],
+        'lowest_stock_first' => [
+            'Lowest stock first',
+            'الأقل مخزونًا أولًا',
+        ],
+        'highest_stock_first' => [
+            'Highest stock first',
+            'الأعلى مخزونًا أولًا',
+        ],
+        'in_stock' => [
+            'In stock',
+            'متوفّر',
+        ],
+        'no_physical_products_to_count' => [
+            'No physical products to count',
+            'لا منتجات فعلية لعدّها',
+        ],
+        'the_stock_report_covers_physical_products_a_digital_one_has_no_level' => [
+            'The stock report covers physical products. A digital one has no level.',
+            'يغطي تقرير المخزون المنتجات الفعلية. المنتج الرقمي لا مستوى له.',
+        ],
+        'everything_you_can_take_with_you' => [
+            'Everything you can take with you',
+            'كل ما يمكنك أخذه معك',
+        ],
+        'produced_by_the_same_exporters_the_app_uses_so_two_downloads_are_one_spreadsheet' => [
+            'Produced by the same exporters the app uses, so two downloads are one spreadsheet.',
+            'يُنتَج بالمصدِّرات نفسها التي يستخدمها التطبيق، فالتنزيلان ملف واحد.',
+        ],
+        'excel' => [
+            'Excel',
+            'إكسل',
+        ],
+        'pdf' => [
+            'PDF',
+            'PDF',
+        ],
+        'every_order_in_the_period_with_its_amounts_discounts_and_commission' => [
+            'Every order in the period, with its amounts, discounts and commission.',
+            'كل طلب في الفترة، بمبالغه وخصوماته وعمولته.',
+        ],
+        'products_listed_in_the_period_with_what_each_has_sold' => [
+            'Products listed in the period, with what each has sold.',
+            'المنتجات المعروضة في الفترة، مع ما باعه كلٌّ منها.',
+        ],
+        'current_stock_for_every_physical_product_lowest_first' => [
+            'Current stock for every physical product, lowest first.',
+            'المخزون الحالي لكل منتج فعلي، الأقل أولًا.',
+        ],
+        'nothing_is_queued_and_nothing_is_kept' => [
+            'Nothing is queued and nothing is kept',
+            'لا شيء يُدرَج في طابور ولا شيء يُحفَظ',
+        ],
+        'a_generated_file_left_on_the_server_is_a_copy_of_your_commercial_data_sitting_where_nobody_is_watching_these_stream_and_are_gone' => [
+            'A generated file left on the server is a copy of your commercial data sitting where nobody is watching. These stream and are gone.',
+            'الملف المُولَّد المتروك على الخادم نسخة من بياناتك التجارية في مكان لا يراقبه أحد. هذه تُبَثّ ثم تزول.',
+        ],
+
+        // ── Fulfilment and returns as measured quantities (control-surface orphans 43 and 47).
+        // These sit on the admin analytics screen rather than in the Seller Center, and the wording
+        // is careful about one thing throughout: which figures are measured and which are absent.
+        'fulfilment_and_returns' => [
+            'Fulfilment and returns',
+            'التنفيذ والمرتجعات',
+        ],
+        'how_long_shipping_takes_what_comes_back_and_what_is_refunded' => [
+            'How long shipping takes, what comes back, and what is refunded',
+            'كم يستغرق الشحن، وما الذي يعود، وما الذي يُستردّ',
+        ],
+        'from_order_to_carrier' => [
+            'From order to carrier',
+            'من الطلب إلى شركة الشحن',
+        ],
+        'no_fulfilments_in_this_period' => [
+            'No fulfilments in this period',
+            'لا عمليات تنفيذ في هذه الفترة',
+        ],
+        'a_fulfilment_opens_when_a_seller_starts_picking_an_order' => [
+            'A fulfilment opens when a seller starts picking an order.',
+            'تُفتح عملية التنفيذ عندما يبدأ البائع بتجهيز الطلب.',
+        ],
+        'median_dispatch_time' => [
+            'Median dispatch time',
+            'وسيط زمن التسليم للشحن',
+        ],
+        'measured_on_n_dispatched_fulfilments' => [
+            'Measured on :count dispatched fulfilments',
+            'مقيس على :count عملية تنفيذ مُشحَنة',
+        ],
+        'slowest_one_in_ten' => [
+            'Slowest one in ten',
+            'الأبطأ واحد من كل عشرة',
+        ],
+        'the_ninetieth_percentile_is_what_an_operator_acts_on' => [
+            'The ninetieth percentile is what an operator acts on: an average is a sentence about nobody.',
+            'المئين التسعون هو ما يتصرّف بناءً عليه المشغّل: المتوسّط جملة لا تصف أحدًا.',
+        ],
+        'past_the_marketplaces_own_limit' => [
+            'Past the marketplace\'s own limit',
+            'تجاوزت حدّ السوق نفسه',
+        ],
+        'the_limit_is_n_hours' => [
+            'The limit is :count hours',
+            'الحدّ :count ساعة',
+        ],
+        'still_open' => [
+            'Still open',
+            'ما زالت مفتوحة',
+        ],
+        'not_yet_dispatched_so_not_yet_measured' => [
+            'Not yet dispatched, so not yet measured — open is not the same as slow.',
+            'لم تُشحن بعد، فلم تُقَس بعد — المفتوحة ليست بطيئة.',
+        ],
+        'opened_to_picked' => [
+            'Opened to picked',
+            'من الفتح إلى التجهيز',
+        ],
+        'picked_to_packed' => [
+            'Picked to packed',
+            'من التجهيز إلى التغليف',
+        ],
+        'packed_to_shipped' => [
+            'Packed to shipped',
+            'من التغليف إلى الشحن',
+        ],
+        'hours_short' => [
+            'h',
+            'س',
+        ],
+        'from_order_to_customer' => [
+            'From order to customer',
+            'من الطلب إلى الزبون',
+        ],
+        'nothing_was_delivered_in_this_period' => [
+            'Nothing was delivered in this period',
+            'لم يُسلَّم شيء في هذه الفترة',
+        ],
+        'delivery_time_is_read_from_the_status_history_not_from_the_current_status' => [
+            'Delivery time is read from the status history, not from the current status: an order delivered twice has two rows there and one status here.',
+            'يُقرأ زمن التسليم من سجلّ الحالات لا من الحالة الحالية: الطلب المُسلَّم مرتين له سطران هناك وحالة واحدة هنا.',
+        ],
+        'median_delivery_time' => [
+            'Median delivery time',
+            'وسيط زمن التسليم',
+        ],
+        'deliveries_measured' => [
+            'Deliveries measured',
+            'عمليات التسليم المقيسة',
+        ],
+        'what_shipping_cost' => [
+            'What shipping cost',
+            'كم كلّف الشحن',
+        ],
+        'shipping_is_counted_from_the_orders_that_were_placed' => [
+            'Shipping is counted from the orders that were placed.',
+            'يُحسب الشحن من الطلبات التي وُضعت فعلًا.',
+        ],
+        'total_shipping' => [
+            'Total shipping',
+            'إجمالي الشحن',
+        ],
+        'average_per_order' => [
+            'Average per order',
+            'المتوسّط لكل طلب',
+        ],
+        'shipped_free' => [
+            'Shipped free',
+            'شُحنت مجانًا',
+        ],
+        'delivery_type' => [
+            'Delivery type',
+            'نوع التوصيل',
+        ],
+        'what_came_back' => [
+            'What came back',
+            'ما الذي عاد',
+        ],
+        'nothing_came_back_in_this_period' => [
+            'Nothing came back in this period',
+            'لم يعُد شيء في هذه الفترة',
+        ],
+        'a_return_opens_when_a_refund_is_authorised_and_the_units_are_expected_back' => [
+            'A return opens when a refund is authorised and the units are expected back.',
+            'يُفتح المرتجع عند اعتماد الاسترداد وتوقّع عودة الوحدات.',
+        ],
+        'returns_opened' => [
+            'Returns opened',
+            'مرتجعات فُتحت',
+        ],
+        'arrived' => [
+            'Arrived',
+            'وصلت',
+        ],
+        'back_on_the_shelf' => [
+            'Back on the shelf',
+            'عادت إلى الرف',
+        ],
+        'of_what_arrived' => [
+            'Of what arrived — a return still in the post has not failed to be restocked.',
+            'من الذي وصل — المرتجع الذي ما زال في الطريق لم يفشل في العودة إلى المخزون.',
+        ],
+        'median_time_to_arrive' => [
+            'Median time to arrive',
+            'وسيط زمن الوصول',
+        ],
+        'what_was_refunded' => [
+            'What was refunded',
+            'ما الذي استُرِدّ',
+        ],
+        'nothing_was_refunded_in_this_period' => [
+            'Nothing was refunded in this period',
+            'لم يُستردّ شيء في هذه الفترة',
+        ],
+        'a_refund_request_is_raised_by_a_customer_against_one_order_line' => [
+            'A refund request is raised by a customer against one order line.',
+            'يقدّم الزبون طلب الاسترداد على سطر طلب واحد.',
+        ],
+        'refunded_value' => [
+            'Refunded value',
+            'قيمة المستردّ',
+        ],
+        'median_time_to_settle' => [
+            'Median time to settle',
+            'وسيط زمن الحسم',
+        ],
+        'an_upper_bound_measured_to_the_rows_last_change' => [
+            'An upper bound: there is no settled-at column, so this measures to the row\'s last change.',
+            'حدّ أعلى: لا يوجد عمود لتاريخ الحسم، لذا يُقاس حتى آخر تغيير على السطر.',
         ],
     ];
 }

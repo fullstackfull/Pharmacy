@@ -403,6 +403,10 @@
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('send_notification') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="send-notification" aria-label="Pin"></button></div>
                     </a>
+                    <a class="v2-nav-item {{ Request::is('admin/notification/deliveries*') ? 'v2-is-active' : '' }}" data-item="delivery-log" href="{{ route('admin.notification.deliveries') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('delivery_log') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="delivery-log" aria-label="Pin"></button></div>
+                    </a>
                     <a class="v2-nav-item {{ Request::is('admin/push-notification/index*') ? 'v2-is-active' : '' }}" data-item="push-setup" href="{{ route('admin.push-notification.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('push_notifications_setup') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="push-setup" aria-label="Pin"></button></div>
@@ -1016,12 +1020,24 @@
                             <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="app-builder" aria-label="Pin"></button></div>
                         </a>
                     @endif
-                    @if (Route::has('admin.commerce.collections.index'))
-                        <a class="v2-nav-item {{ Request::is('admin/commerce*') ? 'v2-is-active' : '' }}" data-item="commerce-experience" href="{{ route('admin.commerce.collections.index') }}">
-                            <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Commerce_Experience') }}</span></span>
-                            <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="commerce-experience" aria-label="Pin"></button></div>
-                        </a>
-                    @endif
+                    {{-- Four complete features, and only the first was reachable: campaigns,
+                         segments and experiments could be found only by opening Collections and
+                         noticing its tab strip. A discovery problem, not a build problem — three
+                         audited features an operator had no reason to know existed. --}}
+                    @foreach ([
+                        'admin.commerce.collections.index' => 'Collections',
+                        'admin.commerce.campaigns.index' => 'Campaigns',
+                        'admin.commerce.segments.index' => 'Segments',
+                        'admin.commerce.experiments.index' => 'Experiments',
+                    ] as $commerceRoute => $commerceLabel)
+                        @if (Route::has($commerceRoute))
+                            <a class="v2-nav-item {{ Request::is('admin/commerce/' . strtolower($commerceLabel) . '*') ? 'v2-is-active' : '' }}"
+                               data-item="commerce-{{ strtolower($commerceLabel) }}" href="{{ route($commerceRoute) }}">
+                                <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate($commerceLabel) }}</span></span>
+                                <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="commerce-{{ strtolower($commerceLabel) }}" aria-label="Pin"></button></div>
+                            </a>
+                        @endif
+                    @endforeach
                     <a class="v2-nav-item {{ (Request::is('admin/theme') || Request::is('admin/theme/*')) ? 'v2-is-active' : '' }}" data-item="theme-management" href="{{ route('admin.theme.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('Theme_Management') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="theme-management" aria-label="Pin"></button></div>

@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Services\Payments\GatewayJournal;
 use App\Models\Order;
 use App\Models\Setting;
 use Carbon\Carbon;
@@ -91,6 +92,24 @@ trait  Processor
 
         $orderIds = Order::where(['transaction_ref' => $payment_info['transaction_id']])->get()->pluck('id')->toArray();
         $encodedOrderIds = base64_encode(json_encode($orderIds));
+
+        // Every one of the fourteen gateways leaves through here, which is why the outcome is
+        // recorded at this one point rather than in each callback. Before this the ledger held one
+        // fact — is_paid — so a declined card, a gateway timeout and a shopper who closed the tab
+        // were byte-identical rows and no failure reason could be shown for any of them.
+        $journal = app(GatewayJournal::class);
+        $journal->finished(
+            paymentRequestId: $payment_info->id ?? null,
+            succeeded: $payment_flag === 'success',
+            failureCode: $payment_flag === 'success' ? null : $payment_flag,
+        );
+
+        // The join the payment reconciliations have never had: attribute_id holds a unix timestamp,
+        // not an order id, so orders.transaction_ref against payment_requests.transaction_id was
+        // the only one available — varchar(30) to varchar(100), nullable on both sides.
+        if ($orderIds !== []) {
+            $journal->linkToOrder($payment_info->id ?? null, $orderIds[0]);
+        }
 
         $token_string = 'payment_method=' . $payment_info->payment_method . '&&transaction_reference=' . $payment_info->transaction_id;
         if (in_array($payment_info->payment_platform, ['web', 'app']) && $payment_info['external_redirect_link'] != null) {

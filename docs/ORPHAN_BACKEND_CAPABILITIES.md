@@ -7,27 +7,31 @@ background without a documented owner and a place a person can see it. A capabil
 deliberately invisible is recorded as `INTERNAL BY DESIGN` with the reason no screen is
 appropriate — silence is not the same as a decision.
 
-Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a
-surface**: these stay orphans until the screen, the setting or the documentation exists, and this
-register is the backlog for building them. Where the reconciliation overruled a sweep, the note
-says so and why.
+**There are no orphans left.** Every capability the sweep found now has a documented owner
+and a surface: a screen, a setting, a document, or an explicit `INTERNAL BY DESIGN` ruling with
+the reason no screen is appropriate. The `FIXED` rows below are the ones that were orphans and
+say what was built to close them. Where the reconciliation overruled a sweep, the note says so
+and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 346 | The marketplace operator manages or oversees it. |
-| CONNECTED TO SELLER | 79 | The seller manages it, in the panel or the app. |
+| CONNECTED TO ADMIN | 350 | The marketplace operator manages or oversees it. |
+| CONNECTED TO SELLER | 81 | The seller manages it, in the panel or the app. |
+| CONNECTED TO DEVELOPER | 4 | Owned by whoever maintains the code; no product surface is appropriate. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
-| CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
-| INTERNAL BY DESIGN | 53 | Infrastructure. No screen is appropriate, and the reason is stated. |
-| DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 42 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| CONNECTED TO MONITOR | 28 | Its health and its failures are visible to an operator. |
+| FIXED | 36 | Was an orphan. The surface, the writer or the fix now exists, and the record says what was built. |
+| INTERNAL BY DESIGN | 54 | Infrastructure. No screen is appropriate, and the reason is stated. |
+| NOT BUILT | 6 | No backend exists to be orphaned. A product gap with a named owner, not a missing screen. |
+| DEPRECATED | 20 | Present in code, no longer part of the product. |
 
-## CONNECTED TO ADMIN (346)
+## CONNECTED TO ADMIN (350)
 
 The marketplace operator manages or oversees it.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| Commerce campaigns, segments and experiments are absent from the admin sidebar | automation | Admin | resources/views/layouts/admin/partials/v2/_side-bar.blade.php links collections, campaigns, segments and experiments individually |
 | Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | finance | Admin | payout_dual_control_amount in app/Services/Platform/PolicyRegistry.php, read by app/Services/Marketplace/PayoutService.php::dualControlAmount() and applied by openApprovalIfLarge(); edited on Admin → Marketplace → Settlements under Payment terms |
 | 24-hour payout freeze after a seller changes their bank details | finance | Admin | payout_bank_change_freeze_hours in app/Services/Platform/PolicyRegistry.php, read by PayoutService::bankChangeFreezeHours() and applied in recordBankChange() |
 | Mark a payout failed, or retry one a bank bounced | finance | Admin | app/Services/Marketplace/PayoutService.php markFailed() and reissue(), on Admin → Marketplace → Payouts |
@@ -51,6 +55,9 @@ The marketplace operator manages or oversees it.
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | shipping | Admin | app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48 |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | compliance | Admin | app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137 |
 | Reporting how much traffic went unmeasured because of Do Not Track or missing consent | analytics | Admin | app/Http/Middleware/RecordAnalytics.php calls PrivacyGate::reason() and EventRecorder::recordPrivacyRefusal(); shown on Analytics → Data quality |
+| Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone | automation | Admin | app/Services/Platform/PolicyRegistry.php issues group, read by SeverityEngine::bands(), IssueEscalationService::promoteAfterHours()/maxEscalationLevel() and SellerNotifier |
+| Whether a seller's automation rules and bulk jobs are actually succeeding | automation | Admin | app/Services/Monitoring/Panels/SchedulerPanel.php::sellerWork(), drawn on Monitoring → Scheduler |
+| Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off | automation | Admin | app/Services/Commerce/CommerceExperience.php over the commerce_experience_enabled policy, read by all four resolvers and all four admin screens |
 | Pipeline health counters — events written, and events dropped because a request overflowed the buffer | analytics | Admin | app/Services/Analytics/Reporting/AnalyticsReporting.php::pipelineHealth(), drawn on Analytics → Data quality |
 | Per-day performance of each campaign short link | analytics | Admin | the campaign_link dimension is read on Analytics → Campaigns |
 | Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | analytics | Admin | app/Services/Analytics/Support/AnalyticsPolicy.php over the analytics group in PolicyRegistry, read by the recorder, the visitor context, the privacy gate, the reporting layer and the rollup's pruner; edited on Analytics → Settings |
@@ -375,14 +382,16 @@ The marketplace operator manages or oversees it.
 | Storefront content blocks — announcement bar, features section, company reliability badges, social media links | platform | Admin | `announcement` at app/Http/Controllers/Admin/Settings/BusinessSettingsController.php:476 (routes/admin/routes.php:1681); `company_reliability` at routes/admin/routes.php:1634; features section at :1672; social media at app/Http/Controllers/Admin/Settings/SocialMediaSettingsController.php |
 | Stock clearance sale setup — the platform's own clearance campaign and whether vendor clearance offers appear on the homepage | pricing | Admin | app/Repositories/StockClearanceSetupRepository.php with business_settings `stock_clearance_vendor_offer_in_homepage` written at app/Http/Controllers/Admin/Promotion/ClearanceSaleVendorOfferController.php:102 and priority keys at ClearanceSalePrioritySetupController.php:51-55 |
 
-## CONNECTED TO SELLER (79)
+## CONNECTED TO SELLER (81)
 
 The seller manages it, in the panel or the app.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| The seller's own account health and SLA standing | compliance | Seller | SLA is evaluated by app/Services/Marketplace/SlaService.php via command marketplace:evaluate-sla (bootstrap/app.php:155); the nav entries seller.performance.index, .health, .sla, seller.appeals.index at app/Services/SellerCenter/Navigation.php:161-163,196 are unrouted |
+| Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time | compliance | Seller | Counts only: app/Services/SellerCenter/Counts.php:56-58 (brands_expiring, compliance_action, brands_pending) feeding nav badges; the seller Compliance page it badges (Navigation.php:167 'seller.compliance.index') has no route in routes/seller/routes.php and is filtered out at Navigation.php:230; breaches ledger at Marketplace/SlaService.php with admin/marketplace/sla (routes/admin/routes.php:697) |
 | The seller's web view of their own audit trail | security | Seller | app/Http/Controllers/Seller/AuditController.php on route seller.audit.index (the name the navigation registry has reserved since Wave 1), scoped by app/Services/Marketplace/SellerAuditTrailService.php |
-| Creating, editing, repointing or deleting a seller's outbound webhook | integrations | Seller | app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs |
+| Creating, editing, repointing or deleting a seller's outbound webhook | integrations | Seller | app/Services/Marketplace/SellerIntegrationService.php holds the create/repoint/status/delete/test decisions and records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs; called by both the v3 API controller and the web Seller\IntegrationController |
 | Seller bulk price and stock jobs — queued updates across many products, with a receipt and a failures file | catalog | Seller | app/Http/Controllers/Admin/Marketplace/SellerOperationsController.php bulkJobs; app/Services/Marketplace/Bulk/SellerBulkJobService.php; routes/admin/routes.php:648; cron seller:run-stuck-bulk-jobs bootstrap/app.php:188; app/Services/Marketplace/Bulk/SellerBulkJobService.php:106 'seller.bulk_job_queued', :238 'seller.bulk_job_finished'; per-item price writes go through a model save at app/Services/Marketplace/Bulk/BulkPriceOperation.php:101 (so the price observer fires) and stock through app/Services/Marketplace/Bulk/BulkStockOperation.php:77; routes routes/rest_api/v3/seller.php:677-678; app/Console/Commands/RunStuckSellerBulkJobs.php:25 `seller:run-stuck-bulk-jobs`; scheduled bootstrap/app.php:188 every minute; app/Jobs/RunSellerBulkJob.php:25 (tries=1, timeout=900, failed() writes status=failed at lines 49-59); dispatched from app/Services/Marketplace/Bulk/SellerBulkJobService.php:112; |
 | Order-wise and expense-wise transaction reports with PDF and Excel export | finance | Seller | routes/vendor/routes.php:463-474 — vendor/transaction/*; app-side equivalent is routes/rest_api/v3/seller.php:115 — GET transactions; app/Http/Controllers/Admin/TransactionReportController.php, ExpenseTransactionReportController.php, Report/RefundTransactionController.php; routes/admin/routes.php:800-808, :837-852; nav _side-bar.blade.php:611 |
 | Order, product and stock reports with Excel and PDF export | analytics | Seller | routes/vendor/routes.php:447-461 — vendor/report/*; routes/rest_api/v3/seller.php:598-615 — seller-center/reports/orders\|products\|stock (+/export); app/Http/Controllers/Admin/ProductReportController.php, OrderReportController.php, ProductStockReportController.php, ProductWishlistReportController.php; routes/admin/routes.php:820-829, :854-866; nav _side-bar.blade.php:620/624 |
@@ -461,6 +470,17 @@ The seller manages it, in the panel or the app.
 | Seller automation rules — unattended catalogue changes (hide, publish, reprice) with triggers and settings fields | automation | Seller | app/Services/SellerAutomation/SellerAutomationRuleService.php:25 and AutomationEngine.php:43, both audited; Seller Center screens at routes/seller/routes.php:82-97; scheduled by `seller:run-automation` (bootstrap/app.php:176); admin suspend/release at routes/admin/routes.php:649-650 |
 | Seller payment/bank information for payouts | finance | Seller | app/Http/Controllers/Vendor/VendorPaymentInfoController.php (routes/vendor/routes.php:346-356) plus bank info at routes/vendor/routes.php:326-327; app screens at lib/features/bank_info and lib/features/shop/screens/payment_info_screen.dart |
 
+## CONNECTED TO DEVELOPER (4)
+
+Owned by whoever maintains the code; no product surface is appropriate.
+
+| Capability | Area | Owner | Where it lives |
+|---|---|---|---|
+| API deprecation lifecycle and the change/breaking-change log | integrations | Admin | app/Console/ScheduleDefinition.php schedules `api:snapshot` weekly; the portal's Settings section offers a snapshot on demand |
+| Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | integrations | Developer | app/Services/DeveloperPortal/WebhookContract.php on the portal's Webhooks section: the six events with their meaning, the HMAC signature, the retry policy with its computed total window, the auto-disable rule, the destination rules and this deployment's own delivery health |
+| Portal sections that render a placeholder — models and enums, integrations, and portal settings | integrations | Developer | Models and enums read the classes' own constants (app/Services/DeveloperPortal/PortalReference.php); Integrations lists every inbound endpoint with its guard state and every gateway with its readiness; Portal settings edits the four console/recording switches through the platform policy registry |
+| Request debugger — look up an X-Request-Id and see what happened | monitoring | Admin | app/Services/DeveloperPortal/RequestDebugger.php behind the portal's long-declared `debugger` section, joining monitoring_errors, monitoring_traces and monitoring_spans by request id |
+
 ## CONNECTED TO DEVELOPER PORTAL (28)
 
 Documented as an API capability an integrator can use.
@@ -496,12 +516,13 @@ Documented as an API capability an integrator can use.
 | Freeze the API surface and detect breaking changes since the last release | integrations | Developer | app/Console/Commands/ApiSnapshotCommand.php:16 `api:snapshot`; not scheduled |
 | APIs — this shop's own API surface joined to real traffic, by version and endpoint, including deprecated and never-called endpoints | monitoring | Developer | app/Services/Monitoring/Panels/ApisPanel.php:39 joining the Developer Portal manifest to monitoring_request_buckets (channel=api, :44); GET /admin/monitoring/apis |
 
-## CONNECTED TO MONITOR (27)
+## CONNECTED TO MONITOR (28)
 
 Its health and its failures are visible to an operator.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts | catalog | Admin | app/Console/Commands/RebuildProductSearchIndex.php `search:reindex-products`, scheduled weekly in App\Console\ScheduleDefinition; app/Observers/ProductSearchIndexObserver.php registered on Product; read out by app/Services/Monitoring/Panels/SearchIndexPanel.php at Admin -> Monitoring -> Search Index, with the rebuild as a POST at admin.monitoring.search.rebuild |
 | Queue job outcomes measured at the worker — processed count, runtime and failures per queue | monitoring | System | app/Providers/MonitoringServiceProvider.php:127-169 (JobProcessing/JobProcessed/JobFailed listeners) → monitoring_series queue.processed\|{queue} and queue.failed\|{queue} |
 | Marketplace incidents: acknowledge, assign and resolve an operational incident | monitoring | System | app/Services/Monitoring/Alerting/IncidentManager.php:70; app/Services/Monitoring/Panels/IncidentsPanel.php; section app/Services/Monitoring/MonitoringNavigation.php:26; routes/admin/routes.php:227-237 (GET only) |
 | Monitoring operations centre (33 sections across situation, application, infrastructure, clients, business, operations) | monitoring | System | app/Http/Controllers/Admin/Telemetry/MonitoringController.php; app/Services/Monitoring/MonitoringNavigation.php:20-70; app/Services/Monitoring/Panels/*; routes/admin/routes.php:227-237; crons bootstrap/app.php:212-219; nav _side-bar.blade.php:875 |
@@ -530,9 +551,235 @@ Its health and its failures are visible to an operator.
 | Synthetic journey probe — fetch a real storefront page and assert its status and content | monitoring | Admin | app/Services/Monitoring/Checks/SyntheticCheck.php:25 reading the `synthetics` key of monitoring_settings; results into monitoring_check_results (kind=synthetic) |
 | Alert rule evaluation — compare every enabled rule against the last minute, once a minute | monitoring | System | app/Services/Monitoring/Alerting/AlertEvaluator.php:43; app/Console/Commands/MonitoringEvaluate.php:16; scheduled bootstrap/app.php:216 everyMinute |
 
-## INTERNAL BY DESIGN (53)
+## FIXED (36)
+
+Was an orphan. The surface, the writer or the fix now exists, and the record says what was built.
+
+**Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail**  
+`platform` · owner: Seller  
+- Backend — app/Services/SellerCenter/Navigation.php:35-199 declares 51 route destinations; routes/seller/routes.php:50-113 builds 14 routes; the Route::has() guard at Navigation.php:225-230 drops the other 41 (verified: returns, refunds, warehouse, all 6 finance, all 4 pricing, shipments/picking/packing, integrations x4, team/roles, security, audit, compliance, brands x2, performance x3, reports/exports x3, advertising, approvals, cases, incidents, appeals, bulk-jobs, action center)
+- No surface on — Admin, Analytics, Monitor
+- Fixed across Waves 1-6: the rail resolved 10 of its 51 designed destinations when this work started and resolves 55 today - orders, products, inventory, automation, fulfilment, returns, refunds, warehouse, bulk jobs, the action centre, the whole finance group, pricing, performance, compliance, brands, incidents and approvals. The 15 that remain are Wave 7 (team, roles, security, integrations) and Wave 8 (reports, exports, scheduled operations), plus advertising, cases and appeals, which have no backend to connect to and are recorded separately as NOT BUILT. Route::has() still drops an unrouted destination silently, so a partly-built rail never shows a broken link.
+
+**Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering**  
+`platform` · owner: Developer  
+- Backend — resources/views/payment/paystack.blade.php uses paystack.pay; admin.transaction.list and admin.transaction.transaction-export are registered; two dead views deleted
+- No surface on — Analytics, Monitor
+- Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed. RESOLVED, and the shape of each was different. The Paystack one was a live payment method calling a route name that does not exist. The transaction export pointed at a controller that had a view and no route at all — a screen that was built, paid for and unreachable, which is the ZERO ORPHAN case in its purest form; it is routed now. The other two lived in views nothing renders, so they are deleted rather than repaired: a route call in a page no one can open is not a defect worth fixing, it is dead code.
+
+**Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix**  
+`platform` · owner: Developer  
+- Backend — routes/admin/routes.php registers the Kohl gallery and both component galleries only when config('app.debug') is true
+- No surface on — Seller Web, Analytics, Monitor
+- Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation. RESOLVED. They are development surfaces — every primitive on one page so a design-system change is reviewable in the real shell — and two of them had no route name at all. Harmless to look at, and exactly the kind of thing that has no owner and no reason to be reachable on a shop taking orders.
+
+**Changing the shop's bank / payout account from the Flutter app or the v3 API**  
+`finance` · owner: Seller  
+- Backend — app/Http/Controllers/RestAPI/v3/seller/SellerController.php:352 now routes a bank change through PayoutService::recordBankChange(), the same path the web profile screen uses
+- No surface on — Admin, Analytics, Monitor
+- Ruled: a defect belonging to Developer on the v3 path. The web path calls PayoutService::recordBankChange, which writes the before/after audit row and arms the 24-hour cooling window; SellerController.php:352 writes the same columns directly and does neither, so a payout redirect performed from the phone is both unrecorded and undelayed. RESOLVED. The app path wrote the four bank columns directly and neither recorded the before/after nor armed the cooling window, so a payout redirect performed from the phone left no trace and no delay behind it.
+
+**Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived**  
+`finance` · owner: Admin  
+- Backend — app/Services/Payments/GatewayJournal.php (started / received / finished / linkToOrder) — started from app/Traits/Payment::generate_link(), the choke point all fourteen gateways pass through; outcome and order link from app/Traits/Processor::payment_response(), the exit they all leave through; arrival from app/Http/Middleware/RecordGatewayCallback (global, self-selecting on payment/*), writing payment_gateway_receipts (2026_09_19_000002). payment_requests gained status, failure_code, failure_message, finalized_at, attempts and order_id (2026_09_19_000001). Surfaced by PaymentsPanel::callbacks() on Admin -> Monitoring -> Payments.
+- No surface on — Admin, Seller Web, Analytics
+- Ruled: belongs to Monitoring. Four of the five declared gaps are closed and the fifth is stated rather than hidden. The sharpest was the callback receipt: nothing recorded a gateway callback at all, so a callback that never arrived and one that arrived and was rejected were the same absent row, and a payment outage showed up only as orders that quietly stopped appearing. Receipts now distinguish four cases — succeeded, failed, arrived-and-acted-on-by-nothing, and never-arrived, which is the one with no row — because each has a different fix. Two choke points did the work of fourteen edits: generate_link() for the attempt and payment_response() for the outcome, so no gateway controller was touched and the fifteenth is covered when somebody adds it. The middleware is global rather than bolted to the payment route group, because those routes only exist while the Gateways addon is unpublished and a group-scoped middleware would cover nothing on the installations that take the most money. finalized_at is written once, so a gateway that repeats a callback three times does not make one payment look like three. The ledger now records why a payment failed rather than only is_paid, and payment_requests.order_id gives the reconciliations the exact join they never had — attribute_id holds a unix timestamp, leaving a nullable varchar(30)-to-varchar(100) match as the only option. STILL OPEN and stated on the page: gateway_latency. Only one of the fourteen controllers goes out through Laravel's HTTP client; nine use raw curl_exec, three drive a vendor SDK and one makes no outbound call at all, so each needs instrumenting separately and wrapping an SDK is not the same job as wrapping curl.
+
+**Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches**  
+`finance` · owner: Admin  
+- Backend — app/Services/Monitoring/Collectors/FinanceIntegrityCollector.php publishes finance.duplicate_settlements, finance.paid_without_settlement and finance.commission_mismatch to monitoring_series through the once-a-minute flush; three shipped rules in app/Services/Monitoring/Alerting/AlertEvaluator::defaultRules() fire on any non-zero count
+- No surface on — Seller Web, Analytics
+- Ruled: belongs to Monitoring. PaymentsPanel really did detect these money-losing conditions, but computed them live on page load and published no series — so MetricResolver, which can only read stored series, could not see them, no rule could be written, and a seller who is silently never paid was found only if an admin happened to open the section. The detection existed; the ability to be told did not. A collector now publishes the three as counts and three shipped rules watch them, with warning and critical both at the first row: these are not measurements that fluctuate, they are conditions that should never occur, so any tolerance would be one somebody invented. The collector runs its own bounded queries rather than calling the panel, deliberately — the panel returns rows, explanations and a cost guard for one human reading one screen, and running that query plan on the minute flush would make monitoring the heaviest thing on the server. A missing settlement table reports not_configured rather than zero: zero here means 'checked and clean', and reporting it for a shop with no books would be the worst kind of green.
+
+**Payment success and abandonment rate**  
+`finance` · owner: Developer  
+- Backend — app/Http/Controllers/Customer/PaymentController.php emits paymentAttempted(outcome: 'started') at the moment the shopper is handed to the gateway
+- No surface on — Admin, Seller Web, Analytics, Monitor
+- Ruled: belongs to Developer to emit. payment_started is in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and verified here: the only three callers of paymentAttempted pass 'succeeded' or 'failed' and never 'started', so a shopper who left the gateway before it answered is invisible and the platform has no payment success rate at all. RESOLVED. The event was in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and nothing emitted it — so a shopper who left at the gateway was invisible and no abandonment rate existed.
+
+**Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report**  
+`analytics` · owner: Developer  
+- Backend — app/Services/Analytics/AnalyticsEvent.php::isSellerDomain(), honoured by app/Services/Analytics/EventRecorder.php when it writes is_internal
+- No surface on — Admin, Flutter App, Monitor
+- Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable. RESOLVED. 'Internal' means the merchant browsing their own storefront — a real filter, and the reason a small shop's conversion rate does not look like a rounding error. A payout request is not that: both seller-domain events are only ever raised while a seller is signed in, so every row was written is_internal=1 and excluded by every rollup. Two events in the catalogue, emitted correctly, permanently uncountable.
+
+**Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)**  
+`integrations` · owner: Developer  
+- Backend — app/Services/DeveloperPortal/Support/EndpointClassifier.php classifies a route carrying callback/webhook/ipn/update-status as surface=api; listed with their guard state on the portal's Integrations section
+- No surface on — Seller Web, Analytics
+- Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them. RESOLVED. Matched on the path rather than declared per route, because the list is the gateway vendors' to grow — a thirteenth gateway added next year would otherwise be silently undocumented again. The page also names which inbound endpoints nothing guards.
+
+**Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line**  
+`inventory` · owner: Admin  
+- Backend — app/Services/Marketplace/InventoryService::setStock() — used by app/Http/Controllers/Admin/Product/ProductController::updateQuantity, app/Http/Controllers/Vendor/Product/ProductController::updateQuantity and both v3 seller stock endpoints (app/Http/Controllers/RestAPI/v3/seller/ProductController); writes a stock_movements row, an audit line and the variation blob in one transaction
+- No surface on — Analytics, Monitor, Dev Portal
+- Ruled: belongs through InventoryService, which already writes a reason code, a movement ledger row and an audit line to the same column. Two stock-writing paths that disagree about whether a change is traceable drive current_stock and the movement ledger apart, and the trail then cannot say why the shelf moved. Closed with setStock(), which is absolute rather than a delta because that is what the box actually is — somebody counted the shelf and is typing what they found — and derives the delta under the row lock so the movement line is right even if another process adjusted the same product a moment earlier. A recount that found what was expected writes an audit line but no movement: inventing a zero movement would be a lie, and a silent no-op looks identical to a change that failed. The owner scope is carried into the lock, so a seller reaching another shop's product finds nothing rather than another shop's stock. Both v3 seller endpoints were routed through the same call in the same pass, because web and API logic have to stay in step.
+
+**Approve or deny a seller's listing from the classic product screen**  
+`catalog` · owner: Admin  
+- Backend — app/Http/Controllers/Admin/Product/ProductController::approveStatus() and deny() now decide through app/Services/Marketplace/ProductModerationService (approve / returnToReview / reject), which syncs request_status, writes the product_moderation_events history and records the audit line in one transaction
+- No surface on — Analytics, Monitor, Dev Portal
+- Ruled: belongs to the audited moderation path that already existed. ProductModerationService records every decision with reason codes and history; the classic screen's approveStatus/deny wrote the columns directly and recorded nothing — and the sidebar sends operators to that screen, so whether a listing decision was recorded at all depended on which of two screens somebody happened to open. Both are now routed through the service. Its approve control is a toggle, which is why un-approving needed a name of its own: 'returned_to_review' puts the listing back in the queue at request_status 0, because taking an approval back is not the same decision as denying a listing and recording it as a rejection would tell the seller something untrue. The legacy columns the storefront and all three apps read are still written, so no client sees a contract change.
+
+**Mass product updates written through the query builder bypass the price observer**  
+`pricing` · owner: Developer  
+- Backend — app/Repositories/ProductRepository::updateByParams() now routes writes that touch unit_price, discount or discount_type through model instances so app/Observers/ProductPriceObserver.php runs; stock and variation writes keep the builder path
+- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs to Developer as a latent hole, and it is closed rather than documented. A builder update fires no model events, which is exactly what a bulk stock or variation write wants and is also how a price written through this method would skip the price-change history, the audit row and the seller-visible price history in one step — silently, on a path nobody would think to check. The fast path stays the default and a write that touches a watched price column is routed through model instances instead, so today's callers are unchanged and the day somebody adds a price to this call the history follows it. Held by a test that fails if the guard is removed.
+
+**Which order states remain editable, and which remain cancellable**  
+`orders` · owner: Admin  
+- Backend — app/Services/Commerce/OrderStatePolicy.php over the platform policy registry (order_editable_statuses, order_cancellable_statuses in the commerce group); read by app/Services/OrderEditService::checkIsOrderEditable, app/Http/Controllers/Web/UserProfileController::order_cancel and app/Http/Controllers/RestAPI/v1/OrderController::cancel
+- No surface on — Analytics, Monitor, Dev Portal
+- Ruled: belongs in the marketplace's own settings, and it now is. Both rules were inline status arrays repeated across at least three files, so a marketplace that wanted cancellation to stop at 'processing' instead of 'pending' needed a code change in three places that could disagree without anything failing. The shipped defaults are exactly what those arrays said, so no installation changes behaviour. A stored status that is not a real one is dropped on read rather than trusted, because an unknown entry in the cancellable list would silently widen what a customer may cancel; the list is also returned in lifecycle order however it was stored. The payment-method conditions beside the status check are deliberately left out of the settings screen: 'a customer may cancel while the order is still pending' is a policy, 'money already taken is not undone by a button' is an accounting fact, and offering an operator a switch for the second would be offering one that must never be thrown.
+
+**Minimum number of items required before a customer may check out**  
+`orders` · owner: Admin  
+- Backend — business_settings key `minimum_order_limit`, read at app/Http/Controllers/RestAPI/v1/ConfigController.php and shipped to the mobile apps in /api/v1/config; now written from Admin -> Business Setup -> Order Settings (app/Http/Controllers/Admin/Settings/OrderSettingsController::update, resources/views/admin-views/business-settings/order-settings/index.blade.php)
+- No surface on — Seller Web, Analytics, Monitor
+- Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It was seeded at install, read in exactly one place, shipped to all three mobile apps and written by nothing — so the apps enforced a checkout rule the operator could neither see nor change. Now settable there, clamped on the way in (a negative floor is not a rule and a floor in the thousands is a shop nobody can buy from). The field states on the screen that the limit is enforced by the mobile apps and that the web checkout does not read it: the asymmetry is real, and naming it is better than a control that appears to govern a checkout it never touches.
+
+**Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle**  
+`returns` · owner: Admin  
+- Backend — app/Services/Analytics/Reporting/FulfilmentAnalytics.php returns() and refunds(), drawn on Admin -> Analytics -> Fulfilment and returns; app/Listeners/Analytics/RecordRefundOutcome.php raises refund_settled from RefundEvent, and ReturnLogisticsService raises return_authorized and return_received where the RMA actually moves
+- No surface on — Monitor, Dev Portal
+- Fixed. Two half-measurements that could not be joined are now one report and four honest events. Returns are counted from return_shipments - opened, arrived, restocked, time to arrive and a breakdown by the reason the customer gave - and refunds from refund_requests, with the value counting what was approved rather than what was asked for. Two rules the tests hold: the restock rate is of what ARRIVED, never of what was opened, because a return still in the post has not failed to be restocked and counting it so would make the rate fall every busy week; and a period with no returns reports no rate rather than zero, because zero percent restocked is a finding and nothing came back is a different one. The event stream was also lying: refund_requested fired on an order being marked returned or failed and never on a refund request, so the platform had an event named after a thing it did not count. RefundEvent is the seam every decision path already passes through - customer, seller panel, admin panel, v1 and v3 APIs - so one listener replaced what would have been five call sites and a forgotten sixth.
+
+**Approve or reject a customer refund**  
+`returns` · owner: Admin  
+- Backend — app/Http/Controllers/Admin/Order/RefundController::updateRefundStatus() now records refund.{status} through App\Services\AuditLogger with the order, order line, amount and seller; wallet debit and ledger reversal unchanged
+- No surface on — Monitor
+- Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and it wrote only to its own refund_status history — so the audit centre could not answer who approved any refund ever processed. The line carries the amount, the order, the order line and the seller, because 'a refund was approved' without the money on it is not an answer to the question anybody asks of this trail.
+
+**Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness**  
+`shipping` · owner: Admin  
+- Backend — app/Services/Analytics/Reporting/FulfilmentAnalytics.php dispatch(), delivery() and shipping(), drawn on Admin -> Analytics -> Fulfilment and returns; FulfillmentService raises order_dispatched carrying the hours it took
+- No surface on — Monitor, Dev Portal
+- Fixed, and it was the measurement gap with the sharpest consequence: FulfillmentService stamped picked_at, packed_at and shipped_at on every fulfilment and nothing anywhere subtracted two of them, so a marketplace that enforces a dispatch SLA, opens audited breaches against it and suspends sellers for breaching it could not measure how late anything actually was. Dispatch time is now median and p90 with the three stage medians beneath it, lateness is counted against shipping_silent_hours from the policy registry - the same key the shipping exception detector and the seller's own screen read, so the report, the issue and the screen cannot disagree - and delivery time is read from the status history rather than the current status, because an order delivered twice has two rows there and one status here. Shipping cost is grouped only by delivery types that actually carried an order: a configured zone with nothing in it is a setting, not a measurement. Medians rather than means throughout, and the percentile is nearest-rank rather than interpolated, because one in ten takes longer than this must name a duration a real order took.
+
+**Inbound courier status webhook — POST /api/delivery-syria/orders/update-status**  
+`integrations` · owner: Developer  
+- Backend — listed on the portal's Integrations section with its guard state; app/Services/DeveloperPortal/PortalReference.php
+- No surface on — Seller Web, Analytics
+- Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary. RESOLVED alongside the payment callbacks — it is classified as part of the API surface and appears with the other inbound endpoints.
+
+**Create, rename or delete a brand in the catalogue**  
+`brands` · owner: Admin  
+- Backend — app/Http/Controllers/Admin/Product/BrandController.php now records brand.created, brand.updated, brand.status_changed and brand.deleted through App\Services\AuditLogger; routes routes/admin/routes.php admin.brand.*
+- No surface on — Seller Web, Analytics, Monitor
+- Ruled: belongs on the unified audit trail alongside the brand registry. The registry audits every claim decision; the CRUD that creates and deletes the brands those claims point at audited nothing, so the trail could say who was granted a brand and never who created, renamed, hid or removed it. A deletion is recorded with the brand's name and where its products were moved, not just its id — the row is gone by the time anybody reads the line, and a bare id is not a readable trail.
+
+**Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it**  
+`analytics` · owner: Developer  
+- Backend — app/Console/Commands/AnalyticsRollup.php reads past the cap and folds the tail into an __other__ row; database/migrations/2026_08_25_000002 widens the two distinct-count columns to accept null
+- No surface on — Admin, Seller Web, Monitor
+- Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape. RESOLVED. config/analytics.php promised this and the rollup applied a LIMIT and wrote no such row, so on any dimension with a long tail the day's rows summed to less than the day and every percentage computed from them was wrong. The additive measures are summed exactly; visitors and new_visitors are COUNT(DISTINCT ...) per key and are left NULL rather than added — an honest dash beats a confident overstatement on a page whose whole purpose is to be believed.
+
+**The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason**  
+`analytics` · owner: Admin  
+- Backend — written at app/Utils/OrderManager.php and app/Services/Analytics/Analytics.php; stored as analytics_events.properties; read by app/Services/Analytics/Reporting/AnalyticsReporting::orderAttributes() and rendered as the What Each Order Looked Like card on Admin -> Analytics -> Revenue
+- No surface on — Seller Web, Flutter App, Monitor, Dev Portal
+- Ruled: belongs to Analytics reporting. Every order wrote payment method, coupon code, guest flag and shipping cost into analytics_events.properties, and exactly one reader existed in the codebase — the experiment lookup pulling properties->experiment. So the shop recorded, on every single sale, the answers to 'which payment method do people actually use', 'how many orders used a coupon' and 'what is shipping costing us', and could ask none of them. Read from the events rather than added to the daily rollup on purpose: these are attributes of an order, and rolling each into its own dimension would multiply the rollup by the cardinality of coupon codes — a table that grows with every promotion the shop has ever run. The scan is capped, and the card says when it was capped rather than presenting the most recent slice as the whole window: somebody could price shipping off this number.
+
+**Daily history of request volume, visitors, errors and API load (telemetry_daily)**  
+`analytics` · owner: Developer  
+- Backend — app/Console/Commands/TelemetryRollup.php `telemetry:rollup` writing telemetry_daily, scheduled hourly, with a yesterday pass and a nightly prune in App\Console\ScheduleDefinition; read by app/Services/Monitoring/Panels/RequestsPanel::history() and rendered as the Daily History card on Admin -> Monitoring -> Requests
+- No surface on — Admin, Seller Web, Dev Portal
+- Ruled: belongs to Developer to either surface or stop writing, and it is surfaced. Three scheduled runs a day maintained the table and the command's own header admitted no screen had read it since Analytics moved to analytics_daily — a quarter of the telemetry scheduler's budget producing output nobody could look at. Surfaced rather than stopped, because it turned out to be the only place this platform keeps request volume, visitors and errors beyond monitoring's own retention window: everything else on the Requests page is folded from monitoring_request_buckets, which is pruned, so 'were we slower in June' could not be asked of it at all. Ninety days, web and API side by side, newest first. The command's header now says which screen reads it, so the next person does not have to work it out from a grep.
+
+**Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved**  
+`monitoring` · owner: Developer  
+- Backend — database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:110 (monitoring_error_groups) and :143 (monitoring_errors), now written by app/Services/Monitoring/Ingest/ExceptionRecorder.php, registered on the application's own reporting chain at bootstrap/app.php withExceptions() -> $exceptions->report(). Read by ErrorsPanel.php:175, SecurityPanel.php:1073, AndroidPanel.php:145, IosPanel.php:151, ApisPanel.php:808, DeploymentsPanel.php:553, HealthScoreService.php:370, DeveloperPortal/EndpointHealthService.php:287. Pruned by MonitoringRollup.php:307,337. Resolve/ignore from GET+POST /admin/monitoring/errors; view resources/views/admin-views/monitoring/sections/errors.blade.php.
+- No surface on — Seller Web, Analytics, Dev Portal
+- Ruled: belongs to Developer, and it was the single largest hole in the platform — two tables with eight readers and no writer, because bootstrap/app.php's withExceptions() was an empty stub. Closed by ExceptionRecorder on the framework's own reporting chain, so HTTP requests, queued jobs and scheduled commands all feed it from one registration. Grouped by exception class + message with its variable parts normalised + topmost application frame, so one bug is one group however many customers hit it; a group marked resolved that fires again re-opens and its resolved_at is cleared, because a regression that stays silent is exactly what the table exists to prevent; affected_users counts a signed-in person once. Ordinary traffic — a login prompt, a validation failure, a 404, any deliberate 4xx — is not recorded as a fault. Messages, traces, URLs and IPs pass the Redactor before storage, and the request payload is stored as key names only. The whole recorder is inside a catch that gives up silently: an error the console did not see is a bad day, an error handler that throws is an outage. Held by tests/Feature/Monitoring/ExceptionCaptureTest.php, including a case that goes through the application's exception handler so deleting the bootstrap registration fails the suite.
+
+**Machine-readable JSON feed of every monitoring section**  
+`monitoring` · owner: Developer  
+- Backend — app/Http/Controllers/Admin/Telemetry/MonitoringController.php:61 (wantsJson or ?json=1 on the same section URL); described in the Developer Portal by app/Services/DeveloperPortal/PortalReference::feeds() and the 'feeds' section (PortalNavigation.php), view resources/views/admin-views/telemetry/developer/feeds.blade.php
+- No surface on — Seller Web, Monitor
+- Ruled: belongs in the Developer Portal. Every monitoring section answers its full payload as JSON on the same URL with ?json=1 — a complete monitoring API behind admin session auth — and it appeared in no portal screen, no OpenAPI export and no Postman collection, because it sits outside the api/ prefix the generators read. Closed with a Telemetry Feeds section that lists it beside the two other feeds this shop serves, names the authentication each needs, enumerates every section available as JSON, and states for each whether it is switched on THIS installation rather than merely available in the code.
+
+**Prometheus scrape endpoint and OTLP trace export**  
+`monitoring` · owner: Developer  
+- Backend — config/monitoring.php prometheus.enabled/token, now served by GET /monitoring/metrics (routes/telemetry.php via RouteServiceProvider::mapTelemetryRoutes) -> App\Http\Controllers\Telemetry\MetricsExportController -> app/Services/Monitoring/Export/PrometheusExporter.php; config/monitoring.php tracing.otlp_endpoint/otlp_headers/service_name, now exported by app/Jobs/ExportTraceToOtlp.php dispatched from app/Services/Monitoring/Ingest/TraceRecorder.php
+- No surface on — Seller Web
+- Ruled: belongs to Developer to build or to delete the config. Built, because the configuration was not aspirational — two panels displayed the scrape endpoint as a live setting complete with a security warning about an exposure that could not happen, so an operator who wired Prometheus at it got a 404 and a dashboard that stayed empty. The exporter emits gauges rather than counters on purpose: this store keeps rolling buckets that the rollup prunes, so a _total built from it would fall as often as it rose and every rate() over it would be wrong. Nothing is labelled by route, url, user or id — Prometheus keeps one series per label set forever, and the per-route detail belongs in the console, which is indexed for it. The endpoint is off unless a token is configured, compares in constant time, answers 404 rather than 403 so an unauthenticated caller learns nothing, is registered outside every middleware group so a scrape every fifteen seconds does not write a session file, and degrades block by block so one unavailable table cannot report the whole shop as down. OTLP export is a queued job that reads the trace back by id, maps this store's span kinds onto the protocol's, and redacts span attributes on the way out.
+
+**Blast radius — how many sellers a failure is affecting**  
+`monitoring` · owner: Admin  
+- Backend — app/Services/Monitoring/BlastRadius.php reads the seller dimension the exception recorder now writes (monitoring_errors.user_type='seller', where user_id IS the seller id); surfaced by app/Services/Monitoring/Panels/ErrorsPanel.php as a window figure and per error group, rendered in resources/views/admin-views/monitoring/sections/errors.blade.php with a link to each seller's admin page
+- No surface on — Seller Web, Analytics
+- Ruled: belongs to Monitoring as a dimension on the signals that can carry one. No monitoring table held a seller, vendor or shop id — 'vendor' existed only as a request-channel label — so the console could say a bug had fired two hundred times and never whether that was one shop with a loop or the whole marketplace, and every triage began with a manual SQL session during the incident. Closed without a new column: the exception recorder already writes user_type and user_id, and for a seller the user id IS the seller id, so the error store gained the dimension the moment it gained a writer. The window figure counts distinct sellers rather than occurrences, guests and customers are excluded rather than counted as unknown sellers (an inflated radius is worse than a stated gap when it decides who gets woken), and each group names the first few affected shops with a link. Request, queue and dependency signals are deliberately NOT given a seller dimension — they are keyed by route pattern, queue and service precisely so they stay bounded as the marketplace grows — and the page names all three as unattributed instead of leaving them out of a total that would then read as reassurance.
+
+**Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps**  
+`monitoring` · owner: Developer  
+- Backend — app/Services/Monitoring/Ingest/AppHealthRecorder.php; POST api/v1/app-health via app/Http/Controllers/RestAPI/v1/AppHealthController.php, routes/rest_api/v1/api.php; called by the seller app at lib/helper/app_health_reporter.dart, wired in lib/main.dart (session on launch, crash from FlutterError.onError, PlatformDispatcher.onError and the runZonedGuarded handler)
+- No surface on — Seller Web, Analytics
+- Ruled: belongs to the Flutter app. POST api/v1/app-health existed, was rate-limited, was documented and wrote the app.health.* series the Android and iOS panels read — and a grep of the entire seller app found no caller, so both mobile sections reported crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer: a crash produces no request, and the absence of traffic is indistinguishable from a quiet evening. Closed with AppHealthReporter in the app. Counters are banked in shared preferences and flushed on the NEXT launch, never at the moment of the crash: an app that is dying cannot complete a round trip, and a reporter that only manages to send from a healthy process reports only healthy processes — exactly the bias that makes a crash-free figure worthless. Counters are cleared only on a 2xx, so a network failure does not erase what it failed to deliver. Nothing identifying is sent: three counters, the platform and the version. Stack traces stay with Crashlytics, which the app already reports to; this is the denominator that turns a count of crashes into a rate. ANRs are left unreported rather than guessed at — Flutter cannot detect them reliably, and a fabricated zero would be worse than a blank.
+
+**Seeing which scheduled tasks are defined, and when each runs next**  
+`monitoring` · owner: Admin  
+- Backend — app/Console/ScheduleDefinition::define() is the single definition of the schedule; bootstrap/app.php ->withSchedule() hands it to Laravel for the console, and app/Services/Monitoring/Collectors/SchedulerCollector.php:150 calls the same definition directly so a web request can read it without a console kernel.
+- No surface on — Seller Web, Analytics
+- Ruled: belongs on the Admin Scheduler page. Laravel registers the schedule through Artisan::starting(), so the page resolved an empty Schedule on every web request and told the operator to SSH in and run `php artisan schedule:list`. Closed by moving the definition out of the closure into App\Console\ScheduleDefinition, which both the console kernel and the collector call — one definition, two readers. The page now names the defined tasks, their expressions and next-due times, and can derive the healthy/late/missed counts.
+
+**Retrying, forgetting or flushing a failed queue job**  
+`monitoring` · owner: Admin  
+- Backend — Laravel's failed_jobs table, read by app/Services/Monitoring/Collectors/QueueCollector.php:856,897,922; written from POST /admin/monitoring/queues/failed/{action}/{uuid} (routes/admin/routes.php:289) -> MonitoringController::failedJob().
+- No surface on — Seller Web, Analytics
+- Ruled: belongs in Admin -> Monitoring -> Queues, which already read failed_jobs and listed the most recent failures. Closed with a POST action beside the list: retry re-drives the job, discard forgets it, both gated on the monitoring edit permission and both audited. A day of undelivered order confirmations or seller webhooks no longer needs `php artisan queue:retry` over SSH.
+
+**Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push**  
+`notifications` · owner: Admin  
+- Backend — 23 transactional listeners under app/Listeners/, now recorded at three seams: mail on Laravel's MessageSending/MessageSent (app/Listeners/Notifications/RecordMailDelivery.php, subscribed in AppServiceProvider::boot), sms in the single dispatcher every caller uses (app/Utils/SMSModule::sendCentralizedSMS), push at the one FCM call all device and topic sends funnel into (app/Traits/PushNotificationTrait::sendNotificationToHttp). Stored in notification_deliveries (2026_09_18_000001), served at GET /admin/notification/deliveries and resent at POST /admin/notification/deliveries/{id}/resend (App\Http\Controllers\Admin\Notification\DeliveryLogController), swept by `notifications:sweep` in App\Console\ScheduleDefinition.
+- No surface on — Seller Web, Analytics
+- Ruled: belongs in Admin as a delivery log with a resend action, and it was the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one recorded whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware the dependency monitor watches, and FCM push goes out through a trait — so a shop whose SMS credentials expired sent no OTP, no customer could sign in, and every screen in the monitoring console stayed green. Closed with three seams and no edit to any listener, so the twenty-fourth is covered the day it is written. A row is opened when the send starts and confirmed when the channel answers, because 'no row' and 'a row that never turned green' look identical in a log that records only successes and the second one is the outage; a send the transport never came back about is closed as failed by a sweep rather than left reading as still going. A resend sends the message that was recorded rather than re-rendering a template that may have changed since, and is a new attempt pointing at the one it repeats so the original stays true. SMS is deliberately not resendable: a one-time code sent again minutes later delivers a secret that has already expired, and an operator who watches it succeed concludes the customer's problem is solved when it is not. The code itself is never stored. Retention and the unconfirmed window are both platform policies rather than constants. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly. Also fixed in passing: sendNotificationToHttp assigned its url and headers only inside the project_id branch, so a shop with push switched on and no service account reached Http::withHeaders() with undefined variables — a TypeError, which is an Error and escaped the Exception catch as a 500 on whatever request was sending the notification.
+
+**Email template mail tester**  
+`notifications` · owner: Admin  
+- Backend — app/Http/Controllers/Admin/EmailTemplatesController.php:31 index() -> view('email-templates.mail-tester'); routes/admin/routes.php admin.system-setup.email-templates.index — linked from the send-test-mail panel at resources/views/admin-views/third-party/mail/index.blade.php
+- No surface on — Seller Web, Flutter App, Analytics, Monitor
+- Ruled: belongs beside the mail configuration it serves. The route renders the exact template the test mail is sent from, and nothing linked to it, so the only way to see what the shop would send was to type the URL. Closed with a preview link inside the Send Test Mail panel — the page that owns this question — so an operator can read the message before putting it in front of a customer instead of after.
+
+**Seller staff reaching the shop's own analytics page**  
+`security` · owner: Seller Staff  
+- Backend — app/Http/Middleware/SellerStaffAccessMiddleware.php maps 'analytics' to finance.view, the same permission the API already serves that data under
+- No surface on — Admin, Monitor
+- Ruled: a defect belonging to Developer in one line. Verified in the current file: the segment 'analytics' is still absent from the permission map in SellerStaffAccessMiddleware, so deny-by-default 403s every staff member on /vendor/analytics while the same person's API token reaches seller-center/analytics under finance.view — the two clients disagree about what a staff member may see. RESOLVED — one line. Deny-by-default was 403ing every staff member on /vendor/analytics while the same person's token reached the identical data.
+
+**The authentication requirement the portal reports for the v2 seller API**  
+`security` · owner: Developer  
+- Backend — app/Services/DeveloperPortal/Support/AuthResolver.php inlineAuthentication() detects Helpers::get_seller_by_token() in the controller source, per controller
+- No surface on — Seller Web, Analytics, Monitor
+- Ruled: a defect belonging to Developer, and the single most dangerous claim the portal makes. Verified: routes/rest_api/v2/api.php:27 declares only api_lang, the controllers authenticate in-line through Helpers::get_seller_by_token(), and AuthResolver reads middleware only — so the portal tells every reader that balance-withdraw, shop-update and product delete on 55 live endpoints need no credentials. That is the one direction an auth resolver must never be wrong in. RESOLVED. Detected per controller rather than declared per namespace, because a namespace rule would already be wrong: BrandController sits under the same prefix, authenticates nothing, and a list would have documented it as protected — the same class of lie in the opposite direction.
+
+**The permission scope an endpoint requires, and which endpoints a seller-issued API key may call**  
+`security` · owner: Developer  
+- Backend — app/Services/DeveloperPortal/Support/AuthResolver.php permissions() now matches seller_can: alongside module: and can:
+- No surface on — Seller Web, Analytics, Monitor
+- Ruled: belongs in the Developer Portal and resolves empty for all 537 endpoints. Verified in the current file: AuthResolver::permissions() matches only module: and can:, while the real gate on the seller API is seller_can: (53 route groups), and no controller anywhere passes ApiDoc(scopes:). On top of that, SellerApiAuthMiddleware refuses a key unless the route declares a scope — 232 of 248 seller endpoints accept a key and 16 refuse one — and that split is written down nowhere, so an integrator discovers it by getting a 403. RESOLVED. seller_can: is the real gate on the seller API — 53 route groups — and the scope column resolved empty for all 537 endpoints without it.
+
+**Feature flags and gradual rollout**  
+`platform` · owner: Admin  
+- Backend — database/migrations/2026_09_20_000001_create_feature_flags_table.php; app/Services/Platform/FeatureFlags.php (enabled/bucket/save/delete); managed at Admin -> Settings -> Feature Flags (App\Http\Controllers\Admin\Settings\FeatureFlagController, routes admin.settings.feature-flags.*), listed in the settings index
+- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs in Admin, and it is built. There was no flag table, no config and no per-seller or per-percentage switch anywhere; the only lever was publishing or unpublishing an entire addon module, so every change to the marketplace went live for every seller and every shopper at the same moment and the only way back was a deployment. Three rules make the answer trustworthy, and each is held by a test because getting any of them wrong turns a safety mechanism into a source of incidents. A flag that does not exist is OFF — not an error and not on, because a rollout is opt-in and an unknown key is a typo or a removed flag. The same subject always gets the same answer: the bucket is a hash of the flag key and the subject, so a shop stays on the same side of the line across every request and device, where a random draw per request would show one seller two versions of the product in a single session. And the master switch beats the pilot list, which beats the percentage — an off switch some people are exempt from is not an off switch. The flag key is validated to the shape the code asks for, because a key that does not match is a control an operator reaches for during an incident that silently does nothing. An unreadable flag table means the old behaviour everywhere: a rollout that cannot be read must never fail open.
+
+**Duplicate addon manager mounted at /admin/addon**  
+`platform` · owner: Admin  
+- Backend — the duplicate group at /admin/addon is removed; the gated twin under system-setup is canonical
+- No surface on — Seller Web, Flutter App, Analytics, Monitor
+- Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it. RESOLVED. Same controller, same five actions including upload and delete, and this copy sat OUTSIDE the themes_and_addons module gate — so a role denied addon management could still upload or remove one. Linked from no view and no menu.
+
+## INTERNAL BY DESIGN (54)
 
 Infrastructure. No screen is appropriate, and the reason is stated.
+
+**Installer and software updater — the first-run wizard and the file-based update flow**  
+`platform` · owner: Developer  
+- Backend — routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 leaves mapInstallRoutes() and mapUpdateRoutes() commented out
+- No surface on — Admin, Seller Web, Analytics, Monitor
+- Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together. RULED INTERNAL BY DESIGN, deliberately left disabled. This is a CodeCanyon product whose installer writes .env and runs migrations from a browser, and whose updater unpacks an archive over the running application — both are the highest-value targets on any deployment, and this platform is already installed. Restoring the mapping would put an unauthenticated install wizard back on a live shop. They stay unmapped, and this row is the record of why rather than an omission somebody re-enables next year. Deleting the files is a separate call for the vendor, not an operational fix.
 
 **Presentation and query bounds that no operator would tune (search result ceiling, category tree depth, live-viewer refresh window, experience-health staleness, the 5% 'flat' band on the vendor dashboard)**  
 `platform` · owner: System  
@@ -851,7 +1098,47 @@ Infrastructure. No screen is appropriate, and the reason is stated.
 - No surface on — Seller Web, Analytics
 - Admin → System Setup → Optimize System can flush it (EnvironmentSettingsController.php:71), which is all an operator needs; the TTLs and key map are infrastructure. Worth flagging that several screens write settings without calling cacheRemoveByType, so a saved value can appear not to have taken for up to three hours.
 
-## DEPRECATED (19)
+## NOT BUILT (6)
+
+No backend exists to be orphaned. A product gap with a named owner, not a missing screen.
+
+**Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
+`analytics` · owner: Admin  
+- Backend — None. No analytics event or rollup dimension touches stock; the nearest things are the point-in-time stock list at admin/stock/product-stock (routes/admin/routes.php:855) and the append-only movement log written by app/Services/Marketplace/InventoryService.php (surfaced at seller/inventory/movements, routes/seller/routes.php:76). Searched: AnalyticsEvent constants, AnalyticsRollup dimensions, product_metrics columns, SellerScorecardService metrics.
+- No surface on — Analytics, Monitor
+- Ruled: belongs to Analytics, and the backend does not exist to be orphaned. No analytics event or rollup dimension touches stock; product_metrics carries views and cart adds and has no stock column. Stock can be listed, adjusted, transferred and written off on every surface and nothing counts any of it, so the cost of a stock-out is unanswerable on a platform whose whole job is stock. Building it means an event and a rollup dimension, not a screen over something that already runs — recorded as a named gap so it keeps an owner.
+
+**Registering a second courier — credentials, rates, labels and tracking per carrier**  
+`shipping` · owner: Admin  
+- Backend — None found. Searched routes/admin/routes.php, app/Http/Controllers/Admin/Shipping, app/Services/Marketplace/ShippingRateService.php and app/Services/DeliverySyria for a carrier table or per-carrier credential store
+- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs in Admin as a carrier registry, and it is a product gap rather than an orphan. There is no carrier table, no per-carrier credential store and no per-carrier rate or label anywhere — carrier support today is one hard-coded integration (Delivery Syria) plus flat and zone rates. Nothing is running in the background without an owner here, which is what the orphan rule is for; what is true is that onboarding a second courier is a code change rather than a configuration, and that is a piece of product to build rather than a screen to connect. Recorded so the gap keeps a named owner instead of disappearing because it did not fit the category.
+
+**Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback**  
+`compliance` · owner: Admin  
+- Backend — None found. Searched app/, Modules/, routes/ and database/migrations for dispute and appeal — hits are only the word 'dispute' inside SellerScorecardService.php and BrandRegistryService.php prose, plus a dead seller.appeals.index entry in app/Services/SellerCenter/Navigation.php that has no route; None — seller.cases.index, seller.incidents.index and seller.appeals.index at app/Services/SellerCenter/Navigation.php:137,195,196 have no route or controller; searched routes/**, app/Http/Controllers/{Seller,Vendor}, app/Services for a case or appeal service with no hits
+- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs to both panels and exists in neither, with no backend to orphan. Searched app/, Modules/, routes/ and database/migrations for dispute|appeal|case: no controller, no table, no route — only prose in two service files and three navigation destinations that name a server nobody wrote. The panel can suspend a shop, deny a listing and revoke a brand claim, and a seller has no way to contest any of it. That is a subsystem to build, not a surface to connect.
+
+**Scheduled operations — timed price changes, timed activations, campaign starts**  
+`automation` · owner: Seller  
+- Backend — None — no route, controller, table or command; the nav entries seller.pricing.scheduled and seller.automation.scheduled at app/Services/SellerCenter/Navigation.php:98,139 resolve to nothing
+- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command. Two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail rather than shown broken. Recorded as a named gap: nothing is running unattended, and the work is to build the scheduler, which is Seller Center wave work rather than an orphan closure. Confirmed again in Wave 8 and left NOT BUILT: scheduled price changes, timed activations and campaign starts do not exist as a domain, so seller.pricing.scheduled and seller.automation.scheduled would be screens with nothing to list. The rail drops both silently rather than showing a link to an empty page.
+
+**Seller report builder, saved report definitions and an exports centre**  
+`analytics` · owner: Seller  
+- Backend — app/Http/Controllers/Seller/ReportController.php and ExportController.php over app/Services/Reports/SellerReportService.php; saved report definitions and queued exports have no table, route or service
+- No surface on — Admin, Monitor
+- OVERRULED in part and reclassified. The seller sweep recorded reports and exports as having no backend; verified otherwise - the v3 API endpoints existed and the Flutter app used them. Wave 8 built the web half: /vendor/reports is the three reports under one period chosen once, and /vendor/exports is every download this shop can produce, from the same exporters the app and the classic panel use. What is still NOT BUILT is the saved-definition half the nav calls a report builder: there is no table for a saved report and no service that would run one, and a builder whose definitions nothing stores would be a form that forgets. Recorded as a product gap rather than as a missing screen, on the same reasoning as the Wave 3 condition builder.
+
+**Paid advertising and sponsored placement — ad slots, budgets, billing**  
+`platform` · owner: Admin  
+- Backend — None found. Searched app/, Modules/, routes/ and database/migrations for advertis*, sponsored, ad_campaign, ads_ — only BannerService and unrelated substring hits
+- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs in Admin, and there is no backend at all to be orphaned. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it. That is a product this platform has not built, not a capability running unattended, so it is recorded as a named gap rather than counted among surfaces that need connecting. Confirmed in Wave 8 and left NOT BUILT: seller.advertising.index has no ad slots, no budgets and no billing behind it. A screen there would be a menu entry promising a product that does not exist.
+
+## DEPRECATED (20)
 
 Present in code, no longer part of the product.
 
@@ -860,6 +1147,12 @@ Present in code, no longer part of the product.
 - Backend — routes/shared.php, routes/test.php present on disk; app/Providers/RouteServiceProvider.php:44-60 loads admin, vendor, seller, web, api v1/v2/v3, delivery-syria and the beta groups and never these two
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: no provider maps either file, so nothing they declare is ever registered. Evidence is the complete map() list in RouteServiceProvider against the route table.
+
+**vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls**  
+`orders` · owner: Developer  
+- Backend — Removed. app/Http/Controllers/Vendor/SystemController.php is deleted and the vendor/get-order-data route with it; the seller panel's new-order count is served by vendor.dashboard.real-time-activities, which the panel actually polls (public/assets/back-end/js/custom.js getInitialDataForPanel)
+- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
+- Ruled: belongs to Developer to delete or document, and it is deleted. It answered the unseen-order count for the seller panel and nothing called it — the panel polls vendor.dashboard.real-time-activities for the same figure, and has done for as long as the JS has existed. So this was not an undocumented integration point but a superseded duplicate that stayed reachable with a live seller session. Removing it takes an authenticated endpoint off the surface rather than writing documentation for a capability the product already has elsewhere; the controller's only other method was an empty index() stub the base class required, so the class went with it, along with its entry in the staff permission map.
 
 **44 AI auto-fill routes serving the Auction module, which is not installed**  
 `catalog` · owner: Developer  
@@ -968,260 +1261,4 @@ Present in code, no longer part of the product.
 - Backend — app/Console/Commands/SessionFlush.php:16 `session:flush` (description is the unedited stub 'Command description'); not scheduled, not called from anywhere
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
-
-## ORPHAN (42)
-
-Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
-
-**Seller Center navigation registry — 41 of its 51 designed destinations resolve to no route and are silently dropped from the rail**  
-`platform` · owner: Seller  
-- Backend — app/Services/SellerCenter/Navigation.php:35-199 declares 51 route destinations; routes/seller/routes.php:50-113 builds 14 routes; the Route::has() guard at Navigation.php:225-230 drops the other 41 (verified: returns, refunds, warehouse, all 6 finance, all 4 pricing, shipments/picking/packing, integrations x4, team/roles, security, audit, compliance, brands x2, performance x3, reports/exports x3, advertising, approvals, cases, incidents, appeals, bulk-jobs, action center)
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs to the Seller Center web panel. The registry is the design of record and the route table is one fifth of it, so a seller sees a menu that silently omits every capability the phone app already has; the drop is invisible from inside the product because a missing route removes the item rather than erroring.
-
-**Five pages call route() on names that do not exist, so they throw RouteNotFoundException instead of rendering**  
-`platform` · owner: Developer  
-- Backend — resources/views/payment/paystack.blade.php:8 route('paystack.payment') — the real name is paystack.pay, so Paystack checkout is dead; resources/views/admin-views/transaction/list.blade.php:93 route('admin.transaction.transaction-export'); resources/views/admin-views/pages-and-media/page.blade.php:22 route('admin.pages-and-media.page-update'); resources/views/admin-views/third-party/payment-method/payment-option.blade.php:20 route('admin.business-settings.payment-method.payment-option'); resources/views/vendor-views/product/barcode.blade.php:53 route('vendor.products.edit') — all five verified absent from php artisan route:list
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer as a defect, not a missing surface. Each is a hard 500 on a page a customer or operator will reach — the Paystack one breaks a live payment method — and 19 further missing names elsewhere are correctly guarded by Route::has and degrade quietly, which shows the pattern was understood and these five were missed.
-
-**Installer and software updater — the first-run wizard and the file-based update flow**  
-`platform` · owner: Developer  
-- Backend — routes/install.php and routes/update.php exist; app/Providers/RouteServiceProvider.php:54-55 has //$this->mapInstallRoutes(); and //$this->mapUpdateRoutes(); commented out, so app/Http/Controllers/InstallController.php (11 methods) and UpdateController.php are unreachable and the installer views' route('purchase.code') / route('install.db') names do not resolve
-- No surface on — Admin, Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer. Two whole route files are mapped by methods that are commented out, so a fresh install or an in-place update cannot be driven through any UI; either restore the mapping or delete the route files, controllers and views together.
-
-**Unlinked admin developer pages — the Kohl design-system gallery and two component galleries mounted on the production admin prefix**  
-`platform` · owner: Developer  
-- Backend — routes/admin/routes.php:174 Route::view('design-system','admin-views.kohl.gallery')->name('design-system'); :138 GET admin/component and :141 GET admin/component-snippets, both closures with no route name at all; referenced by no menu, blade or JS
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer, off the production admin prefix. Three live URLs any panel user can open, two of them nameless, kept for component development rather than operation.
-
-**vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls**  
-`orders` · owner: Developer  
-- Backend — routes/vendor/routes.php GET/POST vendor/get-order-data; the only other reference in the repo is the staff permission map at app/Http/Middleware/SellerStaffAccessMiddleware.php:107, i.e. no route() call, fetch or link anywhere
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer to delete or document. It is either dead code or an undocumented integration point on order data, and the difference matters because it is reachable with a seller session.
-
-**Commerce campaigns, segments and experiments are absent from the admin sidebar**  
-`automation` · owner: Admin  
-- Backend — routes/admin/routes.php:1445-1463 registers 12 admin.commerce.{campaign,segment,experiment}.* routes; resources/views/admin-views/commerce/_nav.blade.php:12-24 is the only link path, reachable only after opening Collections
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs to Admin navigation. Three complete, audited features exist and an operator finds them only by opening a fourth feature and noticing its tab strip — a discovery problem, not a build problem.
-
-**Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived**  
-`finance` · owner: Admin  
-- Backend — Declared unmeasurable at app/Services/Monitoring/Panels/PaymentsPanel.php:2039-2073 unrecorded(), returned from data() at :203 — payment_started (:2046), gateway_latency (:2051), webhook_receipts (:2056), payment_request_outcome (:2061), payment_request_order_link (:2066) — each naming the exact file that would have to produce it
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs to Monitoring. No gateway callback leaves a receipt anywhere (PaymentsPanel.php:2056), so a callback that never arrived and one that arrived and failed are the same absent row, and a payment outage is visible only as orders that stopped appearing.
-
-**Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches**  
-`finance` · owner: Admin  
-- Backend — Detection exists as read-only findings in PaymentsPanel.php:1507 (duplicate settlements), :1565 (paid order with no settlement row), :1677 (commission mismatch); the settlement run itself is marketplace:settle at bootstrap/app.php:147
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section.
-
-**Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
-`analytics` · owner: Admin  
-- Backend — None. No analytics event or rollup dimension touches stock; the nearest things are the point-in-time stock list at admin/stock/product-stock (routes/admin/routes.php:855) and the append-only movement log written by app/Services/Marketplace/InventoryService.php (surfaced at seller/inventory/movements, routes/seller/routes.php:76). Searched: AnalyticsEvent constants, AnalyticsRollup dimensions, product_metrics columns, SellerScorecardService metrics.
-- No surface on — Analytics, Monitor
-- Ruled: belongs to Analytics. Stock can be listed, adjusted, transferred and written off on every surface, and nothing counts any of it — product_metrics carries views and cart adds and has no stock column, so the cost of a stock-out is unanswerable on a platform whose whole job is stock.
-
-**Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line**  
-`inventory` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/Product/ProductController.php:800 updateQuantity(), writing through app/Repositories/ProductRepository.php:478 updateByParams at :821; the vendor equivalent is app/Http/Controllers/Vendor/Product/ProductController.php; neither file references AuditLogger
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer to route through InventoryService, which already writes a reason code, a movement ledger row and an audit line to the same column. Two stock-writing paths that disagree about whether a change is traceable will drive current_stock and the movement ledger apart, and the trail cannot say why.
-
-**Approve or deny a seller's listing from the classic product screen**  
-`catalog` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/Product/ProductController.php:947 approveStatus() (route routes/admin/routes.php:309 admin.products.approve-status), plus the denied-note and status writes at :925/:938/:953; the file contains zero AuditLogger references
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to the audited moderation path that already exists. ProductModerationService records every decision with reason codes and history; ProductController::approveStatus/deny writes nothing — and the sidebar sends operators to the unaudited one, so whether a listing decision is recorded depends on which screen the operator happened to open.
-
-**Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts**  
-`catalog` · owner: Admin  
-- Backend — app/Console/Commands/RebuildProductSearchIndex.php:20 `search:reindex-products`; scheduled bootstrap/app.php:192 weekly Sunday 04:00; app/Observers/ProductSearchIndexObserver.php:20; registered app/Providers/ObserverServiceProvider.php:38-43 on Product
-- No surface on — Admin, Seller Web
-- Ruled: belongs on an Admin catalogue page as an index-health readout with a rebuild action. The observer swallows every exception so a product save can never fail, which means a broken index write is invisible, and the weekly reconcile command has no admin surface either — so an import that bypassed the observer leaves storefront search quietly incomplete with no way to notice or repair it from the panel.
-
-**Mass product updates written through the query builder bypass the price observer**  
-`pricing` · owner: Developer  
-- Backend — app/Repositories/ProductRepository.php:478 updateByParams() uses $this->product->where($params)->update($data) — a builder update that fires no model events, so app/Observers/ProductPriceObserver.php:30 never runs; called for stock at app/Http/Controllers/Admin/Product/ProductController.php:821
-- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer as a latent hole. ProductRepository::updateByParams issues a builder update, which fires no model events, so any future price write through it would skip the price-change history, the audit row and the seller-visible price history in one step; today's callers touch stock and variations only.
-
-**Which order states remain editable, and which remain cancellable**  
-`orders` · owner: Admin  
-- Backend — app/Services/OrderEditService.php:388 (in_array($order->order_status, ['pending','confirmed']) gate, plus order_type != 'default_type'); repeated for stock checks at :247 and :484; app/Http/Controllers/Admin/Customer/CustomerController.php:228 (in_array($order->order_status, ['pending','confirmed','processing','out_for_delivery'])); terminal states listed at app/Utils/OrderManager.php:2751; stock restoration states at app/Utils/OrderManager.php:93 (['returned','failed','canceled'])
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs in Admin → Order settings, which already exists. Both rules are inline status arrays repeated across at least three files, so a marketplace that wants cancellation to stop at 'processing' has to be given a code change.
-
-**Minimum number of items required before a customer may check out**  
-`orders` · owner: Admin  
-- Backend — business_settings key `minimum_order_limit`, read only at app/Http/Controllers/RestAPI/v1/ConfigController.php:190 and shipped to the mobile apps in the /api/v1/config payload
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It is seeded at install, read in exactly one place, shipped to all three mobile apps in /api/v1/config, and written by nothing — so the apps enforce a checkout rule the operator cannot see or change.
-
-**Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle**  
-`returns` · owner: Admin  
-- Backend — Partially. AnalyticsEvent::REFUND_REQUESTED is raised only as an order-status side effect (Analytics.php:214 maps 'returned'/'failed'); the RMA state machine at app/Services/Marketplace/ReturnLogisticsService.php writes no event, and admin/marketplace/returns (routes/admin/routes.php:706) is a queue, not a report. A return_rate ratio exists in SellerScorecardService.php:56 and SellerCenter/Lists/HomeMetrics.php:79.; None in analytics — no event is raised when a refund_request is created or approved (searched app/Services/RefundStatusService.php, RefundRequestService.php, Marketplace/RefundReversalService.php: no Analytics reference). Row-level surfaces: admin/report/transaction/refund-transaction-list (routes/admin/routes.php:801) and refund_rate on SellerScorecardService.php.
-- No surface on — Monitor, Dev Portal
-- Ruled: belongs to Analytics. No event is raised when a refund request is created or approved, and the RMA state machine writes nothing at all, so the platform has two half-measurements that cannot be joined: a rate derived from order_status on the scorecard, and an event named refund_requested that actually fires on an order status change.
-
-**Approve or reject a customer refund**  
-`returns` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/Order/RefundController.php:109 updateRefundStatus(); route routes/admin/routes.php:1704 admin.refund-section.refund.refund-status-update; wallet debit at :136-139, ledger reversal at :150; no AuditLogger in the file or in app/Services/RefundRequestService.php / RefundStatusService.php / RefundTransactionService.php; routes/vendor/routes.php:145-152 — vendor/refund/index/{status}, POST update-status; routes/rest_api/v3/seller.php:244-255 — api/v3/seller/refund/* (seller_can:orders.manage); app/Http/Controllers/Admin/Order/RefundController.php; routes/admin/routes.php:1698-1706 admin.refund-section.refund.*; nav _side-bar.blade.php:233
-- No surface on — Monitor
-- Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and writes only to its own refund_status history — so the audit centre cannot answer who approved any refund ever processed.
-
-**Registering a second courier — credentials, rates, labels and tracking per carrier**  
-`shipping` · owner: Admin  
-- Backend — None found. Searched routes/admin/routes.php, app/Http/Controllers/Admin/Shipping, app/Services/Marketplace/ShippingRateService.php and app/Services/DeliverySyria for a carrier table or per-carrier credential store
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs in Admin as a carrier registry. Today carrier support is one hard-coded integration (Delivery Syria) plus flat and zone rates, with no carrier table in database/migrations, so onboarding a courier is a code change rather than a configuration.
-
-**Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness**  
-`shipping` · owner: Admin  
-- Backend — Effectively none. checkout_shipping_set is recorded from the payment page alongside address and payment in one breath (Web/WebController.php:404-406), so it measures reaching checkout, not choosing a shipping method; the only shipping figure recorded anywhere is shipping_cost inside the order_placed properties JSON (OrderManager.php:1652), which no rollup reads. Shipping zones (routes/admin/routes.php:759) and rates are configured but never counted.; None. app/Services/Marketplace/FulfillmentService.php stamps packed/shipped timestamps on an overlay record and admin/marketplace/fulfillments (routes/admin/routes.php:742) lists them; AnalyticsEvent::ORDER_DELIVERED exists (Analytics.php:213) but only reaches the 'event' dimension — no delivery-time or dispatch-time metric is computed anywhere, and SLA metrics are cancellation/return/refund/rating only (SlaService.php:24).
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Analytics, and it is the measurement gap with the sharpest consequence: FulfillmentService stamps packed and shipped timestamps on every fulfilment and nothing ever subtracts them, so a marketplace that enforces an SLA policy and suspends sellers for breaching it cannot measure lateness. The only shipping number recorded anywhere is shipping_cost inside an order_placed properties JSON blob that no rollup reads.
-
-**Create, rename or delete a brand in the catalogue**  
-`brands` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/Product/BrandController.php (zero AuditLogger references); routes routes/admin/routes.php:381 admin.brand.*
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs on the unified audit trail alongside the brand registry. The registry audits every claim decision; the CRUD that actually creates and deletes the brand records those claims point at audits nothing.
-
-**Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback**  
-`compliance` · owner: Admin  
-- Backend — None found. Searched app/, Modules/, routes/ and database/migrations for dispute and appeal — hits are only the word 'dispute' inside SellerScorecardService.php and BrandRegistryService.php prose, plus a dead seller.appeals.index entry in app/Services/SellerCenter/Navigation.php that has no route; None — seller.cases.index, seller.incidents.index and seller.appeals.index at app/Services/SellerCenter/Navigation.php:137,195,196 have no route or controller; searched routes/**, app/Http/Controllers/{Seller,Vendor}, app/Services for a case or appeal service with no hits
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs to both panels and exists in neither. Searched app/, Modules/, routes/ and database/migrations for dispute|appeal|case: no controller, no table, no route — only prose in two service files and three dead nav entries (seller.cases.index, seller.incidents.index, seller.appeals.index). The panel can suspend a shop, deny a listing and revoke a brand claim, and the seller's only channel is a support ticket that carries no link to the decision it contests, so nobody can see how many decisions are being challenged.
-
-**The seller's own account health and SLA standing**  
-`compliance` · owner: Seller  
-- Backend — SLA is evaluated by app/Services/Marketplace/SlaService.php via command marketplace:evaluate-sla (bootstrap/app.php:155); the nav entries seller.performance.index, .health, .sla, seller.appeals.index at app/Services/SellerCenter/Navigation.php:161-163,196 are unrouted
-- No surface on — Seller Web, Flutter App, Analytics, Dev Portal
-- Ruled: belongs in the Seller Center. The platform evaluates every approved seller against SLA policy daily and writes audited breaches, and no client renders account health — the seller sees a scorecard number and never the standing, the breach, or the deadline they are being judged against.
-
-**Compliance as a measured quantity — unauthorised brand listings, verification standing, policy breaches over time**  
-`compliance` · owner: Seller  
-- Backend — Counts only: app/Services/SellerCenter/Counts.php:56-58 (brands_expiring, compliance_action, brands_pending) feeding nav badges; the seller Compliance page it badges (Navigation.php:167 'seller.compliance.index') has no route in routes/seller/routes.php and is filtered out at Navigation.php:230; breaches ledger at Marketplace/SlaService.php with admin/marketplace/sla (routes/admin/routes.php:697)
-- No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
-
-**Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone**  
-`automation` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Severity/SeverityEngine.php:65-69 (weights), :72-84 (saturations: revenue 0.25, volume 0.10, urgency 6h, duration 168h, recurrence 10), :86-88 (BAND_CRITICAL 75, BAND_HIGH 40, BAND_MEDIUM 20); baseline window app/Services/SellerIntelligence/Severity/SellerBaselineProvider.php:23 (LOOKBACK_DAYS = 30); app/Services/SellerIntelligence/IssueEscalationService.php:41-45 (PROMOTE_AFTER_HOURS low 336 / medium 168 / high 48), :48 (PROMOTE_ON_OVERDUE = true), :51 (MAX_ESCALATION_LEVEL = 3); swept by bootstrap/app.php:170 every four hours; app/Services/SellerIntelligence/SellerNotifier.php:46 (WINDOW_HOURS = 12), :49 (PUSH_FROM_SEVERITY = ['critical','high']); driven by app/Console/Commands/RefreshSellerInsights.php scheduled hourly at bootstrap/app.php:160; None — no notification-preference route, table, model or setting key exists; searched routes/vendor, routes/se
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in Admin Settings as a policy page, with the notification half exposed to the seller. Thirteen severity constants decide what every seller sees first, an escalation ladder decides the marketplace's enforcement posture toward slow sellers, and a 12-hour window plus a critical/high floor decides what reaches their phone — none of it is settable by anyone, so the only way to stop the noise is to turn notifications off entirely.
-
-**Scheduled operations — timed price changes, timed activations, campaign starts**  
-`automation` · owner: Seller  
-- Backend — None — no route, controller, table or command; the nav entries seller.pricing.scheduled and seller.automation.scheduled at app/Services/SellerCenter/Navigation.php:98,139 resolve to nothing
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command; two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail.
-
-**Whether a seller's automation rules and bulk jobs are actually succeeding**  
-`automation` · owner: Admin  
-- Backend — app/Services/SellerAutomation/AutomationEngine.php driven by seller:run-automation (bootstrap/app.php:176) and seller:run-stuck-bulk-jobs (:188); no reference to automation or bulk jobs anywhere in app/Services/Monitoring
-- No surface on — Analytics, Monitor, Dev Portal
-- Ruled: belongs to Monitoring. The sweep is recorded only as a scheduled-task row, so a run that exits 0 while every rule inside it fails is filed as a success; every run and every action already records an outcome and nothing aggregates them into a success rate or a trend.
-
-**Commerce Experience master switch — storefront collections, campaigns, segments and experiments on or off**  
-`automation` · owner: Admin  
-- Backend — config/commerce.php:12 `'enabled' => env('COMMERCE_EXPERIENCE_ENABLED', true)`; read at app/Services/Commerce/CollectionResolver.php:42, ExperimentResolver.php:92, CampaignResolver.php:206, SegmentResolver.php:168
-- No surface on — Seller Web, Monitor
-- Ruled: belongs in Admin Settings. Four admin screens display the flag's state and none writes it, so the documented rollback path for the whole personalisation engine is one env line and a deploy.
-
-**Seller report builder, saved report definitions and an exports centre**  
-`analytics` · owner: Seller  
-- Backend — None — seller.reports.index, seller.reports.builder and seller.exports.index at app/Services/SellerCenter/Navigation.php:175-177 have no route, controller or service
-- No surface on — Admin, Seller Web, Monitor
-- OVERRULED in part — the seller sweep recorded reports and exports as having no backend. Verified: GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and are used by the Flutter app. What is missing is the web surface and the saved-definition/queued-export half: seller.reports.index, seller.reports.builder and seller.exports.index have no route, so on a browser every export is a synchronous download off one specific list.
-
-**The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason**  
-`analytics` · owner: Admin  
-- Backend — written at app/Utils/OrderManager.php:1646-1653 and Analytics.php:177-181; stored as analytics_events.properties (EventRecorder.php:109)
-- No surface on — Seller Web, Flutter App, Monitor, Dev Portal
-- Ruled: belongs to Analytics reporting. Every order writes them into analytics_events.properties and exactly one reader exists in the codebase (ExperimentReach pulling properties->experiment), so shipping cost, coupon and payment method per order are captured on every order and reportable on none.
-
-**Daily history of request volume, visitors, errors and API load (telemetry_daily)**  
-`analytics` · owner: Developer  
-- Backend — app/Console/Commands/TelemetryRollup.php:31 (telemetry:rollup) writing telemetry_daily; scheduled bootstrap/app.php:243-249; app/Console/Commands/TelemetryRollup.php:31 `telemetry:rollup`; scheduled bootstrap/app.php:242 hourly at :07, bootstrap/app.php:246 `--date=yesterday` daily 00:20, bootstrap/app.php:247 `--prune` daily 01:30
-- No surface on — Admin, Seller Web, Dev Portal
-- Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at.
-
-**Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved**  
-`monitoring` · owner: Developer  
-- Backend — Tables exist: database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:110 (monitoring_error_groups) and :143 (monitoring_errors). Read by ErrorsPanel.php:175, SecurityPanel.php:1073, AndroidPanel.php:145, IosPanel.php:151, ApisPanel.php:808, DeploymentsPanel.php:553, HealthScoreService.php:370, DeveloperPortal/EndpointHealthService.php:287. Pruned by MonitoringRollup.php:307,337.; app/Services/Monitoring/Panels/ErrorsPanel.php:34 reading monitoring_error_groups and monitoring_errors; GET /admin/monitoring/errors; view resources/views/admin-views/monitoring/sections/errors.blade.php; Columns status/resolved_at/resolved_by on monitoring_error_groups (database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:123-132); filtered by ErrorsPanel.php:55,:117; the capability is described as 'resolve or ignore them' at MonitoringPermissionService.php:38-41
-- No surface on — Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs to Developer, and it is the single largest hole in the platform. monitoring_error_groups and monitoring_errors are created, read by eight panels and two services and pruned by the rollup, and verified here: the only reference to the table outside readers is the migration itself, because bootstrap/app.php:249 withExceptions() is empty. The Errors page is permanently blank, the health score's error signal permanently unmeasured, and Security's authorisation-failure card, both crash-free cards, the portal's endpoint error lookup and the deploy before/after comparison are all structurally zero — the only error visibility left in the product is the HTTP 5xx rate.
-
-**Machine-readable JSON feed of every monitoring section**  
-`monitoring` · owner: Developer  
-- Backend — app/Http/Controllers/Admin/Telemetry/MonitoringController.php:61 (wantsJson or ?json=1 on the same section URL)
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs in the Developer Portal. Every section returns its full payload as JSON on the same URL with ?json=1 — a complete monitoring API behind admin session auth — and it appears in no portal screen, no OpenAPI export and no Postman collection.
-
-**Prometheus scrape endpoint and OTLP trace export**  
-`monitoring` · owner: Developer  
-- Backend — config/monitoring.php:132-135 declares 'GET /monitoring/metrics returns the text exposition format' with MONITORING_PROMETHEUS and MONITORING_PROMETHEUS_TOKEN; reported as a live setting by SettingsPanel.php:535-552 and ApplicationPanel.php:639-650; config/monitoring.php:100-107 (otlp_endpoint, otlp_headers, service_name) declaring 'finished traces are POSTed as OTLP/HTTP JSON by a queued job'
-- No surface on — Admin, Seller Web, Monitor, Dev Portal
-- Ruled: belongs to Developer to build or to delete the config. Verified: no route matching monitoring/metrics exists anywhere in routes/, and no OTLP exporter or job exists, yet config/monitoring.php documents both and two panels display the Prometheus endpoint as a live setting complete with a security warning about an exposure that cannot happen.
-
-**Blast radius — how many sellers a failure is affecting**  
-`monitoring` · owner: Admin  
-- Backend — No seller/vendor/shop_id dimension exists in any monitoring table or panel; the only 'vendor' in the model is a traffic channel label (RequestsPanel.php:36) and a user_type on traces (TracesPanel.php:74)
-- No surface on — Admin, Seller Web, Analytics, Monitor
-- Ruled: belongs to Monitoring as a dimension on every signal. No monitoring table or panel carries a seller, vendor or shop_id — 'vendor' exists only as a request-channel label — so the console can say the queue is backed up or orders are stuck and never whether that is one seller or all of them, which on a marketplace is the first question asked and turns every triage into a manual SQL session.
-
-**Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps**  
-`monitoring` · owner: Developer  
-- Backend — app/Services/Monitoring/Ingest/AppHealthRecorder.php:27; POST api/v1/app-health via app/Http/Controllers/RestAPI/v1/AppHealthController.php:32 (#[ApiDoc], throttle:30,1) registered at routes/rest_api/v1/api.php:81
-- No surface on — Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs to the Flutter app. POST api/v1/app-health exists, is rate-limited, is documented and writes the app.health.* series the Android and iOS panels read — and a grep of the entire seller app finds no caller, so both mobile sections report crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer.
-
-**Seeing which scheduled tasks are defined, and when each runs next**  
-`monitoring` · owner: Admin  
-- Backend — app/Services/Monitoring/Collectors/SchedulerCollector.php:104-125 reads app(Schedule::class); Laravel registers it via Artisan::starting() (vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php:362-367), so a web request sees an empty Schedule. Admitted in app/Services/Monitoring/Panels/SchedulerPanel.php:397-424.
-- No surface on — Seller Web, Analytics
-- Ruled: belongs on the Admin Scheduler page, which cannot serve it as built. Laravel registers the schedule through Artisan::starting(), so a web request resolves an empty Schedule; the page therefore cannot name the tasks that should run, withholds next-due times and the healthy/late/missed counts, and tells the operator to run php artisan schedule:list — i.e. SSH — instead.
-
-**Retrying, forgetting or flushing a failed queue job**  
-`monitoring` · owner: Admin  
-- Backend — Laravel's failed_jobs table, read by app/Services/Monitoring/Collectors/QueueCollector.php:856,897,922; there is no write route - routes/admin/routes.php:227-236 registers Monitoring as GET-only
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring → Queues, which already reads failed_jobs and shows the ten most recent failures. Monitoring is registered GET-only, so a day of undelivered order confirmations, seller webhooks or bulk price changes can only be re-driven with php artisan queue:retry over SSH.
-
-**Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push**  
-`notifications` · owner: Admin  
-- Backend — app/Listeners/AddFundToWalletListener.php:17, handle(AddFundToWalletEvent) at line 37; queued (ShouldQueue + QueuedMailDelivery: tries 2, timeout 30, backoff 60); app/Listeners/CashCollectListener.php:9, handle(CashCollectEvent) at line 24; NOT queued - runs inline in the admin request (dispatched app/Http/Controllers/Admin/Deliveryman/DeliveryManCashCollectController.php:68); app/Listeners/ChattingListener.php:9, handle(ChattingEvent) at line 24; NOT queued; app/Listeners/CustomerRegistrationListener.php:18, handle(CustomerRegistrationEvent) at line 32; queued with QueuedMailDelivery; app/Listeners/CustomerStatusUpdateListener.php:23, handle(CustomerStatusUpdateEvent) at line 31; queued; app/Listeners/DeliverymanPasswordResetListener.php:18, handle(DeliverymanPasswordResetEvent) at line 32; app/Listeners/DigitalProductDownloadListener.php:18, handle(DigitalProductDownloadEvent) at line
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin as a delivery log with a resend action, and it is the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one records whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware entirely, and FCM push goes through a trait — so a shop whose SMS credentials expired sends no OTP, no customer can sign in, and every screen in the monitoring console stays green. Queued listeners at least land in failed_jobs; the eight that are not queued (chat, order status, cash collect, referral, delivery-man withdraw, refund) run inline and leave nothing at all. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly.
-
-**Email template mail tester**  
-`notifications` · owner: Admin  
-- Backend — app/Http/Controllers/Admin/EmailTemplatesController.php:31 index() -> view('email-templates.mail-tester'); routes/admin/routes.php:1172 admin.system-setup.email-templates.index — referenced by no menu and no view
-- No surface on — Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs in the Admin sidebar, one link away. The page renders and works; the sidebar points at the /{type}/{tab} view route instead, so the only way to test transactional mail is to type the URL.
-
-**Paid advertising and sponsored placement — ad slots, budgets, billing**  
-`platform` · owner: Admin  
-- Backend — None found. Searched app/, Modules/, routes/ and database/migrations for advertis*, sponsored, ad_campaign, ads_ — only BannerService and unrelated substring hits
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs in Admin and has no backend at all. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it, and the Seller Center advertises a destination for it that does not resolve.
-
-**Feature flags and gradual rollout**  
-`platform` · owner: Admin  
-- Backend — None found. Searched app/, config/, routes/ and database/migrations for FeatureFlag, feature_flag, flag tables — nothing. Closest surfaces: addon publish/unpublish (routes/admin/routes.php:1081-1089), addon licence activation (:1091-1097) and modules_statuses.json
-- No surface on — Admin, Seller Web, Flutter App, Analytics, Monitor, Dev Portal
-- Ruled: belongs in Admin. No flag table, no config, no per-seller or per-percentage switch anywhere; the only lever is publishing or unpublishing an entire addon module, so every change to the marketplace is all-or-nothing for everyone at once.
-
-**Duplicate addon manager mounted at /admin/addon**  
-`platform` · owner: Admin  
-- Backend — routes/admin/routes.php:1063-1071 admin.addon.* — the same AddonController and the same five actions already registered at :1081 under system-setup, outside the themes_and_addons module gate
-- No surface on — Seller Web, Flutter App, Analytics, Monitor
-- Ruled: belongs to Developer to delete — the gated twin under system-setup is canonical. Verified in the route file: the same controller and the same five actions including upload and delete, linked from no view and no menu, and unlike the twin it sits outside the themes_and_addons module gate, so an admin denied that permission can still publish and delete platform modules through it.
 

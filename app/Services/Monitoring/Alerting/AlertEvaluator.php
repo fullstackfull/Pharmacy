@@ -467,6 +467,43 @@ class AlertEvaluator
                 'for_seconds' => 300,
                 'description' => 'Minutes since the scheduler last ran. Rollups, reminders and cleanup all stop when this climbs.',
             ]),
+            /*
+            | The money rules.
+            |
+            | The payments page detected all three of these and published nothing, so no rule could
+            | be written against them and a seller who is silently never paid was found only if an
+            | admin happened to open that section. Any non-zero count is an incident: these are not
+            | measurements that fluctuate, they are conditions that should never occur — so warning
+            | and critical are both at the first row rather than at some tolerance somebody would
+            | have to invent.
+            */
+            $rule([
+                'key' => 'finance.duplicate_settlements',
+                'name' => 'A vendor has been credited twice for one sale',
+                'metric' => 'finance.duplicate_settlements',
+                'warning_threshold' => 0,
+                'critical_threshold' => 0,
+                'for_seconds' => 300,
+                'description' => 'Orders with more than one settlement row in the last day. order_transactions has no unique key on order_id, so a retried settlement writes a second row.',
+            ]),
+            $rule([
+                'key' => 'finance.paid_without_settlement',
+                'name' => 'A paid order has no settlement row',
+                'metric' => 'finance.paid_without_settlement',
+                'warning_threshold' => 0,
+                'critical_threshold' => 0,
+                'for_seconds' => 300,
+                'description' => 'Paid, non-offline orders with no row in order_transactions. Nothing downstream will ever find these sales to disburse, so the vendor is simply never paid for them.',
+            ]),
+            $rule([
+                'key' => 'finance.commission_mismatch',
+                'name' => 'A settlement does not add up',
+                'metric' => 'finance.commission_mismatch',
+                'warning_threshold' => 0,
+                'critical_threshold' => 0,
+                'for_seconds' => 300,
+                'description' => 'Settlement rows where seller amount plus commission does not equal the order amount. One of the two parties is being paid from a figure nothing computed.',
+            ]),
             $rule([
                 'key' => 'check.availability',
                 'name' => 'A health check is failing',

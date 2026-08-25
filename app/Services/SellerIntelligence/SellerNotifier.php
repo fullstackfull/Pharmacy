@@ -3,6 +3,7 @@
 namespace App\Services\SellerIntelligence;
 
 use App\Models\Seller;
+use App\Services\Platform\Policy;
 use App\Models\SellerInsight;
 use App\Models\SellerNotificationDelivery;
 use App\Services\AuditLogger;
@@ -43,7 +44,6 @@ class SellerNotifier
      * Long enough that a sweep does not repeat itself, short enough that a problem still standing
      * tomorrow is worth saying again.
      */
-    private const WINDOW_HOURS = 12;
 
     /** Below this, nothing is pushed. A low-severity insight belongs in the list, not on a phone. */
     private const PUSH_FROM_SEVERITY = ['critical', 'high'];
@@ -195,7 +195,10 @@ class SellerNotifier
      */
     private function digestKey(int|string $sellerId, string $topic): string
     {
-        $window = (int) floor(now()->timestamp / (self::WINDOW_HOURS * 3600));
+        // How often the same seller may be interrupted — the difference between a useful alert
+        // and the reason somebody switches notifications off, and it was a constant.
+        $windowHours = app(Policy::class)->int('issue_notify_window_hours');
+        $window = (int) floor(now()->timestamp / ($windowHours * 3600));
 
         return $sellerId . '|' . $topic . '|' . $window;
     }

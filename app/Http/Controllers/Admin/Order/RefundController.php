@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Order;
 
+use App\Services\AuditLogger;
 use App\Contracts\Repositories\AdminWalletRepositoryInterface;
 use App\Contracts\Repositories\CustomerRepositoryInterface;
 use App\Contracts\Repositories\LoyaltyPointTransactionRepositoryInterface;
@@ -166,6 +167,23 @@ class RefundController extends BaseController
             foreach ($dataArray['refundStatus'] as $status) {
                 $this->refundStatusRepos->add(data: $status);
             }
+
+            // The decision moves money: it debits the seller's earnings, reverses the marketplace's
+            // commission and credits the customer. It wrote only to its own refund_status history,
+            // so the audit centre could not answer who approved any refund ever processed.
+            app(AuditLogger::class)->record(
+                action: 'refund.' . $request['refund_status'],
+                subject: ['type' => 'refund_request', 'id' => $request['id']],
+                before: ['status' => $refund['status']],
+                after: ['status' => $request['refund_status']],
+                context: [
+                    'order_id' => $refund['order_id'],
+                    'order_details_id' => $refund['order_details_id'],
+                    'amount' => (float) $refund['amount'],
+                    'seller_is' => $order['seller_is'] ?? null,
+                    'seller_id' => $order['seller_id'] ?? null,
+                ],
+            );
 
             event(new RefundEvent(status: $request['refund_status'], order: $order, refund: $refund, orderDetails: $orderDetails));
             return response()->json(['message' => translate('refund_status_updated') . '.']);

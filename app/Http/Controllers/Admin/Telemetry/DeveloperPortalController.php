@@ -311,6 +311,7 @@ class DeveloperPortalController extends BaseController
             'webhooks' => ['contract' => app(WebhookContract::class)->describe()],
             'models' => app(PortalReference::class)->models(),
             'integrations' => app(PortalReference::class)->integrations(),
+            'feeds' => ['feeds' => app(PortalReference::class)->feeds()],
             'settings' => [
                 'portal' => app(Policy::class)->all('developer'),
                 'fields' => \App\Services\Platform\PolicyRegistry::GROUPS['developer']['policies'],

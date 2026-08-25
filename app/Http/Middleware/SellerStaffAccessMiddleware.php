@@ -104,7 +104,7 @@ class SellerStaffAccessMiddleware
             'products', 'product' => $isWrite ? 'products.manage' : 'products.view',
 
             // Orders and everything that acts on an order.
-            'orders', 'get-order-data' => $isWrite ? 'orders.manage' : 'orders.view',
+            'orders' => $isWrite ? 'orders.manage' : 'orders.view',
             'pos', 'refund' => 'orders.manage',
             'customer' => 'orders.view',
 
@@ -117,7 +117,36 @@ class SellerStaffAccessMiddleware
             // Money. `analytics` is the shop's own numbers — the same screen the API already serves
             // this staff member under finance.view. It was absent from this map, so deny-by-default
             // 403'd every staff member on the web page while their token reached the identical data.
-            'transaction', 'report', 'analytics' => 'finance.view',
+            'transaction', 'report', 'analytics', 'finance' => 'finance.view',
+
+            // Wave 4's fulfilment screens. Reading a return, a refund or the warehouse is order and
+            // catalogue work; moving a return or advancing a fulfilment changes stock, and the
+            // routes declare that split too.
+            'returns', 'refunds', 'shipments', 'picking', 'packing' => $isWrite ? 'orders.manage' : 'orders.view',
+            'warehouse', 'bulk-jobs', 'pricing' => $isWrite ? 'products.manage' : 'products.view',
+
+            // Everything waiting for this shop. Allowed to any active staff for the same reason the
+            // cockpit is: it shows them what is already theirs to see, and each entry links to a
+            // screen that gates itself.
+            'actions' => self::ALLOW,
+
+            // Wave 6's trust screens. A shop's own standing, its brand authorisations and the
+            // issues that escalated are things any active staff member should be able to read —
+            // the same reasoning as the cockpit, and each write beyond them is gated on its route.
+            'performance', 'compliance', 'brands', 'incidents' => self::ALLOW,
+            'approvals' => 'staff.manage',
+
+            // Wave 7's enterprise screens. Team and the access review are staff work by definition;
+            // integrations are shop settings, because a key or an endpoint acts as the whole shop
+            // rather than as one area of it. The routes declare the same, and this is the coarse
+            // pre-filter rather than the decision.
+            'team', 'security' => 'staff.manage',
+            'integrations' => 'shop_settings.manage',
+
+            // Wave 8's platform screens. The hub and the export catalogue are allowed to any
+            // active staff member because they show only what is already theirs to see; each
+            // report and each download declares its own permission on its route.
+            'reports', 'exports' => self::ALLOW,
 
             // Delivery team is an order-fulfilment concern.
             'delivery-man' => 'orders.manage',

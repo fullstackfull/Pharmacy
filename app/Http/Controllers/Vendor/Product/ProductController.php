@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Vendor\Product;
 
+use App\Services\Marketplace\InventoryService;
 use App\Contracts\Repositories\AttributeRepositoryInterface;
 use App\Contracts\Repositories\AuthorRepositoryInterface;
 use App\Contracts\Repositories\BrandRepositoryInterface;
@@ -812,7 +813,25 @@ class ProductController extends BaseController
                 ToastMagic::error(translate('product_not_found') . '!');
                 return back();
             }
-            $this->productRepo->updateByParams(params: ['id' => $request['product_id']] + $ownerScope, data: $dataArray);
+            // Same path as the admin box: reasoned, ledgered and audited. The owner scope is
+            // carried into the service so the lock and the write stay scoped to this seller.
+            $result = app(InventoryService::class)->setStock(
+                productId: $request['product_id'],
+                newStock: (int) $stockCount,
+                reason: 'manual_stock_edit',
+                alongside: ['variation' => $dataArray['variation']],
+                by: auth('seller')->id(),
+                byType: 'seller',
+                scope: $ownerScope,
+            );
+
+            if (!$result['ok']) {
+                ToastMagic::error(translate($result['reason']));
+
+                return back();
+            }
+
+            cacheRemoveByType(type: 'products');
             $updatedProduct = $this->productRepo->getFirstWhere(params: ['id' => $request['product_id']] + $ownerScope);
             $this->updateRestockRequestListAndNotify(product: $product, updatedProduct: $updatedProduct);
 

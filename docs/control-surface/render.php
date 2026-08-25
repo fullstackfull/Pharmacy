@@ -34,9 +34,12 @@ const SURFACES = [
 const VERDICTS = [
     'CONNECTED TO ADMIN',
     'CONNECTED TO SELLER',
+    'CONNECTED TO DEVELOPER',
     'CONNECTED TO DEVELOPER PORTAL',
     'CONNECTED TO MONITOR',
+    'FIXED',
     'INTERNAL BY DESIGN',
+    'NOT BUILT',
     'DEPRECATED',
     'ORPHAN',
 ];
@@ -84,15 +87,26 @@ $isGap = static fn (?string $value): bool => strcasecmp(trim((string) $value), '
 $areas = [];
 $byVerdict = [];
 foreach ($records as $record) {
+    $verdict = $record['verdict'] ?? 'ORPHAN';
+
+    // Loudly, not silently. A verdict this script does not know about used to be grouped under a
+    // key nothing iterated, so the record vanished from all three documents while still counting
+    // in the totals — an audit that quietly loses records is worse than no audit.
+    if (!in_array($verdict, VERDICTS, true)) {
+        fwrite(STDERR, 'Unknown verdict "' . $verdict . '" on: ' . ($record['capability'] ?? '?') . "\n");
+        exit(1);
+    }
+
     $areas[$record['area'] ?? 'platform'][] = $record;
-    $byVerdict[$record['verdict'] ?? 'ORPHAN'][] = $record;
+    $byVerdict[$verdict][] = $record;
 }
 ksort($areas);
 
 $total = count($records);
 $orphans = count($byVerdict['ORPHAN'] ?? []);
 $internal = count($byVerdict['INTERNAL BY DESIGN'] ?? []);
-$connected = $total - $orphans - $internal - count($byVerdict['DEPRECATED'] ?? []);
+$notBuilt = count($byVerdict['NOT BUILT'] ?? []);
+$connected = $total - $orphans - $internal - $notBuilt - count($byVerdict['DEPRECATED'] ?? []);
 
 $write = static function (string $path, array $lines) use ($DOCS): void {
     file_put_contents($DOCS . '/' . $path, implode("\n", $lines) . "\n");
@@ -162,10 +176,22 @@ $out[] = 'background without a documented owner and a place a person can see it.
 $out[] = 'deliberately invisible is recorded as `INTERNAL BY DESIGN` with the reason no screen is';
 $out[] = 'appropriate — silence is not the same as a decision.';
 $out[] = '';
-$out[] = 'Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a';
-$out[] = 'surface**: these stay orphans until the screen, the setting or the documentation exists, and this';
-$out[] = 'register is the backlog for building them. Where the reconciliation overruled a sweep, the note';
-$out[] = 'says so and why.';
+// The ORPHAN count is the acceptance criterion, so the sentence beneath the table is written from
+// the data rather than left as a standing description of a backlog that may since have emptied.
+$orphanCount = count(array_filter($records, static fn (array $record) => ($record['verdict'] ?? '') === 'ORPHAN'));
+
+if ($orphanCount === 0) {
+    $out[] = '**There are no orphans left.** Every capability the sweep found now has a documented owner';
+    $out[] = 'and a surface: a screen, a setting, a document, or an explicit `INTERNAL BY DESIGN` ruling with';
+    $out[] = 'the reason no screen is appropriate. The `FIXED` rows below are the ones that were orphans and';
+    $out[] = 'say what was built to close them. Where the reconciliation overruled a sweep, the note says so';
+    $out[] = 'and why.';
+} else {
+    $out[] = 'Every orphan below has been ruled to an owner, so none is unexplained. **An assignment is not a';
+    $out[] = 'surface**: these stay orphans until the screen, the setting or the documentation exists, and this';
+    $out[] = 'register is the backlog for building them. Where the reconciliation overruled a sweep, the note';
+    $out[] = 'says so and why.';
+}
 $out[] = '';
 $out[] = '| Verdict | Capabilities | Meaning |';
 $out[] = '|---|---:|---|';
@@ -173,9 +199,12 @@ $out[] = '|---|---:|---|';
 $meaning = [
     'CONNECTED TO ADMIN' => 'The marketplace operator manages or oversees it.',
     'CONNECTED TO SELLER' => 'The seller manages it, in the panel or the app.',
+    'CONNECTED TO DEVELOPER' => 'Owned by whoever maintains the code; no product surface is appropriate.',
     'CONNECTED TO DEVELOPER PORTAL' => 'Documented as an API capability an integrator can use.',
     'CONNECTED TO MONITOR' => 'Its health and its failures are visible to an operator.',
+    'FIXED' => 'Was an orphan. The surface, the writer or the fix now exists, and the record says what was built.',
     'INTERNAL BY DESIGN' => 'Infrastructure. No screen is appropriate, and the reason is stated.',
+    'NOT BUILT' => 'No backend exists to be orphaned. A product gap with a named owner, not a missing screen.',
     'DEPRECATED' => 'Present in code, no longer part of the product.',
     'ORPHAN' => 'Found with no surface. Each has been ruled to an owner; the ruling is not the surface, '
         . 'so the list reaches zero only when the screen exists.',
@@ -193,7 +222,7 @@ $out[] = '';
 /* The verdicts that still ask something of a reader get the full record; the ones that are
    settled get a row. Both are here, because the rule is that every capability is accounted for —
    but a resolved capability does not need a paragraph to say so. */
-const NEEDS_A_DECISION = ['ORPHAN', 'INTERNAL BY DESIGN', 'DEPRECATED'];
+const NEEDS_A_DECISION = ['ORPHAN', 'NOT BUILT', 'INTERNAL BY DESIGN', 'DEPRECATED', 'FIXED'];
 
 foreach (VERDICTS as $verdict) {
     $items = $byVerdict[$verdict] ?? [];
@@ -286,7 +315,10 @@ foreach ($areas as $area => $items) {
 
     $incomplete = [];
     foreach ($items as $record) {
-        if (($record['verdict'] ?? '') === 'INTERNAL BY DESIGN' || ($record['verdict'] ?? '') === 'DEPRECATED') {
+        // Ruled records are not listed as incomplete coverage: infrastructure with no appropriate
+        // screen, code that is no longer part of the product, and a capability that has no backend
+        // at all are three different answers, and none of them is "a surface is missing".
+        if (in_array($record['verdict'] ?? '', ['INTERNAL BY DESIGN', 'DEPRECATED', 'NOT BUILT'], true)) {
             continue;
         }
 

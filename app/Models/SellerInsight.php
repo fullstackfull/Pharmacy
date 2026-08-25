@@ -151,6 +151,18 @@ class SellerInsight extends Model
         return $query->where('seller_id', $sellerId);
     }
 
+    /**
+     * Only what the platform has already promoted at least once.
+     *
+     * Escalation climbs one level at a time and never falls, so a non-zero level is a statement
+     * about elapsed silence rather than about severity: a low-severity issue nobody answered for a
+     * week outranks a critical one raised this morning.
+     */
+    public function scopeEscalated(Builder $query): Builder
+    {
+        return $query->where('escalation_level', '>', 0);
+    }
+
     /** Worst first, then by how much it matters, then newest. The Control Tower's order. */
     public function scopeWorstFirst(Builder $query): Builder
     {

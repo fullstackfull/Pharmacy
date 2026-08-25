@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\RestAPI\v1;
 
+use App\Services\Commerce\OrderStatePolicy;
 use App\Events\DigitalProductOtpVerificationEvent;
 use App\Events\RefundEvent;
 use App\Http\Controllers\Controller;
@@ -120,7 +121,9 @@ class OrderController extends Controller
             return response()->json(['message' => translate('order_not_found')], 404);
         }
 
-        if ($order['payment_method'] == 'cash_on_delivery' && $order['order_status'] == 'pending') {
+        // Same rule as the web cancel, read from the same declaration — the two used to be
+        // separate inline arrays that could drift apart without anything failing.
+        if ($order['payment_method'] == 'cash_on_delivery' && app(OrderStatePolicy::class)->customerMayCancel($order['order_status'])) {
             OrderManager::getStockUpdateOnOrderStatusChange($order, 'canceled');
             Order::where(['id' => $request->order_id])->update([
                 'order_status' => 'canceled'

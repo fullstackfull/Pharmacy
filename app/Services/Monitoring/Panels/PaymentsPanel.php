@@ -11,6 +11,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Payments: what the shop recorded taking, and everywhere the record contradicts itself.
@@ -201,6 +202,9 @@ class PaymentsPanel implements Panel
             'rate' => $rate,
             'findings' => $findings,
             'declines' => $declines,
+            // Did the gateway call back at all. Until receipts existed, a callback that never
+            // arrived and one that arrived and was rejected were the same absent row.
+            'callbacks' => $this->callbacks($range),
             'unrecorded' => $this->unrecorded(),
             'scans' => $this->scanReport(),
         ];
@@ -2042,35 +2046,60 @@ class PaymentsPanel implements Panel
         return [
             'state' => 'not_configured',
             'source' => 'code, not data',
-            'note' => 'Each of these is a measurement nothing on this deployment takes. They are drawn as unconfigured readings rather than as empty cells, because a blank latency column reads as a gateway that answered instantly.',
+            'note' => 'One measurement on this page still has no producer. It is drawn as an unconfigured reading rather than as an empty cell, because a blank latency column reads as a gateway that answered instantly.',
             'fields' => [
-                'payment_started' => Metric::notConfigured(
-                    source: 'analytics_events.payment_started',
-                    remedy: 'Emit it from App\\Traits\\Payment::generate_link() (app/Traits/Payment.php), immediately after $payment->save() — the single choke point every one of the fourteen gateways passes through.',
-                    note: 'Analytics::paymentAttempted() already maps an outcome of "started" onto this event, and no code path calls it that way. Without it, a shopper who left the gateway before it answered is invisible and no abandonment rate exists.',
-                ),
                 'gateway_latency' => Metric::notConfigured(
                     source: 'monitoring_dependency_buckets',
-                    remedy: 'Register one Http::globalMiddleware in MonitoringServiceProvider::boot() and increment MetricSink under BucketWriter::DEPENDENCY_PREFIX. The table, its writer, its rollup and the Overview cards that read it are already built.',
-                    note: 'Nothing times an outbound call to a gateway. Thirteen of the fourteen payment controllers are invisible to an Http:: middleware, but not for one reason: nine use raw curl_exec, three drive a vendor SDK (Stripe, Razorpay, MercadoPago) and SenangPay makes no outbound call at all. Only Paymera goes out through Http::, so the other twelve need instrumenting one at a time even after the middleware exists — and wrapping an SDK is not the same job as wrapping curl.',
-                ),
-                'webhook_receipts' => Metric::notConfigured(
-                    source: 'no table',
-                    remedy: 'Record each gateway callback — its gateway, its reference, its outcome and when it landed — at the top of the callback controllers in app/Http/Controllers/Payment_Methods/.',
-                    note: 'No gateway callback leaves a receipt anywhere. A callback that never arrived and one that arrived and failed are the same absence of a row, which is why "money captured with no order" below can name the symptom and never the cause.',
-                ),
-                'payment_request_outcome' => Metric::notConfigured(
-                    source: 'MySQL payment_requests',
-                    remedy: 'Add status, failure_code, failure_message, finalized_at and attempts to payment_requests, and write them from digital_payment_fail(). Index (status, created_at) and (payment_method, created_at) at the same time.',
-                    note: 'The gateway ledger records only is_paid. A declined card, a gateway timeout and a shopper who closed the tab are byte-identical rows, so no failure reason can be shown for any of them.',
-                ),
-                'payment_request_order_link' => Metric::notConfigured(
-                    source: 'MySQL payment_requests.attribute_id',
-                    remedy: 'Add order_id to payment_requests and set it in the success hook, then index it. The reconciliations on this page become exact rather than best-effort.',
-                    note: 'attribute_id holds a unix timestamp, not an order id (app/Http/Controllers/Customer/PaymentController.php). The only join available is orders.transaction_ref = payment_requests.transaction_id, varchar(30) against varchar(100), nullable on both sides.',
+                    remedy: 'Instrument the outbound call in each of the twelve controllers that do not use Http::. The table, its writer, its rollup and the Overview cards that read it are already built, and the global Http:: middleware already covers Paymera.',
+                    note: 'Thirteen of the fourteen payment controllers are invisible to an Http:: middleware, and not for one reason: nine use raw curl_exec, three drive a vendor SDK (Stripe, Razorpay, MercadoPago) and SenangPay makes no outbound call at all. Only Paymera goes out through Http::, so the other twelve need instrumenting one at a time even now that the middleware exists — and wrapping an SDK is not the same job as wrapping curl.',
                 ),
             ],
         ];
+    }
+
+    /**
+     * Did the gateway call back, and what did it say.
+     *
+     * The question this page could not answer at all. A callback that never arrived and one that
+     * arrived and was rejected were the same absence of a row, so it could name the symptom —
+     * money captured with no order — and never the cause.
+     *
+     * "Ignored" is kept apart from "failure" on purpose: a callback nothing acted on is a different
+     * incident from one that decided against the payment, and it is fixed in a different place.
+     *
+     * @return array<string, mixed>
+     */
+    private function callbacks(string $range): array
+    {
+        try {
+            if (!Schema::hasTable('payment_gateway_receipts')) {
+                return ['state' => 'not_configured', 'rows' => [], 'source' => 'payment_gateway_receipts'];
+            }
+
+            $rows = DB::table('payment_gateway_receipts')
+                ->where('created_at', '>=', $this->reader->since($range))
+                ->selectRaw('gateway, outcome, COUNT(*) as total, MAX(created_at) as last_seen_at')
+                ->groupBy('gateway', 'outcome')
+                ->orderBy('gateway')
+                ->limit(200)
+                ->get();
+
+            $byGateway = [];
+            foreach ($rows as $row) {
+                $gateway = (string) $row->gateway;
+                $byGateway[$gateway] ??= ['gateway' => $gateway, 'success' => 0, 'failure' => 0, 'ignored' => 0, 'last_seen_at' => null];
+                $byGateway[$gateway][$row->outcome] = (int) $row->total;
+                $byGateway[$gateway]['last_seen_at'] = max($byGateway[$gateway]['last_seen_at'], (string) $row->last_seen_at);
+            }
+
+            return [
+                'state' => $byGateway === [] ? 'empty' : 'ok',
+                'rows' => array_values($byGateway),
+                'source' => 'payment_gateway_receipts',
+            ];
+        } catch (\Throwable $exception) {
+            return ['state' => 'unavailable', 'rows' => [], 'message' => Metric::describeFailure($exception), 'source' => 'payment_gateway_receipts'];
+        }
     }
 
     // -------------------------------------------------------------------------------------------

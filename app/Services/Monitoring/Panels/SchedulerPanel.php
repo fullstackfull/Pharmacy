@@ -3,6 +3,8 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Collectors\CollectorRegistry;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -111,6 +113,11 @@ class SchedulerPanel implements Panel
             'observed' => $this->observed($statistics),
             'statistics' => $statistics,
             'history' => $this->history($range, $readings),
+            // What the two seller sweeps actually did, rather than only that they exited 0. A run
+            // that finishes cleanly while every rule inside it fails is filed as a success by the
+            // scheduled-task row alone — and every run and every action already records its own
+            // outcome, with nothing aggregating them anywhere in monitoring.
+            'seller_work' => $this->sellerWork($range),
             'unrendered' => $this->unrendered($readings),
         ];
     }
@@ -878,4 +885,52 @@ class SchedulerPanel implements Panel
 
         return $unrendered;
     }
+    /**
+     * The outcome of the work the scheduler drives, not just whether the sweep exited 0.
+     *
+     * `seller:run-automation` and `seller:run-stuck-bulk-jobs` were visible only as scheduled-task
+     * rows, so a sweep in which every rule failed looked exactly like one in which every rule
+     * applied. Read live from the two ledgers, and the panel says so — presenting these as a
+     * measured rate over the selected window would be a number that looks measured and is not.
+     *
+     * @return array<string, mixed>
+     */
+    private function sellerWork(string $range): array
+    {
+        if (!Schema::hasTable('seller_automation_runs')) {
+            return ['state' => 'not_installed'];
+        }
+
+        try {
+            $since = Clock::now()->copy()->subDay();
+
+            $runs = DB::table('seller_automation_runs')->where('created_at', '>=', $since->toDateTimeString());
+            $failedRuns = (int) (clone $runs)->where('outcome', 'failed')->count();
+            $totalRuns = (int) $runs->count();
+
+            $jobs = Schema::hasTable('seller_bulk_jobs')
+                ? DB::table('seller_bulk_jobs')->where('created_at', '>=', $since->toDateTimeString())
+                : null;
+
+            return [
+                'state' => 'ok',
+                'source' => 'seller_automation_runs, seller_bulk_jobs',
+                'note' => 'The last 24 hours of recorded outcomes, counted as they stand rather than measured over the selected window.',
+                'runs' => $totalRuns,
+                'runs_failed' => $failedRuns,
+                // The finding: a sweep that exits 0 while its rules fail. Reported as a share so a
+                // busy marketplace and a quiet one are read the same way.
+                'run_failure_share' => $totalRuns > 0 ? round(100 * $failedRuns / $totalRuns, 1) : null,
+                'jobs' => $jobs === null ? null : (int) $jobs->count(),
+                'jobs_failed' => $jobs === null ? null : (int) (clone $jobs)->whereIn('status', ['failed', 'partial'])->count(),
+                'jobs_stuck' => $jobs === null ? null : (int) (clone $jobs)
+                    ->whereIn('status', ['queued', 'processing'])
+                    ->where('created_at', '<=', Clock::now()->copy()->subHour()->toDateTimeString())
+                    ->count(),
+            ];
+        } catch (\Throwable $exception) {
+            return ['state' => 'failed', 'note' => Metric::describeFailure($exception)];
+        }
+    }
+
 }
