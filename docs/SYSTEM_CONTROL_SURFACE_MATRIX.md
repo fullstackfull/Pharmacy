@@ -251,7 +251,7 @@ the whole point of the document, so it is never blurred.
 |---|---|---|---|---|---|---|---|---|---|
 | Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
 | Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
-| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
+| Seller webhook delivery failure visibility | Oversight | View | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
 | Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Full | No | Developer | INTERNAL BY DESIGN |
 | Seller mobile API v2 — the previous seller app's entire surface, still routed | **None** | **None** | **None** | **None** | Health | Partial | No | Developer | DEPRECATED |
 | API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Full | No | Admin | CONNECTED TO DEVELOPER |
@@ -273,7 +273,7 @@ the whole point of the document, so it is never blurred.
 | API console: send a live request from the portal | Configure | **None** | **None** | **None** | **None** | Full | Yes | Developer | CONNECTED TO DEVELOPER PORTAL |
 | OpenAPI and Postman collection download | View | **None** | **None** | **None** | **None** | Full | No | Developer | CONNECTED TO DEVELOPER PORTAL |
 | API snapshot history and manifest rebuild | Oversight | **None** | **None** | **None** | **None** | Full | No | Developer | CONNECTED TO DEVELOPER PORTAL |
-| API keys the shop issues — mint a scoped key, see where each was last used, revoke one | Oversight | **None** | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
+| API keys the shop issues — mint a scoped key, see where each was last used, revoke one | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Webhooks the shop registers — create, enable, disable, delete, send a test, read the delivery log | Oversight | **None** | Manage | **None** | Failures | Documented | Yes | Seller | CONNECTED TO SELLER |
 | The catalogue of webhook events a shop can subscribe to | **None** | **None** | View | **None** | **None** | Documented | No | Developer | CONNECTED TO DEVELOPER PORTAL |
 | Advertising and marketplace campaigns a seller could join | Configure | **None** | **None** | Events | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
@@ -663,7 +663,7 @@ the whole point of the document, so it is never blurred.
 | Admin authentication and logout | Configure | Manage | Manage | **None** | Health | Partial | No | Admin | CONNECTED TO ADMIN |
 | Seller staff and roles — define a role, grant permissions, add and remove team members | Oversight | Manage | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Sign a staff member out of every session, and see who last accessed the shop | **None** | **None** | Manage | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
-| The shop's own audit trail — what was done in this shop, by whom, with the before and after | Oversight | **None** | View | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
+| The shop's own audit trail — what was done in this shop, by whom, with the before and after | Oversight | View | View | **None** | **None** | Documented | Yes | Seller | CONNECTED TO SELLER |
 | Seller staff sign-in with their own credentials | **None** | Manage | **None** | **None** | **None** | **None** | No | Seller Staff | CONNECTED TO SELLER |
 | Stripping passwords, OTPs, tokens and card numbers out of anything an instrumentation call attaches to an event | View | **None** | N/A | **None** | **None** | **None** | No | System | INTERNAL BY DESIGN |
 | Five separate permissions over analytics: read, export, campaign links, individual journeys, collection settings | Configure | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |

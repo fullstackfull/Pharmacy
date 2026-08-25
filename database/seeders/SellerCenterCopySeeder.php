@@ -4568,5 +4568,539 @@ class SellerCenterCopySeeder extends Seeder
             'Only a payout above the marketplace\'s threshold opens one.',
             'لا يفتح موافقة إلا سحب يتجاوز حدّ السوق.',
         ],
+
+        // ── Wave 7 — Enterprise: team, roles, the access review and integrations. Two audiences
+        // share these screens — an owner reviewing who can do what, and a developer wiring up a
+        // system — so the wording stays concrete on both sides: what a credential can do, and what
+        // happens when it is taken away.
+        'nav_organization' => [
+            'Organization',
+            'المنظومة',
+        ],
+        'nav_platform' => [
+            'Platform',
+            'المنصّة',
+        ],
+        'nav_api_keys' => [
+            'API keys',
+            'مفاتيح الواجهة البرمجية',
+        ],
+        'nav_integrations' => [
+            'Integrations',
+            'التكاملات',
+        ],
+        'who_works_in_this_shop' => [
+            'Who works in this shop',
+            'مَن يعمل في هذا المتجر',
+        ],
+        'and_what_each_of_them_may_do' => [
+            'And what each of them may do.',
+            'وما يجوز لكل منهم فعله.',
+        ],
+        'people_with_access' => [
+            'People with access',
+            'أشخاص لديهم صلاحية دخول',
+        ],
+        'n_accounts_in_total' => [
+            ':count accounts in total',
+            ':count حساب إجمالًا',
+        ],
+        'roles_defined' => [
+            'Roles defined',
+            'الأدوار المعرَّفة',
+        ],
+        'a_role_is_a_set_of_permissions_a_person_is_given' => [
+            'A role is a set of permissions a person is given.',
+            'الدور مجموعة صلاحيات تُمنح لشخص.',
+        ],
+        'permissions_available' => [
+            'Permissions available',
+            'الصلاحيات المتاحة',
+        ],
+        'set_by_the_marketplace_not_by_the_shop' => [
+            'Set by the marketplace, not by the shop.',
+            'يحدّدها السوق، لا المتجر.',
+        ],
+        'manage_team' => [
+            'Manage team',
+            'إدارة الفريق',
+        ],
+        'manage_roles' => [
+            'Manage roles',
+            'إدارة الأدوار',
+        ],
+        'add_someone' => [
+            'Add someone',
+            'إضافة شخص',
+        ],
+        'you_are_the_only_person_here' => [
+            'You are the only person here',
+            'أنت الشخص الوحيد هنا',
+        ],
+        'staff_sign_in_with_their_own_credentials_and_see_only_what_their_role_allows' => [
+            'Staff sign in with their own credentials and see only what their role allows.',
+            'يسجّل الموظفون الدخول ببياناتهم الخاصة ولا يرون إلا ما يسمح به دورهم.',
+        ],
+        'no_role_no_access' => [
+            'No role — no access',
+            'بلا دور — بلا صلاحية',
+        ],
+        'last_signed_in' => [
+            'Last signed in',
+            'آخر تسجيل دخول',
+        ],
+        'never' => [
+            'Never',
+            'أبدًا',
+        ],
+        'role' => [
+            'Role',
+            'الدور',
+        ],
+        'signed_in' => [
+            'Signed in',
+            'مسجَّل الدخول',
+        ],
+        'signed_in_now' => [
+            'Signed in now',
+            'مسجَّل الدخول الآن',
+        ],
+        'what_each_role_actually_grants' => [
+            'What each role actually grants',
+            'ما يمنحه كل دور فعليًا',
+        ],
+        'a_grid_is_the_only_form_in_which_two_roles_that_are_the_same_role_are_visible' => [
+            'A grid is the only form in which two roles that are the same role become visible.',
+            'الجدول الشبكي هو الشكل الوحيد الذي يُظهر أن دورين مختلفَي الاسم هما دور واحد.',
+        ],
+        'permission' => [
+            'Permission',
+            'الصلاحية',
+        ],
+        'n_people' => [
+            ':count people',
+            ':count أشخاص',
+        ],
+        'no_roles_defined' => [
+            'No roles defined',
+            'لا أدوار معرَّفة',
+        ],
+        'until_a_role_exists_only_you_can_act_as_this_shop' => [
+            'Until a role exists, only you can act as this shop.',
+            'إلى أن يوجد دور، لا يستطيع أحد سواك التصرّف باسم هذا المتجر.',
+        ],
+        'create_a_role' => [
+            'Create a role',
+            'إنشاء دور',
+        ],
+        'one_role_is_held_by_nobody' => [
+            'One role is held by nobody',
+            'دور واحد لا يحمله أحد',
+        ],
+        'n_roles_are_held_by_nobody' => [
+            ':count roles are held by nobody',
+            ':count أدوار لا يحملها أحد',
+        ],
+        'who_can_act_as_this_shop' => [
+            'Who can act as this shop',
+            'مَن يستطيع التصرّف باسم هذا المتجر',
+        ],
+        'read_from_the_credentials_themselves_rather_than_from_a_list_of_accounts' => [
+            'Read from the credentials themselves, rather than from a list of accounts.',
+            'مقروء من بيانات الاعتماد نفسها، لا من قائمة حسابات.',
+        ],
+        'people_who_can_sign_in' => [
+            'People who can sign in',
+            'أشخاص يمكنهم تسجيل الدخول',
+        ],
+        'n_hold_a_live_session' => [
+            ':count hold a live session',
+            ':count لديهم جلسة نشطة',
+        ],
+        'api_keys_that_still_work' => [
+            'API keys that still work',
+            'مفاتيح ما زالت تعمل',
+        ],
+        'a_key_acts_as_the_whole_shop_within_its_scopes' => [
+            'A key acts as the whole shop, within its scopes.',
+            'المفتاح يتصرّف باسم المتجر كله، ضمن نطاقاته.',
+        ],
+        'recorded_actions' => [
+            'Recorded actions',
+            'الإجراءات المسجَّلة',
+        ],
+        'everything_done_in_this_shops_name' => [
+            'Everything done in this shop\'s name.',
+            'كل ما تم باسم هذا المتجر.',
+        ],
+        'people' => [
+            'People',
+            'الأشخاص',
+        ],
+        'keys' => [
+            'Keys',
+            'المفاتيح',
+        ],
+        'unnamed' => [
+            'Unnamed',
+            'بلا اسم',
+        ],
+        'full_access' => [
+            'Full access',
+            'صلاحية كاملة',
+        ],
+        'manage' => [
+            'Manage',
+            'إدارة',
+        ],
+        'no_key_can_act_as_this_shop' => [
+            'No key can act as this shop',
+            'لا مفتاح يستطيع التصرّف باسم هذا المتجر',
+        ],
+        'revoked_and_expired_keys_are_left_out_a_key_that_cannot_act_is_not_an_answer_to_who_can' => [
+            'Revoked and expired keys are left out. A key that cannot act is not an answer to who can.',
+            'المفاتيح الملغاة والمنتهية غير مدرجة. المفتاح الذي لا يستطيع التصرّف ليس جوابًا على سؤال مَن يستطيع.',
+        ],
+        'last_used_on_x' => [
+            'Last used on :date',
+            'آخر استخدام في :date',
+        ],
+        'never_used' => [
+            'Never used',
+            'لم يُستخدم قط',
+        ],
+        'everything' => [
+            'Everything',
+            'كل شيء',
+        ],
+        'trail_seller_staff' => [
+            'Team',
+            'الفريق',
+        ],
+        'trail_seller_automation' => [
+            'Automation',
+            'الأتمتة',
+        ],
+        'trail_integration' => [
+            'Integrations',
+            'التكاملات',
+        ],
+        'trail_payout' => [
+            'Payouts',
+            'السحوبات',
+        ],
+        'trail_product' => [
+            'Catalogue',
+            'الكتالوج',
+        ],
+        'showing_the_most_recent_n_of_m' => [
+            'Showing the most recent :shown of :total',
+            'عرض أحدث :shown من :total',
+        ],
+        'nothing_has_been_recorded_yet' => [
+            'Nothing has been recorded yet',
+            'لم يُسجَّل شيء بعد',
+        ],
+        'actions_taken_by_you_or_your_staff_appear_here_as_they_happen' => [
+            'Actions taken by you or your staff appear here as they happen.',
+            'تظهر هنا الإجراءات التي تقوم بها أنت أو موظفوك فور حدوثها.',
+        ],
+        'nothing_in_this_area' => [
+            'Nothing in this area',
+            'لا شيء في هذا المجال',
+        ],
+        'choose_everything_to_see_the_whole_trail' => [
+            'Choose "Everything" to see the whole trail.',
+            'اختر «كل شيء» لعرض السجل كاملًا.',
+        ],
+        'on_what' => [
+            'On what',
+            'على ماذا',
+        ],
+        'the_platform' => [
+            'The platform',
+            'المنصّة',
+        ],
+        'how_your_systems_talk_to_this_marketplace' => [
+            'How your systems talk to this marketplace',
+            'كيف تتحدّث أنظمتك إلى هذا السوق',
+        ],
+        'and_how_it_talks_back_to_them' => [
+            'And how it talks back to them.',
+            'وكيف يردّ عليها.',
+        ],
+        'nav_integration_health' => [
+            'Delivery health',
+            'حالة التسليم',
+        ],
+        'one_endpoint_was_switched_off' => [
+            'One endpoint was switched off',
+            'أُوقف مقصد واحد',
+        ],
+        'n_endpoints_were_switched_off' => [
+            ':count endpoints were switched off',
+            'أُوقفت :count مقاصد',
+        ],
+        'an_endpoint_that_stops_answering_is_switched_off_rather_than_retried_for_ever' => [
+            'An endpoint that stops answering is switched off rather than retried for ever. Nothing is being delivered to it.',
+            'المقصد الذي يتوقّف عن الاستجابة يُوقَف بدل إعادة المحاولة إلى الأبد. لا يُسلَّم إليه شيء.',
+        ],
+        'one_endpoint_is_failing' => [
+            'One endpoint is failing',
+            'مقصد واحد يفشل',
+        ],
+        'n_endpoints_are_failing' => [
+            ':count endpoints are failing',
+            ':count مقاصد تفشل',
+        ],
+        'deliveries_are_being_retried_an_endpoint_is_switched_off_after_ten_failures_in_a_row' => [
+            'Deliveries are being retried. An endpoint is switched off after ten failures in a row.',
+            'تُعاد محاولة التسليم. يُوقَف المقصد بعد عشرة إخفاقات متتالية.',
+        ],
+        'keys_that_still_work' => [
+            'Keys that still work',
+            'مفاتيح ما زالت تعمل',
+        ],
+        'keys_ever_issued' => [
+            'Keys ever issued',
+            'المفاتيح الصادرة إجمالًا',
+        ],
+        'a_key_acts_as_the_whole_shop_within_its_scopes_and_is_shown_once_when_issued' => [
+            'A key acts as the whole shop within its scopes, and is shown once when issued.',
+            'المفتاح يتصرّف باسم المتجر كله ضمن نطاقاته، ويُعرض مرة واحدة عند إصداره.',
+        ],
+        'endpoints_receiving_events' => [
+            'Endpoints receiving events',
+            'مقاصد تستقبل الأحداث',
+        ],
+        'endpoints_switched_off' => [
+            'Endpoints switched off',
+            'مقاصد مُوقَفة',
+        ],
+        'events_you_can_subscribe_to' => [
+            'Events you can subscribe to',
+            'أحداث يمكنك الاشتراك بها',
+        ],
+        'events_this_marketplace_raises' => [
+            'Events this marketplace raises',
+            'الأحداث التي يطلقها هذا السوق',
+        ],
+        'copy_this_key_now' => [
+            'Copy this key now',
+            'انسخ هذا المفتاح الآن',
+        ],
+        'it_is_shown_once_and_stored_only_as_a_hash_if_you_lose_it_issue_another_and_revoke_this_one' => [
+            'It is shown once and stored only as a hash. If you lose it, issue another and revoke this one.',
+            'يُعرض مرة واحدة ويُخزَّن كبصمة فقط. إن فقدته، أصدر غيره وألغِ هذا.',
+        ],
+        'issue_a_key' => [
+            'Issue a key',
+            'إصدار مفتاح',
+        ],
+        'what_this_key_is_for_so_it_can_be_recognised_later' => [
+            'What this key is for, so it can be recognised later.',
+            'الغرض من هذا المفتاح، ليُعرَف لاحقًا.',
+        ],
+        'optional_a_key_with_no_expiry_works_until_it_is_revoked' => [
+            'Optional. A key with no expiry works until it is revoked.',
+            'اختياري. المفتاح بلا تاريخ انتهاء يعمل حتى يُلغى.',
+        ],
+        'what_it_may_do' => [
+            'What it may do',
+            'ما يجوز له فعله',
+        ],
+        'a_key_can_never_be_given_more_than_the_person_issuing_it_holds' => [
+            'A key can never be given more than the person issuing it holds.',
+            'لا يُمنح المفتاح أكثر مما يملكه مُصدِره.',
+        ],
+        'no_keys_yet' => [
+            'No keys yet',
+            'لا مفاتيح بعد',
+        ],
+        'a_key_lets_your_own_systems_read_and_write_here_without_a_person_signing_in' => [
+            'A key lets your own systems read and write here without a person signing in.',
+            'يتيح المفتاح لأنظمتك القراءة والكتابة هنا دون تسجيل دخول شخص.',
+        ],
+        'nothing_a_key_with_no_scopes_can_read_nothing' => [
+            'Nothing — a key with no scopes can read nothing',
+            'لا شيء — المفتاح بلا نطاقات لا يقرأ شيئًا',
+        ],
+        'last_used' => [
+            'Last used',
+            'آخر استخدام',
+        ],
+        'revoke_this_key_anything_using_it_stops_working_on_its_very_next_request' => [
+            'Revoke this key? Anything using it stops working on its very next request.',
+            'إلغاء هذا المفتاح؟ سيتوقّف كل ما يستخدمه عند طلبه التالي مباشرة.',
+        ],
+        'where_this_marketplace_sends_your_shops_events' => [
+            'Where this marketplace sends your shop\'s events.',
+            'إلى أين يرسل هذا السوق أحداث متجرك.',
+        ],
+        'copy_this_signing_secret_now' => [
+            'Copy this signing secret now',
+            'انسخ مفتاح التوقيع الآن',
+        ],
+        'every_delivery_is_signed_with_it_verify_the_signature_or_anybody_can_post_to_your_endpoint' => [
+            'Every delivery is signed with it. Verify the signature, or anybody can post to your endpoint.',
+            'كل عملية تسليم مُوقَّعة به. تحقّق من التوقيع، وإلا استطاع أي أحد الإرسال إلى مقصدك.',
+        ],
+        'add_an_endpoint' => [
+            'Add an endpoint',
+            'إضافة مقصد',
+        ],
+        'destination' => [
+            'Destination',
+            'المقصد',
+        ],
+        'https_only_a_signed_delivery_over_plain_http_is_signed_plaintext' => [
+            'https only. A signed delivery over plain http is signed plaintext, and the payload carries order and payout details.',
+            'https فقط. التسليم المُوقَّع عبر http عادي هو نصّ ظاهر مُوقَّع، والحمولة تحمل تفاصيل الطلبات والسحوبات.',
+        ],
+        'subscribed_to' => [
+            'Subscribed to',
+            'مشترك بـ',
+        ],
+        'an_endpoint_receives_only_the_events_it_asked_for' => [
+            'An endpoint receives only the events it asked for.',
+            'لا يستقبل المقصد إلا الأحداث التي طلبها.',
+        ],
+        'nothing_is_being_told_about_your_events' => [
+            'Nothing is being told about your events',
+            'لا شيء يُبلَّغ بأحداثك',
+        ],
+        'add_an_endpoint_and_this_marketplace_will_post_to_it_as_things_happen' => [
+            'Add an endpoint and this marketplace will post to it as things happen.',
+            'أضف مقصدًا وسيرسل إليه هذا السوق فور وقوع الأحداث.',
+        ],
+        'health' => [
+            'Health',
+            'الحالة',
+        ],
+        'nothing_sent_yet' => [
+            'Nothing sent yet',
+            'لم يُرسَل شيء بعد',
+        ],
+        'n_failures_in_a_row' => [
+            ':count failures in a row',
+            ':count إخفاقات متتالية',
+        ],
+        'last_delivered_x' => [
+            'Last delivered :date',
+            'آخر تسليم :date',
+        ],
+        'send_a_test' => [
+            'Send a test',
+            'إرسال اختبار',
+        ],
+        'remove_this_endpoint_its_deliveries_stay_removing_it_does_not_un_send_them' => [
+            'Remove this endpoint? Its deliveries stay — removing it does not un-send them.',
+            'إزالة هذا المقصد؟ تبقى عمليات التسليم — إزالته لا تلغي ما أُرسل.',
+        ],
+        'what_was_sent_and_what_came_back' => [
+            'What was sent, and what came back',
+            'ما أُرسل وما عاد',
+        ],
+        'every_attempt_kept_whether_it_worked_or_not' => [
+            'Every attempt, kept whether it worked or not.',
+            'كل محاولة محفوظة، سواء نجحت أم لا.',
+        ],
+        'endpoint_n' => [
+            'Endpoint #:id',
+            'المقصد رقم :id',
+        ],
+        'next_attempt_x' => [
+            'Next attempt :date',
+            'المحاولة التالية :date',
+        ],
+        'what_came_back' => [
+            'What came back',
+            'ما عاد',
+        ],
+        'no_response' => [
+            'No response',
+            'لا استجابة',
+        ],
+        'nothing_has_been_sent_yet' => [
+            'Nothing has been sent yet',
+            'لم يُرسَل شيء بعد',
+        ],
+        'deliveries_appear_here_as_events_happen_in_your_shop' => [
+            'Deliveries appear here as events happen in your shop.',
+            'تظهر عمليات التسليم هنا فور وقوع الأحداث في متجرك.',
+        ],
+        'no_deliveries_match_these_filters' => [
+            'No deliveries match these filters',
+            'لا عمليات تسليم تطابق هذه المرشّحات',
+        ],
+        'choose_everything_to_see_them_all' => [
+            'Choose "Everything" to see them all.',
+            'اختر «كل شيء» لعرضها كلها.',
+        ],
+        'event' => [
+            'Event',
+            'الحدث',
+        ],
+        'list_separator' => [
+            ',',
+            '،',
+        ],
+        // The permission catalogue, named in the seller's language rather than in the code's.
+        'products.view' => [
+            'View products',
+            'عرض المنتجات',
+        ],
+        'products.manage' => [
+            'Manage products',
+            'إدارة المنتجات',
+        ],
+        'orders.view' => [
+            'View orders',
+            'عرض الطلبات',
+        ],
+        'orders.manage' => [
+            'Manage orders',
+            'إدارة الطلبات',
+        ],
+        'inventory.manage' => [
+            'Manage inventory',
+            'إدارة المخزون',
+        ],
+        'promotions.manage' => [
+            'Manage promotions',
+            'إدارة العروض',
+        ],
+        'finance.view' => [
+            'View finance',
+            'عرض المالية',
+        ],
+        'payouts.request' => [
+            'Request payouts',
+            'طلب السحوبات',
+        ],
+        'reviews.view' => [
+            'View reviews',
+            'عرض التقييمات',
+        ],
+        'shop_settings.manage' => [
+            'Manage shop settings',
+            'إدارة إعدادات المتجر',
+        ],
+        'staff.manage' => [
+            'Manage the team',
+            'إدارة الفريق',
+        ],
+        'promotions' => [
+            'Promotions',
+            'العروض',
+        ],
+        'reviews' => [
+            'Reviews',
+            'التقييمات',
+        ],
+        'revoked' => [
+            'Revoked',
+            'مُلغى',
+        ],
     ];
 }

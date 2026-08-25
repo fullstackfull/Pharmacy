@@ -37,7 +37,7 @@ when it comes, is a decision taken per screen, not a side effect (PART 15).
 | 4 | Fulfilment — returns, refunds, shipments, exceptions, picking, packing, warehouse, bulk jobs, action centre | **Done** | — |
 | 5 | Finance — overview, transactions, payouts, statements, reconciliation, fees, pricing | **Done** | — |
 | 6 | Trust — performance, account health, SLA, compliance, brand registry, brand protection, incidents, approvals | **Done** (cases and appeals are NOT BUILT, see below) | — |
-| 7 | Enterprise — team, roles, approvals, audit log, security centre, cases, appeals | Not started | — |
+| 7 | Enterprise — team, roles, security centre, integrations, API keys, webhooks, delivery health | **Done** (cases and appeals are NOT BUILT) | — |
 | 8 | Platform — reports, exports, bulk operations, connected apps, API credentials, webhooks | Not started | — |
 
 ---
@@ -163,7 +163,7 @@ Taken from PART 21 and `13-implementation-priority.md`; a wave is not done until
 
 ## Open
 
-- Waves 7–8, in the order above.
+- Wave 8.
 - Per-wave Flutter audits (PART 11) and the cross-client parity tests of PART 16 — a setting written from one
   client is visible in the other, a permission denied in one is denied in the other.
 
@@ -263,3 +263,50 @@ saying which is the difference between a bug report and a fact.
 today. The 15 that remain are Wave 7 (team, roles, security, integrations), Wave 8 (reports, exports,
 scheduled operations), and advertising, cases and appeals, which have no backend behind them and are recorded
 as NOT BUILT rather than deferred.
+
+---
+
+## Wave 7 — Enterprise
+
+**Screens** — `/vendor/team`, `/vendor/team/roles`, `/vendor/security`, `/vendor/integrations` with `api`,
+`webhooks` and `health`.
+
+**Team and roles read; they do not write.** The classic staff page is a working, audited set of forms, and a
+second form writing the same role is how two people end up disagreeing about what `orders.manage` means. What
+was missing was never the forms — it was a reading of them. The roles screen is a grid of role against
+permission, because that is the only form in which "these two roles are the same role with different names"
+is visible, and that is the finding an access review exists to produce. A role nobody holds is called out for
+the same reason.
+
+**Security answers who can act as this shop right now.** Read from the credentials themselves rather than
+from a list of accounts: the owner holds a token, each staff member holds their own, and each live API key is
+a third kind of door. Revoked and expired keys are left out on purpose — a key that cannot act is not an
+answer to who can. The trail beneath is filtered by area because that is how it is actually read: somebody
+asks who changed the automation rules, never "show me everything". Somebody who has since left still appears
+in the history of what they did, which is exactly when a seller wants to look.
+
+**Integrations existed only on the phone.** A seller wiring up an ERP was told to install the app, mint a key
+on a handset and copy it across, and there was no screen anywhere that would show them why their endpoint had
+stopped receiving orders. Integration work happens at a desk. `/vendor/integrations/api` issues, lists and
+revokes keys — scopes narrowed to what the issuer holds, the key shown once and never again.
+`/vendor/integrations/webhooks` adds, repoints, pauses, tests and removes endpoints, with the signing secret
+shown once. `/vendor/integrations/health` is every delivery attempt, kept whether it worked or not: a seller
+whose integration is quietly missing every third order needs to see the third one, and a failure counter on
+the endpoint cannot show them which.
+
+**One rule stayed in the controller rather than the service, because it is about who is asking:** a key
+cannot manage keys. An integration that leaks should cost the seller what that integration could do; if a
+leaked key could mint another or delete the webhook that would have reported it, the limit on its scopes
+would be decorative.
+
+**Everything else moved into `SellerIntegrationService`,** which the v3 API now calls too. Writing a second
+client is exactly the moment the https-only rule, the destination check and what a repoint resets stop being
+one controller's private business: two implementations of "which destinations may this platform be made to
+dial" is one implementation and one hole.
+
+**The extraction found a live defect.** `setWebhookStatus` carried `consecutive_failures` through from the
+model, and that attribute is null on a model that has not been refreshed since its insert — so pausing an
+endpoint created moments earlier wrote a null into a NOT NULL column. It was in the shipped API path.
+Casting fixes it; the test that caught it asserts the pause, not the cast.
+
+12 tests for the wave, all three languages seeded. The rail now resolves 62 of its designed destinations.

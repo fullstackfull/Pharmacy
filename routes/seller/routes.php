@@ -14,6 +14,7 @@ use App\Http\Controllers\Seller\FinanceController;
 use App\Http\Controllers\Seller\FulfilmentController;
 use App\Http\Controllers\Seller\HomeController;
 use App\Http\Controllers\Seller\IncidentController;
+use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\InventoryController;
 use App\Http\Controllers\Seller\IssueController;
 use App\Http\Controllers\Seller\OpportunityController;
@@ -26,6 +27,8 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\RefundController;
 use App\Http\Controllers\Seller\ReturnController;
 use App\Http\Controllers\Seller\SearchController;
+use App\Http\Controllers\Seller\SecurityController;
+use App\Http\Controllers\Seller\TeamController;
 use App\Http\Controllers\Seller\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -248,6 +251,42 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
         // approver is by definition not the requester.
         Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index')
             ->middleware('seller_can:staff.manage');
+
+        // ── Wave 7 — Enterprise.
+
+        // Who works in this shop, and what each of them may do. Reading only: the classic staff
+        // forms already write roles and people, and two forms writing the same role is how two
+        // people end up disagreeing about what `orders.manage` means.
+        Route::controller(TeamController::class)->prefix('team')->as('team.')
+            ->middleware('seller_can:staff.manage')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('roles', 'roles')->name('roles');
+            });
+
+        // Who can act as this shop right now — people and keys alike — and what has been done in
+        // its name. Read-only by nature: an access review that could change access is not a review.
+        Route::get('security', [SecurityController::class, 'index'])->name('security.index')
+            ->middleware('seller_can:staff.manage');
+
+        // Keys and webhooks. These existed only on the phone, which is the wrong device for the
+        // work: nobody wires up an ERP on a handset.
+        Route::controller(IntegrationController::class)->prefix('integrations')->as('integrations.')
+            ->middleware('seller_can:shop_settings.manage')->group(function () {
+                Route::get('/', 'index')->name('index');
+
+                Route::get('api', 'api')->name('api');
+                Route::post('api', 'storeKey')->name('api.store');
+                Route::delete('api/{key}', 'revokeKey')->whereNumber('key')->name('api.revoke');
+
+                Route::get('webhooks', 'webhookList')->name('webhooks');
+                Route::post('webhooks', 'storeWebhook')->name('webhooks.store');
+                Route::put('webhooks/{webhook}', 'updateWebhook')->whereNumber('webhook')->name('webhooks.update');
+                Route::post('webhooks/{webhook}/status', 'setWebhookStatus')->whereNumber('webhook')->name('webhooks.status');
+                Route::post('webhooks/{webhook}/test', 'testWebhook')->whereNumber('webhook')->name('webhooks.test');
+                Route::delete('webhooks/{webhook}', 'destroyWebhook')->whereNumber('webhook')->name('webhooks.destroy');
+
+                Route::get('health', 'health')->name('health');
+            });
 
         Route::get('search', SearchController::class)->name('search');
         Route::get('help', [HelpController::class, 'index'])->name('help');

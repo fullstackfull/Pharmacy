@@ -1249,7 +1249,7 @@
         "area": "integrations",
         "backend": "app/Services/Monitoring/Panels/IntegrationsPanel.php::sellerWebhooks(), drawn on Monitoring → Integrations",
         "admin": "Oversight",
-        "seller_web": "None",
+        "seller_web": "View",
         "flutter": "View",
         "analytics": "None",
         "monitor": "Full",
@@ -1257,7 +1257,7 @@
         "audit": "Partial",
         "owner": "Admin",
         "verdict": "CONNECTED TO ADMIN",
-        "note": "Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see. RESOLVED. Endpoints, active, auto-disabled (with the number of sellers affected), waiting-to-retry and given-up-on. Read live from the delivery ledger and the page says so — reporting them as a windowed rate would be a number that looks measured and is not."
+        "note": "Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see. RESOLVED. Endpoints, active, auto-disabled (with the number of sellers affected), waiting-to-retry and given-up-on. Read live from the delivery ledger and the page says so — reporting them as a windowed rate would be a number that looks measured and is not. Wave 7 added the seller's own side at /vendor/integrations/health: every delivery attempt, kept whether it worked or not, with the response code and the error. A seller whose integration is quietly missing every third order needs to see the third one, and a failure counter on the endpoint cannot show them which."
     },
     {
         "capability": "Blast radius — how many sellers a failure is affecting",
@@ -1682,7 +1682,7 @@
     {
         "capability": "Creating, editing, repointing or deleting a seller's outbound webhook",
         "area": "integrations",
-        "backend": "app/Http/Controllers/RestAPI/v3/seller/SellerIntegrationController.php records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs",
+        "backend": "app/Services/Marketplace/SellerIntegrationService.php holds the create/repoint/status/delete/test decisions and records integration.webhook_created / _repointed / _status_changed / _deleted with both URLs; called by both the v3 API controller and the web Seller\\IntegrationController",
         "admin": "Oversight",
         "seller_web": "Manage",
         "flutter": "Manage",
@@ -1692,7 +1692,7 @@
         "audit": "Yes",
         "owner": "Seller",
         "verdict": "CONNECTED TO SELLER",
-        "note": "Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing. RESOLVED. Only the two paths that switched an endpoint OFF were audited, so repointing a live webhook at a new destination — the shape an exfiltration of a shop's event stream would take — wrote nothing at all. Also removed a duplicated destination guard in the create path."
+        "note": "Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF were audited - the dispatcher's auto-disable and the admin kill switch - so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, wrote nothing. RESOLVED, and in Wave 7 the decisions moved out of the API controller into SellerIntegrationService so the panel and the phone cannot disagree about which destinations may be dialled or what a repoint resets. The move surfaced a live defect: pausing an endpoint carried through a consecutive_failures attribute that is null on a model not refreshed since its insert, writing a null into a NOT NULL column."
     },
     {
         "capability": "Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout",
@@ -4939,7 +4939,7 @@
         "area": "security",
         "backend": "routes/rest_api/v3/seller.php:547 — GET api/v3/seller/seller-center/security/audit (seller_can:staff.manage); app/Services/Marketplace/SellerAuditTrailService.php over app/Services/AuditLogger.php",
         "admin": "Oversight",
-        "seller_web": "None",
+        "seller_web": "View",
         "flutter": "View",
         "analytics": "None",
         "monitor": "None",
@@ -4947,7 +4947,7 @@
         "audit": "Yes",
         "owner": "Seller",
         "verdict": "CONNECTED TO SELLER",
-        "note": "APP ONLY — nav_audit and nav_security (Navigation.php:193-194) are unrouted; the admin has the unified audit centre at /home/user/Pharmacy/routes/admin/routes.php:577 and the seller's own view is phone-only."
+        "note": "Fixed in Wave 7: /vendor/security is the seller's own access review and audit trail on the web. It reads who can act as this shop from the credentials themselves - the owner's token, each staff member's, and each live API key - rather than from a list of accounts, and the trail is filterable by area because that is how it is actually read: somebody asks who changed the automation rules, not for everything."
     },
     {
         "capability": "Seller staff sign-in with their own credentials",
@@ -4969,7 +4969,7 @@
         "area": "integrations",
         "backend": "routes/rest_api/v3/seller.php:516-523 — GET/POST/DELETE api/v3/seller/seller-center/integrations/keys (seller_can:shop_settings.manage); app/Services/Marketplace/SellerApiKeyService.php",
         "admin": "Oversight",
-        "seller_web": "None",
+        "seller_web": "Manage",
         "flutter": "Manage",
         "analytics": "None",
         "monitor": "None",
@@ -4977,7 +4977,7 @@
         "audit": "Yes",
         "owner": "Seller",
         "verdict": "CONNECTED TO SELLER",
-        "note": "APP ONLY — nav_api (Navigation.php:180) is unrouted; the admin can kill a leaked key at /home/user/Pharmacy/routes/admin/routes.php:650 but the seller who owns it can only manage keys from a phone."
+        "note": "Fixed in Wave 7: /vendor/integrations/api issues, lists and revokes keys on the web. Scopes are narrowed to what the person issuing holds, the key itself is shown once on the redirect that minted it, and a key cannot manage keys - the same refusal the API makes, for the same reason: a leaked key must not be able to mint another or cover its tracks."
     },
     {
         "capability": "Webhooks the shop registers — create, enable, disable, delete, send a test, read the delivery log",

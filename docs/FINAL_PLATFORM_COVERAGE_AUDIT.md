@@ -97,7 +97,7 @@ Incomplete — the owner cannot reach it (1):
 
 Backend: 46 capabilities
 Admin: 39 of 46 covered
-Seller Web: 5 of 46 covered
+Seller Web: 7 of 46 covered
 Flutter App: 16 of 31 covered
 Analytics: 3 of 44 covered
 Monitor: 21 of 46 covered
@@ -213,7 +213,7 @@ Incomplete — the owner cannot reach it (1):
 
 Backend: 47 capabilities
 Admin: 41 of 47 covered
-Seller Web: 8 of 47 covered
+Seller Web: 9 of 47 covered
 Flutter App: 20 of 31 covered
 Analytics: 3 of 45 covered
 Monitor: 11 of 47 covered

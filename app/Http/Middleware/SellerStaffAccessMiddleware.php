@@ -136,6 +136,13 @@ class SellerStaffAccessMiddleware
             'performance', 'compliance', 'brands', 'incidents' => self::ALLOW,
             'approvals' => 'staff.manage',
 
+            // Wave 7's enterprise screens. Team and the access review are staff work by definition;
+            // integrations are shop settings, because a key or an endpoint acts as the whole shop
+            // rather than as one area of it. The routes declare the same, and this is the coarse
+            // pre-filter rather than the decision.
+            'team', 'security' => 'staff.manage',
+            'integrations' => 'shop_settings.manage',
+
             // Delivery team is an order-fulfilment concern.
             'delivery-man' => 'orders.manage',
 
