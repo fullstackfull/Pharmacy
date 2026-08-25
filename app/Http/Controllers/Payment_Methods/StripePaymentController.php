@@ -18,7 +18,7 @@ class StripePaymentController extends Controller
 {
     use Processor;
 
-    private $config_values;
+    private $config_values = null;
     private PaymentRequest $payment;
 
     public function __construct(PaymentRequest $payment)

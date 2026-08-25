@@ -591,3 +591,28 @@
     {{ translate('no_credential_value_is_ever_published_on_this_page') }}.
     {{ translate('all_timestamps_are_shown_in') }} {{ $window['timezone'] }}.
 </p>
+
+{{-- The one outbound integration this shop owns rather than merely calls. It had no panel, no
+     check, no series and no rule anywhere in monitoring, so a seller whose endpoint the platform
+     had switched off after a day of failures was visible only if an admin opened another page. --}}
+@php($webhooks = $panel['seller_webhooks'] ?? ['state' => 'not_installed'])
+<x-k.card :title="translate('outbound_webhooks_to_sellers')">
+    @if (($webhooks['state'] ?? '') === 'ok')
+        <div class="k-stats">
+            <x-k.stat :label="translate('endpoints')" :value="number_format($webhooks['endpoints'])" icon="plug" />
+            <x-k.stat :label="translate('active')" :value="number_format($webhooks['active'])" icon="check" />
+            <x-k.stat :label="translate('switched_off_by_us')" :value="number_format($webhooks['auto_disabled'])" icon="alert"
+                      :caption="$webhooks['sellers_affected'] . ' ' . translate('sellers_affected')" />
+            <x-k.stat :label="translate('waiting_to_retry')" :value="number_format($webhooks['waiting_to_retry'])" icon="clock" />
+            <x-k.stat :label="translate('given_up_on')" :value="number_format($webhooks['failed'])" icon="warning-octagon" />
+        </div>
+        <p class="mon-note">
+            {{ $webhooks['note'] }}
+            {{ translate('the_retry_sweep_is') }} <code>{{ $webhooks['retry_sweep'] }}</code>.
+            <code>{{ $webhooks['source'] }}</code>
+        </p>
+    @else
+        <x-k.empty icon="plug" :title="translate('seller_webhook_delivery_could_not_be_read')"
+                   :text="$webhooks['note'] ?? ''" />
+    @endif
+</x-k.card>

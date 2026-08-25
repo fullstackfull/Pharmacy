@@ -13,6 +13,30 @@
 
         @include('admin-views.third-party._third-party-payment-method-menu')
 
+        {{-- A gateway that is switched on and cannot take a payment.
+
+             Credentials live as two separate blobs — live_values and test_values — and each
+             controller reads only the one matching the row's mode. So a fully filled-in, green
+             gateway on this page refuses every payment at checkout when the keys were typed into
+             the mode that is switched off, and nothing on the form could ever say so. --}}
+        @if (!empty($brokenGateways))
+            <div class="alert alert-danger">
+                <strong>{{ translate('these_gateways_are_switched_on_and_cannot_take_a_payment') }}:</strong>
+                <ul class="mb-0 mt-2 fs-12">
+                    @foreach ($brokenGateways as $gateway)
+                        <li><strong>{{ $gateway['gateway'] }}</strong> — {{ $gateway['verdict'] }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @if (!empty($rehearsingGateways))
+            <div class="alert alert-warning fs-12">
+                {{ translate('these_gateways_are_live_on_your_checkout_in_test_mode_so_no_money_moves') }}:
+                <strong>{{ implode(', ', $rehearsingGateways) }}</strong>.
+            </div>
+        @endif
+
         <div class="bg-warning bg-opacity-10 fs-12 px-12 py-10 text-dark rounded mb-3">
             <div class="d-flex gap-2 align-items-center mb-1">
                 <i class="fi fi-sr-info text-warning"></i>

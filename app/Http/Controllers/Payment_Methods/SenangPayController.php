@@ -19,7 +19,7 @@ class SenangPayController extends Controller
 {
     use Processor;
 
-    private $config_values;
+    private $config_values = null;
 
     private PaymentRequest $payment;
     private $user;

@@ -15,7 +15,7 @@ class PaymobController extends Controller
 {
     use Processor;
 
-    private mixed $config_values;
+    private mixed $config_values = null;
 
     private PaymentRequest $payment;
     private User $user;
@@ -40,8 +40,15 @@ class PaymobController extends Controller
         }
         $this->payment = $payment;
         $this->user = $user;
-        $country = $this->config_values['supported_country'];
-        if (array_key_exists($country, $this->supportedCountries)) {
+
+        // A configuration row whose mode is neither "live" nor "test" leaves the credential blob
+        // unread, and indexing it then throws — in the CONSTRUCTOR, which Laravel runs whenever it
+        // gathers this route's middleware. One malformed settings row took down `route:list` and
+        // every page that enumerates routes. An unusable configuration falls back to the default
+        // base URL, which is a gateway that cannot take a payment rather than a fatal error.
+        $country = $this->config_values['supported_country'] ?? null;
+
+        if ($country !== null && array_key_exists($country, $this->supportedCountries)) {
             $this->base_url = $this->supportedCountries[$country];
         } else {
             $this->base_url = $this->defaultBaseUrl;

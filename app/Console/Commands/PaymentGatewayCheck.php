@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Services\Payments\GatewayReadiness;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,9 +28,6 @@ class PaymentGatewayCheck extends Command
     protected $signature = 'payment:check {gateway? : one gateway key, e.g. paymera}';
 
     protected $description = 'Report which payment gateways can actually take a payment, and why not';
-
-    /** Fields that are structure, not credentials — blank ones here are not a fault. */
-    private const NON_CREDENTIAL_FIELDS = ['gateway', 'mode', 'status'];
 
     public function handle(): int
     {
@@ -85,7 +83,7 @@ class PaymentGatewayCheck extends Command
                 $row->key_name,
                 $active ? 'on' : 'off',
                 var_export($row->mode, true),
-                $this->columnInForce($row->mode) ?? '—',
+                app(GatewayReadiness::class)->columnInForce($row->mode) ?? '—',
                 $verdict === 'ready' ? 'ready' : 'CANNOT TAKE PAYMENTS',
             ];
         }
@@ -121,15 +119,6 @@ class PaymentGatewayCheck extends Command
         return self::SUCCESS;
     }
 
-    /** Which JSON column the controllers will actually read for this row's mode. */
-    private function columnInForce(?string $mode): ?string
-    {
-        return match ($mode) {
-            'live' => 'live_values',
-            'test' => 'test_values',
-            default => null,
-        };
-    }
 
     /**
      * The row's fault in one phrase, or "ready".
@@ -138,61 +127,7 @@ class PaymentGatewayCheck extends Command
      */
     private function verdict(object $row): string
     {
-        $column = $this->columnInForce($row->mode);
-
-        if ($column === null) {
-            return 'mode is ' . var_export($row->mode, true) . ' — expected "live" or "test", so no column is read';
-        }
-
-        $values = json_decode((string) ($row->$column ?? ''), true);
-
-        if (!is_array($values) || $values === []) {
-            return $column . ' is empty or not valid JSON';
-        }
-
-        $blank = [];
-        foreach ($values as $field => $value) {
-            if (in_array($field, self::NON_CREDENTIAL_FIELDS, true)) {
-                continue;
-            }
-            if ($value === null || $value === '') {
-                $blank[] = $field;
-            }
-        }
-
-        if ($blank !== []) {
-            $other = $column === 'live_values' ? 'test_values' : 'live_values';
-            $savedElsewhere = $this->hasValues($row->$other ?? null, $blank);
-
-            return $column . ' has no ' . implode(', ', $blank)
-                . ($savedElsewhere ? " — but {$other} does. The credentials are saved under the mode that is switched off." : '');
-        }
-
-        return 'ready';
+        return app(GatewayReadiness::class)->verdict($row);
     }
 
-    /**
-     * Whether the OTHER mode holds what this one is missing.
-     *
-     * This is the whole reason the command exists: it turns "the fields look filled in on my screen"
-     * into "they are, in the column your gateway is not reading".
-     *
-     * @param  array<int, string>  $fields
-     */
-    private function hasValues(mixed $json, array $fields): bool
-    {
-        $values = json_decode((string) $json, true);
-
-        if (!is_array($values)) {
-            return false;
-        }
-
-        foreach ($fields as $field) {
-            if (($values[$field] ?? '') === '') {
-                return false;
-            }
-        }
-
-        return true;
-    }
 }

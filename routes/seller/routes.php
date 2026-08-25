@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Seller\AuditController;
 use App\Http\Controllers\Seller\AutomationController;
 use App\Http\Controllers\Seller\AutomationHistoryController;
 use App\Http\Controllers\Seller\ControlTowerController;
@@ -105,6 +106,12 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
 
         Route::get('opportunities', OpportunityController::class)->name('opportunities.index')
             ->middleware('seller_can:products.view,products.manage');
+
+        // The shop's own history. The navigation has reserved this name since Wave 1 and the route
+        // did not exist, so the menu item was silently dropped and a seller could read their trail
+        // only from the phone app — which drops the before/after values.
+        Route::get('audit', [AuditController::class, 'index'])->name('audit.index')
+            ->middleware('seller_can:staff.manage');
 
         Route::get('search', SearchController::class)->name('search');
         Route::get('help', [HelpController::class, 'index'])->name('help');

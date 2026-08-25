@@ -23,6 +23,40 @@
             </div>
         </div>
 
+        {{-- The shape of the whole money model, and the only setting on this page that could not be
+             changed here: 35 branch sites read `currency_model`, including every conversion in
+             app/Utils/currency.php, and the only writer was the installer. --}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="mb-3">
+                    <h3>{{ translate('currency_model') }}</h3>
+                    <p class="mb-0 fs-12">{{ translate('whether_this_marketplace_runs_on_one_currency_or_several_with_exchange_rates') }}.</p>
+                </div>
+                <form action="{{ route('admin.system-setup.currency.currency-model') }}" method="post" class="row g-3 align-items-end">
+                    @csrf
+                    <div class="col-md-4">
+                        <label class="form-label" for="currency-model">{{ translate('model') }}</label>
+                        <select id="currency-model" name="currency_model" class="form-control">
+                            <option value="single_currency" {{ ($currencyModel['value'] ?? '') === 'single_currency' ? 'selected' : '' }}>
+                                {{ translate('single_currency') }}
+                            </option>
+                            <option value="multi_currency" {{ ($currencyModel['value'] ?? '') === 'multi_currency' ? 'selected' : '' }}>
+                                {{ translate('multi_currency') }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">
+                            {{ translate('on_single_currency_exchange_rates_are_not_applied_anywhere_even_where_they_are_stored') }}.
+                        </small>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100">{{ translate('save') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-body">
                 <div class="mb-3 mb-sm-20">

@@ -366,4 +366,114 @@ class PayoutServiceTest extends TestCase
 
         $this->assertNull($this->payouts->openApprovalIfLarge($request, threshold: 1000));
     }
+    // ---- what happens after the bank sends it back ----
+
+    /**
+     * STATUS_FAILED existed on the model and the payout screen already coloured its badge, and
+     * nothing in the application ever set it — so a bounced transfer stayed marked PAID with money
+     * the seller never received.
+     */
+    public function test_a_bounced_transfer_can_be_marked_failed_and_the_money_comes_back(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+        $this->payouts->review($request, approve: true);
+        $this->payouts->markPaid($request);
+
+        $this->assertSame(VendorPayoutRequest::STATUS_PAID, $request->fresh()->status);
+
+        $this->assertTrue($this->payouts->markFailed($request, 'account closed'));
+
+        $failed = $request->fresh();
+        $this->assertSame(VendorPayoutRequest::STATUS_FAILED, $failed->status);
+        $this->assertNull($failed->paid_at);
+        $this->assertStringContainsString('account closed', (string) $failed->review_note);
+
+        // A failed transfer means the money never left, so the seller can request it again. Read
+        // through withdrawable(), which is the honest number — the `available` bucket overstates
+        // once any of an earning has been reserved or paid.
+        $this->assertSame(400.0, round($this->ledger->withdrawable(5), 2));
+    }
+
+    public function test_a_payout_that_never_went_out_cannot_be_marked_failed(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+
+        $this->assertFalse($this->payouts->markFailed($request), 'a requested payout has nothing to fail');
+    }
+
+    /** A fresh request, because the reservation was released when it failed. */
+    public function test_a_failed_payout_can_be_sent_again_as_a_new_request(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+        $this->payouts->review($request, approve: true);
+        $this->payouts->markPaid($request);
+        $this->payouts->markFailed($request);
+
+        $result = $this->payouts->reissue($request->fresh());
+
+        $this->assertTrue($result['ok']);
+        $this->assertNotSame($request->reference, $result['request']->reference);
+        $this->assertSame(300.0, round((float) $result['request']->amount, 2));
+        $this->assertStringContainsString($request->reference, (string) $result['request']->review_note);
+    }
+
+    public function test_only_a_failed_payout_can_be_sent_again(): void
+    {
+        $this->giveAvailable(5, 400);
+        $request = $this->payouts->requestPayout(5, 300)['request'];
+
+        $this->assertFalse($this->payouts->reissue($request)['ok']);
+    }
+
+    // ---- the terms the marketplace sets ----
+
+    /**
+     * Dual control read a settings key no screen ever wrote, so it was 0 on every install and the
+     * whole maker-checker gate on large payouts was off everywhere.
+     */
+    public function test_dual_control_opens_an_approval_once_the_marketplace_sets_a_threshold(): void
+    {
+        $this->giveAvailable(5, 4000);
+
+        $this->assertNull(
+            $this->payouts->openApprovalIfLarge($this->payouts->requestPayout(5, 100)['request']),
+            'dual control is off until the marketplace sets an amount',
+        );
+
+        $this->setPolicy('payout_dual_control_amount', 500);
+
+        $large = $this->payouts->requestPayout(5, 900)['request'];
+
+        $this->assertNotNull($this->payouts->openApprovalIfLarge($large));
+    }
+
+    public function test_the_bank_change_freeze_is_the_length_the_marketplace_set(): void
+    {
+        $this->assertSame(24, $this->payouts->bankChangeFreezeHours());
+
+        $this->setPolicy('payout_bank_change_freeze_hours', 72);
+
+        $this->assertSame(72, $this->payouts->bankChangeFreezeHours());
+
+        $this->payouts->recordBankChange(5, ['account_no' => '1'], ['account_no' => '2']);
+
+        $this->assertTrue($this->payouts->isInCoolingPeriod(5));
+    }
+
+    private function setPolicy(string $key, mixed $value): void
+    {
+        if (!Schema::hasTable('business_settings')) {
+            Schema::create('business_settings', function (Blueprint $t) {
+                $t->id(); $t->string('type')->nullable(); $t->text('value')->nullable(); $t->timestamps();
+            });
+        }
+
+        \App\Models\BusinessSetting::updateOrCreate(['type' => $key], ['value' => (string) $value]);
+        cache()->flush();
+        app()->forgetInstance(\App\Services\Platform\Policy::class);
+    }
+
 }

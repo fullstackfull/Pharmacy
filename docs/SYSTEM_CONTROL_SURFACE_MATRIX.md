@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 459 |
-| Internal by design | 52 |
+| Fully connected to a surface | 493 |
+| Internal by design | 53 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **77** |
+| **Orphaned — no owner, no surface** | **42** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -27,17 +27,17 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | **None** | Yes | Developer | ORPHAN |
+| Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | Full | Yes | Developer | FIXED |
 | Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through | View | Manage | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Reporting how much traffic went unmeasured because of Do Not Track or missing consent | **None** | **None** | N/A | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Reporting how much traffic went unmeasured because of Do Not Track or missing consent | View | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Seller report builder, saved report definitions and an exports centre | **None** | **None** | View | Metrics | **None** | Full | No | Seller | ORPHAN |
-| Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | **None** | No | Developer | ORPHAN |
-| Pipeline health counters — events written, and events dropped because a request overflowed the buffer | **None** | **None** | N/A | Metrics | **None** | **None** | No | Admin | ORPHAN |
-| Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | ORPHAN |
+| Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | Full | No | Developer | FIXED |
+| Pipeline health counters — events written, and events dropped because a request overflowed the buffer | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
+| Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason | View | **None** | **None** | Events | **None** | **None** | No | Admin | ORPHAN |
 | Saving an analytics report configuration to come back to | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | DEPRECATED |
 | Daily history of request volume, visitors, errors and API load (telemetry_daily) | **None** | **None** | N/A | Metrics | Failures | **None** | No | Developer | ORPHAN |
-| Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | View | **None** | N/A | Metrics | Health | N/A | No | Admin | ORPHAN |
+| Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | Manage | **None** | N/A | Metrics | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Tracked marketing campaigns (UTM links, short links, QR codes) | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | In-house and vendor product sale reports | Oversight | View | View | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Order, product and stock reports with Excel and PDF export | Oversight | Manage | Manage | Metrics | **None** | Documented | No | Seller | CONNECTED TO SELLER |
@@ -187,19 +187,19 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | **None** | Submit | Submit | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| 24-hour payout freeze after a seller changes their bank details | **None** | View | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Changing the shop's bank / payout account from the Flutter app or the v3 API | **None** | Manage | Manage | **None** | **None** | Partial | No | Seller | ORPHAN |
-| Mark a payout failed, or retry one a bank bounced | **None** | View | View | **None** | **None** | Partial | Partial | Admin | ORPHAN |
-| Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | **None** | View | View | Metrics | Health | N/A | No | Admin | ORPHAN |
+| Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers | Manage | Submit | Submit | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| 24-hour payout freeze after a seller changes their bank details | Manage | View | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| Changing the shop's bank / payout account from the Flutter app or the v3 API | **None** | Manage | Manage | **None** | **None** | Partial | Yes | Seller | FIXED |
+| Mark a payout failed, or retry one a bank bounced | Manage | View | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
+| Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times | Manage | View | View | Metrics | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | Manage | **None** | View | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | Manage | View | View | **None** | Failures | Documented | No | Admin | CONNECTED TO ADMIN |
-| Diagnose a payment gateway that is switched on but cannot take a payment | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
+| Diagnose a payment gateway that is switched on but cannot take a payment | View | **None** | N/A | **None** | **None** | N/A | No | Admin | CONNECTED TO ADMIN |
 | Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
 | Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches | View | **None** | N/A | **None** | **None** | N/A | No | Admin | ORPHAN |
-| Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | View | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates | Manage | **None** | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Vendor\PaymentInformationController — a payment-details controller with no route | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
-| Payment success and abandonment rate | **None** | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
+| Payment success and abandonment rate | **None** | **None** | N/A | **None** | **None** | Full | No | Developer | FIXED |
 | Commission rules — the rate the marketplace charges, by global, category, vendor or product scope | Configure | **None** | **None** | Metrics | **None** | **None** | Partial | Admin | CONNECTED TO ADMIN |
 | Per-seller commission override on the vendor record | Configure | View | View | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Seller payout queue — approve, mark paid or reject a requested payout | Approve | Submit | Submit | **None** | **None** | Full | Partial | Admin | CONNECTED TO ADMIN |
@@ -249,18 +249,18 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | **None** | No | Developer | ORPHAN |
-| Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Partial | No | Developer | ORPHAN |
-| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | **None** | Full | Partial | Admin | ORPHAN |
-| Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Partial | No | Developer | ORPHAN |
+| Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others) | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
+| Inbound courier status webhook — POST /api/delivery-syria/orders/update-status | Configure | **None** | N/A | **None** | Failures | Full | No | Developer | FIXED |
+| Seller webhook delivery failure visibility | Oversight | **None** | View | **None** | Full | Full | Partial | Admin | CONNECTED TO ADMIN |
+| Documented intent for the API — 438 of 537 endpoints carry no declared contract | **None** | **None** | Manage | **None** | Health | Full | No | Developer | INTERNAL BY DESIGN |
 | Seller mobile API v2 — the previous seller app's entire surface, still routed | **None** | **None** | **None** | **None** | Health | Partial | No | Developer | DEPRECATED |
-| API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Partial | No | Admin | ORPHAN |
-| Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | Oversight | **None** | Manage | **None** | **None** | **None** | Partial | Developer | ORPHAN |
-| Portal sections that render a placeholder — models and enums, integrations, and portal settings | **None** | **None** | N/A | **None** | Health | **None** | No | Developer | ORPHAN |
-| Creating, editing, repointing or deleting a seller's outbound webhook | Oversight | **None** | Manage | **None** | Failures | Full | Partial | Seller | ORPHAN |
+| API deprecation lifecycle and the change/breaking-change log | View | **None** | N/A | **None** | Failures | Full | No | Admin | CONNECTED TO DEVELOPER |
+| Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour | Oversight | **None** | Manage | **None** | **None** | Full | Partial | Developer | CONNECTED TO DEVELOPER |
+| Portal sections that render a placeholder — models and enums, integrations, and portal settings | **None** | **None** | N/A | **None** | Health | Full | No | Developer | CONNECTED TO DEVELOPER |
+| Creating, editing, repointing or deleting a seller's outbound webhook | Oversight | Manage | Manage | **None** | Failures | Full | Yes | Seller | CONNECTED TO SELLER |
 | Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | Manage | View | View | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
-| Which AI model writes seller content, and how creative it is allowed to be | Configure | Submit | Submit | **None** | **None** | **None** | No | Admin | ORPHAN |
-| AI provider credentials — the API key and organisation id the AI module runs on | Configure | **None** | **None** | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Which AI model writes seller content, and how creative it is allowed to be | Manage | Submit | Submit | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| AI provider credentials — the API key and organisation id the AI module runs on | Manage | **None** | **None** | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | ShareThis social sharing on the product detail page | **None** | **None** | N/A | **None** | **None** | N/A | No | Admin | DEPRECATED |
 | Legacy per-gateway SMS credential editor (Nexmo and friends) | **None** | **None** | **None** | **None** | **None** | **None** | No | Developer | DEPRECATED |
 | Seller webhook oversight: disable an endpoint being hammered | Oversight | **None** | Manage | **None** | Failures | Documented | Yes | Admin | CONNECTED TO ADMIN |
@@ -640,19 +640,19 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | **None** | **None** | **None** | Events | Alerts | **None** | No | Admin | ORPHAN |
-| The before/after values and actor context on every audited change | View | **None** | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Who may read the audit trail | View | **None** | **None** | **None** | **None** | **None** | Yes | Admin | ORPHAN |
-| The seller's web view of their own audit trail | View | **None** | View | **None** | **None** | Full | Yes | Seller | ORPHAN |
-| Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch | Configure | **None** | N/A | **None** | **None** | **None** | No | Admin | ORPHAN |
-| Business settings — the several hundred DB-driven switches the whole platform boots from | Configure | **None** | View | **None** | Health | **None** | No | Admin | ORPHAN |
-| reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | **None** | **None** | **None** | **None** | Health | **None** | No | Admin | ORPHAN |
-| Which channel a customer password reset is sent through — email or SMS OTP | **None** | **None** | View | **None** | **None** | Partial | No | Admin | ORPHAN |
+| Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff | View | **None** | **None** | Events | Alerts | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| The before/after values and actor context on every audited change | View | **None** | View | **None** | **None** | Documented | Yes | Admin | CONNECTED TO ADMIN |
+| Who may read the audit trail | Manage | **None** | **None** | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| The seller's web view of their own audit trail | View | View | View | **None** | **None** | Full | Yes | Seller | CONNECTED TO SELLER |
+| Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch | View | **None** | N/A | **None** | **None** | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| Business settings — the several hundred DB-driven switches the whole platform boots from | View | **None** | View | **None** | Health | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper | Manage | **None** | **None** | **None** | Health | **None** | Yes | Admin | CONNECTED TO ADMIN |
+| Which channel a customer password reset is sent through — email or SMS OTP | Manage | **None** | View | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Minimum password length — 6 characters on some surfaces and 8 on others | Manage | **None** | **None** | **None** | **None** | Documented | No | Admin | CONNECTED TO ADMIN |
 | Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | Manage | **None** | **None** | **None** | Alerts | Documented | No | Admin | CONNECTED TO ADMIN |
-| Seller staff reaching the shop's own analytics page | **None** | **None** | View | Metrics | **None** | Documented | No | Seller Staff | ORPHAN |
-| The authentication requirement the portal reports for the v2 seller API | View | **None** | N/A | **None** | **None** | Full | No | Developer | ORPHAN |
-| The permission scope an endpoint requires, and which endpoints a seller-issued API key may call | View | **None** | Manage | **None** | **None** | Partial | No | Developer | ORPHAN |
+| Seller staff reaching the shop's own analytics page | **None** | View | View | Metrics | **None** | Documented | No | Seller Staff | FIXED |
+| The authentication requirement the portal reports for the v2 seller API | View | **None** | N/A | **None** | **None** | Full | No | Developer | FIXED |
+| The permission scope an endpoint requires, and which endpoints a seller-issued API key may call | View | **None** | Manage | **None** | **None** | Full | No | Developer | FIXED |
 | Unified audit trail viewer | Oversight | **None** | **None** | **None** | **None** | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Seller API key oversight: revoke a leaked key | Oversight | **None** | Manage | **None** | **None** | Full | Yes | Admin | CONNECTED TO ADMIN |
 | Seller staff and role oversight (who is acting for a shop) | Oversight | Manage | Manage | **None** | **None** | Full | Yes | Admin | CONNECTED TO ADMIN |

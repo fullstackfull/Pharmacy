@@ -23,7 +23,7 @@ class PaytmController extends Controller
 
     private PaymentRequest $payment;
     private $user;
-    private mixed $config_values;
+    private mixed $config_values = null;
 
     public function __construct(PaymentRequest $payment, User $user)
     {

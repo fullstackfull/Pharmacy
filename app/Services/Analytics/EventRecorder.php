@@ -3,6 +3,7 @@
 namespace App\Services\Analytics;
 
 use App\Services\Analytics\Support\PathNormalizer;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Monitoring\Support\Redactor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -58,7 +59,7 @@ class EventRecorder
     public function record(AnalyticsEvent $event, ?Request $request = null): void
     {
         try {
-            if (!config('analytics.enabled', true)) {
+            if (!app(AnalyticsPolicy::class)->enabled()) {
                 return;
             }
 
@@ -108,7 +109,10 @@ class EventRecorder
                 'path' => $path,
                 'properties' => $this->properties($event->properties),
                 'is_bot' => $this->context->isBot(),
-                'is_internal' => $this->context->isInternal(),
+                // A seller-domain event is the shop's own business, not the merchant browsing their
+                // own storefront, so the internal-traffic filter must not reach it — marking these
+                // internal is what made payout_requested and kyc_submitted uncountable.
+                'is_internal' => !$event->isSellerDomain() && $this->context->isInternal(),
                 'dedupe_key' => $this->dedupeKey($event, $visitorId, $path),
                 'occurred_at' => Carbon::now(),
             ];
@@ -397,6 +401,19 @@ class EventRecorder
      * A collector that stops has to be able to say so: without this, a broken pipeline draws a
      * flat line that everybody reads as a quiet week.
      */
+    /**
+     * Record that a visit was not measured, and why.
+     *
+     * PrivacyGate::reason() was written "for the data-quality screen" and had no caller anywhere, so
+     * a shop that switched consent on watched its reported traffic fall with nothing explaining the
+     * drop — which is the one circumstance in which an operator concludes analytics is broken and
+     * switches the privacy control back off.
+     */
+    public function recordPrivacyRefusal(string $reason): void
+    {
+        $this->health('privacy_blocked_' . $reason, 1);
+    }
+
     private function health(string $signal, int $count, ?string $detail = null): void
     {
         try {

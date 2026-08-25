@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Ingest\WebVitalsRecorder;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\ReadsFoldedSeries;
@@ -166,7 +167,7 @@ class WebVitalsPanel implements Panel
             'beacon' => self::BEACON,
             'endpoint' => (string) config('analytics.beacon.path', 'analytics/collect'),
             'monitoring_enabled' => (bool) config('monitoring.enabled', true),
-            'analytics_enabled' => (bool) config('analytics.enabled', true),
+            'analytics_enabled' => (bool) app(AnalyticsPolicy::class)->enabled(),
             'beacon_enabled' => (bool) config('analytics.beacon.enabled', true),
             'last_reading_at' => null,
             'last_reading_age_minutes' => null,

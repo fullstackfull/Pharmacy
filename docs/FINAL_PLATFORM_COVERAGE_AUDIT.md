@@ -14,26 +14,20 @@ this document say that almost everything is broken.
 ## ANALYTICS
 
 Backend: 47 capabilities
-Admin: 34 of 47 covered
+Admin: 36 of 47 covered
 Seller Web: 10 of 47 covered
 Flutter App: 9 of 28 covered
 Analytics: 40 of 47 covered
 Monitor: 3 of 47 covered
-Dev Portal: 17 of 45 covered
+Dev Portal: 19 of 45 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (10):
+Incomplete — the owner cannot reach it (4):
 
-- **Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report** — assigned to Developer, no surface yet. Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable.
 - **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through** — assigned to Admin, no surface yet. Ruled: belongs to Analytics. Stock can be listed, adjusted, transferred and written off on every surface, and nothing counts any of it — product_metrics carries views and cart adds and has no stock column, so the cost of a stock-out is unanswerable on a platform whose whole job is stock.
-- **Reporting how much traffic went unmeasured because of Do Not Track or missing consent** — assigned to Admin, no surface yet. Ruled: belongs on the Analytics data-quality screen it was written for. PrivacyGate::reason() exists specifically to supply that number and has no caller anywhere, so a shop that turns consent on loses reported traffic with nothing explaining the drop.
 - **Seller report builder, saved report definitions and an exports centre** — assigned to Seller, no surface yet. OVERRULED in part — the seller sweep recorded reports and exports as having no backend. Verified: GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and are used by the Flutter app. What is missing is the web surface and the saved-definition/queued-export half: seller.reports.index, seller.reports.builder and seller.exports.index have no route, so on a browser every export is a synchronous download off one specific list.
-- **Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it** — assigned to Developer, no surface yet. Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape.
-- **Pipeline health counters — events written, and events dropped because a request overflowed the buffer** — assigned to Admin, no surface yet. Ruled: belongs on the Analytics data-quality screen. EventRecorder records both counters explicitly so that screen can show them, and collectionHealth reads only rollup_ran and write_failed — so a request loop quietly shortening the numbers is recorded and shown to nobody.
-- **Per-day performance of each campaign short link** — assigned to Admin, no surface yet. Ruled: belongs on the Admin Campaigns screen, which instead reads lifetime counters off analytics_campaigns. The rollup writes a campaign_link dimension every day and no section asks for it, so the day-by-day series is reachable only by guessing the export URL.
 - **The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason** — assigned to Admin, no surface yet. Ruled: belongs to Analytics reporting. Every order writes them into analytics_events.properties and exactly one reader exists in the codebase (ExperimentReach pulling properties->experiment), so shipping cost, coupon and payment method per order are captured on every order and reportable on none.
 - **Daily history of request volume, visitors, errors and API load (telemetry_daily)** — assigned to Developer, no surface yet. Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at.
-- **Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment.
 
 ## AUTOMATION
 
@@ -105,50 +99,31 @@ Incomplete — the owner cannot reach it (3):
 ## FINANCE
 
 Backend: 57 capabilities
-Admin: 48 of 57 covered
+Admin: 53 of 57 covered
 Seller Web: 29 of 57 covered
 Flutter App: 37 of 49 covered
 Analytics: 14 of 57 covered
 Monitor: 8 of 57 covered
-Dev Portal: 39 of 52 covered
+Dev Portal: 40 of 52 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (10):
+Incomplete — the owner cannot reach it (2):
 
-- **Dual-control (maker-checker) gate on large seller payouts — above a set amount a payout needs two approvers** — assigned to Admin, no surface yet. Ruled: belongs on Admin → Marketplace → Settlements, beside the maker-checker toggle that already has a screen. Verified by repo-wide grep — payout_dual_control_threshold appears at exactly two read sites and no writer — so it defaults to 0, dual control is off on every install, and arming it is a hand-written database row; the required approver count of 2 is a default argument as well.
-- **24-hour payout freeze after a seller changes their bank details** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings next to the payout queue. It is the platform's anti-account-takeover hold and the length is exactly what a risk team retunes after an incident, yet PayoutService.php:37 is a class constant with no setting key.
-- **Changing the shop's bank / payout account from the Flutter app or the v3 API** — assigned to Seller, no surface yet. Ruled: a defect belonging to Developer on the v3 path. The web path calls PayoutService::recordBankChange, which writes the before/after audit row and arms the 24-hour cooling window; SellerController.php:352 writes the same columns directly and does neither, so a payout redirect performed from the phone is both unrecorded and undelayed.
-- **Mark a payout failed, or retry one a bank bounced** — assigned to Admin, no surface yet. Ruled: belongs on the Admin payout queue. VendorPayoutRequest::STATUS_FAILED exists and payouts.blade.php:8 colours the badge, but a grep of every STATUS_FAILED write shows only bulk jobs, automation actions and webhook deliveries setting it — nothing ever marks a payout failed, so a bounced transfer stays 'paid' and the seller is never made whole.
-- **Payment terms and scheduled cadences — payout frequency, minimum payout, holding period, settlement release time, SLA evaluation time and abandoned-cart send times** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings. Settlement release is hard-scheduled at 02:00 (bootstrap/app.php:147), seller judgement at 03:00 (:155) and cart reminders at :140/:151, and there is no screen for a payout frequency, a minimum amount or a hold period — so changing the marketplace's payment-terms promise to its sellers is a deploy.
-- **Diagnose a payment gateway that is switched on but cannot take a payment** — assigned to Admin, no surface yet. Ruled: belongs on Admin → Third-party → Payment methods as a check button or a banner. Credentials live in addon_settings as separate live_values/test_values blobs and the controllers read only the blob matching the row's mode, so a shop can show a green, fully-filled gateway that refuses every payment; payment:check names the blank field and no screen ever runs it.
 - **Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. No gateway callback leaves a receipt anywhere (PaymentsPanel.php:2056), so a callback that never arrived and one that arrived and failed are the same absent row, and a payment outage is visible only as orders that stopped appearing.
 - **Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section.
-- **Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates** — assigned to Admin, no surface yet. Ruled: belongs on the existing Admin Currency screen, which already reads and displays it. 35 branch sites including every conversion in app/Utils/currency.php depend on it and the only writer is the installer, so the audited bulk exchange-rate editor can be maintaining rates the platform will never apply.
-- **Payment success and abandonment rate** — assigned to Developer, no surface yet. Ruled: belongs to Developer to emit. payment_started is in the catalogue, mapped in the recorder and charted by the funnel's gateway breakdown, and verified here: the only three callers of paymentAttempted pass 'succeeded' or 'failed' and never 'started', so a shopper who left the gateway before it answered is invisible and the platform has no payment success rate at all.
 
 ## INTEGRATIONS
 
 Backend: 46 capabilities
 Admin: 39 of 46 covered
-Seller Web: 4 of 46 covered
+Seller Web: 5 of 46 covered
 Flutter App: 16 of 31 covered
 Analytics: 3 of 44 covered
-Monitor: 20 of 46 covered
-Dev Portal: 33 of 42 covered
+Monitor: 21 of 46 covered
+Dev Portal: 36 of 42 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (10):
-
-- **Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them.
-- **Inbound courier status webhook — POST /api/delivery-syria/orders/update-status** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal with a written contract. It is the only genuinely external partner endpoint on the whole API — an outside courier POSTs order status changes into it under a shared secret — and it carries no ApiDoc, so the portal's Partner APIs section shows one endpoint described by a mechanically inferred summary.
-- **Seller webhook delivery failure visibility** — assigned to Admin, no surface yet. Ruled: belongs to Monitoring. The marketplace dispatches signed webhooks to sellers' own systems with a retry ledger and a five-minute retry sweep, and app/Services/Monitoring contains no reference to any of it — no panel, no check, no series, no rule. The only count lives in the admin operations overview, so a seller whose endpoint has rejected every delivery for a week produces nothing an operator would see.
-- **Documented intent for the API — 438 of 537 endpoints carry no declared contract** — assigned to Developer, no surface yet. Ruled: belongs to Developer as an #[ApiDoc] pass. The manifest describes all 537 endpoints mechanically and the miss count against the route table is zero, but only 99 carry a declared contract and 86 of those are the v3 Seller Center alone (86/86). Outside it: v2 is 0/95, v1 is 11/185, the rest of v3 is 2/170 — so the entire shopper app API, the entire delivery app API, 20 unauthenticated customer auth endpoints, 29 AI endpoints that spend money per call and the tax endpoints are all undescribed.
-- **API deprecation lifecycle and the change/breaking-change log** — assigned to Admin, no surface yet. Ruled: belongs in the Developer Portal and is fully built and never run. Four surfaces are wired to render deprecations (portal screen, OpenAPI flag, Postman annotation, Monitoring panel) and zero endpoints declare one; the snapshot service, diff engine and severity classification exist, api_snapshots holds no rows, and verified here — api:snapshot is absent from a scheduler that runs 20 other commands. Three live API versions and no retirement machinery in use.
-- **Documentation for outbound seller webhooks — the event catalogue, the signature, the retry policy and the auto-disable behaviour** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal's webhooks section, which is the worst of the placeholders: the capability probe returns true so the entry renders enabled and opens onto an empty card, while a complete signed-delivery system with six events, SSRF-guarded dialling and a retry sweep sits beside it. ApiDoc carries emits and dependsOn into every manifest entry and no view renders either — and the only two endpoints that declare emits name events that do not exist in the real webhook vocabulary.
-- **Portal sections that render a placeholder — models and enums, integrations, and portal settings** — assigned to Developer, no surface yet. Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link.
-- **Creating, editing, repointing or deleting a seller's outbound webhook** — assigned to Seller, no surface yet. Ruled: belongs on the audit trail. Only the two paths that switch a webhook OFF are audited — the dispatcher's auto-disable and the admin kill switch — so repointing a live webhook at a new destination, which is how a shop's event data would be exfiltrated, writes nothing.
-- **Which AI model writes seller content, and how creative it is allowed to be** — assigned to Admin, no surface yet. Ruled: belongs in the AI module's admin settings, which already choose the provider from the database. Because the model name and temperature are hardcoded in the provider class, an operator can switch vendors but cannot change model or cost per call.
-- **AI provider credentials — the API key and organisation id the AI module runs on** — assigned to Admin, no surface yet. Ruled: belongs on the audit trail. Verified by grep: no module — AI, Blog or TaxModule — writes a single audit row, so replacing the credential the whole AI module spends money through is one unrecorded form post.
+Every capability in this domain is reachable by the surface that owns it.
 
 ## INVENTORY
 
@@ -278,27 +253,15 @@ Incomplete — the owner cannot reach it (2):
 ## SECURITY
 
 Backend: 47 capabilities
-Admin: 38 of 47 covered
-Seller Web: 6 of 47 covered
+Admin: 41 of 47 covered
+Seller Web: 8 of 47 covered
 Flutter App: 20 of 31 covered
 Analytics: 3 of 45 covered
 Monitor: 11 of 47 covered
 Dev Portal: 30 of 42 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (11):
-
-- **Authentication events — sign-in success, sign-in failure and lockout for admins, sellers and seller staff** — assigned to Admin, no surface yet. Ruled: belongs on the audit trail, and the monitoring panel already prints the fix. A rejected password leaves no trace anywhere in the application: no auth.* action exists in app/ or Modules/, and the Admin and Vendor auth controllers contain zero AuditLogger calls, so a credential-stuffing run against the seller panel is indistinguishable from silence and monitoring can only count 401 responses, which measures refusal by any cause.
-- **The before/after values and actor context on every audited change** — assigned to Admin, no surface yet. Ruled: belongs on the Admin audit page and the seller's own trail — rows nobody can read are as much a gap as rows never written. AuditLogger captures before, after, ip_address and user_agent on every row; the admin page renders the word 'changed' and nothing else, and the Flutter model drops the diff entirely while its tile shows three of the eight returned fields. The bank-details change PayoutService records specifically so a fraud review can see what the account was redirected from and to cannot be read on any screen in this system.
-- **Who may read the audit trail** — assigned to Admin, no surface yet. Ruled: belongs behind its own permission. The only screen that reads the trail sits inside the marketplace route group, so an admin role without that unrelated module flag cannot see a single audit row while theme, commerce, developer-console and approval events keep writing to it.
-- **The seller's web view of their own audit trail** — assigned to Seller, no surface yet. Ruled: belongs in the Seller Center, where the IA already reserves seller.audit.index — verified absent from the route table, so the route-existence filter silently drops the menu item. A seller on a browser cannot see what happened in their own shop; only the phone app can, and it drops the before/after values.
-- **Admin employee accounts and admin custom roles — who operates the platform and which modules they may touch** — assigned to Admin, no surface yet. Ruled: belongs on the audit trail. Verified zero AuditLogger references in EmployeeController and CustomRoleController: the platform audits every change to a seller's permission model with before/after and none to its own, including granting an employee the 'marketplace' module that unlocks the audit page itself.
-- **Business settings — the several hundred DB-driven switches the whole platform boots from** — assigned to Admin, no surface yet. Ruled: belongs on the audit trail, and it matters more here than in most codebases because CLAUDE.md is explicit that behaviour on this platform is DB-driven rather than code-driven. Only 11 of 139 admin controllers call AuditLogger and none of them is under Admin/Settings, so changing the commission percentage, the OTP lockout window, the storage backend, maintenance mode or the forced minimum app version leaves no record of who did it or what it was before — most behavioural change on this platform is unaudited by construction.
-- **reCAPTCHA on customer login, registration and both forgot-password flows, and the bot score that refuses a shopper** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings. Verified by grep: the recaptcha key has read sites in RecaptchaService and the monitoring integrations panel and no writer anywhere in app/Http/Controllers/Admin or resources/views, so the platform's only bot defence on its authentication forms is seeded off at install and can be enabled — or its secret rotated — only by editing the database; the 0.5 score floor beside it is a class constant, and 0.5 is precisely the number an operator lowers when real customers start being blocked.
-- **Which channel a customer password reset is sent through — email or SMS OTP** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings, where the vendor and delivery-man equivalents already have screens. Only the customer one has none, so switching customer account recovery to SMS is a hand-edited row.
-- **Seller staff reaching the shop's own analytics page** — assigned to Seller Staff, no surface yet. Ruled: a defect belonging to Developer in one line. Verified in the current file: the segment 'analytics' is still absent from the permission map in SellerStaffAccessMiddleware, so deny-by-default 403s every staff member on /vendor/analytics while the same person's API token reaches seller-center/analytics under finance.view — the two clients disagree about what a staff member may see.
-- **The authentication requirement the portal reports for the v2 seller API** — assigned to Developer, no surface yet. Ruled: a defect belonging to Developer, and the single most dangerous claim the portal makes. Verified: routes/rest_api/v2/api.php:27 declares only api_lang, the controllers authenticate in-line through Helpers::get_seller_by_token(), and AuthResolver reads middleware only — so the portal tells every reader that balance-withdraw, shop-update and product delete on 55 live endpoints need no credentials. That is the one direction an auth resolver must never be wrong in.
-- **The permission scope an endpoint requires, and which endpoints a seller-issued API key may call** — assigned to Developer, no surface yet. Ruled: belongs in the Developer Portal and resolves empty for all 537 endpoints. Verified in the current file: AuthResolver::permissions() matches only module: and can:, while the real gate on the seller API is seller_can: (53 route groups), and no controller anywhere passes ApiDoc(scopes:). On top of that, SellerApiAuthMiddleware refuses a key unless the route declares a scope — 232 of 248 seller endpoints accept a key and 16 refuse one — and that split is written down nowhere, so an integrator discovers it by getting a 403.
+Every capability in this domain is reachable by the surface that owns it.
 
 ## SHIPPING
 

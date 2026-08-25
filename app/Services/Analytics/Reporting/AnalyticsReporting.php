@@ -3,6 +3,7 @@
 namespace App\Services\Analytics\Reporting;
 
 use App\Services\Analytics\AnalyticsEvent;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Telemetry\ClientIdentity;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +65,7 @@ class AnalyticsReporting
             ];
         }
 
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             return [
                 'state' => 'disabled',
                 'message_key' => 'analytics_collection_is_switched_off_so_nothing_is_being_recorded',
@@ -309,6 +310,55 @@ class AnalyticsReporting
                     'share' => $total > 0 ? round(100 * $weight / $total, 1) : null,
                 ];
             })->all(),
+        ];
+    }
+
+    /**
+     * What the pipeline itself did, and what it refused.
+     *
+     * Two families of counter were being written and read by nothing. `events_written` and
+     * `events_dropped_buffer_full` are recorded explicitly by EventRecorder so this screen can show
+     * them — a request loop quietly shortening the numbers was recorded and shown nowhere. And the
+     * privacy refusals answer the question a shop asks the day it turns consent on and watches its
+     * reported traffic fall.
+     *
+     * @return array<string, mixed>
+     */
+    public function pipelineHealth(): array
+    {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed'];
+        }
+
+        try {
+            $signals = $this->connection()->table('analytics_health')->get()->keyBy('signal');
+        } catch (\Throwable) {
+            return ['state' => 'failed'];
+        }
+
+        $count = static fn (string $signal): int => (int) ($signals[$signal]->count ?? 0);
+        $written = $count('events_written');
+        $dropped = $count('events_dropped_buffer_full');
+        $doNotTrack = $count('privacy_blocked_do_not_track');
+        $noConsent = $count('privacy_blocked_consent_not_given');
+
+        return [
+            'state' => 'ok',
+            'events_written' => $written,
+            'events_dropped_buffer_full' => $dropped,
+            // The number that matters when it is not zero: events the pipeline had and threw away.
+            'drop_share' => ($written + $dropped) > 0 ? round(100 * $dropped / ($written + $dropped), 2) : null,
+            'write_failed' => $count('write_failed'),
+            'privacy' => [
+                'do_not_track' => $doNotTrack,
+                'consent_not_given' => $noConsent,
+                'total' => $doNotTrack + $noConsent,
+                // Whether either control is actually on, so a zero reads as "nobody was refused"
+                // rather than as "the control is not working".
+                'respect_do_not_track' => app(AnalyticsPolicy::class)->respectDoNotTrack(),
+                'require_consent' => app(AnalyticsPolicy::class)->requireConsent(),
+            ],
+            'since' => optional($signals->min('created_at')),
         ];
     }
 
@@ -915,11 +965,11 @@ class AnalyticsReporting
     {
         $query = $this->connection()->table('analytics_sessions')->whereBetween('started_at', [$from, $to]);
 
-        if (config('analytics.exclude_bots', true)) {
+        if (app(AnalyticsPolicy::class)->excludeBots()) {
             $query->where('is_bot', false);
         }
 
-        if (config('analytics.exclude_internal', true)) {
+        if (app(AnalyticsPolicy::class)->excludeInternal()) {
             $query->where('is_internal', false);
         }
 
@@ -930,11 +980,11 @@ class AnalyticsReporting
     {
         $query = $this->connection()->table('analytics_events')->whereBetween('occurred_at', [$from, $to]);
 
-        if (config('analytics.exclude_bots', true)) {
+        if (app(AnalyticsPolicy::class)->excludeBots()) {
             $query->where('is_bot', false);
         }
 
-        if (config('analytics.exclude_internal', true)) {
+        if (app(AnalyticsPolicy::class)->excludeInternal()) {
             $query->where('is_internal', false);
         }
 

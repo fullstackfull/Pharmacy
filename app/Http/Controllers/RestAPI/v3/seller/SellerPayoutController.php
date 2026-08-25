@@ -106,11 +106,10 @@ class SellerPayoutController extends Controller
             return response()->json(['message' => translate($result['reason'])], 403);
         }
 
-        // Dual control on large payouts: same opt-in threshold the web flow applies.
-        $threshold = (float) (getWebConfig(name: 'payout_dual_control_threshold') ?? 0);
-        if ($threshold > 0) {
-            $this->payouts->openApprovalIfLarge($result['request'], $threshold);
-        }
+        // Dual control on large payouts (spec item 83): above the marketplace's own threshold the
+        // request is routed through the maker-checker approval engine and surfaces in the admin
+        // approvals inbox. Opt-in — at zero nothing opens and the ordinary review path applies.
+        $this->payouts->openApprovalIfLarge($result['request']);
 
         return response()->json([
             'status' => true,

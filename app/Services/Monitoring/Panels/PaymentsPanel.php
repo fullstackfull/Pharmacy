@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Metric;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -628,11 +629,11 @@ class PaymentsPanel implements Panel
             'first_start_at' => null,
             'starts_recorded' => null,
             'window_since' => Clock::display($this->reader->since($range))->toDateTimeString(),
-            'retention_days' => (int) config('analytics.retention.event_days', 90),
+            'retention_days' => app(AnalyticsPolicy::class)->retentionDays('event_days'),
             'window_days' => (int) round($this->reader->window($range)['minutes'] / 1440, 0),
         ];
 
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             return array_merge($base, [
                 'state' => 'not_configured',
                 'can_compute_rate' => false,
@@ -715,7 +716,7 @@ class PaymentsPanel implements Panel
      */
     private function volume(string $range): array
     {
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             return [
                 'state' => 'not_configured',
                 'note' => 'Analytics collection is switched off, so no payment event is being written.',
@@ -886,7 +887,7 @@ class PaymentsPanel implements Panel
      */
     private function timeline(string $range, array $window): array
     {
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             return [
                 'state' => 'not_configured',
                 'note' => 'Analytics collection is switched off, so there is no series to draw.',

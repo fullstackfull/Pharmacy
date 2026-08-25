@@ -206,8 +206,12 @@ return new class extends Migration
                 $table->string('dimension_key', 191);
 
                 $table->unsignedBigInteger('sessions')->default(0);
-                $table->unsignedBigInteger('visitors')->default(0);
-                $table->unsignedBigInteger('new_visitors')->default(0);
+                // Nullable, unlike every other measure here, because the `__other__` row that
+                // folds a dimension's tail cannot state them: they are COUNT(DISTINCT visitor_id)
+                // per key, and adding those across keys counts one person once per key. Null
+                // renders as "—", which is the truthful answer; a zero would not be.
+                $table->unsignedBigInteger('visitors')->nullable()->default(0);
+                $table->unsignedBigInteger('new_visitors')->nullable()->default(0);
                 $table->unsignedBigInteger('pageviews')->default(0);
                 $table->unsignedBigInteger('events')->default(0);
                 $table->unsignedBigInteger('bounces')->default(0);

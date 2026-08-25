@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\VendorBankChangeLog;
+use App\Services\Platform\Policy;
 use App\Models\VendorLedgerEntry;
 use App\Models\VendorPayoutRequest;
 use App\Services\Marketplace\ExchangeRateService;
@@ -33,9 +34,6 @@ use Illuminate\Support\Facades\Schema;
  */
 class PayoutService
 {
-    /** How long payouts are blocked after a bank-detail change. */
-    public const COOLING_HOURS = 24;
-
     public function __construct(private readonly VendorLedger $ledger)
     {
     }
@@ -149,8 +147,12 @@ class PayoutService
      * opens an ApprovalRequest requiring two approvers, and the admin actions it from the approvals
      * inbox — the maker who requested the payout cannot be one of them.
      */
-    public function openApprovalIfLarge(VendorPayoutRequest $request, float $threshold, int $requiredApprovals = 2): ?\App\Models\ApprovalRequest
+    public function openApprovalIfLarge(VendorPayoutRequest $request, ?float $threshold = null, int $requiredApprovals = 2): ?\App\Models\ApprovalRequest
     {
+        // The marketplace's own line, not the caller's. Two call sites read a settings key that no
+        // screen ever wrote, so it was 0 on every install and dual control was off everywhere.
+        $threshold ??= $this->dualControlAmount();
+
         if ($threshold <= 0 || $request->amount < $threshold) {
             return null;
         }
@@ -244,6 +246,112 @@ class PayoutService
     }
 
     /**
+     * A transfer the bank sent back.
+     *
+     * `STATUS_FAILED` existed on the model and the payout screen coloured its badge, and nothing in
+     * the application ever set it — only bulk jobs, automation actions and webhook deliveries used
+     * that constant. So a bounced transfer had no status to move to: the payout sat marked PAID with
+     * money the seller never received, and the only trace was a bank statement nobody reconciled
+     * against it.
+     *
+     * The reservation goes back to available, because a failed transfer means the money never left.
+     * The seller can request again, or an admin can re-issue it with `reissue()`.
+     */
+    public function markFailed(VendorPayoutRequest $request, ?string $reason = null): bool
+    {
+        return DB::transaction(function () use ($request, $reason) {
+            $locked = VendorPayoutRequest::whereKey($request->getKey())->lockForUpdate()->first();
+
+            // Payable states and paid ones both. A bank bounce arrives days after the payment was
+            // recorded, which is exactly the case the old status set had no answer for.
+            if (!$locked || !in_array($locked->status, [
+                VendorPayoutRequest::STATUS_APPROVED,
+                VendorPayoutRequest::STATUS_PROCESSING,
+                VendorPayoutRequest::STATUS_PAID,
+            ], true)) {
+                return false;
+            }
+
+            if ($locked->reserve_entry_id) {
+                // A credit, not a status flip on the debit: the reservation is a debit entry, and
+                // relabelling it would leave the ledger without a line saying the money came back.
+                // Same shape as releaseReservation, for the same reason — the history is not
+                // rewritten, it is added to.
+                VendorLedgerEntry::where('id', $locked->reserve_entry_id)
+                    ->update(['status' => VendorLedgerEntry::STATUS_PAID, 'updated_at' => now()]);
+
+                $this->ledger->record(
+                    sellerId: $locked->seller_id,
+                    entryType: VendorLedgerEntry::TYPE_MANUAL_ADJUSTMENT,
+                    credit: $locked->amount,
+                    status: VendorLedgerEntry::STATUS_AVAILABLE,
+                    referenceType: 'payout_failed',
+                    referenceId: $locked->id,
+                    description: 'Transfer failed for payout ' . $locked->reference,
+                    sellerIs: $locked->seller_is,
+                );
+            }
+
+            $locked->forceFill([
+                'status' => VendorPayoutRequest::STATUS_FAILED,
+                'paid_at' => null,
+                'payout_entry_id' => null,
+                'review_note' => trim(($locked->review_note ? $locked->review_note . "\n" : '') . ($reason ?: 'Transfer failed')),
+            ])->save();
+            $request->setRawAttributes($locked->getAttributes(), true);
+
+            app(\App\Services\AuditLogger::class)->record(
+                action: 'payout.failed',
+                subject: $locked,
+                before: ['status' => $request->getOriginal('status')],
+                after: ['status' => VendorPayoutRequest::STATUS_FAILED],
+                context: ['reference' => $locked->reference, 'amount' => $locked->amount, 'reason' => $reason],
+            );
+
+            return true;
+        });
+    }
+
+    /**
+     * Send a failed payout again.
+     *
+     * A fresh request rather than a resurrection of the old one: the reservation was released when
+     * it failed, so the money has to be reserved again, and a payout row whose history says
+     * requested → paid → failed → paid is a row nobody can audit. The new request names the one it
+     * replaces.
+     *
+     * @return array{ok: bool, reason?: string, request?: VendorPayoutRequest}
+     */
+    public function reissue(VendorPayoutRequest $failed): array
+    {
+        if ($failed->status !== VendorPayoutRequest::STATUS_FAILED) {
+            return ['ok' => false, 'reason' => 'only_a_failed_payout_can_be_sent_again'];
+        }
+
+        $result = $this->requestPayout(
+            sellerId: $failed->seller_id,
+            amount: (float) $failed->amount,
+            method: $failed->method ?: 'bank_transfer',
+            sellerIs: $failed->seller_is ?: 'seller',
+            payoutCurrency: $failed->currency,
+        );
+
+        if ($result['ok'] ?? false) {
+            $result['request']->forceFill([
+                'review_note' => 'Re-issued after ' . $failed->reference . ' failed',
+            ])->save();
+
+            app(\App\Services\AuditLogger::class)->record(
+                action: 'payout.reissued',
+                subject: $result['request'],
+                context: ['replaces' => $failed->reference, 'amount' => $failed->amount],
+            );
+        }
+
+        return $result;
+    }
+
+    /**
      * Reject or fail a request, releasing the reservation back to available.
      *
      * The release is a credit rather than a deletion, so the ledger still shows that a payout was
@@ -303,7 +411,7 @@ class PayoutService
             'seller_id' => $sellerId,
             'previous' => $previous,
             'current' => $current,
-            'cooling_until' => now()->addHours(self::COOLING_HOURS),
+            'cooling_until' => now()->addHours($this->bankChangeFreezeHours()),
             'changed_by' => $changedBy,
             'changed_by_type' => $changedByType,
             'ip_address' => $ip,
@@ -366,4 +474,21 @@ class PayoutService
 
         return $reference;
     }
+    /** Above this amount a payout needs a second approver. Zero switches dual control off. */
+    public function dualControlAmount(): float
+    {
+        return app(Policy::class)->float('payout_dual_control_amount');
+    }
+
+    /**
+     * How long payouts are frozen after a seller changes where the money goes.
+     *
+     * The platform's anti-account-takeover hold, and the number a risk team retunes the week after
+     * an incident — so it is a setting rather than the class constant it used to be.
+     */
+    public function bankChangeFreezeHours(): int
+    {
+        return app(Policy::class)->int('payout_bank_change_freeze_hours');
+    }
+
 }

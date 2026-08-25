@@ -292,6 +292,7 @@ class LiqPayController extends Controller
     {
         try {
             $config = $this->payment_config('liqpay', 'payment_config');
+            $values = null;
             if (!is_null($config) && $config->mode == 'live') {
                 $values = json_decode($config->live_values);
             } elseif (!is_null($config) && $config->mode == 'test') {

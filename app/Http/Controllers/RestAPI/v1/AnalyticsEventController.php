@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Analytics\Analytics;
 use App\Services\Analytics\AnalyticsEvent;
 use App\Services\Analytics\Support\ClientEventIngest;
@@ -47,7 +48,7 @@ class AnalyticsEventController extends Controller
     {
         $silence = response()->json(null, 204);
 
-        if (!config('analytics.enabled', true) || !config('analytics.beacon.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled() || !config('analytics.beacon.enabled', true)) {
             return $silence;
         }
 

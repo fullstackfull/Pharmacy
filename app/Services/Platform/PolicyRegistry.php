@@ -267,9 +267,98 @@ class PolicyRegistry
                     'type' => 'int', 'default' => 20, 'min' => 1, 'max' => 600,
                     'label' => 'sign_in_attempts_allowed_per_minute',
                 ],
+                'recaptcha_minimum_score' => [
+                    'type' => 'ratio', 'default' => 0.5, 'min' => 0.0, 'max' => 1.0,
+                    'label' => 'lowest_recaptcha_score_a_visitor_may_have_and_still_be_let_through',
+                    'help' => 'higher_turns_away_more_bots_and_more_people',
+                ],
                 'api_requests_per_minute' => [
                     'type' => 'int', 'default' => 3000, 'min' => 60, 'max' => 100000,
                     'label' => 'api_requests_allowed_per_minute_per_client',
+                ],
+            ],
+        ],
+
+        'analytics' => [
+            'title' => 'analytics_and_privacy',
+            'help' => 'what_is_measured_about_live_customer_traffic_who_is_excluded_and_how_long_it_is_kept',
+            'icon' => 'reports',
+            'policies' => [
+                'analytics_enabled' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'measure_visits_at_all',
+                ],
+                'analytics_respect_do_not_track' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'honour_the_do_not_track_header',
+                    'help' => 'refused_visits_are_counted_on_the_data_quality_screen_so_the_drop_has_an_explanation',
+                ],
+                'analytics_require_consent' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'measure_nothing_until_a_visitor_accepts_cookies',
+                ],
+                'analytics_mask_ip' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'mask_the_ip_to_its_network_before_hashing_it',
+                ],
+                'analytics_store_country' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'store_the_visitors_country',
+                ],
+                'analytics_exclude_bots' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'leave_bots_out_of_the_reports',
+                ],
+                'analytics_exclude_internal' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'leave_your_own_staffs_browsing_out_of_the_reports',
+                ],
+                'analytics_session_gap_minutes' => [
+                    'type' => 'int', 'default' => 30, 'min' => 1, 'max' => 1440,
+                    'label' => 'minutes_of_inactivity_that_end_a_visit',
+                ],
+                'analytics_engaged_after_seconds' => [
+                    'type' => 'int', 'default' => 10, 'min' => 1, 'max' => 3600,
+                    'label' => 'seconds_on_the_shop_before_a_visit_counts_as_engaged',
+                ],
+                'analytics_retention_event_days' => [
+                    'type' => 'int', 'default' => 90, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_individual_events_are_kept',
+                ],
+                'analytics_retention_session_days' => [
+                    'type' => 'int', 'default' => 400, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_sessions_are_kept',
+                ],
+                'analytics_retention_daily_days' => [
+                    'type' => 'int', 'default' => 1100, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_the_daily_rollups_are_kept',
+                    'help' => 'the_rollups_are_small_and_are_what_every_long_range_chart_reads',
+                ],
+            ],
+        ],
+
+        'developer' => [
+            'title' => 'developer_portal',
+            'help' => 'what_the_api_console_may_do_and_whether_response_shapes_are_learned_from_traffic',
+            'icon' => 'code',
+            'policies' => [
+                'developer_console_enabled' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'the_api_console_is_available',
+                ],
+                'developer_console_allow_writes' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'the_console_may_send_writes',
+                    'help' => 'off_by_default_everywhere_a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders',
+                ],
+                'developer_console_rate_limit' => [
+                    'type' => 'int', 'default' => 20, 'min' => 1, 'max' => 600,
+                    'label' => 'console_requests_per_minute_per_administrator',
+                ],
+                'developer_record_response_shapes' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'learn_response_shapes_from_real_traffic',
+                    'help' => 'only_keys_and_types_are_stored_never_a_value_from_any_response',
                 ],
             ],
         ],
@@ -307,6 +396,16 @@ class PolicyRegistry
                 'payout_minimum_amount' => [
                     'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 1000000,
                     'label' => 'smallest_balance_a_seller_may_request_a_payout_for',
+                ],
+                'payout_dual_control_amount' => [
+                    'type' => 'decimal', 'default' => 0.0, 'min' => 0, 'max' => 100000000,
+                    'label' => 'payout_amount_above_which_a_second_approver_is_required',
+                    'help' => 'zero_switches_the_second_approver_off',
+                ],
+                'payout_bank_change_freeze_hours' => [
+                    'type' => 'int', 'default' => 24, 'min' => 0, 'max' => 720,
+                    'label' => 'hours_payouts_are_frozen_after_a_seller_changes_their_bank_details',
+                    'help' => 'the_platforms_anti_account_takeover_hold_the_length_is_what_a_risk_team_retunes_after_an_incident',
                 ],
                 'reconciliation_lookback_days' => [
                     'type' => 'int', 'default' => 30, 'min' => 1, 'max' => 730,

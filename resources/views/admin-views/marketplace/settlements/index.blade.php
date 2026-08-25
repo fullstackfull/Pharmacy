@@ -38,6 +38,33 @@
             </div>
         </div>
 
+        {{-- What the marketplace promises its sellers about when they are paid. Every line here was
+             a constant, a settings key nothing wrote, or a value with no home at all — so changing
+             the terms was a deploy rather than a decision. --}}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">{{ translate('payment_terms') }}</h5>
+                <small class="text-muted">{{ translate('what_the_marketplace_promises_its_sellers_about_when_they_are_paid') }}.</small>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('admin.marketplace.settlements.terms') }}" method="post" class="row g-3">
+                    @csrf
+                    @foreach ($termFields as $key => $field)
+                        <div class="col-md-4">
+                            <label class="form-label fs-12 mb-1" for="{{ $key }}">{{ translate($field['label']) }}</label>
+                            @include('admin-views.settings.partials._policy-field', ['key' => $key, 'field' => $field, 'value' => $terms[$key]])
+                            @if (!empty($field['help']))
+                                <small class="text-muted d-block mt-1">{{ translate($field['help']) }}.</small>
+                            @endif
+                        </div>
+                    @endforeach
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary px-4">{{ translate('save') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         {{-- The one number that tells the operator whether Calculate will do anything. --}}
         <div class="card mb-3">
             <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">

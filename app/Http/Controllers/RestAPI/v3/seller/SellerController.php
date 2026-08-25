@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestAPI\v3\seller;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Services\Marketplace\PayoutService;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ReviewRepositoryInterface;
 use App\Http\Controllers\Controller;
@@ -353,7 +354,17 @@ class SellerController extends Controller
     {
         $seller = $request->seller;
 
-        $old_image = Seller::where(['id' => $seller['id']])->first()->image;
+        // The bank columns as they stand, read before the write. The web path routes a bank change
+        // through PayoutService — which records the before/after audit row and arms the payout
+        // cooling window — and this path wrote the same four columns directly and did neither, so a
+        // payout redirect performed from the app left no trace and no delay behind it.
+        $current = Seller::where(['id' => $seller['id']])->first();
+        $previousBank = [
+            'bank_name' => $current->bank_name, 'branch' => $current->branch,
+            'holder_name' => $current->holder_name, 'account_no' => $current->account_no,
+        ];
+
+        $old_image = $current->image;
         $image = $request->file('image');
         if ($image != null) {
             $imageName = ImageManager::update('seller/', $old_image, 'webp', $request->file('image'));
@@ -369,10 +380,26 @@ class SellerController extends Controller
             'account_no' => $request['account_no'],
             'holder_name' => $request['holder_name'],
             'phone' => $request['phone'],
-            'password' => $request['password'] != null ? bcrypt($request['password']) : Seller::where(['id' => $seller['id']])->first()->password,
+            'password' => $request['password'] != null ? bcrypt($request['password']) : $current->password,
             'image' => $imageName,
             'updated_at' => now()
         ]);
+
+        $newBank = [
+            'bank_name' => $request['bank_name'], 'branch' => $request['branch'],
+            'holder_name' => $request['holder_name'], 'account_no' => $request['account_no'],
+        ];
+
+        if ($previousBank !== $newBank) {
+            app(PayoutService::class)->recordBankChange(
+                sellerId: $seller['id'],
+                previous: $previousBank,
+                current: $newBank,
+                changedBy: $seller['id'],
+                changedByType: 'seller',
+                ip: $request->ip(),
+            );
+        }
 
         // Changing the password ends every other session, which is right — but the caller is not
         // one of them. This used to rotate the token and answer 200 with no way to learn the new

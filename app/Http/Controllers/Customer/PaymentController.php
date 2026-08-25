@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Events\OrderEditDuePaymentEvent;
+use App\Services\Analytics\Analytics;
 use App\Models\AdminWallet;
 use App\Models\Cart;
 use App\Models\CustomerWallet;
@@ -394,6 +395,17 @@ class PaymentController extends Controller
         );
 
         $receiverInfo = new Receiver('receiver_name', 'example.png');
+
+        // The shopper has been handed to the gateway. Recorded here because it is the last moment
+        // the application knows about a payment that may never come back: without it, someone who
+        // abandoned at the gateway is invisible and there is no abandonment rate to compute — the
+        // event was in the catalogue, mapped in the recorder and charted, and nothing emitted it.
+        app(Analytics::class)->paymentAttempted(
+            gateway: (string) $request['payment_method'],
+            outcome: 'started',
+            amount: (float) $paymentAmount,
+        );
+
         return $this->generate_link($payer, $paymentInfo, $receiverInfo);
     }
 

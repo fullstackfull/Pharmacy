@@ -1029,6 +1029,654 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── analytics · privacy settings, data quality and the fold ────────
+        'analytics_and_privacy' => [
+            'Analytics and privacy',
+            'التحليلات والخصوصية',
+        ],
+        'what_is_measured_about_live_customer_traffic_who_is_excluded_and_how_long_it_is_kept' => [
+            'What is measured about live customer traffic, who is excluded, and how long it is kept',
+            'ما يُقاس من حركة العملاء الفعلية، ومن يُستبعَد، ومدة الاحتفاظ',
+        ],
+        'measure_visits_at_all' => [
+            'Measure visits at all',
+            'قياس الزيارات أصلاً',
+        ],
+        'honour_the_do_not_track_header' => [
+            'Honour the Do Not Track header',
+            'احترام ترويسة عدم التتبّع',
+        ],
+        'refused_visits_are_counted_on_the_data_quality_screen_so_the_drop_has_an_explanation' => [
+            'Refused visits are counted on the Data quality screen, so the drop has an explanation',
+            'تُحصى الزيارات المرفوضة في شاشة جودة البيانات، فيكون للانخفاض تفسير',
+        ],
+        'measure_nothing_until_a_visitor_accepts_cookies' => [
+            'Measure nothing until a visitor accepts cookies',
+            'لا تقس شيئاً حتى يقبل الزائر ملفات تعريف الارتباط',
+        ],
+        'mask_the_ip_to_its_network_before_hashing_it' => [
+            'Mask the IP to its network before hashing it',
+            'إخفاء عنوان IP إلى شبكته قبل تجزئته',
+        ],
+        'store_the_visitors_country' => [
+            'Store the visitor’s country',
+            'تخزين بلد الزائر',
+        ],
+        'leave_bots_out_of_the_reports' => [
+            'Leave bots out of the reports',
+            'استبعاد الروبوتات من التقارير',
+        ],
+        'leave_your_own_staffs_browsing_out_of_the_reports' => [
+            'Leave your own staff’s browsing out of the reports',
+            'استبعاد تصفّح موظفيك من التقارير',
+        ],
+        'minutes_of_inactivity_that_end_a_visit' => [
+            'Minutes of inactivity that end a visit',
+            'دقائق الخمول التي تنهي الزيارة',
+        ],
+        'seconds_on_the_shop_before_a_visit_counts_as_engaged' => [
+            'Seconds on the shop before a visit counts as engaged',
+            'الثواني في المتجر قبل اعتبار الزيارة متفاعلة',
+        ],
+        'days_individual_events_are_kept' => [
+            'Days individual events are kept',
+            'عدد أيام الاحتفاظ بالأحداث الفردية',
+        ],
+        'days_sessions_are_kept' => [
+            'Days sessions are kept',
+            'عدد أيام الاحتفاظ بالجلسات',
+        ],
+        'days_the_daily_rollups_are_kept' => [
+            'Days the daily rollups are kept',
+            'عدد أيام الاحتفاظ بالتجميعات اليومية',
+        ],
+        'the_rollups_are_small_and_are_what_every_long_range_chart_reads' => [
+            'The rollups are small, and are what every long-range chart reads',
+            'التجميعات صغيرة الحجم، وهي ما تقرأه كل الرسوم البيانية الممتدة',
+        ],
+        'what_this_shop_measures' => [
+            'What this shop measures',
+            'ما يقيسه هذا المتجر',
+        ],
+        'the_pipeline_itself' => [
+            'The pipeline itself',
+            'خط المعالجة نفسه',
+        ],
+        'events_written' => [
+            'Events written',
+            'الأحداث المكتوبة',
+        ],
+        'dropped_buffer_full' => [
+            'Dropped — buffer full',
+            'مهملة — الذاكرة المؤقتة ممتلئة',
+        ],
+        'write_failures' => [
+            'Write failures',
+            'إخفاقات الكتابة',
+        ],
+        'events_reached_the_recorder_and_were_thrown_away_because_one_request_produced_more_than_the_buffer_holds' => [
+            'Events reached the recorder and were thrown away because one request produced more than the buffer holds',
+            'وصلت أحداث إلى المسجّل وأُهملت لأن طلباً واحداً أنتج أكثر مما تتسع له الذاكرة المؤقتة',
+        ],
+        'every_number_on_every_analytics_screen_is_short_by_that_much' => [
+            'Every number on every analytics screen is short by that much',
+            'كل رقم في كل شاشة تحليلات ناقص بهذا المقدار',
+        ],
+        'visits_we_chose_not_to_measure' => [
+            'Visits we chose not to measure',
+            'زيارات اخترنا ألا نقيسها',
+        ],
+        'neither_privacy_control_is_switched_on' => [
+            'Neither privacy control is switched on',
+            'لم يُفعَّل أي من ضابطي الخصوصية',
+        ],
+        'no_visit_is_being_refused_so_nothing_is_missing_from_the_figures_for_this_reason' => [
+            'No visit is being refused, so nothing is missing from the figures for this reason',
+            'لا تُرفض أي زيارة، فلا ينقص من الأرقام شيء لهذا السبب',
+        ],
+        'do_not_track' => [
+            'Do Not Track',
+            'عدم التتبّع',
+        ],
+        'consent_not_given' => [
+            'Consent not given',
+            'لم تُمنح الموافقة',
+        ],
+        'total_refused' => [
+            'Total refused',
+            'إجمالي المرفوض',
+        ],
+        'these_visits_were_deliberately_not_measured_they_are_the_reason_the_figures_are_lower_than_your_server_logs' => [
+            'These visits were deliberately not measured. They are the reason the figures are lower than your server logs',
+            'لم تُقَس هذه الزيارات عمداً. وهي سبب كون الأرقام أقل من سجلات خادمك',
+        ],
+        'what_each_link_did_in_this_window' => [
+            'What each link did in this window',
+            'ما فعله كل رابط في هذه النافذة',
+        ],
+        'short_link' => [
+            'Short link',
+            'الرابط المختصر',
+        ],
+
+        // ── integrations · the portal's reference sections and webhooks ────
+        'developer_portal' => [
+            'Developer portal',
+            'بوابة المطوّرين',
+        ],
+        'what_the_api_console_may_do_and_whether_response_shapes_are_learned_from_traffic' => [
+            'What the API console may do, and whether response shapes are learned from traffic',
+            'ما يُسمح لوحدة تجربة الواجهة بفعله، وهل تُستنتج أشكال الاستجابات من حركة المرور الفعلية',
+        ],
+        'the_api_console_is_available' => [
+            'The API console is available',
+            'وحدة تجربة الواجهة متاحة',
+        ],
+        'the_console_may_send_writes' => [
+            'The console may send writes',
+            'يمكن للوحدة إرسال طلبات كتابة',
+        ],
+        'off_by_default_everywhere_a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders' => [
+            'Off by default everywhere — a console on an admin panel sends real requests at the shop that takes the orders',
+            'معطّل افتراضياً في كل مكان — الوحدة في لوحة الإدارة ترسل طلبات حقيقية إلى المتجر الذي يستقبل الطلبات',
+        ],
+        'console_requests_per_minute_per_administrator' => [
+            'Console requests per minute, per administrator',
+            'عدد طلبات الوحدة في الدقيقة لكل مسؤول',
+        ],
+        'learn_response_shapes_from_real_traffic' => [
+            'Learn response shapes from real traffic',
+            'استنتاج أشكال الاستجابات من حركة المرور الفعلية',
+        ],
+        'only_keys_and_types_are_stored_never_a_value_from_any_response' => [
+            'Only keys and types are stored — never a value from any response',
+            'تُخزَّن المفاتيح والأنواع فقط — ولا تُخزَّن أي قيمة من أي استجابة',
+        ],
+        'a_console_on_an_admin_panel_sends_real_requests_at_the_shop_that_takes_the_orders' => [
+            'A console on an admin panel sends real requests at the shop that takes the orders',
+            'الوحدة في لوحة الإدارة ترسل طلبات حقيقية إلى المتجر الذي يستقبل الطلبات',
+        ],
+        'some_endpoints_are_never_sent_at_any_setting_money_identity_removal_and_that_list_is_deliberately_not_configurable' => [
+            'Some endpoints are never sent at any setting — money, identity, removal — and that list is deliberately not configurable',
+            'بعض النقاط لا تُرسَل مهما كانت الإعدادات — المال والهوية والحذف — وهذه القائمة غير قابلة للضبط عمداً',
+        ],
+        'api_snapshots' => [
+            'API snapshots',
+            'لقطات الواجهة البرمجية',
+        ],
+        'snapshots_are_being_taken_so_the_change_log_and_the_breaking_change_detection_have_something_to_compare_against' => [
+            'Snapshots are being taken, so the change log and the breaking-change detection have something to compare against',
+            'تُلتقط اللقطات، فيصبح لسجل التغييرات وكشف التغييرات الكاسرة ما يُقارَن به',
+        ],
+        'no_snapshot_has_been_stored_yet_so_the_change_log_has_nothing_to_compare_against' => [
+            'No snapshot has been stored yet, so the change log has nothing to compare against',
+            'لم تُخزَّن أي لقطة بعد، فليس لدى سجل التغييرات ما يُقارن به',
+        ],
+        'take_a_snapshot_now' => [
+            'Take a snapshot now',
+            'التقط لقطة الآن',
+        ],
+        'the_events_you_can_subscribe_to' => [
+            'The events you can subscribe to',
+            'الأحداث التي يمكنك الاشتراك بها',
+        ],
+        'sent_when' => [
+            'Sent when',
+            'تُرسَل عندما',
+        ],
+        'a_customer_placed_an_order_containing_at_least_one_of_your_products' => [
+            'A customer placed an order containing at least one of your products',
+            'قدّم عميل طلباً يحوي منتجاً واحداً على الأقل من منتجاتك',
+        ],
+        'an_order_of_yours_moved_to_a_new_status' => [
+            'An order of yours moved to a new status',
+            'انتقل أحد طلباتك إلى حالة جديدة',
+        ],
+        'a_customer_asked_for_a_refund_on_one_of_your_lines' => [
+            'A customer asked for a refund on one of your lines',
+            'طلب عميل استرداداً على أحد بنودك',
+        ],
+        'one_of_your_products_fell_under_the_low_stock_threshold' => [
+            'One of your products fell under the low-stock threshold',
+            'انخفض أحد منتجاتك دون عتبة المخزون المنخفض',
+        ],
+        'one_of_your_automation_rules_hid_a_listing' => [
+            'One of your automation rules hid a listing',
+            'أخفت إحدى قواعد الأتمتة لديك إدراجاً',
+        ],
+        'a_payout_of_yours_moved_to_a_new_status' => [
+            'A payout of yours moved to a new status',
+            'انتقلت إحدى دفعاتك إلى حالة جديدة',
+        ],
+        'verifying_a_delivery' => [
+            'Verifying a delivery',
+            'التحقق من التسليم',
+        ],
+        'every_delivery_is_signed_without_a_signature_a_webhook_endpoint_is_a_url_that_does_something_when_anybody_posts_to_it' => [
+            'Every delivery is signed. Without a signature, a webhook endpoint is a URL that does something when anybody posts to it',
+            'كل تسليم موقّع. بلا توقيع، تصبح نقطة الويب هوك رابطاً يفعل شيئاً عندما يرسل إليه أي أحد',
+        ],
+        'header' => [
+            'Header',
+            'الترويسة',
+        ],
+        'algorithm' => [
+            'Algorithm',
+            'الخوارزمية',
+        ],
+        'signed_over' => [
+            'Signed over',
+            'التوقيع على',
+        ],
+        'the_exact_request_body_as_bytes_not_a_reserialisation_of_it' => [
+            'The exact request body as bytes, not a re-serialisation of it',
+            'جسم الطلب بالضبط كبايتات، لا إعادة تسلسل له',
+        ],
+        'the_secret' => [
+            'The secret',
+            'السر',
+        ],
+        'once_when_the_endpoint_is_created_and_never_again' => [
+            'Shown once when the endpoint is created, and never again',
+            'يُعرض مرة عند إنشاء النقطة، ولا يُعرض بعدها',
+        ],
+        'other_headers' => [
+            'Other headers',
+            'ترويسات أخرى',
+        ],
+        'what_happens_when_your_endpoint_is_down' => [
+            'What happens when your endpoint is down',
+            'ما يحدث عندما تكون نقطتك متوقفة',
+        ],
+        'attempts' => [
+            'Attempts',
+            'المحاولات',
+        ],
+        'first_retry' => [
+            'First retry',
+            'أول إعادة محاولة',
+        ],
+        'doubling_each_attempt' => [
+            'Doubling each attempt',
+            'تتضاعف مع كل محاولة',
+        ],
+        'total_window' => [
+            'Total window',
+            'النافذة الكلية',
+        ],
+        'plan_your_outage_window_against_this' => [
+            'Plan your outage window against this',
+            'خطّط لفترة انقطاعك بناءً على هذا',
+        ],
+        'timeout' => [
+            'Timeout',
+            'المهلة',
+        ],
+        'switched_off_after' => [
+            'Switched off after',
+            'يُطفأ بعد',
+        ],
+        'consecutive_failures' => [
+            'Consecutive failures',
+            'إخفاقات متتالية',
+        ],
+        'a_switched_off_endpoint_is_cleared_by' => [
+            'A switched-off endpoint is cleared by',
+            'تُستعاد النقطة المطفأة عبر',
+        ],
+        're_saving_the_endpoint_which_resets_its_failure_run' => [
+            'Re-saving the endpoint, which resets its failure run',
+            'إعادة حفظ النقطة، ما يصفّر سلسلة إخفاقاتها',
+        ],
+        'the_retry_sweep_is' => [
+            'The retry sweep is',
+            'جولة إعادة المحاولة هي',
+        ],
+        'where_we_will_and_will_not_deliver' => [
+            'Where we will and will not deliver',
+            'إلى أين نُسلّم وإلى أين لا نُسلّم',
+        ],
+        'https_only' => [
+            'HTTPS only',
+            'HTTPS فقط',
+        ],
+        'refused' => [
+            'Refused',
+            'مرفوض',
+        ],
+        'private_addresses_loopback_and_cloud_metadata_endpoints' => [
+            'Private addresses, loopback, and cloud metadata endpoints',
+            'العناوين الخاصة والاسترجاع ونقاط بيانات السحابة الوصفية',
+        ],
+        'redirects_are_not_followed' => [
+            'Redirects are not followed',
+            'لا تُتبع عمليات إعادة التوجيه',
+        ],
+        'delivery_on_this_deployment' => [
+            'Delivery on this deployment',
+            'التسليم في هذا التثبيت',
+        ],
+        'endpoints' => [
+            'Endpoints',
+            'النقاط',
+        ],
+        'active' => [
+            'Active',
+            'نشط',
+        ],
+        'switched_off_by_us' => [
+            'Switched off by us',
+            'أطفأناها',
+        ],
+        'waiting_to_retry' => [
+            'Waiting to retry',
+            'بانتظار إعادة المحاولة',
+        ],
+        'given_up_on' => [
+            'Given up on',
+            'تم التخلي عنها',
+        ],
+        'delivered_today' => [
+            'Delivered today',
+            'سُلّمت اليوم',
+        ],
+        'this_enumeration_could_not_be_read' => [
+            'This enumeration could not be read',
+            'تعذّرت قراءة هذا التعداد',
+        ],
+        'the_constant_it_is_declared_in_has_been_renamed_or_removed' => [
+            'The constant it is declared in has been renamed or removed',
+            'الثابت المُعلَن فيه أُعيدت تسميته أو حُذف',
+        ],
+        'where_a_sellers_withdrawal_has_got_to' => [
+            'Where a seller’s withdrawal has got to',
+            'إلى أين وصل طلب سحب البائع',
+        ],
+        'the_events_an_endpoint_may_subscribe_to' => [
+            'The events an endpoint may subscribe to',
+            'الأحداث التي يمكن للنقطة الاشتراك بها',
+        ],
+        'the_states_a_seller_may_put_their_own_endpoint_into' => [
+            'The states a seller may put their own endpoint into',
+            'الحالات التي يمكن للبائع وضع نقطته فيها',
+        ],
+        'endpoints_other_systems_post_into' => [
+            'Endpoints other systems post into',
+            'النقاط التي ترسل إليها أنظمة أخرى',
+        ],
+        'nothing_posts_into_this_shop' => [
+            'Nothing posts into this shop',
+            'لا شيء يرسل إلى هذا المتجر',
+        ],
+        'endpoint' => [
+            'Endpoint',
+            'النقطة',
+        ],
+        'method' => [
+            'Method',
+            'الطريقة',
+        ],
+        'authentication' => [
+            'Authentication',
+            'المصادقة',
+        ],
+        'guarded' => [
+            'Guarded',
+            'محمية',
+        ],
+        'unauthenticated' => [
+            'Unauthenticated',
+            'غير مُصادَق عليها',
+        ],
+        'payment_gateways_this_shop_calls_out_to' => [
+            'Payment gateways this shop calls out to',
+            'بوابات الدفع التي يتصل بها هذا المتجر',
+        ],
+        'no_payment_gateway_is_configured' => [
+            'No payment gateway is configured',
+            'لا توجد بوابة دفع مضبوطة',
+        ],
+        'gateway' => [
+            'Gateway',
+            'البوابة',
+        ],
+        'switched' => [
+            'Switched',
+            'الحالة',
+        ],
+        'ready' => [
+            'Ready',
+            'جاهزة',
+        ],
+        'test_mode_no_money_moves' => [
+            'Test mode — no money moves',
+            'وضع الاختبار — لا ينتقل أي مال',
+        ],
+        'outbound_webhooks_to_sellers' => [
+            'Outbound webhooks to sellers',
+            'الويب هوك الصادر إلى البائعين',
+        ],
+        'sellers_affected' => [
+            'sellers affected',
+            'بائعين متأثرين',
+        ],
+        'seller_webhook_delivery_could_not_be_read' => [
+            'Seller webhook delivery could not be read',
+            'تعذّرت قراءة تسليم ويب هوك البائعين',
+        ],
+        'temperature' => [
+            'Temperature',
+            'درجة الإبداع',
+        ],
+        'left_empty_the_shipped_default_is_used' => [
+            'Left empty, the shipped default is used',
+            'إن تُرك فارغاً، يُستخدَم الافتراضي المرفق',
+        ],
+        'lower_is_more_literal_higher_is_more_inventive' => [
+            'Lower is more literal, higher is more inventive',
+            'الأقل أكثر حرفية، والأعلى أكثر ابتكاراً',
+        ],
+
+        // ── finance · payout terms, failed transfers and gateway readiness ─
+        'the_platforms_anti_account_takeover_hold_the_length_is_what_a_risk_team_retunes_after_an_incident' => [
+            'The platform\'s anti-account-takeover hold — the length is what a risk team retunes after an incident',
+            'حجز المنصة ضد استيلاء الحسابات — مدّته ما يعيد فريق المخاطر ضبطه بعد أي حادثة',
+        ],
+        'mark_failed' => [
+            'Mark failed',
+            'وضع كفاشلة',
+        ],
+        'mark_payout_failed' => [
+            'Mark payout failed',
+            'وضع الدفعة كفاشلة',
+        ],
+        'a_failed_transfer_means_the_money_never_left_so_it_goes_back_to_the_sellers_available_balance' => [
+            'A failed transfer means the money never left, so it goes back to the seller\'s available balance',
+            'التحويل الفاشل يعني أن المال لم يغادر، فيعود إلى الرصيد المتاح للبائع',
+        ],
+        'what_the_bank_said' => [
+            'What the bank said',
+            'ما قالته البنك',
+        ],
+        'the_payout_was_marked_failed_and_the_money_is_back_in_the_sellers_available_balance' => [
+            'The payout was marked failed and the money is back in the seller\'s available balance.',
+            'تم وضع الدفعة كفاشلة وعاد المال إلى الرصيد المتاح للبائع.',
+        ],
+        'only_an_approved_processing_or_paid_payout_can_be_marked_failed' => [
+            'Only an approved, processing or paid payout can be marked failed.',
+            'لا يمكن وضع كفاشلة إلا دفعة معتمدة أو قيد المعالجة أو مدفوعة.',
+        ],
+        'send_again' => [
+            'Send again',
+            'إعادة الإرسال',
+        ],
+        'open_a_new_payout_request_for_the_same_amount' => [
+            'Open a new payout request for the same amount',
+            'فتح طلب صرف جديد بالمبلغ نفسه',
+        ],
+        'a_new_payout_request_was_opened' => [
+            'A new payout request was opened',
+            'تم فتح طلب صرف جديد',
+        ],
+        'that_payout_could_not_be_sent_again' => [
+            'That payout could not be sent again.',
+            'تعذّر إعادة إرسال هذه الدفعة.',
+        ],
+        'only_a_failed_payout_can_be_sent_again' => [
+            'Only a failed payout can be sent again.',
+            'لا يمكن إعادة إرسال سوى دفعة فاشلة.',
+        ],
+        'these_gateways_are_switched_on_and_cannot_take_a_payment' => [
+            'These gateways are switched on and cannot take a payment',
+            'هذه البوابات مفعّلة ولا يمكنها استقبال أي دفعة',
+        ],
+        'these_gateways_are_live_on_your_checkout_in_test_mode_so_no_money_moves' => [
+            'These gateways are live on your checkout in test mode, so no money moves',
+            'هذه البوابات ظاهرة في صفحة الدفع بوضع الاختبار، فلا ينتقل أي مال',
+        ],
+        'currency_model' => [
+            'Currency model',
+            'نموذج العملة',
+        ],
+        'whether_this_marketplace_runs_on_one_currency_or_several_with_exchange_rates' => [
+            'Whether this marketplace runs on one currency, or several with exchange rates',
+            'هل يعمل هذا السوق بعملة واحدة أم بعدّة عملات مع أسعار صرف',
+        ],
+        'single_currency' => [
+            'Single currency',
+            'عملة واحدة',
+        ],
+        'multi_currency' => [
+            'Multi currency',
+            'عدّة عملات',
+        ],
+        'on_single_currency_exchange_rates_are_not_applied_anywhere_even_where_they_are_stored' => [
+            'On single currency, exchange rates are not applied anywhere — even where they are stored',
+            'في وضع العملة الواحدة لا تُطبَّق أسعار الصرف في أي مكان — حتى حيث تكون مخزّنة',
+        ],
+        'the_currency_model_was_updated' => [
+            'The currency model was updated.',
+            'تم تحديث نموذج العملة.',
+        ],
+        'the_payment_terms_were_saved' => [
+            'The payment terms were saved.',
+            'تم حفظ شروط الدفع.',
+        ],
+
+        // ── security · the audit trail, sign-in events and bot defence ────
+        'what_changed' => [
+            'What changed',
+            'ما الذي تغيّر',
+        ],
+        'who' => [
+            'Who',
+            'مَن',
+        ],
+        'field' => [
+            'Field',
+            'الحقل',
+        ],
+        'no_field_changed' => [
+            'No field changed',
+            'لم يتغيّر أي حقل',
+        ],
+        'everything_you_your_staff_and_your_api_keys_did_and_everything_the_platform_recorded_about_your_shop' => [
+            'Everything you, your staff and your API keys did — and everything the platform recorded about your shop',
+            'كل ما فعلته أنت وموظفوك ومفاتيح الواجهة البرمجية — وكل ما سجّلته المنصة عن متجرك',
+        ],
+        'actions_appear_here_as_they_happen_there_is_nothing_to_switch_on' => [
+            'Actions appear here as they happen; there is nothing to switch on.',
+            'تظهر الإجراءات هنا فور حدوثها؛ لا شيء بحاجة إلى تفعيل.',
+        ],
+        'showing_n_of_m_recorded_actions' => [
+            'Showing :shown of :total recorded actions.',
+            'عرض :shown من أصل :total إجراء مُسجَّل.',
+        ],
+        'authentication_security' => [
+            'Authentication security',
+            'أمن تسجيل الدخول',
+        ],
+        'Authentication_Security' => [
+            'Authentication Security',
+            'أمن تسجيل الدخول',
+        ],
+        'the_bot_defence_on_your_sign_in_forms_and_how_a_customer_recovers_their_account' => [
+            'The bot defence on your sign-in forms, and how a customer recovers their account',
+            'دفاع النماذج ضد الروبوتات، وكيفية استعادة العميل لحسابه',
+        ],
+        'recaptcha' => [
+            'reCAPTCHA',
+            'reCAPTCHA',
+        ],
+        'applies_to_every_sign_in_and_password_reset_form_admin_vendor_and_customer' => [
+            'Applies to every sign-in and password-reset form — admin, vendor and customer',
+            'يُطبَّق على كل نماذج تسجيل الدخول واستعادة كلمة المرور — الإدارة والبائع والعميل',
+        ],
+        'enforced' => [
+            'Enforced',
+            'مُطبَّق',
+        ],
+        'not_enforced' => [
+            'Not enforced',
+            'غير مُطبَّق',
+        ],
+        'while_this_is_off_the_sign_in_forms_are_protected_by_rate_limiting_alone' => [
+            'While this is off, the sign-in forms are protected by rate limiting alone',
+            'ما دام هذا معطّلاً، فنماذج الدخول محميّة بتحديد المعدّل وحده',
+        ],
+        'the_limit_is_on_the_platform_policies_page_under_access_policy' => [
+            'The limit is on the Platform Policies page, under Access policy',
+            'الحد موجود في صفحة سياسات المنصة ضمن سياسة الوصول',
+        ],
+        'site_key' => [
+            'Site key',
+            'مفتاح الموقع',
+        ],
+        'secret_key' => [
+            'Secret key',
+            'المفتاح السري',
+        ],
+        'lowest_score_let_through' => [
+            'Lowest score let through',
+            'أدنى درجة مسموح بمرورها',
+        ],
+        'lowest_recaptcha_score_a_visitor_may_have_and_still_be_let_through' => [
+            'Lowest reCAPTCHA score a visitor may have and still be let through',
+            'أدنى درجة reCAPTCHA يمكن للزائر أن يحملها ويُسمح له بالمرور',
+        ],
+        'higher_turns_away_more_bots_and_more_people' => [
+            'Higher turns away more bots, and more people',
+            'الأعلى يمنع روبوتات أكثر، وأشخاصاً أكثر',
+        ],
+        'recaptcha_needs_both_a_site_key_and_a_secret_key_before_it_can_be_switched_on' => [
+            'reCAPTCHA needs both a site key and a secret key before it can be switched on.',
+            'يحتاج reCAPTCHA إلى مفتاح موقع ومفتاح سري قبل تفعيله.',
+        ],
+        'the_authentication_settings_were_saved' => [
+            'The authentication settings were saved.',
+            'تم حفظ إعدادات تسجيل الدخول.',
+        ],
+        'customer_password_recovery' => [
+            'Customer password recovery',
+            'استعادة كلمة مرور العميل',
+        ],
+        'the_vendor_and_delivery_man_equivalents_are_on_their_own_settings_pages' => [
+            'The vendor and delivery-man equivalents are on their own settings pages',
+            'ما يقابلها للبائع ومندوب التوصيل موجود في صفحات إعداداتهما',
+        ],
+        'send_the_reset_through' => [
+            'Send the reset through',
+            'أرسل الاستعادة عبر',
+        ],
+        'sms_otp' => [
+            'SMS OTP',
+            'رمز عبر رسالة نصية',
+        ],
+        'this_value_is_also_shipped_to_the_mobile_apps_in_the_config_payload_so_they_ask_for_the_same_thing_the_website_does' => [
+            'This value is also shipped to the mobile apps in the config payload, so they ask for the same thing the website does',
+            'تُرسَل هذه القيمة أيضاً إلى تطبيقات الجوال ضمن حزمة الضبط، فتطلب ما يطلبه الموقع نفسه',
+        ],
+
         // ── admin · the monitoring console's write actions ────────────────
         'a_note_needs_something_to_say' => [
             'A note needs something to say.',

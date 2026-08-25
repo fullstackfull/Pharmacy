@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Enums\GlobalConstant;
+use Illuminate\Support\Facades\Event;
+use App\Listeners\Security\RecordAuthenticationEvents;
 use App\Models\BusinessPage;
 use App\Models\BusinessSetting;
 use App\Models\Contact;
@@ -158,6 +160,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Authentication events, registered here because App\Providers\EventServiceProvider is not
+        // in bootstrap/providers.php — the application relies on listener auto-discovery, and
+        // discovery only finds `handle` and `__invoke`, never a subscriber's own method names.
+        Event::subscribe(RecordAuthenticationEvents::class);
+
         if (!in_array(request()->ip(), ['127.0.0.1', '::1']) && env('FORCE_HTTPS')) {
             \URL::forceScheme('https');
         }

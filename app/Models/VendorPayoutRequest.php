@@ -17,6 +17,20 @@ class VendorPayoutRequest extends Model
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_FAILED = 'failed';
 
+    /**
+     * Every state a payout can be in, in the order it moves through them.
+     *
+     * Declared as a set rather than only as individual constants because the Developer Portal
+     * publishes it: a client branching on payout status needs the whole list, and a list assembled
+     * by hand in a document is one that goes stale the first time a state is added.
+     *
+     * @var array<int, string>
+     */
+    public const STATUSES = [
+        self::STATUS_REQUESTED, self::STATUS_UNDER_REVIEW, self::STATUS_APPROVED,
+        self::STATUS_PROCESSING, self::STATUS_PAID, self::STATUS_REJECTED, self::STATUS_FAILED,
+    ];
+
     /** Statuses in which the amount is still reserved and can be released back. */
     public const OPEN_STATUSES = [
         self::STATUS_REQUESTED, self::STATUS_UNDER_REVIEW, self::STATUS_APPROVED, self::STATUS_PROCESSING,

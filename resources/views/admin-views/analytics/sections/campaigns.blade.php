@@ -180,3 +180,16 @@
     @endif
 </x-k.card>
 @endif
+
+{{-- What each short link did over the selected window.
+
+     The rollup has written a `campaign_link` dimension every day since it was built and no section
+     asked for it, so the day-by-day series was reachable only by guessing the export URL — while
+     this page read lifetime counters and could not answer "which day did it work". --}}
+@php($perDay = $data['per_day'] ?? [])
+
+@include('admin-views.analytics.sections._breakdown', [
+    'breakdown' => $perDay,
+    'title' => translate('what_each_link_did_in_this_window'),
+    'label' => translate('short_link'),
+])

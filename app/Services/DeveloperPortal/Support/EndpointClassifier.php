@@ -38,6 +38,14 @@ class EndpointClassifier
         'deliveryman' => ApiDoc::DELIVERY_APP,
     ];
 
+    /**
+     * Path fragments that mean "an outside system POSTs into this".
+     *
+     * Matched on the path rather than declared per route, because the list is the gateway vendors'
+     * to grow: a thirteenth gateway added next year would otherwise silently be undocumented again.
+     */
+    private const INBOUND_FRAGMENTS = ['callback', 'webhook', '/ipn', 'update-status'];
+
     /** The actor a route authenticates decides its audience more reliably than its path does. */
     private const ACTOR_AUDIENCE = [
         'vendor' => ApiDoc::VENDOR_APP,
@@ -91,7 +99,12 @@ class EndpointClassifier
             'group' => $doc?->group ?? $this->group($uri, $route),
             'version' => $this->version($uri),
             'visibility' => $doc?->visibility ?? $this->visibility($audience, $auth, $methods),
-            'surface' => str_starts_with($uri, 'api/') ? 'api' : 'panel',
+            // Not merely "does the path start with api/". Twelve payment callbacks and the courier
+            // status webhook sit under /payment/* and are as external as anything the API serves —
+            // an outside system POSTs into them and money moves — so calling them panel routes made
+            // the explorer, the OpenAPI export and the coverage score all skip the endpoints most
+            // likely to be pointed at the wrong host during a migration.
+            'surface' => str_starts_with($uri, 'api/') || $this->isInboundIntegration($uri) ? 'api' : 'panel',
         ];
     }
 
@@ -185,4 +198,16 @@ class EndpointClassifier
             'unclassified',
         ];
     }
+    /** Whether an outside system dials this route rather than a panel or an app. */
+    private function isInboundIntegration(string $uri): bool
+    {
+        foreach (self::INBOUND_FRAGMENTS as $fragment) {
+            if (str_contains($uri, $fragment)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

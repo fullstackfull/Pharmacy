@@ -3,6 +3,8 @@
 namespace App\Services\DeveloperPortal;
 
 use Illuminate\Http\Request;
+use App\Services\Platform\PolicyRegistry;
+use App\Services\Platform\Policy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -119,7 +121,7 @@ class ResponseShapeRecorder
 
     private function shouldRecord(Request $request, Response $response): bool
     {
-        if (!config('developer_portal.record_response_shapes', true) || !$this->ready()) {
+        if (!$this->settingEnabled('developer_record_response_shapes', 'record_response_shapes') || !$this->ready()) {
             return false;
         }
 
@@ -214,4 +216,28 @@ class ResponseShapeRecorder
             // Documentation is never the reason a request is remembered as having failed.
         }
     }
+    /**
+     * A portal switch, from the settings page, falling back to configuration.
+     *
+     * These four were env-only, so an operator could not see whether the console was enabled, and
+     * turning writes off during an incident meant editing .env and clearing caches. The config
+     * value stays the fallback, so an install that sets them by environment is unchanged.
+     */
+    private function settingEnabled(string $policy, string $configKey): bool
+    {
+        try {
+            $settings = app(Policy::class);
+
+            // Stored, then environment, then the shipped default. An install that turns the console
+            // off in .env must not have it turned back on by a default nobody chose.
+            if ($settings->isSet($policy)) {
+                return (bool) $settings->get($policy);
+            }
+        } catch (\Throwable) {
+            // No settings table yet — fall through to configuration.
+        }
+
+        return (bool) config('developer_portal.' . $configKey, PolicyRegistry::definition($policy)['default']);
+    }
+
 }
