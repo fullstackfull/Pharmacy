@@ -80,7 +80,7 @@ class ProductList
             ->open()
             ->where('entity_type', 'product')
             ->whereIn('entity_id', $productIds)
-            ->orderByRaw("FIELD(severity, 'critical', 'high', 'medium', 'low')")
+            ->orderBySeverity()
             ->get()
             ->keyBy(fn (SellerInsight $issue) => (int) $issue->entity_id)
             ->all();

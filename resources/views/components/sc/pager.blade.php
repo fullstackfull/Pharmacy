@@ -14,7 +14,11 @@
             </select>
         </form>
         <div class="sc-spacer"></div>
-        <span class="sc-num">{{ $paginator->firstItem() }}–{{ $paginator->lastItem() }} {{ translate('of') }} {{ $paginator->total() }}</span>
+        <span class="sc-num">{{ \App\Services\SellerCenter\Copy::line('showing_range', [
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+            'total' => $paginator->total(),
+        ]) }}</span>
         <a class="sc-icon-btn {{ $paginator->onFirstPage() ? 'is-disabled' : '' }}"
            href="{{ $paginator->onFirstPage() ? '#' : $paginator->previousPageUrl() }}"
            aria-label="{{ translate('previous_page') }}" @if ($paginator->onFirstPage()) aria-disabled="true" tabindex="-1" style="opacity:.45;pointer-events:none" @endif>

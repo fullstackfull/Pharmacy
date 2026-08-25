@@ -168,9 +168,9 @@ class IssueList
             'due' => $query->orderBy('due_at', $direction),
             'impact' => $query->orderBy('impact_score', $direction),
             'affected' => $query->orderBy('affected_count', $direction),
-            default => $query
-                ->orderByRaw("FIELD(severity, 'critical', 'high', 'medium', 'low')")
-                ->orderByRaw('due_at IS NULL, due_at ASC'),
+            // Severity first, then the nearest deadline. A backlog sorted any other way
+            // buries the thing that is about to cost money.
+            default => $query->orderBySeverity()->orderByRaw('due_at IS NULL, due_at ASC'),
         };
     }
 

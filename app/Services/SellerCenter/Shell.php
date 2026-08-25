@@ -73,7 +73,7 @@ class Shell
      * half its destinations missing. Returning null lets a partial omit the control entirely
      * rather than draw one that goes nowhere.
      */
-    public static function route(string $name, array $parameters = []): ?string
+    public static function route(string $name, array|int|string $parameters = []): ?string
     {
         return Route::has($name) ? route($name, $parameters) : null;
     }
