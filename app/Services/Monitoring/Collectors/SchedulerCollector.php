@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Collectors;
 
 use App\Services\Monitoring\Metric;
+use App\Console\ScheduleDefinition;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Services\Monitoring\Support\Clock;
 use Illuminate\Support\Carbon;
@@ -72,6 +73,10 @@ class SchedulerCollector implements Collector
     {
         try {
             $defined = $this->definedTasks();
+            // Best-effort: the recorded history lives on the monitoring connection, and when that is
+            // unreachable an operator still needs to see what is supposed to run. Blanking the whole
+            // table because the history is missing turns "I cannot reach the monitoring database"
+            // into "nothing is scheduled", which are opposite things.
             $runs = $this->latestRuns(array_column($defined, 'task'));
             $now = Clock::now();
             $tasks = [];
@@ -110,10 +115,9 @@ class SchedulerCollector implements Collector
      */
     private function definedTasks(): array
     {
-        $schedule = app(Schedule::class);
         $tasks = [];
 
-        foreach ($schedule->events() as $event) {
+        foreach ($this->scheduledEvents() as $event) {
             $tasks[] = [
                 'task' => $this->taskName($event),
                 'description' => (string) ($event->description ?? ''),
@@ -122,6 +126,30 @@ class SchedulerCollector implements Collector
         }
 
         return $tasks;
+    }
+
+    /**
+     * The events the application actually schedules, readable from a web request.
+     *
+     * Laravel registers the schedule from `Artisan::starting`, so the container's Schedule is empty
+     * on any request that is not a console command — which is every request that renders this page.
+     * Applying the same definition to a throwaway Schedule reads what is defined without starting a
+     * console process, and without a second hand-maintained list to drift out of date.
+     *
+     * @return array<int, \Illuminate\Console\Scheduling\Event>
+     */
+    private function scheduledEvents(): array
+    {
+        $registered = app(Schedule::class);
+
+        if ($registered->events() !== []) {
+            return $registered->events();
+        }
+
+        $schedule = new Schedule();
+        ScheduleDefinition::define($schedule);
+
+        return $schedule->events();
     }
 
     /**
@@ -153,20 +181,26 @@ class SchedulerCollector implements Collector
             return [];
         }
 
-        $connection = DB::connection(config('monitoring.connection', 'monitoring'));
+        try {
+            $connection = DB::connection(config('monitoring.connection', 'monitoring'));
 
-        // One row per task: the most recent run. A correlated subquery would be N queries; this is
-        // one, and the table is small because runs are pruned by retention.
-        $latest = $connection->table('monitoring_scheduled_runs')
-            ->select('task', DB::raw('MAX(id) as id'))
-            ->whereIn('task', $names)
-            ->groupBy('task');
+            // One row per task: the most recent run. A correlated subquery would be N queries; this
+            // is one, and the table is small because runs are pruned by retention.
+            $latest = $connection->table('monitoring_scheduled_runs')
+                ->select('task', DB::raw('MAX(id) as id'))
+                ->whereIn('task', $names)
+                ->groupBy('task');
 
-        return $connection->table('monitoring_scheduled_runs as runs')
-            ->joinSub($latest, 'newest', fn ($join) => $join->on('runs.id', '=', 'newest.id'))
-            ->get()
-            ->keyBy('task')
-            ->all();
+            return $connection->table('monitoring_scheduled_runs as runs')
+                ->joinSub($latest, 'newest', fn ($join) => $join->on('runs.id', '=', 'newest.id'))
+                ->get()
+                ->keyBy('task')
+                ->all();
+        } catch (\Throwable) {
+            // No history rather than no schedule. Every task then reads as never-run, which is what
+            // the status column already knows how to say.
+            return [];
+        }
     }
 
     /**
