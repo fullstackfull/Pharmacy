@@ -8,6 +8,7 @@ use App\Services\DeveloperPortal\ApiManifest;
 use App\Services\DeveloperPortal\ApiSnapshotService;
 use App\Services\DeveloperPortal\Generators\OpenApiGenerator;
 use App\Services\DeveloperPortal\ConsoleGuard;
+use App\Services\DeveloperPortal\DeveloperPortalPermissionService;
 use App\Services\DeveloperPortal\Generators\PostmanGenerator;
 use App\Services\DeveloperPortal\PortalNavigation;
 use App\Services\Telemetry\DeveloperPortalService;
@@ -32,12 +33,18 @@ class DeveloperPortalController extends BaseController
         private readonly DeveloperPortalService $portal,
         private readonly ApiManifest $manifest,
         private readonly ApiSnapshotService $snapshots,
+        private readonly DeveloperPortalPermissionService $permissions,
     ) {
     }
 
     public function index(?Request $request = null, ?string $type = null): View|JsonResponse|RedirectResponse
     {
         $request ??= request();
+
+        if (!$this->permissions->canView()) {
+            return redirect()->route('admin.dashboard.index');
+        }
+
         $section = $type ?: $this->stringOr($request->query('section'), 'overview');
 
         if (!PortalNavigation::has($section)) {
@@ -59,6 +66,10 @@ class DeveloperPortalController extends BaseController
     /** One endpoint's page: reference, examples, live health and history in one place. */
     public function endpoint(Request $request, string $id): View|RedirectResponse
     {
+        if (!$this->permissions->canView()) {
+            return redirect()->route('admin.dashboard.index');
+        }
+
         $endpoint = $this->portal->endpoint($id);
 
         if ($endpoint === null) {
@@ -70,6 +81,9 @@ class DeveloperPortalController extends BaseController
             'endpoint' => $endpoint,
             'manifest' => $this->manifest->get(),
             'navigation' => PortalNavigation::grouped($this->portal->capabilities()),
+            // Drawn or not drawn, rather than drawn and refused: a send button that always answers
+            // 403 teaches an operator to ignore the refusal rather than to ask for the grant.
+            'mayUseConsole' => $this->permissions->canUseConsole(),
         ]);
     }
 
@@ -84,6 +98,10 @@ class DeveloperPortalController extends BaseController
      */
     public function lookup(Request $request): RedirectResponse
     {
+        if (!$this->permissions->canView()) {
+            return redirect()->route('admin.dashboard.index');
+        }
+
         $path = $this->stringOr($request->query('path'));
         $method = $this->stringOr($request->query('method'));
         $endpoint = $path === '' ? null : $this->manifest->findByPath($path, $method !== '' ? $method : null);
@@ -101,6 +119,8 @@ class DeveloperPortalController extends BaseController
     /** The generated OpenAPI document. */
     public function openapi(Request $request, OpenApiGenerator $generator): StreamedResponse
     {
+        abort_unless($this->permissions->canView(), 403);
+
         $filters = $this->filters($request);
         $format = $request->query('format') === 'yaml' ? 'yaml' : 'json';
 
@@ -117,6 +137,8 @@ class DeveloperPortalController extends BaseController
     /** The generated Postman collection. */
     public function postman(Request $request, PostmanGenerator $generator): StreamedResponse
     {
+        abort_unless($this->permissions->canView(), 403);
+
         $filters = $this->filters($request);
         $body = $generator->toJson($filters);
 
@@ -135,6 +157,13 @@ class DeveloperPortalController extends BaseController
      */
     public function snapshot(Request $request): RedirectResponse
     {
+        // A snapshot writes the baseline every later run is compared against, so it is granted
+        // rather than inherited from the module.
+        if (!$this->permissions->canSnapshot()) {
+            return redirect()->route('admin.developer.section', ['section' => 'changelog'])
+                ->with('error', translate('you_do_not_have_permission_to_capture_an_api_snapshot'));
+        }
+
         $label = $this->stringOr($request->input('label')) ?: 'manual-' . now()->format('Y-m-d H:i');
         $result = $this->snapshots->captureAndRecord($label, auth('admin')->id());
 
@@ -162,6 +191,15 @@ class DeveloperPortalController extends BaseController
      */
     public function try(Request $request, string $id, ApiConsole $console, ConsoleGuard $guard): JsonResponse
     {
+        // The console sends real, authenticated requests at this installation. Reading the
+        // documentation never carried that, and now it does not grant it either.
+        if (!$this->permissions->canUseConsole()) {
+            return response()->json([
+                'ok' => false,
+                'message' => translate('you_do_not_have_permission_to_send_requests_from_the_console'),
+            ], 403);
+        }
+
         $endpoint = $this->manifest->endpoint($id);
 
         if ($endpoint === null) {
@@ -220,6 +258,10 @@ class DeveloperPortalController extends BaseController
     /** Rebuild the manifest by hand, for the moment after a deployment. */
     public function refresh(): RedirectResponse
     {
+        if (!$this->permissions->canView()) {
+            return redirect()->route('admin.dashboard.index');
+        }
+
         $this->manifest->forget();
         $this->manifest->get();
 
