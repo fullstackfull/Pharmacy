@@ -106,13 +106,13 @@
 
                 <x-sc.card :title="translate('timeline')">
                     <x-sc.timeline>
-                        <x-sc.timeline-item tone="info" :time="optional($issue->first_detected_at)->format('H:i')"
-                                            :meta="optional($issue->first_detected_at)->format('j M Y')">
+                        <x-sc.timeline-item tone="info" :time="\App\Services\SellerCenter\Moment::time($issue->first_detected_at)"
+                                            :meta="\App\Services\SellerCenter\Moment::day($issue->first_detected_at)">
                             {{ translate('detected_by') }} {{ $issue->type }}
                         </x-sc.timeline-item>
 
                         @foreach ($escalations as $escalation)
-                            <x-sc.timeline-item tone="critical" :time="isset($escalation['at']) ? \Illuminate\Support\Carbon::parse($escalation['at'])->format('H:i') : null">
+                            <x-sc.timeline-item tone="critical" :time="isset($escalation['at']) ? \App\Services\SellerCenter\Moment::time(\Illuminate\Support\Carbon::parse($escalation['at'])) : null">
                                 {{ translate('severity_raised_from') }} {{ translate($escalation['from'] ?? '') }}
                                 {{ translate('to') }} {{ translate($escalation['to'] ?? '') }} —
                                 {{ translate($escalation['reason'] ?? '') }}
@@ -120,7 +120,7 @@
                         @endforeach
 
                         @if ($issue->resolved_at)
-                            <x-sc.timeline-item tone="good" :time="$issue->resolved_at->format('H:i')">
+                            <x-sc.timeline-item tone="good" :time="\App\Services\SellerCenter\Moment::time($issue->resolved_at)">
                                 {{ $issue->resolution_type === 'auto' ? translate('resolved_automatically') : translate('resolved') }}
                             </x-sc.timeline-item>
                         @else

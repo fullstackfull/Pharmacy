@@ -24,7 +24,7 @@
                           ['label' => translate('nav_all_orders'), 'href' => route('seller.orders.index')],
                           ['label' => '#' . $order->id],
                       ]"
-                      :sub="translate('placed') . ' ' . optional($order->created_at)->format('j M H:i') . ' · ' . ($isCod ? translate('cod') : translate('card'))">
+                      :sub="translate('placed') . ' ' . \App\Services\SellerCenter\Moment::stamp($order->created_at) . ' · ' . ($isCod ? translate('cod') : translate('card'))">
         <x-slot:actions>
             @if ($cancelled)
                 {{-- A cancelled order collapses to view-only; the timeline still explains it. --}}
@@ -118,9 +118,9 @@
                         <x-sc.info :label="translate('payment_status')" :value="translate($order->payment_status ?? 'unpaid')" />
                         <x-sc.info :label="translate('ship_by')"
                                    :tone="in_array($sla['state'], ['breached', 'closing', 'soon'], true) ? $sla['tone'] : null"
-                                   :value="$sla['deadline'] ? $sla['deadline']->format('j M H:i') : '—'" />
+                                   :value="\App\Services\SellerCenter\Moment::stamp($sla['deadline'])" />
                         @if ($order->expected_delivery_date)
-                            <x-sc.info :label="translate('promised_delivery')" :value="\Illuminate\Support\Carbon::parse($order->expected_delivery_date)->format('j M')" />
+                            <x-sc.info :label="translate('promised_delivery')" :value="\App\Services\SellerCenter\Moment::day(\Illuminate\Support\Carbon::parse($order->expected_delivery_date), withYear: false)" />
                         @endif
                     </div>
                 </x-sc.card>
@@ -134,8 +134,8 @@
                             @foreach ($timeline['events'] as $event)
                                 @php($isSystem = in_array($event['key'], $automatic, true) || ($event['actor'] ?? null) === 'system')
                                 <x-sc.timeline-item :tone="$isSystem ? 'info' : 'neutral'"
-                                                    :time="\Illuminate\Support\Carbon::parse($event['at'])->format('H:i')"
-                                                    :meta="\Illuminate\Support\Carbon::parse($event['at'])->format('j M Y') . ($event['actor'] ? ' · ' . translate($event['actor']) : '')">
+                                                    :time="\App\Services\SellerCenter\Moment::time(\Illuminate\Support\Carbon::parse($event['at']))"
+                                                    :meta="\App\Services\SellerCenter\Moment::day(\Illuminate\Support\Carbon::parse($event['at'])) . ($event['actor'] ? ' · ' . translate($event['actor']) : '')">
                                     {{ translate($event['key']) }}{{ $event['note'] ? ' — ' . $event['note'] : '' }}
                                 </x-sc.timeline-item>
                             @endforeach

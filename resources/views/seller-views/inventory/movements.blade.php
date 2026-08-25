@@ -58,7 +58,7 @@
             @foreach ($movements as $movement)
                 @php($isAdjustment = $movement->type === \App\Models\StockMovement::TYPE_ADJUSTMENT)
                 <x-sc.tr :id="$movement->id">
-                    <x-sc.td class="sc-muted sc-num">{{ optional($movement->created_at)->format('j M Y H:i') }}</x-sc.td>
+                    <x-sc.td class="sc-muted sc-ts">{{ \App\Services\SellerCenter\Moment::stamp($movement->created_at, withYear: true) }}</x-sc.td>
                     <x-sc.td class="sc-code">{{ $movement->product?->code ?: '—' }}</x-sc.td>
                     {{-- A movement outlives the product it describes: the log is the record of what
                          happened, so a deleted product leaves its id rather than an empty row. --}}

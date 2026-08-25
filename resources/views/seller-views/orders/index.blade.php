@@ -68,7 +68,7 @@
                     <x-sc.td :sub="$order->order_type === 'POS' ? translate('pos') : translate('marketplace')">
                         <span class="sc-code" style="color:var(--color-accent)">#{{ $order->id }}</span>
                     </x-sc.td>
-                    <x-sc.td drop="sm" class="sc-muted">{{ optional($order->created_at)->format('j M H:i') }}</x-sc.td>
+                    <x-sc.td drop="sm" class="sc-muted sc-ts">{{ \App\Services\SellerCenter\Moment::stamp($order->created_at) }}</x-sc.td>
                     <x-sc.td :sub="$order->shippingAddress->city ?? null">
                         {{ $order->customer ? trim($order->customer->f_name . ' ' . $order->customer->l_name) : translate('walk_in_customer') }}
                     </x-sc.td>

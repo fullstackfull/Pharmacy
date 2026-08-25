@@ -123,6 +123,12 @@ safety classification.
 change made), run (the listing hidden, the trail written), and undone (the listing restored, the trail
 stamped). 22 tests for the wave, 54 across waves 1–3, 1822 in the suite, 0 failures.
 
+**Flutter audit (PART 11)** — done, and it found drift. The app's rule form built its inputs from a bare
+list of setting names, so it hard-coded `discount_type` as the one setting that is not a number and rendered
+a free-text box for a value with exactly two legal answers. It now reads the same field description the web
+reads, gained rule scope and the safety class, and refuses what the server would refuse. Both language files
+still carry the same 1,836 keys. Commit `abee668` in `sillercenter-syria-cosmatics`.
+
 **Not built, and why**
 
 - **Scheduled operations (A4)** — there is no server for it. Scheduled price changes, timed activations and
