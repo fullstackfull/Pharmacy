@@ -194,8 +194,8 @@ class SlaPanel implements Panel
      */
     private function basis(array $window, array $availability, array $history): array
     {
-        $rawDays = (int) config('monitoring.retention.hour_days', 90);
-        $rolledDays = (int) config('monitoring.retention.day_days', 400);
+        $rawDays = app(MonitoringSettings::class)->retentionDays('hour_days', 90);
+        $rolledDays = app(MonitoringSettings::class)->retentionDays('day_days', 400);
         $windowDays = $window['minutes'] / 1440;
 
         $synthetic = null;
@@ -598,7 +598,7 @@ class SlaPanel implements Panel
      */
     private function discrepancy(int $probes, array $history, array $window): ?array
     {
-        $rawDays = (int) config('monitoring.retention.hour_days', 90);
+        $rawDays = app(MonitoringSettings::class)->retentionDays('hour_days', 90);
 
         if ($history['state'] !== 'ok' || $history['truncated'] || $window['minutes'] / 1440 > $rawDays) {
             return null;

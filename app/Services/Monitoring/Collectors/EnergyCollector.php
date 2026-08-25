@@ -594,9 +594,9 @@ class EnergyCollector implements Collector
             return null;
         }
 
-        // Deliberately config and not the stored setting: this has to be the same number the
-        // pruner uses, and MonitoringRollup prunes on config('monitoring.retention').
-        $minuteFloor = $now->copy()->subDays(max(1, (int) config('monitoring.retention.minute_days', 7)));
+        // The same number the pruner uses. Both read the settings service, so an operator who
+        // widens the minute window on the Settings page widens it here too.
+        $minuteFloor = $now->copy()->subDays(max(1, app(MonitoringSettings::class)->retentionDays('minute_days', 7)));
 
         // The seam between the two resolutions has to land on an hour edge. An hour bucket is only
         // ever whole, so cutting mid-hour counts the minutes between the seam and the end of that

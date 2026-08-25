@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 450 |
+| Fully connected to a surface | 459 |
 | Internal by design | 52 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **86** |
+| **Orphaned — no owner, no surface** | **77** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -329,16 +329,16 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | Oversight | **None** | N/A | **None** | Failures | Full | No | Admin | ORPHAN |
-| Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | View | **None** | N/A | N/A | Alerts | Partial | No | Admin | ORPHAN |
+| Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | Manage | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO ADMIN |
+| Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | Manage | **None** | N/A | N/A | Alerts | Partial | Yes | Admin | CONNECTED TO ADMIN |
 | Queue job outcomes measured at the worker — processed count, runtime and failures per queue | View | **None** | N/A | N/A | Alerts | N/A | No | System | CONNECTED TO MONITOR |
 | Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved | View | **None** | N/A | **None** | **None** | **None** | No | Developer | ORPHAN |
-| Defining the customer journeys the synthetic prober fetches | View | **None** | N/A | **None** | Health | N/A | No | Admin | ORPHAN |
-| Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it | **None** | **None** | N/A | N/A | **None** | N/A | No | Admin | ORPHAN |
-| Writing a human note onto the monitoring timeline | View | **None** | N/A | **None** | Alerts | N/A | No | Admin | ORPHAN |
-| Recording that a backup ran and that a restore was tested | View | **None** | N/A | **None** | Alerts | N/A | No | Admin | ORPHAN |
-| Recording a deployment, and comparing performance either side of it | View | **None** | N/A | **None** | Alerts | N/A | No | Admin | ORPHAN |
-| Changing a monitoring threshold, retention window, sampling rate or SLA target | View | **None** | N/A | **None** | Health | N/A | No | Admin | ORPHAN |
+| Defining the customer journeys the synthetic prober fetches | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
+| Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it | Manage | **None** | N/A | N/A | **None** | N/A | Yes | Admin | CONNECTED TO ADMIN |
+| Writing a human note onto the monitoring timeline | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
+| Recording that a backup ran and that a restore was tested | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
+| Recording a deployment, and comparing performance either side of it | Manage | **None** | N/A | **None** | Alerts | N/A | Yes | Admin | CONNECTED TO ADMIN |
+| Changing a monitoring threshold, retention window, sampling rate or SLA target | Manage | **None** | N/A | **None** | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Machine-readable JSON feed of every monitoring section | View | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
 | Prometheus scrape endpoint and OTLP trace export | **None** | **None** | N/A | N/A | **None** | **None** | No | Developer | ORPHAN |
 | The Integrations page's statement about what outbound instrumentation exists | View | **None** | N/A | N/A | **None** | N/A | No | Developer | DEPRECATED |
@@ -347,7 +347,7 @@ the whole point of the document, so it is never blurred.
 | Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps | View | **None** | **None** | **None** | **None** | Documented | No | Developer | ORPHAN |
 | Seeing which scheduled tasks are defined, and when each runs next | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
 | Retrying, forgetting or flushing a failed queue job | View | **None** | N/A | **None** | Failures | N/A | No | Admin | ORPHAN |
-| Request debugger — look up an X-Request-Id and see what happened | **None** | **None** | N/A | **None** | Failures | **None** | No | Admin | ORPHAN |
+| Request debugger — look up an X-Request-Id and see what happened | **None** | **None** | N/A | **None** | Failures | Full | Yes | Admin | CONNECTED TO DEVELOPER |
 | Marketplace incidents: acknowledge, assign and resolve an operational incident | View | **None** | **None** | **None** | Alerts | Partial | No | System | CONNECTED TO MONITOR |
 | Seller-facing issue register (Control Tower issues seen from the marketplace side) | Oversight | View | View | **None** | **None** | Partial | Partial | Admin | CONNECTED TO ADMIN |
 | 404 / error log review | Oversight | **None** | **None** | **None** | Failures | Partial | No | Admin | CONNECTED TO ADMIN |

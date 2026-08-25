@@ -14,15 +14,15 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 318 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 326 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 77 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 86 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 77 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (318)
+## CONNECTED TO ADMIN (326)
 
 The marketplace operator manages or oversees it.
 
@@ -30,6 +30,7 @@ The marketplace operator manages or oversees it.
 |---|---|---|---|
 | How far back a seller's finance reconciliation looks, and how many example rows it shows | finance | Admin | app/Services/Platform/PolicyRegistry.php (reconciliation_lookback_days) read at app/Services/Marketplace/SellerReconciliationService.php:305 |
 | How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | finance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_finance_grace_hours, default 6), read at app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:51; LOOKBACK_DAYS = 90 and LIMIT = 200 remain sweep bounds |
+| Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts) | monitoring | Admin | app/Services/Monitoring/Support/MonitoringSettings.php retentionDays() plus the existing threshold map, all editable at Monitoring → Settings via app/Services/Monitoring/Operations/MonitoringConfiguration.php |
 | Low-stock threshold used by the seller API and the Flutter app | inventory | Admin | app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:42 (LOW_STOCK_THRESHOLD = 5) used at :69 and :73; mirrored in the Flutter app at /home/user/sillercenter-syria-cosmatics/lib/features/inventory/domain/models/inventory_models.dart:32 (lowStockThreshold ?? 5) |
 | What counts as low stock — three surviving and mutually inconsistent definitions (7 days of cover, 1/3 days of cover, 14 days of cover) | inventory | Admin | app/Services/Platform/PolicyRegistry.php inventory group (stock_cover_critical_days, stock_cover_low_days, stock_cover_raise_days, stock_cover_opportunity_days, stock_velocity_days) read through app/Services/Marketplace/StockPolicy.php by InventoryRiskProducer.php:42, app/Services/SellerCenter/Lists/InventoryList.php and app/Services/SellerCenter/Automation/Opportunities.php |
 | When unsold stock is called dead capital (90 days, at least 3 units) | inventory | Admin | app/Services/Platform/PolicyRegistry.php (stock_stale_days, stock_stale_minimum_units) read at app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:50-51 |
@@ -44,6 +45,13 @@ The marketplace operator manages or oversees it.
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | shipping | Admin | app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48 |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | compliance | Admin | app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137 |
 | Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | platform | Admin | app/Services/Platform/PolicyRegistry.php platform group (limit_automation_sweep, limit_audit_rows, limit_control_tower_rows, limit_admin_seller_rollup) read at AutomationEngine.php, SellerAuditTrailService.php, ControlTowerService.php and SellerOperationsOverview.php |
+| Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringAlertRules.php (create, edit, silence, enable, delete, reinstall) behind routes/admin/routes.php admin.monitoring.actions.alert-rule; rules screen at resources/views/admin-views/monitoring/actions/_alert-rule.blade.php |
+| Defining the customer journeys the synthetic prober fetches | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringConfiguration.php addJourney()/removeJourney(), on Monitoring → Synthetics; the console command still works and applies the same rules |
+| Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringIncidents.php writes acknowledged_at, notes, probable_cause, cause_evidence, deployment_id and resolved_by, from the incident itself in Monitoring → Incidents |
+| Writing a human note onto the monitoring timeline | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php annotate(), on Monitoring → Timeline; monitoring:annotate still works |
+| Recording that a backup ran and that a restore was tested | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordBackup() and recordRestoreTest(), on Monitoring → Backups |
+| Recording a deployment, and comparing performance either side of it | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringJournal.php recordDeployment(), on Monitoring → Deployments |
+| Changing a monitoring threshold, retention window, sampling rate or SLA target | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringConfiguration.php save(), on Monitoring → Settings; SettingsPanel marks each row editable or not by whether the running code reads that key back |
 | Minimum password length — 6 characters on some surfaces and 8 on others | security | Admin | app/Services/Platform/PasswordPolicy.php over the password_minimum_length policy, used by every validator where a password is CHOSEN (registration, reset, staff and deliveryman creation, on web and API); sign-in validators are deliberately excluded so raising the minimum cannot lock out an existing account |
 | Brute-force tolerance — 20 attempts a minute on auth endpoints, 3000 a minute globally | security | Admin | app/Providers/RouteServiceProvider.php:182 defines the `auth` and `global` limiters from the auth_attempts_per_minute and api_requests_per_minute policies; the six route files now use `throttle:auth` rather than a repeated literal |
 | Outbound webhook retry policy — five attempts, doubling backoff, 8-second timeout | integrations | Admin | app/Services/Platform/PolicyRegistry.php (webhook_max_attempts, webhook_timeout_seconds, webhook_backoff_minutes) read at app/Services/Marketplace/SellerWebhookDispatcher.php |
@@ -933,7 +941,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (86)
+## ORPHAN (77)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -1044,12 +1052,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Twelve routes under /payment/*/callback registered at routes/web/routes.php:499-584 (RazorPay :499, SenangPay :522, Paytm :528, Flutterwave :535, Paystack :541, bKash :549, LiqPay :555, MercadoPago :562, PayMob :568, PayTabs :574, Paymera :584) — all outside the api/ prefix so ApiManifest classifies them surface=panel (app/Services/DeveloperPortal/Support/EndpointClassifier.php:94)
 - No surface on — Seller Web, Analytics, Dev Portal
 - Ruled: belongs in the Developer Portal's partner surface. They are real external webhooks that move money, but they sit under /payment/* rather than api/, so EndpointClassifier marks them panel routes and the explorer, the OpenAPI export and the quality score all skip them.
-
-**Monitoring and portal thresholds left as class constants beside the editable threshold map (duplicate-order window, payment capture grace, backup size-drop, incident correlation window, endpoint health verdicts)**  
-`monitoring` · owner: Admin  
-- Backend — app/Services/Monitoring/Panels/OrderIntegrityPanel.php:117 (DUPLICATE_GAP_SECONDS = 120), :105 (MINIMUM_LOOKBACK_DAYS = 7), :114 (STANDING_LOOKBACK_DAYS = 30), :120 (AMOUNT_TOLERANCE = 0.01), :88 (MAX_SAMPLE_ORDERS = 400); app/Services/Monitoring/Panels/PaymentsPanel.php:92 (CAPTURE_GRACE_MINUTES = 15), :95 (MONEY_TOLERANCE = 0.01), :113 (PAYTABS_APPROVED = 100); app/Services/Monitoring/Panels/BackupsPanel.php:65 (SIZE_DROP_PERCENT = 40.0), :50 (CHECK_CADENCE_MINUTES = 5); backup age threshold is configurable (config/monitoring.php:176 backup_age_warning_hours); app/Services/Monitoring/Alerting/IncidentManager.php:29 (public const CORRELATION_WINDOW_MINUTES = 30); evaluated by bootstrap/app.php:216 (monitoring:evaluate everyMinute); app/Services/DeveloperPortal/EndpointHealthService.php:262-270 verdict(); removal-safety advice keyed on 30 days of silence at :200, :209 and :226
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in the same Admin monitoring threshold map that already holds stuck_order_hours and backup_age_warning_hours — these five sit one file away from it, so the omission is inconsistency rather than design. The endpoint health verdicts additionally duplicate error_rate_warning and p95_critical_ms, so the Developer Portal and the monitor can disagree about the same endpoint.
 
 **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
 `analytics` · owner: Admin  
@@ -1219,53 +1221,11 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web
 - Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment.
 
-**Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires**  
-`monitoring` · owner: Admin  
-- Backend — app/Services/Monitoring/Alerting/AlertEvaluator.php:62 (table monitoring_alert_rules, seeded in code at :83); app/Services/Monitoring/Alerting/AlertNotifier.php; app/Services/Monitoring/Panels/AlertsPanel.php:42; routes/admin/routes.php:227-237; app/Services/Monitoring/Alerting/AlertEvaluator.php:374-476 (defaultRules), installed only by `php artisan monitoring:evaluate --seed` (MonitoringEvaluate.php:19,33); Table monitoring_alert_rules (database/migrations/2026_08_24_000002_create_monitoring_operations_tables.php:77, whose comment says 'edited in Monitoring → Settings'); read by AlertsPanel.php:95 and AlertEvaluator.php:62; app/Services/Monitoring/Alerting/AlertNotifier.php:19 (fired) and :34 (recovered); log line always, email only when the rule's notify_email is true (:66) to notify_channels or mail.from.address (:90); app/Services/Monitoring/Alerting/MetricResolver.php:27 (:30 REQUE
-- No surface on — Seller Web
-- Ruled: belongs in Admin → Monitoring, which is registered GET-only. Three compounding failures mean nothing ever pages anyone: the scheduled monitoring:evaluate carries no --seed and there is no seeder, so a fresh install evaluates zero rules forever; no route can write a rule, so a threshold change is a hand-written SQL INSERT; and every shipped rule is created with notify_email=false with no screen to enable it, so alerts land only in laravel.log. The evaluator, incident correlator, cooldown machine, metric resolver and email notifier are all built and unreachable.
-
 **Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved**  
 `monitoring` · owner: Developer  
 - Backend — Tables exist: database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:110 (monitoring_error_groups) and :143 (monitoring_errors). Read by ErrorsPanel.php:175, SecurityPanel.php:1073, AndroidPanel.php:145, IosPanel.php:151, ApisPanel.php:808, DeploymentsPanel.php:553, HealthScoreService.php:370, DeveloperPortal/EndpointHealthService.php:287. Pruned by MonitoringRollup.php:307,337.; app/Services/Monitoring/Panels/ErrorsPanel.php:34 reading monitoring_error_groups and monitoring_errors; GET /admin/monitoring/errors; view resources/views/admin-views/monitoring/sections/errors.blade.php; Columns status/resolved_at/resolved_by on monitoring_error_groups (database/migrations/2026_08_24_000001_create_monitoring_core_tables.php:123-132); filtered by ErrorsPanel.php:55,:117; the capability is described as 'resolve or ignore them' at MonitoringPermissionService.php:38-41
 - No surface on — Seller Web, Analytics, Monitor, Dev Portal
 - Ruled: belongs to Developer, and it is the single largest hole in the platform. monitoring_error_groups and monitoring_errors are created, read by eight panels and two services and pruned by the rollup, and verified here: the only reference to the table outside readers is the migration itself, because bootstrap/app.php:249 withExceptions() is empty. The Errors page is permanently blank, the health score's error signal permanently unmeasured, and Security's authorisation-failure card, both crash-free cards, the portal's endpoint error lookup and the deploy before/after comparison are all structurally zero — the only error visibility left in the product is the HTTP 5xx rate.
-
-**Defining the customer journeys the synthetic prober fetches**  
-`monitoring` · owner: Admin  
-- Backend — app/Console/Commands/MonitoringSynthetic.php:27 (list/add/remove, writes monitoring_settings.synthetics at :105 and :140, records an EventLog::CONFIG entry at :108,:143); app/Console/Commands/MonitoringSynthetic.php:29 `monitoring:synthetic {list|add|remove}`; writes monitoring_settings, consumed by app/Services/Monitoring/Checks/SyntheticCheck.php; `synthetics` key in monitoring_settings, read at app/Services/Monitoring/Panels/SyntheticsPanel.php:223-253 and Checks/SyntheticCheck; written only by app/Console/Commands/MonitoringSynthetic.php:105 and :140
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring → Settings, which SyntheticsPanel.php:470 itself says is read-only in this build. Adding a probe on your own checkout page is a shell command, and before that command existed it was a hand-written INSERT.
-
-**Acknowledging an incident, adding notes, recording probable cause, linking the deploy that caused it and saying who resolved it**  
-`monitoring` · owner: Admin  
-- Backend — Columns acknowledged_at, notes, probable_cause, cause_evidence, deployment_id, resolved_by on monitoring_incidents (database/migrations/2026_08_24_000002_create_monitoring_operations_tables.php:142-151); declared unwritten at IncidentsPanel.php:25-28 and :1058,:1068
-- No surface on — Admin, Seller Web, Monitor
-- Ruled: belongs in Admin → Monitoring → Incidents. Six columns on monitoring_incidents have no writer anywhere, so there is no MTTA, no record of who took an incident and no cause attribution even though the deploy and error tables sit beside it — incident handling happens entirely outside the tool.
-
-**Writing a human note onto the monitoring timeline**  
-`monitoring` · owner: Admin  
-- Backend — app/Console/Commands/MonitoringAnnotate.php:23 (--at backdates the entry); app/Console/Commands/MonitoringAnnotate.php:25 `monitoring:annotate`; writes EventLog::ANNOTATION
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring. The annotation renders on the admin timeline and can only be written from a shell, because the whole area is GET-only — the command says so at MonitoringAnnotate.php:20 — so an operator reading a chart cannot annotate what they are looking at.
-
-**Recording that a backup ran and that a restore was tested**  
-`monitoring` · owner: Admin  
-- Backend — app/Console/Commands/MonitoringBackupRecorded.php:31 `monitoring:backup-recorded`; writes monitoring_backups, graded by app/Services/Monitoring/Checks/BackupCheck.php; app/Console/Commands/MonitoringRestoreTested.php:22 `monitoring:restore-tested`
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring → Backups. Both facts can only be written by shell commands an operator must bolt into their own backup script, so BackupCheck grades the shop degraded permanently for anyone deploying through cPanel or the built-in updater, and the Backups page can only report the gap.
-
-**Recording a deployment, and comparing performance either side of it**  
-`monitoring` · owner: Admin  
-- Backend — app/Console/Commands/MonitoringDeployRecorded.php:30 `monitoring:deploy-recorded`; writes monitoring_deployments; Columns before_metrics / after_metrics on monitoring_deployments (database/migrations/2026_08_24_000002_create_monitoring_operations_tables.php:175-176); the missing job is named at DeploymentsPanel.php:636
-- No surface on — Seller Web, Analytics
-- Ruled: belongs in Admin → Monitoring → Deployments. The recording command is the only writer, so the timeline is permanently empty on most installs, and before_metrics/after_metrics have no writer at all — which means the single most useful monitoring sentence, 'p95 doubled at 14:20 and the deploy was at 14:19', cannot be produced.
-
-**Changing a monitoring threshold, retention window, sampling rate or SLA target**  
-`monitoring` · owner: Admin  
-- Backend — app/Services/Monitoring/Support/MonitoringSettings.php:60 put() exists; monitoring_settings table created at database/migrations/2026_08_24_000002_create_monitoring_operations_tables.php:209 with the comment 'so an operator can change them from the panel without a deploy'; config/monitoring.php:11-206 defaults; live overrides in the `monitoring_settings` table via app/Services/Monitoring/Support/MonitoringSettings.php:41 get() / :60 put(); admin routes at routes/admin/routes.php:227-237; config/monitoring.php:73 retention / :92 tracing / :118 privacy; app/Services/Monitoring/Panels/SettingsPanel.php; section rendered at resources/views/admin-views/monitoring/sections/settings.blade.php:306
-- No surface on — Seller Web, Analytics
-- OVERRULED — the admin sweep filed this as internal infrastructure; it is not, because config/monitoring.php:154 and the migration both state the live values are edited in Monitoring → Settings, and SettingsPanel then admits it is read-only. MonitoringSettings::put() exists and is called from exactly two non-UI places, and the panels' own remedy strings tell the operator to run php artisan tinker to move a CPU threshold.
 
 **Machine-readable JSON feed of every monitoring section**  
 `monitoring` · owner: Developer  
@@ -1410,12 +1370,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Declared at app/Services/DeveloperPortal/PortalNavigation.php:33; no branch in app/Http/Controllers/Admin/Telemetry/DeveloperPortalController.php:236 dataFor(); no view under resources/views/admin-views/telemetry/developer/; Declared at app/Services/DeveloperPortal/PortalNavigation.php:56; no branch in DeveloperPortalController::dataFor() (:236); no view. Monitoring already ships the equivalent at resources/views/admin-views/monitoring/sections/integrations.blade.php; Declared at app/Services/DeveloperPortal/PortalNavigation.php:58; no view. The real switches are env-only in config/developer_portal.php:22,46,47,49
 - No surface on — Admin, Seller Web, Analytics, Dev Portal
 - Ruled: belongs to Developer to build or unlist. DeveloperPortalController::dataFor() has no branch for any of them and no blade exists. Portal settings is the costliest: console enable, console writes, console rate limit and response-shape recording are env-only, so an operator cannot turn the Try It console off without a deploy — and the integrations section duplicates a screen Monitoring already has, so the honest fix there is a link.
-
-**Request debugger — look up an X-Request-Id and see what happened**  
-`monitoring` · owner: Admin  
-- Backend — Declared at app/Services/DeveloperPortal/PortalNavigation.php:51; no branch in DeveloperPortalController::dataFor() (:236); no view; the request_id it promises is recorded by Monitoring (app/Services/Monitoring/Panels/ErrorsPanel.php:570, LogsPanel.php:623)
-- No surface on — Admin, Seller Web, Analytics, Dev Portal
-- Ruled: belongs in the Developer Portal or Monitoring, and the advice already points at it: the Errors section tells developers to keep the X-Request-Id because it is what makes a failure findable, Monitoring records request_id in its errors and logs panels, and there is no lookup-by-id screen anywhere.
 
 **Creating, editing, repointing or deleting a seller's outbound webhook**  
 `integrations` · owner: Seller  

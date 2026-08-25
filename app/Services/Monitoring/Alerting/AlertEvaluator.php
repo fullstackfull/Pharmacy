@@ -382,7 +382,11 @@ class AlertEvaluator
             'for_seconds' => 120,
             'cooldown_seconds' => 900,
             'enabled' => true,
-            'notify_email' => false,
+            // On by default. Every shipped rule used to be created with this false and there was no
+            // screen to turn it on, so an alert that fired went to laravel.log and nowhere else —
+            // which is a log line, not an alert. A send that fails is caught and logged by the
+            // notifier, so an install with no mail configured degrades rather than breaking.
+            'notify_email' => true,
             'notify_channels' => null,
         ];
 

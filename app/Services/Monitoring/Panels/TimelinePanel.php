@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\EventLog;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
@@ -166,7 +167,7 @@ class TimelinePanel implements Panel
             'incidents' => $this->incidents($range),
             // The pruner keeps the axis for this many days. An entry older than it was deleted,
             // which is a different fact from one that was never written.
-            'retention_days' => max(1, (int) config('monitoring.retention.incident_days', 400)),
+            'retention_days' => max(1, app(MonitoringSettings::class)->retentionDays('incident_days', 400)),
             // This panel reads no collector — every column it reads is drawn. Kept so the section
             // closes on the same shape as every other one.
             'unrendered' => [],

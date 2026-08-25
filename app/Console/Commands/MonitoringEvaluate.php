@@ -16,7 +16,7 @@ use Illuminate\Console\Command;
 class MonitoringEvaluate extends Command
 {
     protected $signature = 'monitoring:evaluate
-                            {--seed : Install the shipped alert rules on a system that has none}
+                            {--seed : No longer needed; the shipped rules are installed on the first run}
                             {--force-seed : Re-install any shipped rule that has been deleted}
                             {--quiet-ok : Only print rules that are not ok}';
 
@@ -30,15 +30,22 @@ class MonitoringEvaluate extends Command
             return self::SUCCESS;
         }
 
-        if ($this->option('seed') || $this->option('force-seed')) {
-            $created = $evaluator->seedDefaults(force: (bool) $this->option('force-seed'));
-            $this->info($created === 0 ? 'No rule needed to be created.' : "Created {$created} alert rule(s).");
+        // Seeded on the first run, not only when somebody remembers the flag. The scheduled
+        // evaluator runs every minute without it, so an install whose operator never typed
+        // `--seed` evaluated zero rules forever and nothing could ever page anyone — the alerting
+        // chain was complete and silent. seedDefaults() is marker-guarded, so this happens once.
+        $created = $evaluator->seedDefaults(force: (bool) $this->option('force-seed'));
+
+        if ($created > 0) {
+            $this->info("Created {$created} alert rule(s).");
+        } elseif ($this->option('seed') || $this->option('force-seed')) {
+            $this->info('No rule needed to be created.');
         }
 
         $outcomes = $evaluator->evaluate();
 
         if ($outcomes === []) {
-            $this->warn('No alert rule is enabled. Run php artisan monitoring:evaluate --seed to install the shipped set, or add rules in Monitoring → Settings.');
+            $this->warn('No alert rule is enabled. Add or re-enable one in Monitoring → Alerts.');
 
             return self::SUCCESS;
         }

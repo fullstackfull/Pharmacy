@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Collectors\CollectorRegistry;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Ingest\MetricSink;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
@@ -686,8 +687,13 @@ class ApplicationPanel implements Panel
      */
     private function retentionReadings(): array
     {
-        $source = 'Laravel config monitoring.retention';
-        $configured = config('monitoring.retention', []);
+        $source = 'monitoring_settings, falling back to config monitoring.retention';
+        $settings = app(MonitoringSettings::class);
+        $configured = [];
+
+        foreach ((array) config('monitoring.retention', []) as $kind => $default) {
+            $configured[$kind] = $settings->retentionDays($kind, (int) $default);
+        }
 
         if (!is_array($configured) || $configured === []) {
             return ['retention' => Metric::notConfigured(

@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Metric;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -425,7 +426,7 @@ class TracesPanel implements Panel
                 'state' => 'no_data',
                 'trace_id' => $traceId,
                 'note' => 'This trace is no longer stored.',
-                'remedy' => 'Traces are pruned after monitoring.retention.trace_days (currently ' . (int) config('monitoring.retention.trace_days', 3) . ' days). Raise MONITORING_RETENTION_TRACE_DAYS to keep them longer — spans are the largest table monitoring writes, so the default is deliberately short.',
+                'remedy' => 'Traces are pruned after monitoring.retention.trace_days (currently ' . app(MonitoringSettings::class)->retentionDays('trace_days', 3) . ' days). Raise MONITORING_RETENTION_TRACE_DAYS to keep them longer — spans are the largest table monitoring writes, so the default is deliberately short.',
             ];
         }
 
@@ -767,7 +768,7 @@ class TracesPanel implements Panel
         $tracing = (bool) config('monitoring.tracing.enabled', true);
         $sampleRate = (float) config('monitoring.tracing.sample_rate', 0.02);
         $slowMs = (float) config('monitoring.tracing.always_trace_slower_than_ms', 1500);
-        $retentionDays = (int) config('monitoring.retention.trace_days', 3);
+        $retentionDays = app(MonitoringSettings::class)->retentionDays('trace_days', 3);
 
         $base = [
             'collection_enabled' => $collecting,

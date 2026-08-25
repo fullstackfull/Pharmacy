@@ -1,3 +1,5 @@
+@include('admin-views.monitoring.actions._deployments', ['permissions' => $permissions])
+
 {{--
     Deployments: which build started running, when, and what it carried.
 

@@ -1,3 +1,5 @@
+@include('admin-views.monitoring.actions._synthetics', ['permissions' => $permissions])
+
 {{--
     Synthetic tests: whether a page a customer opens still comes back, and comes back correct.
 

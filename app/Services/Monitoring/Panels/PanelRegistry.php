@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Collectors\CollectorRegistry;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\HealthScoreService;
 use App\Services\Monitoring\Ingest\MetricSink;
 use App\Services\Monitoring\Metric;
@@ -160,7 +161,7 @@ class PanelRegistry
                 'sample_rate' => (float) config('monitoring.tracing.sample_rate', 0.02),
             ],
             'storage' => $this->storageFootprint(),
-            'retention' => (array) config('monitoring.retention', []),
+            'retention' => $this->liveRetention(),
         ];
     }
 
@@ -206,4 +207,25 @@ class PanelRegistry
             return ['state' => 'unavailable', 'reason' => class_basename($exception)];
         }
     }
+    /**
+     * The retention windows actually in force, which are the stored ones where they exist.
+     *
+     * Reported rather than the shipped block, because the page that shows this is the page an
+     * operator uses to decide whether their data is being kept — and the shipped number stopped
+     * being the answer the moment the Settings page could change it.
+     *
+     * @return array<string, int>
+     */
+    private function liveRetention(): array
+    {
+        $settings = app(MonitoringSettings::class);
+        $live = [];
+
+        foreach ((array) config('monitoring.retention', []) as $kind => $default) {
+            $live[$kind] = $settings->retentionDays($kind, (int) $default);
+        }
+
+        return $live;
+    }
+
 }
