@@ -39,6 +39,14 @@ class OrderSettingsController extends BaseController
         $this->businessSettingRepo->updateOrInsert(type: 'free_delivery_responsibility', value: $request['free_delivery_responsibility']);
         $this->businessSettingRepo->updateOrInsert(type: 'guest_checkout', value: $request->get('guest_checkout', 0));
         $this->businessSettingRepo->updateOrInsert(type: 'free_delivery_over_amount_seller', value: currencyConverter(amount: $request['free_delivery_over_amount_seller']) ?? 0);
+        // The checkout item floor. Seeded at install, shipped to all three mobile apps in
+        // /api/v1/config and written by nothing — so the apps enforced a rule the operator could
+        // neither see nor change. Clamped rather than trusted: a negative floor is not a rule, and
+        // a floor in the thousands is a shop nobody can buy from.
+        $this->businessSettingRepo->updateOrInsert(
+            type: 'minimum_order_limit',
+            value: max(0, min(1000, (int) $request->get('minimum_order_limit', 0))),
+        );
         clearWebConfigCacheKeys();
         ToastMagic::success(translate('successfully_updated'));
         return back();

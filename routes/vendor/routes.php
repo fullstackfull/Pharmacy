@@ -33,7 +33,6 @@ use App\Http\Controllers\Vendor\Shipping\ShippingMethodController;
 use App\Http\Controllers\Vendor\Shipping\ShippingTypeController;
 use App\Http\Controllers\Vendor\ShopController;
 use App\Http\Controllers\FirebaseController;
-use App\Http\Controllers\Vendor\SystemController;
 use App\Http\Controllers\Vendor\WithdrawController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Vendor\Order\OrderController;
@@ -438,10 +437,6 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
                         });
                     });
                 });
-            });
-
-            Route::controller(SystemController::class)->group(function () {
-                Route::get('/get-order-data', 'getOrderData')->name('get-order-data');
             });
 
             Route::group(['prefix' => 'report', 'as' => 'report.'], function () {

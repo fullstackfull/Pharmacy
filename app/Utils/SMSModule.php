@@ -2,6 +2,8 @@
 
 namespace App\Utils;
 
+use App\Models\NotificationDelivery;
+use App\Services\Notifications\DeliveryLog;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Twilio\Rest\Client;
@@ -9,10 +11,33 @@ use Modules\Gateways\Traits\SmsGateway;
 
 class SMSModule
 {
-    public static function sendCentralizedSMS($phone, $token)
+    /**
+     * The one door every SMS in this application goes out through.
+     *
+     * Which is why the delivery record is written here rather than in each of the fourteen
+     * providers: they all answer with the literal string 'success' or 'error' and persist nothing,
+     * so a shop whose credentials expired sends no OTP, no customer can sign in, and every screen
+     * in the console stays green. One row per attempt makes that visible in the first minute.
+     */
+    public static function sendCentralizedSMS($phone, $token, string $purpose = 'otp')
     {
         $paymentPublishedStatus = config('get_payment_publish_status') ?? 0;
-        return $paymentPublishedStatus == 1 ? SmsGateway::send($phone, $token) : SMSModule::send($phone, $token);
+        $response = $paymentPublishedStatus == 1 ? SmsGateway::send($phone, $token) : SMSModule::send($phone, $token);
+
+        app(DeliveryLog::class)->record(
+            channel: NotificationDelivery::CHANNEL_SMS,
+            recipient: (string) $phone,
+            succeeded: $response === 'success',
+            attributes: [
+                'event' => $purpose,
+                // The code itself is never stored: a delivery log that holds live one-time secrets
+                // is a credential store nobody meant to build.
+                'payload' => ['provider_response' => is_string($response) ? $response : 'unknown'],
+                'error' => is_string($response) ? $response : 'the sms gateway returned no answer',
+            ],
+        );
+
+        return $response;
     }
 
     public static function send($receiver, $otp): string

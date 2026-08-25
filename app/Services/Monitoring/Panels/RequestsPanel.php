@@ -6,6 +6,8 @@ use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\SeriesReader;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Request performance: how the shop is answering, and which route to open first.
@@ -76,7 +78,68 @@ class RequestsPanel implements Panel
             'coverage' => $rankings['coverage'],
             'channels' => $this->channels($range, $collection, $window),
             'breakdowns' => $rankings['tables'],
+            // The long history. The buckets above are pruned at monitoring's retention, so a
+            // question like "were we slower in June" cannot be asked of them at all — while three
+            // scheduled runs a day have been maintaining exactly that history in telemetry_daily
+            // and no screen has ever read it.
+            'history' => $this->history(),
         ];
+    }
+
+    /** How many days of daily history to show. A quarter is what a seasonality question needs. */
+    private const HISTORY_DAYS = 90;
+
+    /**
+     * Daily request history, from the rollup nothing was reading.
+     *
+     * telemetry_daily is written by three scheduled runs a day — hourly, a yesterday pass and a
+     * prune — and the command's own header admitted no screen read it since Analytics moved to
+     * analytics_daily. It survived the raw-row prune as the retention, so a quarter of the telemetry
+     * scheduler's budget produced output nobody could look at. It is the only place this platform
+     * keeps request volume, visitors and errors beyond monitoring's own retention window.
+     *
+     * @return array<string, mixed>
+     */
+    private function history(): array
+    {
+        try {
+            if (!Schema::hasTable('telemetry_daily')) {
+                return ['state' => 'not_configured', 'rows' => [], 'source' => 'telemetry_daily'];
+            }
+
+            $rows = DB::table('telemetry_daily')
+                ->where('scope', 'totals')
+                ->whereIn('key', ['web', 'api'])
+                ->where('date', '>=', Clock::daysAgo(self::HISTORY_DAYS)->toDateString())
+                ->orderBy('date')
+                ->limit(self::HISTORY_DAYS * 2)
+                ->get();
+
+            $byDate = [];
+            foreach ($rows as $row) {
+                $date = (string) $row->date;
+                $byDate[$date] ??= ['date' => $date, 'web' => 0, 'api' => 0, 'visitors' => 0, 'errors' => 0, 'avg_ms' => null];
+                $byDate[$date][$row->key] = (int) $row->hits;
+                $byDate[$date]['visitors'] += (int) $row->visitors;
+                $byDate[$date]['errors'] += (int) $row->errors;
+                // Web and API are answered by the same application; a single mean across both is
+                // the number an operator is actually asking for on this row.
+                $byDate[$date]['avg_ms'] = $row->avg_duration_ms === null
+                    ? $byDate[$date]['avg_ms']
+                    : (int) round((($byDate[$date]['avg_ms'] ?? $row->avg_duration_ms) + $row->avg_duration_ms) / 2);
+            }
+
+            krsort($byDate);
+
+            return [
+                'state' => $byDate === [] ? 'empty' : 'ok',
+                'days' => self::HISTORY_DAYS,
+                'rows' => array_values($byDate),
+                'source' => 'telemetry_daily',
+            ];
+        } catch (\Throwable $exception) {
+            return ['state' => 'unavailable', 'rows' => [], 'message' => Metric::describeFailure($exception), 'source' => 'telemetry_daily'];
+        }
     }
 
     /**

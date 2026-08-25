@@ -232,6 +232,22 @@ class PolicyRegistry
                     'type' => 'int', 'default' => 4, 'min' => 2, 'max' => 20,
                     'label' => 'variants_per_storefront_experiment',
                 ],
+                // Both were inline status arrays repeated across three files, so moving the line
+                // meant a code change. The defaults are exactly what those arrays said.
+                'order_editable_statuses' => [
+                    'type' => 'multi_choice',
+                    'default' => ['pending', 'confirmed'],
+                    'options' => \App\Services\Commerce\OrderStatePolicy::STATUSES,
+                    'label' => 'order_states_that_can_still_be_edited',
+                    'help' => 'editing_rebuilds_the_order_lines_and_the_stock_behind_them_so_states_past_dispatch_are_normally_left_out',
+                ],
+                'order_cancellable_statuses' => [
+                    'type' => 'multi_choice',
+                    'default' => ['pending'],
+                    'options' => \App\Services\Commerce\OrderStatePolicy::STATUSES,
+                    'label' => 'order_states_a_customer_may_cancel_from',
+                    'help' => 'payment_rules_still_apply_on_top_money_already_taken_is_never_undone_by_this_button',
+                ],
             ],
         ],
 
@@ -484,6 +500,16 @@ class PolicyRegistry
                 'limit_admin_seller_rollup' => [
                     'type' => 'int', 'default' => 200, 'min' => 20, 'max' => 10000,
                     'label' => 'sellers_included_in_the_admin_issue_rollup',
+                ],
+                'notification_log_retention_days' => [
+                    'type' => 'int', 'default' => 90, 'min' => 7, 'max' => 730,
+                    'label' => 'days_of_transactional_message_history_to_keep',
+                    'help' => 'the_delivery_log_is_a_support_aid_with_a_shelf_life_not_an_archive_of_what_was_said_to_customers',
+                ],
+                'notification_unconfirmed_minutes' => [
+                    'type' => 'int', 'default' => 15, 'min' => 2, 'max' => 1440,
+                    'label' => 'minutes_before_an_unconfirmed_message_counts_as_failed',
+                    'help' => 'a_send_the_transport_never_came_back_about_reads_as_still_going_until_this_elapses',
                 ],
             ],
         ],

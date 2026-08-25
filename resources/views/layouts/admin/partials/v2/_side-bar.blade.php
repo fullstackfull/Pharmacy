@@ -403,6 +403,10 @@
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('send_notification') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="send-notification" aria-label="Pin"></button></div>
                     </a>
+                    <a class="v2-nav-item {{ Request::is('admin/notification/deliveries*') ? 'v2-is-active' : '' }}" data-item="delivery-log" href="{{ route('admin.notification.deliveries') }}">
+                        <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('delivery_log') }}</span></span>
+                        <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="delivery-log" aria-label="Pin"></button></div>
+                    </a>
                     <a class="v2-nav-item {{ Request::is('admin/push-notification/index*') ? 'v2-is-active' : '' }}" data-item="push-setup" href="{{ route('admin.push-notification.index') }}">
                         <span class="v2-nav-btn"><span class="v2-nav-label">{{ translate('push_notifications_setup') }}</span></span>
                         <div class="v2-nav-right"><button class="v2-pin-btn" type="button" data-pin="push-setup" aria-label="Pin"></button></div>

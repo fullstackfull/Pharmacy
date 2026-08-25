@@ -77,7 +77,7 @@
   {
     "capability": "vendor/get-order-data — an authenticated seller endpoint returning order data that nothing calls",
     "area": "orders",
-    "backend": "routes/vendor/routes.php GET/POST vendor/get-order-data; the only other reference in the repo is the staff permission map at app/Http/Middleware/SellerStaffAccessMiddleware.php:107, i.e. no route() call, fetch or link anywhere",
+    "backend": "Removed. app/Http/Controllers/Vendor/SystemController.php is deleted and the vendor/get-order-data route with it; the seller panel's new-order count is served by vendor.dashboard.real-time-activities, which the panel actually polls (public/assets/back-end/js/custom.js getInitialDataForPanel)",
     "admin": "None",
     "seller_web": "None",
     "flutter": "None",
@@ -86,8 +86,8 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Developer",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Developer to delete or document. It is either dead code or an undocumented integration point on order data, and the difference matters because it is reachable with a seller session."
+    "verdict": "DEPRECATED",
+    "note": "Ruled: belongs to Developer to delete or document, and it is deleted. It answered the unseen-order count for the seller panel and nothing called it — the panel polls vendor.dashboard.real-time-activities for the same figure, and has done for as long as the JS has existed. So this was not an undocumented integration point but a superseded duplicate that stayed reachable with a live seller session. Removing it takes an authenticated endpoint off the surface rather than writing documentation for a capability the product already has elsewhere; the controller's only other method was an empty index() stub the base class required, so the class went with it, along with its entry in the staff permission map."
   },
   {
     "capability": "Commerce campaigns, segments and experiments are absent from the admin sidebar",
@@ -242,32 +242,32 @@
   {
     "capability": "Why a payment failed — gateway latency, failure reason, and whether the callback ever arrived",
     "area": "finance",
-    "backend": "Declared unmeasurable at app/Services/Monitoring/Panels/PaymentsPanel.php:2039-2073 unrecorded(), returned from data() at :203 — payment_started (:2046), gateway_latency (:2051), webhook_receipts (:2056), payment_request_outcome (:2061), payment_request_order_link (:2066) — each naming the exact file that would have to produce it",
+    "backend": "app/Services/Payments/GatewayJournal.php (started / received / finished / linkToOrder) — started from app/Traits/Payment::generate_link(), the choke point all fourteen gateways pass through; outcome and order link from app/Traits/Processor::payment_response(), the exit they all leave through; arrival from app/Http/Middleware/RecordGatewayCallback (global, self-selecting on payment/*), writing payment_gateway_receipts (2026_09_19_000002). payment_requests gained status, failure_code, failure_message, finalized_at, attempts and order_id (2026_09_19_000001). Surfaced by PaymentsPanel::callbacks() on Admin -> Monitoring -> Payments.",
     "admin": "None",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "None",
-    "monitor": "None",
+    "monitor": "Full",
     "dev_portal": "N/A",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Monitoring. No gateway callback leaves a receipt anywhere (PaymentsPanel.php:2056), so a callback that never arrived and one that arrived and failed are the same absent row, and a payment outage is visible only as orders that stopped appearing."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Monitoring. Four of the five declared gaps are closed and the fifth is stated rather than hidden. The sharpest was the callback receipt: nothing recorded a gateway callback at all, so a callback that never arrived and one that arrived and was rejected were the same absent row, and a payment outage showed up only as orders that quietly stopped appearing. Receipts now distinguish four cases — succeeded, failed, arrived-and-acted-on-by-nothing, and never-arrived, which is the one with no row — because each has a different fix. Two choke points did the work of fourteen edits: generate_link() for the attempt and payment_response() for the outcome, so no gateway controller was touched and the fifteenth is covered when somebody adds it. The middleware is global rather than bolted to the payment route group, because those routes only exist while the Gateways addon is unpublished and a group-scoped middleware would cover nothing on the installations that take the most money. finalized_at is written once, so a gateway that repeats a callback three times does not make one payment look like three. The ledger now records why a payment failed rather than only is_paid, and payment_requests.order_id gives the reconciliations the exact join they never had — attribute_id holds a unix timestamp, leaving a nullable varchar(30)-to-varchar(100) match as the only option. STILL OPEN and stated on the page: gateway_latency. Only one of the fourteen controllers goes out through Laravel's HTTP client; nine use raw curl_exec, three drive a vendor SDK and one makes no outbound call at all, so each needs instrumenting separately and wrapping an SDK is not the same job as wrapping curl."
   },
   {
     "capability": "Alerting on payout and settlement failure — duplicate settlements, paid orders with no settlement row, commission mismatches",
     "area": "finance",
-    "backend": "Detection exists as read-only findings in PaymentsPanel.php:1507 (duplicate settlements), :1565 (paid order with no settlement row), :1677 (commission mismatch); the settlement run itself is marketplace:settle at bootstrap/app.php:147",
+    "backend": "app/Services/Monitoring/Collectors/FinanceIntegrityCollector.php publishes finance.duplicate_settlements, finance.paid_without_settlement and finance.commission_mismatch to monitoring_series through the once-a-minute flush; three shipped rules in app/Services/Monitoring/Alerting/AlertEvaluator::defaultRules() fire on any non-zero count",
     "admin": "View",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "None",
-    "monitor": "None",
+    "monitor": "Full",
     "dev_portal": "N/A",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Monitoring. PaymentsPanel really did detect these money-losing conditions, but computed them live on page load and published no series — so MetricResolver, which can only read stored series, could not see them, no rule could be written, and a seller who is silently never paid was found only if an admin happened to open the section. The detection existed; the ability to be told did not. A collector now publishes the three as counts and three shipped rules watch them, with warning and critical both at the first row: these are not measurements that fluctuate, they are conditions that should never occur, so any tolerance would be one somebody invented. The collector runs its own bounded queries rather than calling the panel, deliberately — the panel returns rows, explanations and a cost guard for one human reading one screen, and running that query plan on the minute flush would make monitoring the heaviest thing on the server. A missing settlement table reports not_configured rather than zero: zero here means 'checked and clean', and reporting it for a shop with no books would be the worst kind of green."
   },
   {
     "capability": "Currency model — whether the marketplace runs single-currency or multi-currency with exchange rates",
@@ -461,38 +461,38 @@
     "dev_portal": "Documented",
     "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Analytics. Stock can be listed, adjusted, transferred and written off on every surface, and nothing counts any of it — product_metrics carries views and cart adds and has no stock column, so the cost of a stock-out is unanswerable on a platform whose whole job is stock."
+    "verdict": "NOT BUILT",
+    "note": "Ruled: belongs to Analytics, and the backend does not exist to be orphaned. No analytics event or rollup dimension touches stock; product_metrics carries views and cart adds and has no stock column. Stock can be listed, adjusted, transferred and written off on every surface and nothing counts any of it, so the cost of a stock-out is unanswerable on a platform whose whole job is stock. Building it means an event and a rollup dimension, not a screen over something that already runs — recorded as a named gap so it keeps an owner."
   },
   {
     "capability": "Quick stock edit from the classic product list — sets current_stock directly, with no reason, no movement row and no audit line",
     "area": "inventory",
-    "backend": "app/Http/Controllers/Admin/Product/ProductController.php:800 updateQuantity(), writing through app/Repositories/ProductRepository.php:478 updateByParams at :821; the vendor equivalent is app/Http/Controllers/Vendor/Product/ProductController.php; neither file references AuditLogger",
+    "backend": "app/Services/Marketplace/InventoryService::setStock() — used by app/Http/Controllers/Admin/Product/ProductController::updateQuantity, app/Http/Controllers/Vendor/Product/ProductController::updateQuantity and both v3 seller stock endpoints (app/Http/Controllers/RestAPI/v3/seller/ProductController); writes a stock_movements row, an audit line and the variation blob in one transaction",
     "admin": "Configure",
     "seller_web": "Manage",
     "flutter": "Manage",
     "analytics": "None",
     "monitor": "None",
     "dev_portal": "None",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Developer to route through InventoryService, which already writes a reason code, a movement ledger row and an audit line to the same column. Two stock-writing paths that disagree about whether a change is traceable will drive current_stock and the movement ledger apart, and the trail cannot say why."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs through InventoryService, which already writes a reason code, a movement ledger row and an audit line to the same column. Two stock-writing paths that disagree about whether a change is traceable drive current_stock and the movement ledger apart, and the trail then cannot say why the shelf moved. Closed with setStock(), which is absolute rather than a delta because that is what the box actually is — somebody counted the shelf and is typing what they found — and derives the delta under the row lock so the movement line is right even if another process adjusted the same product a moment earlier. A recount that found what was expected writes an audit line but no movement: inventing a zero movement would be a lie, and a silent no-op looks identical to a change that failed. The owner scope is carried into the lock, so a seller reaching another shop's product finds nothing rather than another shop's stock. Both v3 seller endpoints were routed through the same call in the same pass, because web and API logic have to stay in step."
   },
   {
     "capability": "Approve or deny a seller's listing from the classic product screen",
     "area": "catalog",
-    "backend": "app/Http/Controllers/Admin/Product/ProductController.php:947 approveStatus() (route routes/admin/routes.php:309 admin.products.approve-status), plus the denied-note and status writes at :925/:938/:953; the file contains zero AuditLogger references",
+    "backend": "app/Http/Controllers/Admin/Product/ProductController::approveStatus() and deny() now decide through app/Services/Marketplace/ProductModerationService (approve / returnToReview / reject), which syncs request_status, writes the product_moderation_events history and records the audit line in one transaction",
     "admin": "Approve",
     "seller_web": "View",
     "flutter": "View",
     "analytics": "None",
     "monitor": "None",
     "dev_portal": "None",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to the audited moderation path that already exists. ProductModerationService records every decision with reason codes and history; ProductController::approveStatus/deny writes nothing — and the sidebar sends operators to the unaudited one, so whether a listing decision is recorded depends on which screen the operator happened to open."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to the audited moderation path that already existed. ProductModerationService records every decision with reason codes and history; the classic screen's approveStatus/deny wrote the columns directly and recorded nothing — and the sidebar sends operators to that screen, so whether a listing decision was recorded at all depended on which of two screens somebody happened to open. Both are now routed through the service. Its approve control is a toggle, which is why un-approving needed a name of its own: 'returned_to_review' puts the listing back in the queue at request_status 0, because taking an approval back is not the same decision as denying a listing and recording it as a rejection would tell the seller something untrue. The legacy columns the storefront and all three apps read are still written, so no client sees a contract change."
   },
   {
     "capability": "The listing quality bar (a score under 70 is raised for improvement)",
@@ -557,22 +557,22 @@
   {
     "capability": "Keeping the storefront product search index in step with the catalogue, and rebuilding it when it drifts",
     "area": "catalog",
-    "backend": "app/Console/Commands/RebuildProductSearchIndex.php:20 `search:reindex-products`; scheduled bootstrap/app.php:192 weekly Sunday 04:00; app/Observers/ProductSearchIndexObserver.php:20; registered app/Providers/ObserverServiceProvider.php:38-43 on Product",
-    "admin": "None",
+    "backend": "app/Console/Commands/RebuildProductSearchIndex.php `search:reindex-products`, scheduled weekly in App\\Console\\ScheduleDefinition; app/Observers/ProductSearchIndexObserver.php registered on Product; read out by app/Services/Monitoring/Panels/SearchIndexPanel.php at Admin -> Monitoring -> Search Index, with the rebuild as a POST at admin.monitoring.search.rebuild",
+    "admin": "Manage",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "Events",
-    "monitor": "Failures",
+    "monitor": "Full",
     "dev_portal": "N/A",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs on an Admin catalogue page as an index-health readout with a rebuild action. The observer swallows every exception so a product save can never fail, which means a broken index write is invisible, and the weekly reconcile command has no admin surface either — so an import that bypassed the observer leaves storefront search quietly incomplete with no way to notice or repair it from the panel."
+    "verdict": "CONNECTED TO MONITOR",
+    "note": "Ruled on re-check: this is NOT an orphan, and the original finding was wrong about the surface rather than about the risk. Admin -> Monitoring -> Search Index reads the index against the catalogue and says how much of it storefront search can actually find, and the same page carries the rebuild as a POST — so an import that bypassed the observer is both visible and repairable without a shell. The underlying concern stands and is why the readout matters: the observer swallows every exception so a product save can never fail, which means a broken index write is silent, and only a coverage figure compared against the catalogue can expose it."
   },
   {
     "capability": "Mass product updates written through the query builder bypass the price observer",
     "area": "pricing",
-    "backend": "app/Repositories/ProductRepository.php:478 updateByParams() uses $this->product->where($params)->update($data) — a builder update that fires no model events, so app/Observers/ProductPriceObserver.php:30 never runs; called for stock at app/Http/Controllers/Admin/Product/ProductController.php:821",
+    "backend": "app/Repositories/ProductRepository::updateByParams() now routes writes that touch unit_price, discount or discount_type through model instances so app/Observers/ProductPriceObserver.php runs; stock and variation writes keep the builder path",
     "admin": "Configure",
     "seller_web": "None",
     "flutter": "None",
@@ -581,8 +581,8 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Developer",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Developer as a latent hole. ProductRepository::updateByParams issues a builder update, which fires no model events, so any future price write through it would skip the price-change history, the audit row and the seller-visible price history in one step; today's callers touch stock and variations only."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Developer as a latent hole, and it is closed rather than documented. A builder update fires no model events, which is exactly what a bulk stock or variation write wants and is also how a price written through this method would skip the price-change history, the audit row and the seller-visible price history in one step — silently, on a path nobody would think to check. The fast path stays the default and a write that touches a watched price column is routed through model instances instead, so today's callers are unchanged and the day somebody adds a price to this call the history follows it. Held by a test that fails if the guard is removed."
   },
   {
     "capability": "What counts as a suspicious price swing (more than half the previous price within 48 hours)",
@@ -617,7 +617,7 @@
   {
     "capability": "Which order states remain editable, and which remain cancellable",
     "area": "orders",
-    "backend": "app/Services/OrderEditService.php:388 (in_array($order->order_status, ['pending','confirmed']) gate, plus order_type != 'default_type'); repeated for stock checks at :247 and :484; app/Http/Controllers/Admin/Customer/CustomerController.php:228 (in_array($order->order_status, ['pending','confirmed','processing','out_for_delivery'])); terminal states listed at app/Utils/OrderManager.php:2751; stock restoration states at app/Utils/OrderManager.php:93 (['returned','failed','canceled'])",
+    "backend": "app/Services/Commerce/OrderStatePolicy.php over the platform policy registry (order_editable_statuses, order_cancellable_statuses in the commerce group); read by app/Services/OrderEditService::checkIsOrderEditable, app/Http/Controllers/Web/UserProfileController::order_cancel and app/Http/Controllers/RestAPI/v1/OrderController::cancel",
     "admin": "Configure",
     "seller_web": "Manage",
     "flutter": "Manage",
@@ -626,14 +626,14 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in Admin → Order settings, which already exists. Both rules are inline status arrays repeated across at least three files, so a marketplace that wants cancellation to stop at 'processing' has to be given a code change."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs in the marketplace's own settings, and it now is. Both rules were inline status arrays repeated across at least three files, so a marketplace that wanted cancellation to stop at 'processing' instead of 'pending' needed a code change in three places that could disagree without anything failing. The shipped defaults are exactly what those arrays said, so no installation changes behaviour. A stored status that is not a real one is dropped on read rather than trusted, because an unknown entry in the cancellable list would silently widen what a customer may cancel; the list is also returned in lifecycle order however it was stored. The payment-method conditions beside the status check are deliberately left out of the settings screen: 'a customer may cancel while the order is still pending' is a policy, 'money already taken is not undone by a button' is an accounting fact, and offering an operator a switch for the second would be offering one that must never be thrown."
   },
   {
     "capability": "Minimum number of items required before a customer may check out",
     "area": "orders",
-    "backend": "business_settings key `minimum_order_limit`, read only at app/Http/Controllers/RestAPI/v1/ConfigController.php:190 and shipped to the mobile apps in the /api/v1/config payload",
-    "admin": "None",
+    "backend": "business_settings key `minimum_order_limit`, read at app/Http/Controllers/RestAPI/v1/ConfigController.php and shipped to the mobile apps in /api/v1/config; now written from Admin -> Business Setup -> Order Settings (app/Http/Controllers/Admin/Settings/OrderSettingsController::update, resources/views/admin-views/business-settings/order-settings/index.blade.php)",
+    "admin": "Configure",
     "seller_web": "None",
     "flutter": "View",
     "analytics": "None",
@@ -641,8 +641,8 @@
     "dev_portal": "Partial",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It is seeded at install, read in exactly one place, shipped to all three mobile apps in /api/v1/config, and written by nothing — so the apps enforce a checkout rule the operator cannot see or change."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs on the Admin order-settings screen that already carries the minimum order amount. It was seeded at install, read in exactly one place, shipped to all three mobile apps and written by nothing — so the apps enforced a checkout rule the operator could neither see nor change. Now settable there, clamped on the way in (a negative floor is not a rule and a floor in the thousands is a shop nobody can buy from). The field states on the screen that the limit is enforced by the mobile apps and that the web checkout does not read it: the asymmetry is real, and naming it is better than a control that appears to govern a checkout it never touches."
   },
   {
     "capability": "Returns and refunds as measured quantities — return rate by reason, time to receive, restock rate, refund volume, value and time to settle",
@@ -662,17 +662,17 @@
   {
     "capability": "Approve or reject a customer refund",
     "area": "returns",
-    "backend": "app/Http/Controllers/Admin/Order/RefundController.php:109 updateRefundStatus(); route routes/admin/routes.php:1704 admin.refund-section.refund.refund-status-update; wallet debit at :136-139, ledger reversal at :150; no AuditLogger in the file or in app/Services/RefundRequestService.php / RefundStatusService.php / RefundTransactionService.php; routes/vendor/routes.php:145-152 — vendor/refund/index/{status}, POST update-status; routes/rest_api/v3/seller.php:244-255 — api/v3/seller/refund/* (seller_can:orders.manage); app/Http/Controllers/Admin/Order/RefundController.php; routes/admin/routes.php:1698-1706 admin.refund-section.refund.*; nav _side-bar.blade.php:233",
+    "backend": "app/Http/Controllers/Admin/Order/RefundController::updateRefundStatus() now records refund.{status} through App\\Services\\AuditLogger with the order, order line, amount and seller; wallet debit and ledger reversal unchanged",
     "admin": "Approve",
     "seller_web": "Manage",
     "flutter": "Manage",
     "analytics": "Events",
     "monitor": "None",
     "dev_portal": "Partial",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and writes only to its own refund_status history — so the audit centre cannot answer who approved any refund ever processed."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and it wrote only to its own refund_status history — so the audit centre could not answer who approved any refund ever processed. The line carries the amount, the order, the order line and the seller, because 'a refund was approved' without the money on it is not an answer to the question anybody asks of this trail."
   },
   {
     "capability": "The returns response promise — 48 hours to answer a return request, 72 hours to process it",
@@ -701,8 +701,8 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in Admin as a carrier registry. Today carrier support is one hard-coded integration (Delivery Syria) plus flat and zone rates, with no carrier table in database/migrations, so onboarding a courier is a code change rather than a configuration."
+    "verdict": "NOT BUILT",
+    "note": "Ruled: belongs in Admin as a carrier registry, and it is a product gap rather than an orphan. There is no carrier table, no per-carrier credential store and no per-carrier rate or label anywhere — carrier support today is one hard-coded integration (Delivery Syria) plus flat and zone rates. Nothing is running in the background without an owner here, which is what the orphan rule is for; what is true is that onboarding a second courier is a code change rather than a configuration, and that is a piece of product to build rather than a screen to connect. Recorded so the gap keeps a named owner instead of disappearing because it did not fit the category."
   },
   {
     "capability": "Shipping and fulfilment as measured quantities — what shipping costs, which zone is expensive, dispatch time and lateness",
@@ -752,17 +752,17 @@
   {
     "capability": "Create, rename or delete a brand in the catalogue",
     "area": "brands",
-    "backend": "app/Http/Controllers/Admin/Product/BrandController.php (zero AuditLogger references); routes routes/admin/routes.php:381 admin.brand.*",
+    "backend": "app/Http/Controllers/Admin/Product/BrandController.php now records brand.created, brand.updated, brand.status_changed and brand.deleted through App\\Services\\AuditLogger; routes routes/admin/routes.php admin.brand.*",
     "admin": "Configure",
     "seller_web": "None",
     "flutter": "View",
     "analytics": "None",
     "monitor": "None",
     "dev_portal": "Partial",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs on the unified audit trail alongside the brand registry. The registry audits every claim decision; the CRUD that actually creates and deletes the brand records those claims point at audits nothing."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs on the unified audit trail alongside the brand registry. The registry audits every claim decision; the CRUD that creates and deletes the brands those claims point at audited nothing, so the trail could say who was granted a brand and never who created, renamed, hid or removed it. A deletion is recorded with the brand's name and where its products were moved, not just its id — the row is gone by the time anybody reads the line, and a bare id is not a readable trail."
   },
   {
     "capability": "Disputes and appeals — a channel for a seller to contest a rejection, a suspension, a brand revocation or a chargeback",
@@ -776,8 +776,8 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to both panels and exists in neither. Searched app/, Modules/, routes/ and database/migrations for dispute|appeal|case: no controller, no table, no route — only prose in two service files and three dead nav entries (seller.cases.index, seller.incidents.index, seller.appeals.index). The panel can suspend a shop, deny a listing and revoke a brand claim, and the seller's only channel is a support ticket that carries no link to the decision it contests, so nobody can see how many decisions are being challenged."
+    "verdict": "NOT BUILT",
+    "note": "Ruled: belongs to both panels and exists in neither, with no backend to orphan. Searched app/, Modules/, routes/ and database/migrations for dispute|appeal|case: no controller, no table, no route — only prose in two service files and three navigation destinations that name a server nobody wrote. The panel can suspend a shop, deny a listing and revoke a brand claim, and a seller has no way to contest any of it. That is a subsystem to build, not a surface to connect."
   },
   {
     "capability": "The seller's own account health and SLA standing",
@@ -866,8 +866,8 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Seller",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command; two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail."
+    "verdict": "NOT BUILT",
+    "note": "Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command. Two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail rather than shown broken. Recorded as a named gap: nothing is running unattended, and the work is to build the scheduler, which is Seller Center wave work rather than an orphan closure."
   },
   {
     "capability": "Whether a seller's automation rules and bulk jobs are actually succeeding",
@@ -911,8 +911,8 @@
     "dev_portal": "Full",
     "audit": "No",
     "owner": "Seller",
-    "verdict": "ORPHAN",
-    "note": "OVERRULED in part — the seller sweep recorded reports and exports as having no backend. Verified: GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and are used by the Flutter app. What is missing is the web surface and the saved-definition/queued-export half: seller.reports.index, seller.reports.builder and seller.exports.index have no route, so on a browser every export is a synchronous download off one specific list."
+    "verdict": "NOT BUILT",
+    "note": "OVERRULED in part and reclassified. The seller sweep recorded reports and exports as having no backend; verified otherwise — GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and the Flutter app uses them. What does not exist is the web surface and the saved-definition/queued-export half, which has no table, no route and no service. So the API half has an owner and a client, and the missing half is a product gap to build in a Seller Center wave rather than a capability running with nobody watching it."
   },
   {
     "capability": "Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it",
@@ -962,17 +962,17 @@
   {
     "capability": "The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason",
     "area": "analytics",
-    "backend": "written at app/Utils/OrderManager.php:1646-1653 and Analytics.php:177-181; stored as analytics_events.properties (EventRecorder.php:109)",
+    "backend": "written at app/Utils/OrderManager.php and app/Services/Analytics/Analytics.php; stored as analytics_events.properties; read by app/Services/Analytics/Reporting/AnalyticsReporting::orderAttributes() and rendered as the What Each Order Looked Like card on Admin -> Analytics -> Revenue",
     "admin": "View",
     "seller_web": "None",
     "flutter": "None",
-    "analytics": "Events",
+    "analytics": "Full",
     "monitor": "None",
     "dev_portal": "None",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Analytics reporting. Every order writes them into analytics_events.properties and exactly one reader exists in the codebase (ExperimentReach pulling properties->experiment), so shipping cost, coupon and payment method per order are captured on every order and reportable on none."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Analytics reporting. Every order wrote payment method, coupon code, guest flag and shipping cost into analytics_events.properties, and exactly one reader existed in the codebase — the experiment lookup pulling properties->experiment. So the shop recorded, on every single sale, the answers to 'which payment method do people actually use', 'how many orders used a coupon' and 'what is shipping costing us', and could ask none of them. Read from the events rather than added to the daily rollup on purpose: these are attributes of an order, and rolling each into its own dimension would multiply the rollup by the cardinality of coupon codes — a table that grows with every promotion the shop has ever run. The scan is capped, and the card says when it was capped rather than presenting the most recent slice as the whole window: somebody could price shipping off this number."
   },
   {
     "capability": "Saving an analytics report configuration to come back to",
@@ -992,17 +992,17 @@
   {
     "capability": "Daily history of request volume, visitors, errors and API load (telemetry_daily)",
     "area": "analytics",
-    "backend": "app/Console/Commands/TelemetryRollup.php:31 (telemetry:rollup) writing telemetry_daily; scheduled bootstrap/app.php:243-249; app/Console/Commands/TelemetryRollup.php:31 `telemetry:rollup`; scheduled bootstrap/app.php:242 hourly at :07, bootstrap/app.php:246 `--date=yesterday` daily 00:20, bootstrap/app.php:247 `--prune` daily 01:30",
+    "backend": "app/Console/Commands/TelemetryRollup.php `telemetry:rollup` writing telemetry_daily, scheduled hourly, with a yesterday pass and a nightly prune in App\\Console\\ScheduleDefinition; read by app/Services/Monitoring/Panels/RequestsPanel::history() and rendered as the Daily History card on Admin -> Monitoring -> Requests",
     "admin": "None",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "Metrics",
-    "monitor": "Failures",
+    "monitor": "Full",
     "dev_portal": "None",
     "audit": "No",
     "owner": "Developer",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Developer to either surface or stop writing, and it is surfaced. Three scheduled runs a day maintained the table and the command's own header admitted no screen had read it since Analytics moved to analytics_daily — a quarter of the telemetry scheduler's budget producing output nobody could look at. Surfaced rather than stopped, because it turned out to be the only place this platform keeps request volume, visitors and errors beyond monitoring's own retention window: everything else on the Requests page is folded from monitoring_request_buckets, which is pruned, so 'were we slower in June' could not be asked of it at all. Ninety days, web and API side by side, newest first. The command's header now says which screen reads it, so the next person does not have to work it out from a grep."
   },
   {
     "capability": "Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept",
@@ -1262,32 +1262,32 @@
   {
     "capability": "Blast radius — how many sellers a failure is affecting",
     "area": "monitoring",
-    "backend": "No seller/vendor/shop_id dimension exists in any monitoring table or panel; the only 'vendor' in the model is a traffic channel label (RequestsPanel.php:36) and a user_type on traces (TracesPanel.php:74)",
-    "admin": "None",
+    "backend": "app/Services/Monitoring/BlastRadius.php reads the seller dimension the exception recorder now writes (monitoring_errors.user_type='seller', where user_id IS the seller id); surfaced by app/Services/Monitoring/Panels/ErrorsPanel.php as a window figure and per error group, rendered in resources/views/admin-views/monitoring/sections/errors.blade.php with a link to each seller's admin page",
+    "admin": "View",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "None",
-    "monitor": "None",
+    "monitor": "Full",
     "dev_portal": "N/A",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to Monitoring as a dimension on every signal. No monitoring table or panel carries a seller, vendor or shop_id — 'vendor' exists only as a request-channel label — so the console can say the queue is backed up or orders are stuck and never whether that is one seller or all of them, which on a marketplace is the first question asked and turns every triage into a manual SQL session."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to Monitoring as a dimension on the signals that can carry one. No monitoring table held a seller, vendor or shop id — 'vendor' existed only as a request-channel label — so the console could say a bug had fired two hundred times and never whether that was one shop with a loop or the whole marketplace, and every triage began with a manual SQL session during the incident. Closed without a new column: the exception recorder already writes user_type and user_id, and for a seller the user id IS the seller id, so the error store gained the dimension the moment it gained a writer. The window figure counts distinct sellers rather than occurrences, guests and customers are excluded rather than counted as unknown sellers (an inflated radius is worse than a stated gap when it decides who gets woken), and each group names the first few affected shops with a link. Request, queue and dependency signals are deliberately NOT given a seller dimension — they are keyed by route pattern, queue and service precisely so they stay bounded as the marketplace grows — and the page names all three as unattributed instead of leaving them out of a total that would then read as reassurance."
   },
   {
     "capability": "Mobile app health ingest — self-reported sessions, crashes and ANRs from the phone apps",
     "area": "monitoring",
-    "backend": "app/Services/Monitoring/Ingest/AppHealthRecorder.php:27; POST api/v1/app-health via app/Http/Controllers/RestAPI/v1/AppHealthController.php:32 (#[ApiDoc], throttle:30,1) registered at routes/rest_api/v1/api.php:81",
+    "backend": "app/Services/Monitoring/Ingest/AppHealthRecorder.php; POST api/v1/app-health via app/Http/Controllers/RestAPI/v1/AppHealthController.php, routes/rest_api/v1/api.php; called by the seller app at lib/helper/app_health_reporter.dart, wired in lib/main.dart (session on launch, crash from FlutterError.onError, PlatformDispatcher.onError and the runZonedGuarded handler)",
     "admin": "View",
     "seller_web": "None",
-    "flutter": "None",
+    "flutter": "Full",
     "analytics": "None",
-    "monitor": "None",
+    "monitor": "Full",
     "dev_portal": "Documented",
     "audit": "No",
     "owner": "Developer",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs to the Flutter app. POST api/v1/app-health exists, is rate-limited, is documented and writes the app.health.* series the Android and iOS panels read — and a grep of the entire seller app finds no caller, so both mobile sections report crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs to the Flutter app. POST api/v1/app-health existed, was rate-limited, was documented and wrote the app.health.* series the Android and iOS panels read — and a grep of the entire seller app found no caller, so both mobile sections reported crash-free sessions as not_configured, which is the one thing about a phone app the server cannot infer: a crash produces no request, and the absence of traffic is indistinguishable from a quiet evening. Closed with AppHealthReporter in the app. Counters are banked in shared preferences and flushed on the NEXT launch, never at the moment of the crash: an app that is dying cannot complete a round trip, and a reporter that only manages to send from a healthy process reports only healthy processes — exactly the bias that makes a crash-free figure worthless. Counters are cleared only on a 2xx, so a network failure does not erase what it failed to deliver. Nothing identifying is sent: three counters, the platform and the version. Stack traces stay with Crashlytics, which the app already reports to; this is the denominator that turns a count of crashes into a rate. ANRs are left unreported rather than guessed at — Flutter cannot detect them reliably, and a fabricated zero would be worse than a blank."
   },
   {
     "capability": "Seeing which scheduled tasks are defined, and when each runs next",
@@ -1322,17 +1322,17 @@
   {
     "capability": "Transactional notification delivery — every order, refund, wallet, OTP, verification, restock, referral and seller-onboarding email, SMS and push",
     "area": "notifications",
-    "backend": "app/Listeners/AddFundToWalletListener.php:17, handle(AddFundToWalletEvent) at line 37; queued (ShouldQueue + QueuedMailDelivery: tries 2, timeout 30, backoff 60); app/Listeners/CashCollectListener.php:9, handle(CashCollectEvent) at line 24; NOT queued - runs inline in the admin request (dispatched app/Http/Controllers/Admin/Deliveryman/DeliveryManCashCollectController.php:68); app/Listeners/ChattingListener.php:9, handle(ChattingEvent) at line 24; NOT queued; app/Listeners/CustomerRegistrationListener.php:18, handle(CustomerRegistrationEvent) at line 32; queued with QueuedMailDelivery; app/Listeners/CustomerStatusUpdateListener.php:23, handle(CustomerStatusUpdateEvent) at line 31; queued; app/Listeners/DeliverymanPasswordResetListener.php:18, handle(DeliverymanPasswordResetEvent) at line 32; app/Listeners/DigitalProductDownloadListener.php:18, handle(DigitalProductDownloadEvent) at line ",
-    "admin": "Configure",
+    "backend": "23 transactional listeners under app/Listeners/, now recorded at three seams: mail on Laravel's MessageSending/MessageSent (app/Listeners/Notifications/RecordMailDelivery.php, subscribed in AppServiceProvider::boot), sms in the single dispatcher every caller uses (app/Utils/SMSModule::sendCentralizedSMS), push at the one FCM call all device and topic sends funnel into (app/Traits/PushNotificationTrait::sendNotificationToHttp). Stored in notification_deliveries (2026_09_18_000001), served at GET /admin/notification/deliveries and resent at POST /admin/notification/deliveries/{id}/resend (App\\Http\\Controllers\\Admin\\Notification\\DeliveryLogController), swept by `notifications:sweep` in App\\Console\\ScheduleDefinition.",
+    "admin": "Manage",
     "seller_web": "None",
     "flutter": "N/A",
     "analytics": "None",
-    "monitor": "Failures",
+    "monitor": "Full",
     "dev_portal": "N/A",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in Admin as a delivery log with a resend action, and it is the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one records whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware entirely, and FCM push goes through a trait — so a shop whose SMS credentials expired sends no OTP, no customer can sign in, and every screen in the monitoring console stays green. Queued listeners at least land in failed_jobs; the eight that are not queued (chat, order status, cash collect, referral, delivery-man withdraw, refund) run inline and leave nothing at all. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs in Admin as a delivery log with a resend action, and it was the failure mode most invisible without opening the database. Twenty-three listeners send the platform's entire transactional traffic and not one recorded whether the message arrived: the fourteen SMS providers return the literal string 'error' and persist nothing, Mail:: bypasses the HTTP-client middleware the dependency monitor watches, and FCM push goes out through a trait — so a shop whose SMS credentials expired sent no OTP, no customer could sign in, and every screen in the monitoring console stayed green. Closed with three seams and no edit to any listener, so the twenty-fourth is covered the day it is written. A row is opened when the send starts and confirmed when the channel answers, because 'no row' and 'a row that never turned green' look identical in a log that records only successes and the second one is the outage; a send the transport never came back about is closed as failed by a sweep rather than left reading as still going. A resend sends the message that was recorded rather than re-rendering a template that may have changed since, and is a new attempt pointing at the one it repeats so the original stays true. SMS is deliberately not resendable: a one-time code sent again minutes later delivers a secret that has already expired, and an operator who watches it succeed concludes the customer's problem is solved when it is not. The code itself is never stored. Retention and the unconfirmed window are both platform policies rather than constants. OVERRULED on one point: the jobs sweep recorded OrderEditDuePaymentListener as mis-bound to OrderEditEvent; it now type-hints OrderEditDuePaymentEvent and the due-payment notification fires correctly. Also fixed in passing: sendNotificationToHttp assigned its url and headers only inside the project_id branch, so a shop with push switched on and no service account reached Http::withHeaders() with undefined variables — a TypeError, which is an Error and escaped the Exception catch as a 500 on whatever request was sending the notification."
   },
   {
     "capability": "Email the seller that an order arrived for them",
@@ -1781,23 +1781,23 @@
     "dev_portal": "None",
     "audit": "No",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in Admin and has no backend at all. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it, and the Seller Center advertises a destination for it that does not resolve."
+    "verdict": "NOT BUILT",
+    "note": "Ruled: belongs in Admin, and there is no backend at all to be orphaned. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it. That is a product this platform has not built, not a capability running unattended, so it is recorded as a named gap rather than counted among surfaces that need connecting."
   },
   {
     "capability": "Feature flags and gradual rollout",
     "area": "platform",
-    "backend": "None found. Searched app/, config/, routes/ and database/migrations for FeatureFlag, feature_flag, flag tables — nothing. Closest surfaces: addon publish/unpublish (routes/admin/routes.php:1081-1089), addon licence activation (:1091-1097) and modules_statuses.json",
-    "admin": "None",
+    "backend": "database/migrations/2026_09_20_000001_create_feature_flags_table.php; app/Services/Platform/FeatureFlags.php (enabled/bucket/save/delete); managed at Admin -> Settings -> Feature Flags (App\\Http\\Controllers\\Admin\\Settings\\FeatureFlagController, routes admin.settings.feature-flags.*), listed in the settings index",
+    "admin": "Manage",
     "seller_web": "None",
     "flutter": "None",
     "analytics": "None",
     "monitor": "None",
     "dev_portal": "None",
-    "audit": "No",
+    "audit": "Yes",
     "owner": "Admin",
-    "verdict": "ORPHAN",
-    "note": "Ruled: belongs in Admin. No flag table, no config, no per-seller or per-percentage switch anywhere; the only lever is publishing or unpublishing an entire addon module, so every change to the marketplace is all-or-nothing for everyone at once."
+    "verdict": "FIXED",
+    "note": "Ruled: belongs in Admin, and it is built. There was no flag table, no config and no per-seller or per-percentage switch anywhere; the only lever was publishing or unpublishing an entire addon module, so every change to the marketplace went live for every seller and every shopper at the same moment and the only way back was a deployment. Three rules make the answer trustworthy, and each is held by a test because getting any of them wrong turns a safety mechanism into a source of incidents. A flag that does not exist is OFF — not an error and not on, because a rollout is opt-in and an unknown key is a typo or a removed flag. The same subject always gets the same answer: the bucket is a hash of the flag key and the subject, so a shop stays on the same side of the line across every request and device, where a random draw per request would show one seller two versions of the product in a single session. And the master switch beats the pilot list, which beats the percentage — an off switch some people are exempt from is not an off switch. The flag key is validated to the shape the code asks for, because a key that does not match is a control an operator reaches for during an incident that silently does nothing. An unreadable flag table means the old behaviour everywhere: a rollout that cannot be read must never fail open."
   },
   {
     "capability": "Duplicate addon manager mounted at /admin/addon",

@@ -6,6 +6,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 use App\Models\PaymentRequest;
+use App\Services\Payments\GatewayJournal;
 
 trait Payment
 {
@@ -35,6 +36,11 @@ trait Payment
         $payment->attribute_id = $payment_info->getAttributeId();
         $payment->payment_platform = $payment_info->getPaymentPlatForm();
         $payment->save();
+
+        // The single choke point every one of the fourteen gateways passes through, which is why
+        // the attempt is recorded here rather than in each of them. Without it a shopper who left
+        // the gateway before it answered was invisible and no abandonment rate could exist.
+        app(GatewayJournal::class)->started($payment);
 
         $routes = [
             'ssl_commerz' => 'payment/sslcommerz/pay',

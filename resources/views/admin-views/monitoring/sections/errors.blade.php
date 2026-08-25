@@ -13,6 +13,7 @@
     $filters = $panel['filters'];
     $options = $panel['options'];
     $summary = $panel['summary'];
+    $blast = $panel['blast_radius'];
     $groupList = $panel['groups'];
     $selected = $panel['selected'] ?? null;
     $capture = $panel['capture'];
@@ -109,7 +110,32 @@
                     ? $count($summary['affected_users']['value'])
                     : translate($summary['affected_users']['state'] ?? 'no_data')"
               icon="customers" :caption="translate('guests_are_not_counted')" />
+
+    {{-- Blast radius. On a marketplace this is the first question asked about any incident, and
+         until the error store carried a seller it could only be answered by opening a SQL client
+         during the incident. --}}
+    <x-k.stat :label="translate('sellers_affected')"
+              :value="$blast['state'] === 'ok' ? $count($blast['sellers']) : translate('not_measured')"
+              icon="store"
+              :caption="$blast['state'] === 'ok'
+                    ? $count($blast['occurrences']) . ' ' . translate('occurrences_on_a_signed_in_seller')
+                    : null" />
 </div>
+
+@if ($blast['state'] === 'ok')
+    <details class="mon-metric__remedy">
+        {{-- Named rather than hidden: an operator who knows the queue figure is unattributed asks
+             the next question; one shown a total that silently excludes it stops. --}}
+        <summary>{{ translate('what_this_figure_cannot_see') }}</summary>
+        <ul class="mon-note">
+            @foreach ($blast['unattributed'] as $signal => $reason)
+                <li><strong>{{ translate($signal) }}</strong> — {{ translate($reason) }}</li>
+            @endforeach
+        </ul>
+    </details>
+@elseif (!empty($blast['message']))
+    <p class="mon-note mon-note--critical">{{ translate('the_blast_radius_could_not_be_read') }}: {{ $blast['message'] }}</p>
+@endif
 
 @if ($summary['state'] !== 'ok' && isset($summary['message']))
     <p class="mon-note mon-note--critical">{{ translate('the_summary_could_not_be_read') }}: {{ $summary['message'] }}</p>
@@ -380,6 +406,22 @@
 
             <h3 class="mon-heading">{{ $group['exception_class'] }}</h3>
             <p class="mon-note">{{ $group['message'] }}</p>
+
+            {{-- Two hundred occurrences and two hundred occurrences across one seller are the same
+                 number and opposite decisions: one shop with a loop, or the marketplace. --}}
+            @php($groupBlast = $selected['blast_radius'] ?? ['state' => 'unavailable'])
+            @if ($groupBlast['state'] === 'ok' && $groupBlast['sellers'] > 0)
+                <p class="mon-note">
+                    <strong>{{ translate('sellers_affected') }}:</strong>
+                    {{ $count($groupBlast['sellers']) }} —
+                    @foreach ($groupBlast['named'] as $seller)
+                        <a href="{{ route('admin.vendors.view', ['id' => $seller['id']]) }}">{{ $seller['name'] }}</a>@if (!$loop->last), @endif
+                    @endforeach
+                    @if ($groupBlast['more'] > 0)
+                        + {{ $count($groupBlast['more']) }} {{ translate('more') }}
+                    @endif
+                </p>
+            @endif
 
             <div class="mon-grid">
                 <div class="mon-metric">

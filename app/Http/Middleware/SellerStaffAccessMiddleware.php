@@ -104,7 +104,7 @@ class SellerStaffAccessMiddleware
             'products', 'product' => $isWrite ? 'products.manage' : 'products.view',
 
             // Orders and everything that acts on an order.
-            'orders', 'get-order-data' => $isWrite ? 'orders.manage' : 'orders.view',
+            'orders' => $isWrite ? 'orders.manage' : 'orders.view',
             'pos', 'refund' => 'orders.manage',
             'customer' => 'orders.view',
 

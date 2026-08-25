@@ -2735,5 +2735,336 @@ class SellerCenterCopySeeder extends Seeder
             'Preview the test mail',
             'معاينة بريد الاختبار',
         ],
+        // The transactional delivery log.
+        'notification_delivery_log' => [
+            'Notification Delivery Log',
+            'سجل تسليم الإشعارات',
+        ],
+        'delivery_log' => [
+            'Delivery Log',
+            'سجل التسليم',
+        ],
+        'every_transactional_email_sms_and_push_this_shop_tried_to_send' => [
+            'Every transactional email, SMS and push this shop tried to send — and whether it arrived',
+            'كل بريد ورسالة نصية وإشعار معاملات حاول المتجر إرساله — وهل وصل أم لا',
+        ],
+        'delivered' => [
+            'Delivered',
+            'تم التسليم',
+        ],
+        'not_confirmed' => [
+            'Not confirmed',
+            'غير مؤكّد',
+        ],
+        'last_24_hours' => [
+            'Last 24 hours',
+            'آخر ٢٤ ساعة',
+        ],
+        'an_email_address_or_a_phone_number' => [
+            'An email address or a phone number',
+            'بريد إلكتروني أو رقم هاتف',
+        ],
+        'send_again' => [
+            'Send again',
+            'إرسال مرة أخرى',
+        ],
+        'resent_from' => [
+            'Resent from',
+            'أُعيد إرساله من',
+        ],
+        'no_message_has_been_sent_yet' => [
+            'No message has been sent yet.',
+            'لم تُرسل أي رسالة بعد.',
+        ],
+        'the_message_was_sent_again' => [
+            'The message was sent again.',
+            'تم إرسال الرسالة مرة أخرى.',
+        ],
+        'the_message_could_not_be_sent' => [
+            'The message could not be sent.',
+            'تعذّر إرسال الرسالة.',
+        ],
+        'a_one_time_code_cannot_be_sent_again' => [
+            'A one-time code cannot be sent again',
+            'لا يمكن إعادة إرسال رمز لمرة واحدة',
+        ],
+        'an_sms_carries_a_one_time_code_that_has_already_expired' => [
+            'An SMS carries a one-time code that has already expired, so sending it again would deliver a secret that no longer works.',
+            'تحمل الرسالة النصية رمزًا لمرة واحدة انتهت صلاحيته، فإعادة إرساله تُسلّم رمزًا لم يعد يعمل.',
+        ],
+        'this_record_has_no_recipient_to_send_to' => [
+            'This record has no recipient to send to.',
+            'لا يحتوي هذا السجل على مستلم لإرساله إليه.',
+        ],
+        'this_message_was_not_stored_in_full_so_it_cannot_be_sent_again' => [
+            'This message was not stored in full, so it cannot be sent again.',
+            'لم تُحفظ هذه الرسالة كاملة، لذا لا يمكن إعادة إرسالها.',
+        ],
+        'this_push_has_no_stored_payload_to_send_again' => [
+            'This push has no stored payload to send again.',
+            'لا يوجد محتوى محفوظ لهذا الإشعار لإعادة إرساله.',
+        ],
+        'days_of_transactional_message_history_to_keep' => [
+            'Days of transactional message history to keep',
+            'عدد أيام الاحتفاظ بسجل رسائل المعاملات',
+        ],
+        'the_delivery_log_is_a_support_aid_with_a_shelf_life_not_an_archive_of_what_was_said_to_customers' => [
+            'The delivery log is a support aid with a shelf life, not a permanent archive of what was said to customers.',
+            'سجل التسليم أداة دعم لها مدة صلاحية، وليس أرشيفًا دائمًا لما قيل للعملاء.',
+        ],
+        'minutes_before_an_unconfirmed_message_counts_as_failed' => [
+            'Minutes before an unconfirmed message counts as failed',
+            'عدد الدقائق قبل اعتبار الرسالة غير المؤكّدة فاشلة',
+        ],
+        'a_send_the_transport_never_came_back_about_reads_as_still_going_until_this_elapses' => [
+            'A send the transport never came back about reads as "still going" until this elapses.',
+            'الإرسال الذي لم يعد منه ناقل الرسائل بجواب يُقرأ على أنه «قيد التنفيذ» حتى انقضاء هذه المدة.',
+        ],
+        // Blast radius — how many sellers a failure is reaching.
+        'sellers_affected' => [
+            'Sellers affected',
+            'البائعون المتأثرون',
+        ],
+        'occurrences_on_a_signed_in_seller' => [
+            'occurrences on a signed-in seller',
+            'حالة وقعت لبائع مسجّل الدخول',
+        ],
+        'not_measured' => [
+            'Not measured',
+            'غير مقيس',
+        ],
+        'what_this_figure_cannot_see' => [
+            'What this figure cannot see',
+            'ما لا يستطيع هذا الرقم رؤيته',
+        ],
+        'the_blast_radius_could_not_be_read' => [
+            'The blast radius could not be read',
+            'تعذّرت قراءة نطاق التأثير',
+        ],
+        'request_buckets_are_keyed_by_route_pattern_so_they_stay_bounded_as_the_marketplace_grows' => [
+            'Request counters are keyed by route pattern so they stay bounded as the marketplace grows, so traffic cannot be attributed to a seller.',
+            'تُفهرَس عدّادات الطلبات بنمط المسار كي تبقى محدودة مع نمو السوق، لذا لا يمكن نسب حركة المرور إلى بائع بعينه.',
+        ],
+        'a_queued_job_records_its_queue_and_class_not_whose_work_it_was' => [
+            'A queued job records its queue and its class, not whose work it was.',
+            'تُسجّل المهمة في الطابور اسم الطابور وصنفها، لا صاحب العمل الذي تخصّه.',
+        ],
+        'an_outbound_call_is_attributed_to_the_service_it_reached_not_to_a_seller' => [
+            'An outbound call is attributed to the service it reached, not to a seller.',
+            'يُنسب النداء الصادر إلى الخدمة التي وصل إليها، لا إلى بائع.',
+        ],
+        'requests' => [
+            'Requests',
+            'الطلبات',
+        ],
+        'queues' => [
+            'Queues',
+            'الطوابير',
+        ],
+        'dependencies' => [
+            'Dependencies',
+            'الاعتماديات',
+        ],
+        // Order state policy and the checkout item floor.
+        'order_states_that_can_still_be_edited' => [
+            'Order states that can still be edited',
+            'حالات الطلب التي ما زال يمكن تعديلها',
+        ],
+        'editing_rebuilds_the_order_lines_and_the_stock_behind_them_so_states_past_dispatch_are_normally_left_out' => [
+            'Editing rebuilds the order lines and the stock behind them, so states past dispatch are normally left out.',
+            'يعيد التعديل بناء بنود الطلب والمخزون خلفها، لذا تُستبعد عادةً الحالات التي تلي الإرسال.',
+        ],
+        'order_states_a_customer_may_cancel_from' => [
+            'Order states a customer may cancel from',
+            'حالات الطلب التي يمكن للعميل الإلغاء منها',
+        ],
+        'payment_rules_still_apply_on_top_money_already_taken_is_never_undone_by_this_button' => [
+            'Payment rules still apply on top: money already taken is never undone by this button.',
+            'تبقى قواعد الدفع سارية فوق ذلك: لا يُلغى المال المحصَّل مسبقًا بهذا الزر.',
+        ],
+        'this_order_can_no_longer_be_edited_in_its_current_status' => [
+            'This order can no longer be edited in its current status.',
+            'لم يعد بالإمكان تعديل هذا الطلب في حالته الحالية.',
+        ],
+        'Minimum_Items_Per_Order' => [
+            'Minimum Items Per Order',
+            'الحد الأدنى لعدد الأصناف في الطلب',
+        ],
+        'the_fewest_items_a_customer_may_check_out_with_zero_means_no_limit' => [
+            'The fewest items a customer may check out with. Zero means no limit.',
+            'أقل عدد أصناف يمكن للعميل إتمام الشراء به. الصفر يعني بلا حد.',
+        ],
+        'this_limit_is_enforced_by_the_mobile_apps_the_web_checkout_does_not_read_it' => [
+            'This limit is enforced by the mobile apps; the web checkout does not read it.',
+            'تطبّق تطبيقات الجوال هذا الحد؛ أما إتمام الشراء عبر الويب فلا يقرأه.',
+        ],
+        // Gateway callback receipts.
+        'gateway_callbacks_received' => [
+            'Gateway callbacks received',
+            'استدعاءات بوابات الدفع الواردة',
+        ],
+        'acted_on_by_nothing' => [
+            'Acted on by nothing',
+            'لم يُتّخذ عليها أي إجراء',
+        ],
+        'last_callback' => [
+            'Last callback',
+            'آخر استدعاء',
+        ],
+        'no_gateway_callback_landed_in_this_window' => [
+            'No gateway callback landed in this window',
+            'لم يصل أي استدعاء من بوابة دفع في هذه الفترة',
+        ],
+        'a_shop_that_took_a_card_payment_in_this_window_and_has_no_row_here_has_a_callback_that_never_arrived' => [
+            'A shop that took a card payment in this window and has no row here has a callback that never arrived.',
+            'المتجر الذي تلقّى دفعة ببطاقة في هذه الفترة ولا يوجد له سجل هنا لديه استدعاء لم يصل أبدًا.',
+        ],
+        'succeeded' => [
+            'Succeeded',
+            'نجحت',
+        ],
+        // The daily request history, from the rollup nothing was reading.
+        'daily_history' => [
+            'Daily History',
+            'السجل اليومي',
+        ],
+        'web_requests' => [
+            'Web requests',
+            'طلبات الويب',
+        ],
+        'api_requests' => [
+            'API requests',
+            'طلبات الواجهة البرمجية',
+        ],
+        'server_errors' => [
+            'Server errors',
+            'أخطاء الخادم',
+        ],
+        'average_response_time' => [
+            'Average response time',
+            'متوسط زمن الاستجابة',
+        ],
+        'no_daily_history_has_been_rolled_up_yet' => [
+            'No daily history has been rolled up yet',
+            'لم يُجمَّع أي سجل يومي بعد',
+        ],
+        'telemetry_rollup_writes_one_row_per_day_per_channel_the_first_appears_after_its_next_run' => [
+            'The telemetry rollup writes one row per day per channel; the first appears after its next run.',
+            'يكتب تجميع القياسات صفًا واحدًا لكل يوم ولكل قناة؛ يظهر الأول بعد التشغيل التالي.',
+        ],
+        // Order attributes — the facts every order carried and nothing reported.
+        'what_each_order_looked_like' => [
+            'What Each Order Looked Like',
+            'كيف بدا كل طلب',
+        ],
+        'orders_with_a_coupon' => [
+            'Orders with a coupon',
+            'الطلبات التي استخدمت قسيمة',
+        ],
+        'guest_orders' => [
+            'Guest orders',
+            'طلبات الزوار',
+        ],
+        'average_shipping_cost' => [
+            'Average shipping cost',
+            'متوسط تكلفة الشحن',
+        ],
+        'share' => [
+            'Share',
+            'الحصة',
+        ],
+        'read_from_the_most_recent_orders_in_this_window_not_all_of_them' => [
+            'Read from the most recent orders in this window, not from all of them.',
+            'مقروء من أحدث الطلبات في هذه الفترة، لا من جميعها.',
+        ],
+        'no_orders_in_this_window' => [
+            'No orders in this window',
+            'لا توجد طلبات في هذه الفترة',
+        ],
+        'order_attributes_are_read_from_the_events_recorded_when_an_order_is_placed' => [
+            'Order attributes are read from the events recorded when an order is placed.',
+            'تُقرأ خصائص الطلب من الأحداث المسجّلة لحظة إنشائه.',
+        ],
+        // Feature flags.
+        'feature_flags' => [
+            'Feature Flags',
+            'مفاتيح المزايا',
+        ],
+        'Feature_Flags' => [
+            'Feature Flags',
+            'مفاتيح المزايا',
+        ],
+        'turn_a_change_on_for_some_of_the_marketplace_before_all_of_it' => [
+            'Turn a change on for some of the marketplace before all of it',
+            'شغّل تغييرًا لجزء من السوق قبل تعميمه على الجميع',
+        ],
+        'add_or_update_a_flag' => [
+            'Add or update a flag',
+            'إضافة مفتاح أو تحديثه',
+        ],
+        'flag_key' => [
+            'Flag key',
+            'مفتاح المزية',
+        ],
+        'this_must_match_exactly_what_the_code_asks_for' => [
+            'This must match exactly what the code asks for.',
+            'يجب أن يطابق تمامًا ما تطلبه الشيفرة.',
+        ],
+        'rollout_percentage' => [
+            'Rollout percentage',
+            'نسبة الطرح',
+        ],
+        'always_on_for_these_sellers' => [
+            'Always on for these sellers',
+            'مُفعّل دائمًا لهؤلاء البائعين',
+        ],
+        'the_pilot_group_these_shops_are_in_whatever_the_percentage_says' => [
+            'The pilot group: these shops are in whatever the percentage says.',
+            'المجموعة التجريبية: هذه المتاجر مشمولة مهما كانت النسبة.',
+        ],
+        'switched_on' => [
+            'Switched on',
+            'مُفعّل',
+        ],
+        'off_means_off_for_everyone_including_the_pilot_group' => [
+            'Off means off for everyone, including the pilot group.',
+            'الإيقاف يعني الإيقاف للجميع، بمن فيهم المجموعة التجريبية.',
+        ],
+        'flags_on_this_installation' => [
+            'Flags on this installation',
+            'المفاتيح على هذا التركيب',
+        ],
+        'no_flag_has_been_created_yet_a_flag_that_does_not_exist_is_off' => [
+            'No flag has been created yet. A flag that does not exist is off',
+            'لم يُنشأ أي مفتاح بعد. المفتاح غير الموجود يُعدّ مُطفأً',
+        ],
+        'rollout' => [
+            'Rollout',
+            'الطرح',
+        ],
+        'pilot_group' => [
+            'Pilot group',
+            'المجموعة التجريبية',
+        ],
+        'the_flag_was_saved' => [
+            'The flag was saved.',
+            'تم حفظ المفتاح.',
+        ],
+        'the_flag_was_removed' => [
+            'The flag was removed.',
+            'تمت إزالة المفتاح.',
+        ],
+        'that_flag_does_not_exist' => [
+            'That flag does not exist.',
+            'هذا المفتاح غير موجود.',
+        ],
+        'a_flag_key_is_lowercase_letters_numbers_dots_dashes_and_underscores' => [
+            'A flag key is lowercase letters, numbers, dots, dashes and underscores.',
+            'مفتاح المزية يتكوّن من أحرف صغيرة وأرقام ونقاط وشرطات وشرطات سفلية.',
+        ],
+        'the_feature_flag_table_has_not_been_created_on_this_installation' => [
+            'The feature flag table has not been created on this installation.',
+            'لم يُنشأ جدول مفاتيح المزايا على هذا التركيب.',
+        ],
     ];
 }

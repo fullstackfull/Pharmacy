@@ -2,6 +2,7 @@
 
 namespace App\Services\Monitoring\Panels;
 
+use App\Services\Monitoring\BlastRadius;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\Clock;
@@ -94,6 +95,10 @@ class ErrorsPanel implements Panel
             'filters' => $filters,
             'options' => $options,
             'summary' => $this->summary($since, $filters),
+            // How many sellers the errors in this window actually reached. On a marketplace this is
+            // the first question asked about an incident, and no monitoring table carried a seller
+            // dimension at all until the error store gained one.
+            'blast_radius' => app(BlastRadius::class)->inWindow($since),
             'groups' => $groups,
             'selected' => $filters['group'] === null ? null : $this->selectedGroup($filters['group'], $since),
             'capture' => $capture,
@@ -517,6 +522,9 @@ class ErrorsPanel implements Panel
                 'id' => $groupId,
                 'group' => $this->presentGroup($row, $since, $this->occurrencesPerGroup([$groupId], $since), $groupId),
                 'occurrences' => $this->occurrences($groupId, $since),
+                // Two hundred occurrences and two hundred occurrences across one seller are the
+                // same number and opposite decisions.
+                'blast_radius' => app(BlastRadius::class)->forGroup($groupId, $since),
             ];
         } catch (\Throwable $exception) {
             return [

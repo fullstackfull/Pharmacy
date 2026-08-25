@@ -217,6 +217,21 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::get('{group}', 'index')->name('group');
         });
 
+    /*
+    | Feature flags: a change that can be turned on for some of the shop rather than all of it.
+    |
+    | The only lever this platform had was publishing or unpublishing a whole addon module, so every
+    | change went live for everyone at the same moment and the only way back was a deployment.
+    */
+    Route::controller(\App\Http\Controllers\Admin\Settings\FeatureFlagController::class)
+        ->prefix('settings/feature-flags')->name('settings.feature-flags.')->middleware('module:system_settings')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            // Writes, so they are POSTs: both change what the shop does for real people.
+            Route::post('/', 'update')->name('update');
+            Route::post('delete', 'destroy')->name('delete');
+        });
+
     // Kohl design-system gallery. Every primitive on one page, so a change to the system is
     // reviewable in the real admin shell — in light/dark and LTR/RTL — rather than discovered later
     // on a production screen. Debug-only, with the two component galleries above: a development
@@ -1072,6 +1087,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             Route::post('delete', 'delete')->name('delete');
             Route::post('update-status', 'updateStatus')->name('update-status');
             Route::post('resend-notification', 'resendNotification')->name('resend-notification');
+        });
+
+        // The delivery record for every transactional message the platform sends, and the one
+        // action on it. Resending is a send, so it is a POST rather than a link a browser can
+        // prefetch, and it is audited.
+        Route::controller(\App\Http\Controllers\Admin\Notification\DeliveryLogController::class)->group(function () {
+            Route::get('deliveries', 'index')->name('deliveries');
+            Route::post('deliveries/{id}/resend', 'resend')->name('deliveries.resend')->whereNumber('id');
         });
     });
 

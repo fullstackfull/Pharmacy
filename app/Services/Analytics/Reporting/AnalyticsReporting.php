@@ -31,6 +31,16 @@ use Illuminate\Support\Facades\Schema;
 class AnalyticsReporting
 {
     /** Dimensions the rollup writes, so a screen can never ask for one that does not exist. */
+    /**
+     * How many recent orders the attribute read looks at.
+     *
+     * Bounded because the properties column is JSON and cannot be grouped in the database without a
+     * generated column per key — which would mean a schema change every time an order gains a
+     * new attribute. A capped scan of the most recent orders answers the question honestly, and the
+     * payload says when it was capped so nobody reads a slice as the whole.
+     */
+    private const ATTRIBUTE_SCAN = 5000;
+
     public const DIMENSIONS = [
         'source', 'medium', 'campaign', 'device', 'os', 'browser', 'country', 'language',
         'app_version', 'landing_path', 'attribution_basis', 'new_vs_returning', 'hour', 'weekday',
@@ -1046,6 +1056,89 @@ class AnalyticsReporting
                 && Schema::connection(config('analytics.connection'))->hasTable('analytics_events');
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * The facts attached to each order, which were captured on every one and reportable on none.
+     *
+     * `analytics_events.properties` has carried payment method, coupon code, guest flag and shipping
+     * cost since the day it was built, and exactly one reader existed in the codebase — the
+     * experiment lookup pulling `properties->experiment`. So the shop recorded, on every single
+     * order, the answers to "which payment method do people actually use", "how many orders used a
+     * coupon" and "what is shipping costing us", and could answer none of them.
+     *
+     * Read from the events rather than added to the daily rollup on purpose: these are attributes of
+     * an order, and rolling each one into its own dimension would multiply the rollup by the
+     * cardinality of coupon codes — a table that grows with every promotion the shop has ever run.
+     *
+     * @return array<string, mixed>
+     */
+    public function orderAttributes(Window $window, int $limit = 12): array
+    {
+        if (!$this->ready()) {
+            return ['state' => 'not_installed'];
+        }
+
+        try {
+            $rows = $this->connection()->table('analytics_events')
+                ->where('name', 'order_placed')
+                ->whereBetween('occurred_at', [$window->from, $window->to])
+                ->whereNotNull('properties')
+                ->orderByDesc('id')
+                ->limit(self::ATTRIBUTE_SCAN)
+                ->pluck('properties');
+
+            $methods = [];
+            $orders = 0;
+            $withCoupon = 0;
+            $guest = 0;
+            $shippingTotal = 0.0;
+            $shippingCounted = 0;
+
+            foreach ($rows as $raw) {
+                $properties = json_decode((string) $raw, true);
+                if (!is_array($properties)) {
+                    continue;
+                }
+
+                $orders++;
+                $method = (string) ($properties['payment_method'] ?? 'unknown');
+                $methods[$method] = ($methods[$method] ?? 0) + 1;
+
+                if (($properties['coupon_code'] ?? '') !== '') {
+                    $withCoupon++;
+                }
+                if (!empty($properties['is_guest'])) {
+                    $guest++;
+                }
+                if (isset($properties['shipping_cost'])) {
+                    $shippingTotal += (float) $properties['shipping_cost'];
+                    $shippingCounted++;
+                }
+            }
+
+            arsort($methods);
+
+            return [
+                // "Sampled" rather than "all", said out loud: the scan is capped, and a figure
+                // presented as the whole truth when it is the most recent slice is the kind of
+                // number somebody makes a pricing decision on.
+                'state' => $orders === 0 ? 'empty' : 'ok',
+                'orders' => $orders,
+                'capped' => $orders >= self::ATTRIBUTE_SCAN,
+                'payment_methods' => array_slice(
+                    array_map(static fn ($key, $count) => ['key' => $key, 'orders' => $count], array_keys($methods), $methods),
+                    0,
+                    $limit,
+                ),
+                'coupon_orders' => $withCoupon,
+                'guest_orders' => $guest,
+                'average_shipping' => $shippingCounted === 0 ? null : round($shippingTotal / $shippingCounted, 2),
+                'source' => 'analytics_events.properties',
+            ];
+        } catch (\Throwable) {
+            return ['state' => 'unavailable', 'source' => 'analytics_events.properties'];
         }
     }
 

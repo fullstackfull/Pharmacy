@@ -475,10 +475,39 @@ class ProductRepository implements ProductRepositoryInterface
         return $this->product->find($id)->update($data);
     }
 
+    /**
+     * Columns whose change has to reach an observer.
+     *
+     * @var array<int, string>
+     */
+    private const OBSERVED_COLUMNS = ['unit_price', 'discount', 'discount_type'];
+
+    /**
+     * Update every product matching the parameters.
+     *
+     * A builder update fires no model events, which is fast and is exactly what a bulk stock or
+     * variation write wants. It is also a hole: ProductPriceObserver exists precisely because seven
+     * services and three API versions reach `unit_price` by their own route, and a price written
+     * through here would skip the price-change history, the audit row and the seller-visible price
+     * history in one step — silently, on a path nobody would think to check.
+     *
+     * So the fast path stays the default and a write that touches a price is routed through model
+     * instances instead. Today's callers only touch stock and variations, so nothing changes for
+     * them; the day somebody adds a price to this call, the history follows it.
+     */
     public function updateByParams(array $params, array $data): bool
     {
         cacheRemoveByType(type: 'products');
-        return $this->product->where($params)->update($data);
+
+        if (array_intersect(array_keys($data), self::OBSERVED_COLUMNS) === []) {
+            return $this->product->where($params)->update($data);
+        }
+
+        $this->product->where($params)->get()->each(function ($product) use ($data) {
+            $product->update($data);
+        });
+
+        return true;
     }
 
     public function getListWhereNotIn(array $filters = [], array $whereNotIn = [], array $relations = [], int|string $dataLimit = DEFAULT_DATA_LIMIT, ?int $offset = null): Collection|LengthAwarePaginator

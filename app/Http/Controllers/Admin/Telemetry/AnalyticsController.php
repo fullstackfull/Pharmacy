@@ -287,6 +287,11 @@ class AnalyticsController extends BaseController
                 'trend' => $this->reporting->trend($window),
                 'sources' => $this->reporting->breakdown($window, 'source', 20),
                 'campaigns' => $this->reporting->breakdown($window, 'campaign', 20),
+                // Payment method, coupon use, guest share and what shipping costs. Every order has
+                // carried these since the day the events table was built, and exactly one reader
+                // existed in the codebase — so the shop recorded the answers on every sale and
+                // could not ask any of the questions.
+                'attributes' => $this->reporting->orderAttributes($window),
             ],
             'timing' => [
                 'hours' => $this->reporting->breakdown($window, 'hour', 24),

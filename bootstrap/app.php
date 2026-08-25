@@ -57,6 +57,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // It binds a context on first pass and skips on the second, so the group entries below
             // cost a container lookup and record nothing twice.
             \App\Http\Middleware\MonitorRequest::class,
+            // A receipt for every gateway callback. Global rather than on the payment route group:
+            // the built-in gateway routes only exist while the Gateways addon is unpublished, and a
+            // middleware bolted to that group would cover nothing on the installations that take
+            // the most money. It self-selects on the path and does its writing on terminate.
+            \App\Http\Middleware\RecordGatewayCallback::class,
         ]);
         $middleware->group('web', [
             \App\Http\Middleware\EncryptCookies::class,

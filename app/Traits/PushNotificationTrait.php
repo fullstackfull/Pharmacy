@@ -2,13 +2,16 @@
 
 namespace App\Traits;
 
+use App\Models\NotificationDelivery;
 use App\Models\NotificationMessage;
 use App\Models\Order;
 use App\Models\ReferralCustomer;
 use App\Models\User;
+use App\Services\Notifications\DeliveryLog;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Throwable;
 
 trait PushNotificationTrait
@@ -481,19 +484,56 @@ trait PushNotificationTrait
         return $this->sendNotificationToHttp($postData);
     }
 
+    /**
+     * The single HTTP call every device and topic push funnels into.
+     *
+     * Which makes it the place the delivery record belongs: FCM is reached through this trait rather
+     * than through the instrumented HTTP client, so a shop whose Firebase credentials expired sent
+     * nothing and nothing anywhere said so.
+     *
+     * The credential guard is not decoration either. `$url` and `$headers` were only assigned inside
+     * the project_id branch, so a shop with push switched on and no service account reached
+     * Http::withHeaders() with undefined variables — a TypeError, which is an Error and not caught
+     * by the Exception below, so it escaped as a 500 on whatever request happened to be sending the
+     * notification.
+     */
     protected function sendNotificationToHttp(array|null $data): bool|string|null
     {
+        $log = app(DeliveryLog::class);
+        $recipient = $data['message']['token'] ?? ($data['message']['topic'] ?? null);
+        $message = $data['message']['notification'] ?? [];
+
+        $delivery = $log->start(NotificationDelivery::CHANNEL_PUSH, is_string($recipient) ? $recipient : null, [
+            'event' => (string) ($data['message']['data']['type'] ?? 'push'),
+            'subject' => (string) ($message['title'] ?? ''),
+            'body' => (string) ($message['body'] ?? ''),
+            'payload' => $data,
+        ]);
+
         try {
-            $key = (array)getWebConfig('push_notification_key');
-            if (isset($key['project_id'])) {
-                $url = 'https://fcm.googleapis.com/v1/projects/' . $key['project_id'] . '/messages:send';
-                $headers = [
-                    'Authorization' => 'Bearer ' . $this->getAccessToken($key),
-                    'Content-Type' => 'application/json',
-                ];
+            $key = (array) getWebConfig('push_notification_key');
+
+            if (!isset($key['project_id'])) {
+                $log->fail($delivery, 'push notifications have no firebase service account configured');
+
+                return false;
             }
-            return Http::withHeaders($headers)->post($url, $data);
-        } catch (Exception $exception) {
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->getAccessToken($key),
+                'Content-Type' => 'application/json',
+            ])->post('https://fcm.googleapis.com/v1/projects/' . $key['project_id'] . '/messages:send', $data);
+
+            if ($response->successful()) {
+                $log->succeed($delivery);
+            } else {
+                $log->fail($delivery, 'FCM answered ' . $response->status() . ': ' . Str::limit($response->body(), 400, ''));
+            }
+
+            return $response;
+        } catch (Throwable $exception) {
+            $log->fail($delivery, Str::limit($exception->getMessage(), 400, ''));
+
             return false;
         }
     }
