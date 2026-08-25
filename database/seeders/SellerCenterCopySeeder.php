@@ -972,5 +972,18 @@ class SellerCenterCopySeeder extends Seeder
         'one_product' => ['1 product', 'منتج واحد'],
         'n_products' => [':count products', ':count منتجاً'],
         'nav_classic_dashboard' => ['Classic dashboard', 'اللوحة الكلاسيكية'],
+
+        // ── admin · putting a failed job back on the queue ─────────────────
+        'discard' => ['Discard', 'تجاهل'],
+        'the_job_was_queued_again' => ['The job was queued again.', 'أُعيد وضع المهمة في الطابور.'],
+        'the_failed_job_was_discarded' => ['The failed job was discarded.', 'تم تجاهل المهمة الفاشلة.'],
+        'that_job_is_no_longer_in_the_failed_list' => [
+            'That job is no longer in the failed list — somebody may have already dealt with it.',
+            'لم تعد هذه المهمة في قائمة الفاشلة — ربما عالجها شخص آخر.',
+        ],
+        'discard_this_failed_job_without_running_it_again' => [
+            'Discard this failed job without running it again?',
+            'هل تتجاهل هذه المهمة الفاشلة دون إعادة تشغيلها؟',
+        ],
     ];
 }
