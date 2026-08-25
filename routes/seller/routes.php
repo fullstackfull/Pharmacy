@@ -136,7 +136,11 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
         // route was worse than a missing page: it was a badge that led nowhere.
         Route::controller(ActionCenterController::class)->group(function () {
             Route::get('actions', 'index')->name('actions');
-            Route::post('actions/{insight}/dismiss', 'dismiss')->name('actions.dismiss')->whereNumber('insight');
+            // Gated as the phone gates it. Dismissing an insight is a decision about the shop's
+            // work queue, so it needs a stake in that work — the same pair the v3 action centre
+            // requires, stated here rather than left to the staff gate's segment map.
+            Route::post('actions/{insight}/dismiss', 'dismiss')->name('actions.dismiss')->whereNumber('insight')
+                ->middleware('seller_can:orders.view,products.view');
         });
 
         // Returns and refunds. Reading either is order history; moving a return changes stock, so

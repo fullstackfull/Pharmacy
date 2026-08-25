@@ -534,3 +534,75 @@ is built from.
    classification means correcting the record and re-rendering, so the registers and the domain sections
    can never disagree.
 
+
+---
+
+## Flutter audit, waves 4–8 (PART 11)
+
+Audited the app against each wave's rules — terminology, statuses, permissions, validation,
+calculations, thresholds, audit behaviour — and found one real disagreement, plus one gap in what the
+server was willing to tell the app.
+
+### The disagreement: the app carried its own SLA thresholds
+
+`scorecard_screen.dart` coloured the cancellation, return and refund rates against numbers written
+into the screen — 5% amber, 15% red — while the marketplace's real limits live in SLA policy and are
+settable from the admin. A market that lowered its cancellation ceiling to 8% therefore had **three
+answers to one question**: the phone calling 10% comfortable, the web panel calling it a breach, and
+the platform opening one against the seller.
+
+Fixed by removing the client's copy entirely rather than by syncing it. The rates are now coloured
+against `thresholds` from the server, and where the server has already reached a verdict — a metric
+in `over_the_line` — that verdict wins, because the platform evaluates with the rounding and grace
+the policy actually applies. A rate with no published ceiling is drawn plainly: judging it against a
+guess is the bug, not the absence of a colour.
+
+Two smaller consequences of the same fix:
+
+- The progress bar is scaled to the ceiling rather than to 100%, so a full bar means "at the line"
+  rather than "every order cancelled".
+- `_DetailRowWidget` no longer asserts its translation away. Some of its titles are metric names the
+  server chose, so a marketplace that adds an SLA line the app has no copy for shows its name
+  instead of crashing.
+
+### The gap: the API would not say what it was judging against
+
+`GET seller-center/scorecard` returned the rates and the tier and nothing else, so even an app that
+wanted to render the line had nothing to render. It now carries `thresholds`,
+`processing_window_hours`, `over_the_line` and `open_breaches`, and a new
+`GET seller-center/sla-breaches` serves the audited ledger — cleared breaches included, because a
+record that shows only current problems cannot show improvement.
+
+### Checked and already in agreement
+
+| Wave | Rule | App |
+|---|---|---|
+| 4 | Lateness reads the marketplace's threshold | Server-driven; the app renders the insight's own metric |
+| 4 | Dispatch time is null, never zero, while open | No client-side computation |
+| 5 | The buckets are the whole account, not the filtered range | `StatementController` states the rule and holds it |
+| 8 | Stock has no period | `stock_report_screen.dart` says so and offers no picker |
+| 3 | Rule fields come from the server's schema | Fixed in the Wave 3 audit; still holds |
+
+### Not carried to the phone, and why
+
+Wave 6's incidents, approvals and brand-protection screens and Wave 7's team, access-review and
+integrations screens stay web-first. Each is either a review task somebody does at a desk with the
+whole list in front of them, or — for integrations — work nobody does on a handset. The APIs exist
+for all of them, so this is a product judgement rather than a missing capability, and it is recorded
+here rather than left as an unexplained absence.
+
+## Cross-client parity, held by tests (PART 16)
+
+`tests/Feature/CrossClientParityTest.php` asserts the properties rather than trusting them:
+
+- **A capability both clients expose is gated the same on both.** Read out of both route tables, so
+  a route added to one side without its gate fails the test rather than shipping. It found one: the
+  web's action-centre dismiss declared no permission where the phone required
+  `orders.view,products.view`. Same capability, two rules — now one.
+- **Every Seller Center write declares a permission.** The staff gate's segment map would catch an
+  omission, but that map is the coarse pre-filter and not the decision.
+- **A threshold set once is read by both**, and a policy written through the operator's own save path
+  is the number every consumer reads — asserted through `FulfilmentAnalytics`, which resolves it
+  independently of the seller screens.
+- **The API publishes what it judges against**, so a client can render a rate as a position rather
+  than as a statistic.

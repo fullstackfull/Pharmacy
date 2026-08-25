@@ -163,8 +163,10 @@ Taken from PART 21 and `13-implementation-priority.md`; a wave is not done until
 
 ## Open
 
-- Per-wave Flutter audits for waves 4–8 (PART 11), and the cross-client parity tests of PART 16 — a setting
-  written from one client is visible in the other, a permission denied in one is denied in the other.
+Nothing. The eight waves are built, the Flutter audit for waves 4–8 is done (PART 11) and the cross-client
+parity properties of PART 16 are held by tests rather than by discipline. Both are written up in
+`docs/SELLER_WEB_APP_PARITY.md`; the two findings were the app carrying its own copy of the marketplace's
+SLA thresholds, and one web write that declared no permission where the phone required two.
 
 ---
 

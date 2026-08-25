@@ -416,6 +416,9 @@ Route::group(['namespace' => 'RestAPI\v3\seller', 'prefix' => 'v3/seller', 'midd
                 Route::middleware('seller_can:orders.view,orders.manage,products.view,products.manage,finance.view')->group(function () {
                     Route::get('overview', 'overview');
                     Route::get('scorecard', 'scorecard');
+                    // The ledger the scorecard's tier rests on. Same permission as the scorecard
+                    // itself: a shop's own standing is not a delegable operation, it is the shop.
+                    Route::get('sla-breaches', 'slaBreaches');
                 });
             });
 
