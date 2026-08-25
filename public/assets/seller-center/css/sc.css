@@ -63,6 +63,9 @@
 
 /* Identifiers, codes and figures read LTR inside Arabic (handoff 10 B3). */
 .sc-code, .sc .sc-id { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+/* A timestamp is a code, not prose: "25 Aug 05:05" set loose inside an Arabic line is reordered by
+   the bidirectional algorithm into a date that does not exist (handoff 10 B3). */
+.sc-ts { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
 .sc-num, .sc .num, .sc-money { font-variant-numeric: tabular-nums; }
 
 /* ── utility ─────────────────────────────────────────────────────────────── */

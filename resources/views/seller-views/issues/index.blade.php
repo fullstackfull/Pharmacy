@@ -55,7 +55,7 @@
                     <x-sc.td drop="md" class="sc-muted">{{ translate($issue->category) }}</x-sc.td>
                     <x-sc.td num>{{ number_format($issue->affected_count) }}</x-sc.td>
                     <x-sc.td num drop="lg" class="sc-muted">{{ $issue->impact_score }}</x-sc.td>
-                    <x-sc.td drop="lg" class="sc-muted sc-num">{{ optional($issue->first_detected_at)->format('j M H:i') }}</x-sc.td>
+                    <x-sc.td drop="lg" class="sc-muted sc-ts">{{ \App\Services\SellerCenter\Moment::stamp($issue->first_detected_at) }}</x-sc.td>
                     {{-- Overdue takes the critical colour whatever the severity, prefixed "Breached". --}}
                     <x-sc.td :tone="$overdue ? 'critical' : null">
                         @if ($issue->due_at === null)

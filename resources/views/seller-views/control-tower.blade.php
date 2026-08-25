@@ -38,7 +38,7 @@
 
 @section('content')
     <x-sc.page-header :eyebrow="translate('nav_home')" :title="translate('operations_control_tower')"
-                      :sub="$checkedAt->translatedFormat('l j F') . ' · ' . $checkedAt->format('H:i') . ' · ' . translate('sections_in_server_reading_order_empty_ones_hidden')" />
+                      :sub="\App\Services\SellerCenter\Moment::longDay($checkedAt) . ' · ' . \App\Services\SellerCenter\Moment::time($checkedAt) . ' · ' . translate('sections_in_server_reading_order_empty_ones_hidden')" />
 
     <div class="sc-scroll">
         <div class="sc-page sc-grid-tower">
@@ -61,7 +61,7 @@
                 @elseif ($problemSections->isEmpty() && ($autoResolved === null || ($autoResolved['count'] ?? 0) === 0))
                     {{-- All clear is a dedicated state, not a blank page. --}}
                     <x-sc.empty glyph="check-circle" tone="good" :title="translate('nothing_needs_attention')"
-                                :text="\App\Services\SellerCenter\Copy::line('nothing_needs_attention_body', ['time' => $checkedAt->format('H:i')])">
+                                :text="\App\Services\SellerCenter\Copy::line('nothing_needs_attention_body', ['time' => \App\Services\SellerCenter\Moment::time($checkedAt)])">
                         <x-slot:actions>
                             @if ($ordersUrl = \App\Services\SellerCenter\Shell::route('seller.orders.index'))
                                 <x-sc.button variant="primary" :href="$ordersUrl">{{ translate('open_order_queue') }}</x-sc.button>
@@ -88,7 +88,7 @@
                                                      :affected="\App\Services\SellerCenter\Copy::line('n_affected', ['count' => $issue['affected_count']])"
                                                      :due="$due === null ? null : (($issue['is_overdue'] ?? false) ? translate('breached') : \Illuminate\Support\Carbon::parse($due)->diffForHumans())"
                                                      :due-tone="($issue['is_overdue'] ?? false) ? 'critical' : ($sla['tone'] === 'neutral' ? null : $sla['tone'])"
-                                                     :detected="$issue['first_detected_at'] ? \App\Services\SellerCenter\Copy::line('detected_at', ['time' => \Illuminate\Support\Carbon::parse($issue['first_detected_at'])->format('H:i')]) : null"
+                                                     :detected="$issue['first_detected_at'] ? \App\Services\SellerCenter\Copy::line('detected_at', ['time' => \App\Services\SellerCenter\Moment::time(\Illuminate\Support\Carbon::parse($issue['first_detected_at']))]) : null"
                                                      :impact="$issue['impact_score'] ?: null">
                                         @if (($issue['escalation_level'] ?? 0) > 0)
                                             <x-slot:flag>
@@ -123,7 +123,7 @@
                                                  :summary="\App\Services\SellerCenter\Copy::choice('one_resolved', 'n_resolved', $autoResolved['count'])" />
                             <div class="sc-stack--tight">
                                 @foreach ($autoResolved['issues'] as $issue)
-                                    <x-sc.auto-row :time="$issue['resolved_at'] ? \Illuminate\Support\Carbon::parse($issue['resolved_at'])->format('H:i') : null">
+                                    <x-sc.auto-row :time="$issue['resolved_at'] ? \App\Services\SellerCenter\Moment::time(\Illuminate\Support\Carbon::parse($issue['resolved_at'])) : null">
                                         {{ translate($issue['title']) }}
                                         @if ($issue['resolution_type'])
                                             <span class="sc-muted">· {{ translate($issue['resolution_type']) }}</span>

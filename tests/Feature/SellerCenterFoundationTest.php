@@ -6,10 +6,12 @@ use App\Models\Seller;
 use App\Models\SellerRole;
 use App\Models\SellerStaff;
 use App\Services\SellerCenter\Icons;
+use App\Services\SellerCenter\Moment;
 use App\Services\SellerCenter\Navigation;
 use App\Services\SellerCenter\Shell;
 use App\Services\SellerCenter\Status;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -284,5 +286,52 @@ class SellerCenterFoundationTest extends TestCase
     {
         // The shell renders through eight waves with half its destinations missing.
         $this->assertNull(Shell::route('seller.a-screen-from-wave-eight'));
+    }
+
+    // ────────────────────────────────────────────── moments in time
+
+    public function test_a_moment_that_never_happened_renders_as_a_dash(): void
+    {
+        // Not "now", and not the epoch. An order with no ship-by time has no ship-by time.
+        $this->assertSame('—', Moment::stamp(null));
+        $this->assertSame('—', Moment::day(null));
+        $this->assertSame('—', Moment::time(null));
+        $this->assertSame('—', Moment::longDay(null));
+    }
+
+    public function test_the_month_is_a_word_in_the_readers_own_language(): void
+    {
+        $at = Carbon::parse('2026-08-25 05:05:00');
+
+        session()->put('local', 'en');
+        $this->assertSame('25 Aug 05:05', Moment::stamp($at));
+
+        // This install's Arabic lives in the `sy` folder, which Carbon has never heard of. Asking
+        // it to translate under that name emits two include() failures per call before falling
+        // back, so the folder is mapped to the tag Carbon knows before the question is asked.
+        session()->put('local', 'sy');
+        $translated = Moment::stamp($at);
+
+        $this->assertStringNotContainsString('Aug', $translated);
+        $this->assertStringContainsString('05:05', $translated);
+    }
+
+    public function test_a_moment_that_is_not_a_carbon_is_still_formatted(): void
+    {
+        // `expected_delivery_date` and the movement ledger hand over whatever the driver returned.
+        $this->assertSame('25 Aug 2026', Moment::day(new \DateTimeImmutable('2026-08-25 05:05:00')));
+    }
+
+    public function test_the_year_is_offered_rather_than_assumed(): void
+    {
+        $at = Carbon::parse('2026-08-25 05:05:00');
+
+        session()->put('local', 'en');
+
+        // A table of today's runs does not need the year; a movement ledger going back two years
+        // does. Neither is the default for the other.
+        $this->assertSame('25 Aug 05:05', Moment::stamp($at));
+        $this->assertSame('25 Aug 2026 05:05', Moment::stamp($at, withYear: true));
+        $this->assertSame('25 Aug', Moment::day($at, withYear: false));
     }
 }

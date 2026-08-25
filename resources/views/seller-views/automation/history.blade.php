@@ -61,7 +61,7 @@
 
             @foreach ($runs as $run)
                 <x-sc.tr :href="$rowUrl($run)" :id="$run->id">
-                    <x-sc.td class="sc-muted">{{ $run->started_at?->format('d M H:i') ?? '—' }}</x-sc.td>
+                    <x-sc.td class="sc-muted sc-ts">{{ \App\Services\SellerCenter\Moment::stamp($run->started_at) }}</x-sc.td>
                     {{-- The runs outlive the rule deliberately; a deleted rule still names what it
                          did rather than leaving the seller with "rule 14 ran". --}}
                     <x-sc.td>{{ $ruleNames[$run->rule_id] ?? translate('a_deleted_rule') }}</x-sc.td>
@@ -81,7 +81,7 @@
                 @foreach ($runs as $run)
                     <x-sc.entity-card :title="$ruleNames[$run->rule_id] ?? translate('a_deleted_rule')"
                                       :href="$rowUrl($run)"
-                                      :meta="$run->started_at?->format('d M H:i') ?? '—'">
+                                      :meta="\App\Services\SellerCenter\Moment::stamp($run->started_at)">
                         <div class="sc-dim" style="font-size:12px">{{ $list->outcomeSentence($run) }}</div>
                     </x-sc.entity-card>
                 @endforeach
@@ -94,7 +94,7 @@
     @if ($openRun)
         @php($run = $openRun['run'])
         <x-sc.drawer id="sc-run" :title="$ruleNames[$run->rule_id] ?? translate('a_deleted_rule')">
-            <x-slot:sub>{{ $run->started_at?->format('d M Y H:i') ?? '—' }}</x-slot:sub>
+            <x-slot:sub><span class="sc-ts">{{ \App\Services\SellerCenter\Moment::stamp($run->started_at, withYear: true) }}</span></x-slot:sub>
             <x-slot:badges>
                 <x-sc.badge :tone="$list->outcomeTone($run)" :label="translate('automation_outcome_' . $run->outcome)" />
             </x-slot:badges>
