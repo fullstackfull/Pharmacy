@@ -10,6 +10,7 @@ use App\Http\Controllers\Seller\BulkJobController;
 use App\Http\Controllers\Seller\ComplianceController;
 use App\Http\Controllers\Seller\ControlTowerController;
 use App\Http\Controllers\Seller\FoundationController;
+use App\Http\Controllers\Seller\ExportController;
 use App\Http\Controllers\Seller\FinanceController;
 use App\Http\Controllers\Seller\FulfilmentController;
 use App\Http\Controllers\Seller\HomeController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\Seller\PreferencesController;
 use App\Http\Controllers\Seller\PricingController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\RefundController;
+use App\Http\Controllers\Seller\ReportController;
 use App\Http\Controllers\Seller\ReturnController;
 use App\Http\Controllers\Seller\SearchController;
 use App\Http\Controllers\Seller\SecurityController;
@@ -287,6 +289,28 @@ Route::group(['middleware' => ['maintenance_mode', 'actch:admin_panel']], functi
 
                 Route::get('health', 'health')->name('health');
             });
+
+        // ── Wave 8 — Platform.
+
+        // What this shop did over a period, in the three shapes a seller asks for — under one
+        // period, chosen once. The classic panel scattered these across three menus with three
+        // independent date pickers.
+        Route::controller(ReportController::class)->prefix('reports')->as('reports.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('orders', 'orders')->name('orders')->middleware('seller_can:orders.view');
+            Route::get('products', 'products')->name('products')->middleware('seller_can:products.view');
+            Route::get('stock', 'stock')->name('stock')->middleware('seller_can:products.view');
+        });
+
+        // Everything the shop can take away with it, produced by the same exporters the classic
+        // panel and the phone use. Nothing is queued and nothing is stored.
+        Route::controller(ExportController::class)->prefix('exports')->as('exports.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('orders', 'orders')->name('orders')->middleware('seller_can:orders.view');
+            Route::get('orders-pdf', 'ordersPdf')->name('orders-pdf')->middleware('seller_can:orders.view');
+            Route::get('products', 'products')->name('products')->middleware('seller_can:products.view');
+            Route::get('stock', 'stock')->name('stock')->middleware('seller_can:products.view');
+        });
 
         Route::get('search', SearchController::class)->name('search');
         Route::get('help', [HelpController::class, 'index'])->name('help');

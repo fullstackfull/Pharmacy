@@ -30,7 +30,7 @@ the whole point of the document, so it is never blurred.
 | Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | Full | Yes | Developer | FIXED |
 | Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through | View | Manage | View | **None** | **None** | Documented | Yes | Admin | NOT BUILT |
 | Reporting how much traffic went unmeasured because of Do Not Track or missing consent | View | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
-| Seller report builder, saved report definitions and an exports centre | **None** | **None** | View | Metrics | **None** | Full | No | Seller | NOT BUILT |
+| Seller report builder, saved report definitions and an exports centre | **None** | Manage | View | Metrics | **None** | Full | No | Seller | NOT BUILT |
 | Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | Full | No | Developer | FIXED |
 | Pipeline health counters — events written, and events dropped because a request overflowed the buffer | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
@@ -227,7 +227,7 @@ the whole point of the document, so it is never blurred.
 | Delivery man wallet, cash collection and withdrawal approval | Oversight | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
 | Legacy balance withdrawal request against the seller wallet | Approve | Manage | Manage | Events | **None** | Partial | No | Seller | CONNECTED TO ADMIN |
 | Ledger payout — request the withdrawable balance, which reserves it, and cancel a pending request | Approve | Manage | Manage | Events | **None** | Documented | Yes | Seller | CONNECTED TO ADMIN |
-| Account statement — the shop's ledger line by line with the running balance each entry left behind, exportable | View | **None** | View | **None** | **None** | Documented | No | Seller | CONNECTED TO SELLER |
+| Account statement — the shop's ledger line by line with the running balance each entry left behind, exportable | View | View | View | **None** | **None** | Documented | No | Seller | CONNECTED TO SELLER |
 | Where the shop's money is sent — bank / withdrawal method details, default selection | Configure | Manage | Manage | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |
 | Settlements — the marketplace calculating what it owes each seller and releasing it | Configure | **None** | **None** | **None** | Failures | **None** | Yes | Admin | CONNECTED TO ADMIN |
 | VAT / tax report for the shop | Configure | View | View | **None** | **None** | Partial | No | Seller | CONNECTED TO SELLER |

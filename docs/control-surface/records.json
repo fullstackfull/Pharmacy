@@ -867,7 +867,7 @@
         "audit": "No",
         "owner": "Seller",
         "verdict": "NOT BUILT",
-        "note": "Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command. Two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail rather than shown broken. Recorded as a named gap: nothing is running unattended, and the work is to build the scheduler, which is Seller Center wave work rather than an orphan closure."
+        "note": "Ruled: belongs in the Seller Center and has no backend at all — no route, controller, table or command. Two navigation destinations (seller.pricing.scheduled, seller.automation.scheduled) name a server that was never built and are filtered out of the rail rather than shown broken. Recorded as a named gap: nothing is running unattended, and the work is to build the scheduler, which is Seller Center wave work rather than an orphan closure. Confirmed again in Wave 8 and left NOT BUILT: scheduled price changes, timed activations and campaign starts do not exist as a domain, so seller.pricing.scheduled and seller.automation.scheduled would be screens with nothing to list. The rail drops both silently rather than showing a link to an empty page."
     },
     {
         "capability": "Whether a seller's automation rules and bulk jobs are actually succeeding",
@@ -902,9 +902,9 @@
     {
         "capability": "Seller report builder, saved report definitions and an exports centre",
         "area": "analytics",
-        "backend": "None — seller.reports.index, seller.reports.builder and seller.exports.index at app/Services/SellerCenter/Navigation.php:175-177 have no route, controller or service",
+        "backend": "app/Http/Controllers/Seller/ReportController.php and ExportController.php over app/Services/Reports/SellerReportService.php; saved report definitions and queued exports have no table, route or service",
         "admin": "None",
-        "seller_web": "None",
+        "seller_web": "Manage",
         "flutter": "View",
         "analytics": "Metrics",
         "monitor": "None",
@@ -912,7 +912,7 @@
         "audit": "No",
         "owner": "Seller",
         "verdict": "NOT BUILT",
-        "note": "OVERRULED in part and reclassified. The seller sweep recorded reports and exports as having no backend; verified otherwise — GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and the Flutter app uses them. What does not exist is the web surface and the saved-definition/queued-export half, which has no table, no route and no service. So the API half has an owner and a client, and the missing half is a product gap to build in a Seller Center wave rather than a capability running with nobody watching it."
+        "note": "OVERRULED in part and reclassified. The seller sweep recorded reports and exports as having no backend; verified otherwise - the v3 API endpoints existed and the Flutter app used them. Wave 8 built the web half: /vendor/reports is the three reports under one period chosen once, and /vendor/exports is every download this shop can produce, from the same exporters the app and the classic panel use. What is still NOT BUILT is the saved-definition half the nav calls a report builder: there is no table for a saved report and no service that would run one, and a builder whose definitions nothing stores would be a form that forgets. Recorded as a product gap rather than as a missing screen, on the same reasoning as the Wave 3 condition builder."
     },
     {
         "capability": "Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it",
@@ -1782,7 +1782,7 @@
         "audit": "No",
         "owner": "Admin",
         "verdict": "NOT BUILT",
-        "note": "Ruled: belongs in Admin, and there is no backend at all to be orphaned. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it. That is a product this platform has not built, not a capability running unattended, so it is recorded as a named gap rather than counted among surfaces that need connecting."
+        "note": "Ruled: belongs in Admin, and there is no backend at all to be orphaned. Searched app/, Modules/, routes/ and database/migrations for advertis*/sponsored/ad_campaign: only BannerService and unrelated substring hits. The marketplace can place its own banners and run merchandising overlays but cannot sell placement to a seller, price it, cap it or bill for it — a revenue line with nothing behind it. That is a product this platform has not built, not a capability running unattended, so it is recorded as a named gap rather than counted among surfaces that need connecting. Confirmed in Wave 8 and left NOT BUILT: seller.advertising.index has no ad slots, no budgets and no billing behind it. A screen there would be a menu entry promising a product that does not exist."
     },
     {
         "capability": "Feature flags and gradual rollout",
@@ -4729,7 +4729,7 @@
         "area": "finance",
         "backend": "routes/rest_api/v3/seller.php:630-635 — GET api/v3/seller/seller-center/statement, /export (seller_can:finance.view); app/Services/Marketplace/SellerLedgerStatementService.php",
         "admin": "View",
-        "seller_web": "None",
+        "seller_web": "View",
         "flutter": "View",
         "analytics": "None",
         "monitor": "None",
@@ -4737,7 +4737,7 @@
         "audit": "No",
         "owner": "Seller",
         "verdict": "CONNECTED TO SELLER",
-        "note": "APP ONLY — the admin can read any seller's ledger at /home/user/Pharmacy/routes/admin/routes.php:561 but the seller can only read their own on a phone; nav_statements (Navigation.php:126) is dropped as unrouted."
+        "note": "Fixed in Wave 5: /vendor/finance/statements reads the same SellerLedgerStatementService the phone does. The admin can still read any seller's ledger; the seller now reads their own on both clients."
     },
     {
         "capability": "Where the shop's money is sent — bank / withdrawal method details, default selection",

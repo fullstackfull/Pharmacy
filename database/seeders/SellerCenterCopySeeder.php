@@ -5102,5 +5102,261 @@ class SellerCenterCopySeeder extends Seeder
             'Revoked',
             'مُلغى',
         ],
+
+        // ── Wave 8 — Platform: reports and exports. The period is named on every screen and on
+        // every download card, because a spreadsheet with the wrong dates in it is indistinguishable
+        // from a correct one until somebody acts on it.
+        'nav_order_report' => [
+            'Order report',
+            'تقرير الطلبات',
+        ],
+        'nav_product_report' => [
+            'Product report',
+            'تقرير المنتجات',
+        ],
+        'nav_stock_report' => [
+            'Stock report',
+            'تقرير المخزون',
+        ],
+        'what_this_shop_did' => [
+            'What this shop did',
+            'ما قام به هذا المتجر',
+        ],
+        'three_reports_under_one_period_so_they_can_be_read_against_each_other' => [
+            'Three reports under one period, so they can be read against each other.',
+            'ثلاثة تقارير ضمن فترة واحدة، لتُقرأ في مقابل بعضها.',
+        ],
+        'period' => [
+            'Period',
+            'الفترة',
+        ],
+        'used_only_with_a_custom_period' => [
+            'Used only with a custom period.',
+            'تُستخدم فقط مع فترة مخصّصة.',
+        ],
+        'covering_x_to_y' => [
+            'Covering :from to :to',
+            'تغطي من :from إلى :to',
+        ],
+        'today' => [
+            'Today',
+            'اليوم',
+        ],
+        'this_week' => [
+            'This week',
+            'هذا الأسبوع',
+        ],
+        'this_month' => [
+            'This month',
+            'هذا الشهر',
+        ],
+        'this_year' => [
+            'This year',
+            'هذه السنة',
+        ],
+        'custom_date' => [
+            'A period I choose',
+            'فترة أحدّدها',
+        ],
+        'still_moving' => [
+            'Still moving',
+            'قيد التنفيذ',
+        ],
+        'cancelled_or_returned' => [
+            'Cancelled or returned',
+            'مُلغى أو مُرتجع',
+        ],
+        'settled' => [
+            'Settled',
+            'مُسوّى',
+        ],
+        'still_due' => [
+            'Still due',
+            'ما زال مستحقًا',
+        ],
+        'nothing_delivered_in_this_period' => [
+            'Nothing delivered in this period',
+            'لم يُسلَّم شيء في هذه الفترة',
+        ],
+        'the_chart_plots_delivered_orders_only' => [
+            'The chart plots delivered orders only.',
+            'يرسم المخطّط الطلبات المُسلَّمة فقط.',
+        ],
+        'awaiting_approval' => [
+            'Awaiting approval',
+            'بانتظار الموافقة',
+        ],
+        'rejected' => [
+            'Rejected',
+            'مرفوض',
+        ],
+        'units_sold' => [
+            'Units sold',
+            'الوحدات المباعة',
+        ],
+        'sold_for' => [
+            'Sold for',
+            'قيمة المبيعات',
+        ],
+        'discount_given' => [
+            'Discount given',
+            'الخصم الممنوح',
+        ],
+        'less_x_in_discount' => [
+            'Less :amount in discount',
+            'ناقص :amount خصمًا',
+        ],
+        'how_you_were_paid' => [
+            'How you were paid',
+            'كيف حصلت على المال',
+        ],
+        'cash' => [
+            'Cash',
+            'نقدًا',
+        ],
+        'wallet' => [
+            'Wallet',
+            'المحفظة',
+        ],
+        'offline' => [
+            'Offline payment',
+            'دفع خارج المنصّة',
+        ],
+        'digital' => [
+            'Digital payment',
+            'دفع إلكتروني',
+        ],
+        'returned' => [
+            'Returned to the customer',
+            'أُعيد إلى الزبون',
+        ],
+        'stock_carries_no_period_a_level_is_what_it_is_now' => [
+            'Stock carries no period: a level is what it is now.',
+            'لا فترة للمخزون: المستوى هو ما هو عليه الآن.',
+        ],
+        'every_order_in_the_period_with_what_the_marketplace_took' => [
+            'Every order in the period, with what the marketplace took.',
+            'كل طلب في الفترة، مع ما اقتطعه السوق.',
+        ],
+        'order_amount' => [
+            'Order amount',
+            'قيمة الطلب',
+        ],
+        'placed' => [
+            'Placed',
+            'تاريخ الطلب',
+        ],
+        'search_by_order_number' => [
+            'Search by order number',
+            'ابحث برقم الطلب',
+        ],
+        'no_orders_in_this_period' => [
+            'No orders in this period',
+            'لا طلبات في هذه الفترة',
+        ],
+        'choose_a_wider_period_to_see_more' => [
+            'Choose a wider period to see more.',
+            'اختر فترة أوسع لعرض المزيد.',
+        ],
+        'no_orders_match_that_search' => [
+            'No orders match that search',
+            'لا طلبات تطابق هذا البحث',
+        ],
+        'the_search_matches_an_order_number' => [
+            'The search matches an order number.',
+            'يطابق البحث رقم الطلب.',
+        ],
+        'what_is_listed_what_sold_and_what_it_earned' => [
+            'What is listed, what sold, and what it earned.',
+            'ما هو معروض، وما بِيع، وما حقّقه.',
+        ],
+        'listed' => [
+            'Listed',
+            'تاريخ العرض',
+        ],
+        'search_products' => [
+            'Search products',
+            'ابحث في المنتجات',
+        ],
+        'nothing_was_listed_in_this_period' => [
+            'Nothing was listed in this period',
+            'لم يُعرض شيء في هذه الفترة',
+        ],
+        'the_period_filters_on_when_a_product_was_listed_not_on_when_it_sold' => [
+            'The period filters on when a product was listed, not on when it sold.',
+            'تُصفّي الفترة حسب وقت عرض المنتج، لا وقت بيعه.',
+        ],
+        'no_products_match_that_search' => [
+            'No products match that search',
+            'لا منتجات تطابق هذا البحث',
+        ],
+        'low_is_anything_at_or_below_x_units' => [
+            'Low is anything at or below :limit units',
+            'المنخفض هو ما يساوي :limit وحدة أو أقل',
+        ],
+        'every_category' => [
+            'Every category',
+            'كل الفئات',
+        ],
+        'order_by' => [
+            'Order by',
+            'الترتيب حسب',
+        ],
+        'lowest_stock_first' => [
+            'Lowest stock first',
+            'الأقل مخزونًا أولًا',
+        ],
+        'highest_stock_first' => [
+            'Highest stock first',
+            'الأعلى مخزونًا أولًا',
+        ],
+        'in_stock' => [
+            'In stock',
+            'متوفّر',
+        ],
+        'no_physical_products_to_count' => [
+            'No physical products to count',
+            'لا منتجات فعلية لعدّها',
+        ],
+        'the_stock_report_covers_physical_products_a_digital_one_has_no_level' => [
+            'The stock report covers physical products. A digital one has no level.',
+            'يغطي تقرير المخزون المنتجات الفعلية. المنتج الرقمي لا مستوى له.',
+        ],
+        'everything_you_can_take_with_you' => [
+            'Everything you can take with you',
+            'كل ما يمكنك أخذه معك',
+        ],
+        'produced_by_the_same_exporters_the_app_uses_so_two_downloads_are_one_spreadsheet' => [
+            'Produced by the same exporters the app uses, so two downloads are one spreadsheet.',
+            'يُنتَج بالمصدِّرات نفسها التي يستخدمها التطبيق، فالتنزيلان ملف واحد.',
+        ],
+        'excel' => [
+            'Excel',
+            'إكسل',
+        ],
+        'pdf' => [
+            'PDF',
+            'PDF',
+        ],
+        'every_order_in_the_period_with_its_amounts_discounts_and_commission' => [
+            'Every order in the period, with its amounts, discounts and commission.',
+            'كل طلب في الفترة، بمبالغه وخصوماته وعمولته.',
+        ],
+        'products_listed_in_the_period_with_what_each_has_sold' => [
+            'Products listed in the period, with what each has sold.',
+            'المنتجات المعروضة في الفترة، مع ما باعه كلٌّ منها.',
+        ],
+        'current_stock_for_every_physical_product_lowest_first' => [
+            'Current stock for every physical product, lowest first.',
+            'المخزون الحالي لكل منتج فعلي، الأقل أولًا.',
+        ],
+        'nothing_is_queued_and_nothing_is_kept' => [
+            'Nothing is queued and nothing is kept',
+            'لا شيء يُدرَج في طابور ولا شيء يُحفَظ',
+        ],
+        'a_generated_file_left_on_the_server_is_a_copy_of_your_commercial_data_sitting_where_nobody_is_watching_these_stream_and_are_gone' => [
+            'A generated file left on the server is a copy of your commercial data sitting where nobody is watching. These stream and are gone.',
+            'الملف المُولَّد المتروك على الخادم نسخة من بياناتك التجارية في مكان لا يراقبه أحد. هذه تُبَثّ ثم تزول.',
+        ],
     ];
 }

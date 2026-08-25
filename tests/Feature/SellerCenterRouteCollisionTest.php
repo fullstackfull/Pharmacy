@@ -56,6 +56,29 @@ class SellerCenterRouteCollisionTest extends TestCase
         'vendor/automation/new' => 'Seller\AutomationController',
         'vendor/automation/history' => 'Seller\AutomationHistoryController',
         'vendor/opportunities' => 'Seller\OpportunityController',
+
+        // Waves 4-8. Listed here rather than trusted, because every one of them was added to a
+        // panel the classic routes reach first: a path that stops resolving to its own controller
+        // has been shadowed, and the seller sees the old screen with no sign anything is wrong.
+        'vendor/returns' => 'Seller\ReturnController',
+        'vendor/refunds' => 'Seller\RefundController',
+        'vendor/shipments' => 'Seller\FulfilmentController',
+        'vendor/warehouse' => 'Seller\WarehouseController',
+        'vendor/bulk-jobs' => 'Seller\BulkJobController',
+        'vendor/actions' => 'Seller\ActionCenterController',
+        'vendor/finance' => 'Seller\FinanceController',
+        'vendor/finance/transactions' => 'Seller\FinanceController',
+        'vendor/pricing' => 'Seller\PricingController',
+        'vendor/performance' => 'Seller\PerformanceController',
+        'vendor/compliance' => 'Seller\ComplianceController',
+        'vendor/brands' => 'Seller\BrandController',
+        'vendor/incidents' => 'Seller\IncidentController',
+        'vendor/approvals' => 'Seller\ApprovalController',
+        'vendor/team' => 'Seller\TeamController',
+        'vendor/security' => 'Seller\SecurityController',
+        'vendor/integrations' => 'Seller\IntegrationController',
+        'vendor/reports' => 'Seller\ReportController',
+        'vendor/exports' => 'Seller\ExportController',
     ];
 
     public function test_every_classic_page_still_reaches_its_own_controller(): void

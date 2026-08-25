@@ -15,7 +15,7 @@ this document say that almost everything is broken.
 
 Backend: 47 capabilities
 Admin: 36 of 47 covered
-Seller Web: 10 of 47 covered
+Seller Web: 11 of 47 covered
 Flutter App: 9 of 28 covered
 Analytics: 40 of 47 covered
 Monitor: 3 of 47 covered
@@ -82,7 +82,7 @@ Every capability in this domain is reachable by the surface that owns it.
 
 Backend: 57 capabilities
 Admin: 53 of 57 covered
-Seller Web: 29 of 57 covered
+Seller Web: 30 of 57 covered
 Flutter App: 37 of 49 covered
 Analytics: 14 of 57 covered
 Monitor: 10 of 57 covered

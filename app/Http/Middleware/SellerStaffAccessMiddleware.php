@@ -143,6 +143,11 @@ class SellerStaffAccessMiddleware
             'team', 'security' => 'staff.manage',
             'integrations' => 'shop_settings.manage',
 
+            // Wave 8's platform screens. The hub and the export catalogue are allowed to any
+            // active staff member because they show only what is already theirs to see; each
+            // report and each download declares its own permission on its route.
+            'reports', 'exports' => self::ALLOW,
+
             // Delivery team is an order-fulfilment concern.
             'delivery-man' => 'orders.manage',
 

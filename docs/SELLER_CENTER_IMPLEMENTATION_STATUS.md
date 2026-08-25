@@ -37,8 +37,8 @@ when it comes, is a decision taken per screen, not a side effect (PART 15).
 | 4 | Fulfilment — returns, refunds, shipments, exceptions, picking, packing, warehouse, bulk jobs, action centre | **Done** | — |
 | 5 | Finance — overview, transactions, payouts, statements, reconciliation, fees, pricing | **Done** | — |
 | 6 | Trust — performance, account health, SLA, compliance, brand registry, brand protection, incidents, approvals | **Done** (cases and appeals are NOT BUILT, see below) | — |
-| 7 | Enterprise — team, roles, security centre, integrations, API keys, webhooks, delivery health | **Done** (cases and appeals are NOT BUILT) | — |
-| 8 | Platform — reports, exports, bulk operations, connected apps, API credentials, webhooks | Not started | — |
+| 7 | Enterprise — team, roles, security centre, integrations, API keys, webhooks, delivery health | **Done** | — |
+| 8 | Platform — reports, exports (report builder, scheduled operations and advertising are NOT BUILT) | **Done** | — |
 
 ---
 
@@ -163,9 +163,8 @@ Taken from PART 21 and `13-implementation-priority.md`; a wave is not done until
 
 ## Open
 
-- Wave 8.
-- Per-wave Flutter audits (PART 11) and the cross-client parity tests of PART 16 — a setting written from one
-  client is visible in the other, a permission denied in one is denied in the other.
+- Per-wave Flutter audits for waves 4–8 (PART 11), and the cross-client parity tests of PART 16 — a setting
+  written from one client is visible in the other, a permission denied in one is denied in the other.
 
 ---
 
@@ -310,3 +309,52 @@ endpoint created moments earlier wrote a null into a NOT NULL column. It was in 
 Casting fixes it; the test that caught it asserts the pause, not the cast.
 
 12 tests for the wave, all three languages seeded. The rail now resolves 62 of its designed destinations.
+
+---
+
+## Wave 8 — Platform
+
+**Screens** — `/vendor/reports` with `orders`, `products` and `stock`, and `/vendor/exports`.
+
+**One period, chosen once.** The figures are not new — `SellerReportService` has computed them for the
+classic panel and the phone since Phase 4. What is new is that all three reports and every download sit
+behind a single period. The classic panel scattered them across three menus with three independent date
+pickers, which is how a seller ends up comparing March's orders against the year's products and drawing a
+conclusion from it.
+
+**Stock deliberately has no period.** A stock level is a fact about now; asking what it was in March would
+need the movement ledger replayed backwards, and printing today's figure under a March heading would be
+false. The screen says so rather than offering a picker that quietly does nothing.
+
+**An export is not a lower bar than the list it exports.** A spreadsheet is the whole list in one file, so a
+download gated more loosely than the screen it comes from is the permission model with a side door. Each
+export route declares the same permission as its report, and the wave's test reads that out of the route
+table rather than from a list written in the test — a route added next year without a permission fails it.
+
+Nothing is queued and nothing is stored: a generated file left on the server is a copy of a shop's
+commercial data sitting where nobody is watching. The exports stream and are gone. They are produced by the
+same exporter classes the classic panel and the app use, so a spreadsheet downloaded from the panel and one
+downloaded from the phone are the same spreadsheet rather than two renderings that agree today.
+
+7 tests for the wave. The route-collision suite also grew: it now pins all 19 Seller Center screens from
+waves 4–8 to their own controllers, because every one of them was added to a panel whose classic routes are
+registered first — a path that stops resolving to its own controller has been shadowed, and the seller sees
+the old screen with no sign anything is wrong.
+
+**Not built, and why**
+
+- **Report builder (`seller.reports.builder`)** — there is no table for a saved report definition and no
+  service that would run one. A builder whose definitions nothing stores is a form that forgets. Recorded
+  NOT BUILT on the same reasoning as the Wave 3 condition builder: the practical half of it — choose the
+  report, the period and the search, then read it or download it — is what the reports screens are.
+- **Scheduled operations (`seller.pricing.scheduled`, `seller.automation.scheduled`)** — confirmed again:
+  timed price changes, timed activations and campaign starts do not exist as a domain, so the screens would
+  have nothing to list. Unchanged from the Wave 3 ruling.
+- **Advertising (`seller.advertising.index`)** — no ad slots, no budgets, no billing. A screen there would
+  be a menu entry promising a product that does not exist.
+- **Cases and appeals** — no backend; a channel for contesting a rejection or a suspension would be a new
+  product, not a missing page.
+
+The rail resolves 64 of its 51 designed destinations plus the sub-screens each wave added, and the 6 that
+remain are exactly the four rulings above. Every one of them is a documented product gap rather than an
+unrouted link, and `Route::has()` keeps them out of the menu until they exist.
