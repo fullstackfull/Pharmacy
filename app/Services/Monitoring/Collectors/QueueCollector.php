@@ -937,6 +937,10 @@ class QueueCollector implements Collector
 
             foreach ($connection->table($table)->orderByDesc('id')->limit(self::RECENT_FAILURES)->get() as $row) {
                 $failures[] = [
+                    // The identifier Laravel's own failed-job store addresses a row by. Without it
+                    // this table can only be read: an operator can see that an order confirmation
+                    // failed and has no way to send it again except from a shell.
+                    'uuid' => (string) ($row->uuid ?? ''),
                     'job' => $this->jobName((string) ($row->payload ?? '')),
                     'queue' => (string) ($row->queue ?? ''),
                     'failed_at' => (string) ($row->failed_at ?? ''),

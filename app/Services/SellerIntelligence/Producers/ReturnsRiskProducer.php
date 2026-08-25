@@ -2,6 +2,7 @@
 
 namespace App\Services\SellerIntelligence\Producers;
 
+use App\Services\Marketplace\OperationsPolicy;
 use App\Models\ReturnShipment;
 use App\Models\SellerInsight;
 use App\Services\SellerCenter\Copy;
@@ -27,12 +28,6 @@ class ReturnsRiskProducer implements InsightProducer
 {
     public const TYPE = 'RETURNS_RISK';
 
-    /** How long a refund request may sit unanswered before it is worth raising. */
-    private const RESPONSE_HOURS = 48;
-
-    /** And how long received goods may sit unprocessed. */
-    private const PROCESSING_HOURS = 72;
-
     private const LIMIT = 100;
 
     public function type(): string
@@ -49,6 +44,8 @@ class ReturnsRiskProducer implements InsightProducer
     /** @return iterable<InsightDraft> */
     private function unansweredRefunds(int|string $sellerId): iterable
     {
+        $responseHours = app(OperationsPolicy::class)->returnsResponseHours();
+
         if (!Schema::hasTable('refund_requests') || !Schema::hasTable('orders')) {
             return;
         }
@@ -58,7 +55,7 @@ class ReturnsRiskProducer implements InsightProducer
             ->where('orders.seller_is', 'seller')
             ->where('orders.seller_id', $sellerId)
             ->where('refund_requests.status', 'pending')
-            ->where('refund_requests.created_at', '<=', now()->subHours(self::RESPONSE_HOURS))
+            ->where('refund_requests.created_at', '<=', now()->subHours($responseHours))
             ->orderBy('refund_requests.created_at')
             ->limit(self::LIMIT)
             ->get([
@@ -87,17 +84,17 @@ class ReturnsRiskProducer implements InsightProducer
                 actionKey: 'open_refund',
                 actionParams: ['refund_request_id' => $request->id, 'order_id' => $request->order_id],
                 category: SellerInsight::CATEGORY_RETURNS,
-                dueAt: \Illuminate\Support\Carbon::parse($request->created_at)->addHours(self::RESPONSE_HOURS),
+                dueAt: \Illuminate\Support\Carbon::parse($request->created_at)->addHours($responseHours),
                 signals: new ImpactSignals(
                     revenueAtRisk: (float) $request->amount,
                     affectedCount: 1,
                     // Already past the window, so urgency is at its ceiling and counting up.
-                    hoursUntilDue: -($waitingHours - self::RESPONSE_HOURS),
+                    hoursUntilDue: -($waitingHours - $responseHours),
                     openForHours: $waitingHours,
                     // Doing nothing is worse than either decision, so this never falls to advisory.
                     severityFloor: SellerInsight::SEVERITY_HIGH,
                 ),
-                metadata: ['waiting_hours' => $waitingHours, 'window_hours' => self::RESPONSE_HOURS],
+                metadata: ['waiting_hours' => $waitingHours, 'window_hours' => $responseHours],
             );
         }
     }
@@ -105,13 +102,15 @@ class ReturnsRiskProducer implements InsightProducer
     /** @return iterable<InsightDraft> */
     private function receivedButUnfinished(int|string $sellerId): iterable
     {
+        $processingHours = app(OperationsPolicy::class)->returnsProcessingHours();
+
         if (!Schema::hasTable('return_shipments')) {
             return;
         }
 
         $stuck = ReturnShipment::where('seller_id', $sellerId)
             ->whereIn('status', [ReturnShipment::STATUS_AUTHORIZED, ReturnShipment::STATUS_IN_TRANSIT])
-            ->where('created_at', '<=', now()->subHours(self::PROCESSING_HOURS))
+            ->where('created_at', '<=', now()->subHours($processingHours))
             ->orderBy('created_at')
             ->limit(self::LIMIT)
             ->get();
@@ -126,7 +125,7 @@ class ReturnsRiskProducer implements InsightProducer
             severity: SellerInsight::SEVERITY_MEDIUM,
             title: 'insight_returns_awaiting_processing',
             body: Copy::choice('insight_body_returns_waiting_one', 'insight_body_returns_waiting', $stuck->count(), [
-                'hours' => self::PROCESSING_HOURS,
+                'hours' => $processingHours,
             ]),
             entityType: 'return_group',
             entityId: 'awaiting_processing',

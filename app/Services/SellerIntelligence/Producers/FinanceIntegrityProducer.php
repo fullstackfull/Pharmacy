@@ -2,6 +2,7 @@
 
 namespace App\Services\SellerIntelligence\Producers;
 
+use App\Services\Marketplace\OperationsPolicy;
 use App\Models\SellerInsight;
 use App\Services\SellerCenter\Copy;
 use App\Models\VendorLedgerEntry;
@@ -28,9 +29,6 @@ class FinanceIntegrityProducer implements InsightProducer
 {
     public const TYPE = 'FINANCE_INTEGRITY';
 
-    /** How long after delivery an earning may legitimately still be catching up. */
-    private const GRACE_HOURS = 6;
-
     /** Older than this and the money is a support case, not a banner. */
     private const LOOKBACK_DAYS = 90;
 
@@ -47,10 +45,12 @@ class FinanceIntegrityProducer implements InsightProducer
             return [];
         }
 
+        $graceHours = app(OperationsPolicy::class)->financeGraceHours();
+
         $delivered = DB::table('order_details')
             ->where('seller_id', $sellerId)
             ->where('delivery_status', 'delivered')
-            ->whereBetween('created_at', [now()->subDays(self::LOOKBACK_DAYS), now()->subHours(self::GRACE_HOURS)])
+            ->whereBetween('created_at', [now()->subDays(self::LOOKBACK_DAYS), now()->subHours($graceHours)])
             ->orderByDesc('id')
             ->limit(self::LIMIT)
             ->get(['id', 'order_id', 'price', 'qty']);
@@ -103,7 +103,7 @@ class FinanceIntegrityProducer implements InsightProducer
             metadata: [
                 'count' => $missing->count(),
                 'uncredited_amount' => $uncredited,
-                'grace_hours' => self::GRACE_HOURS,
+                'grace_hours' => $graceHours,
             ],
         );
     }

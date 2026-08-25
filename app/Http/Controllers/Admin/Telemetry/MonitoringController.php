@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Telemetry;
 use App\Http\Controllers\BaseController;
 use App\Jobs\RebuildProductSearchIndex;
 use App\Services\AuditLogger;
+use App\Services\Monitoring\FailedJobs;
 use App\Services\Monitoring\MonitoringNavigation;
 use App\Services\Monitoring\MonitoringPermissionService;
 use App\Services\Monitoring\Panels\PanelRegistry;
@@ -88,9 +89,39 @@ class MonitoringController extends BaseController
     }
 
     /**
+     * Put a failed job back on its queue, or drop it.
+     *
+     * One of the two writes in an area that is otherwise read-only, and the reason for the
+     * exception is that the alternative is worse: a failed order confirmation is visible on this
+     * page and repairable only from a shell, so the person who can see the problem is never the
+     * person who can fix it.
+     *
+     * Reading the queue is infrastructure; changing what it will do is the write capability, which
+     * this area already calls settings. Both are checked, and both are audited.
+     */
+    public function failedJob(Request $request, string $action, string $uuid): RedirectResponse
+    {
+        if (!$this->permissions->canEditSettings()) {
+            ToastMagic::error(translate('access_Denied') . '!');
+
+            return redirect()->route('admin.monitoring.section', ['section' => 'queues']);
+        }
+
+        $result = $action === 'retry'
+            ? app(FailedJobs::class)->retry($uuid)
+            : app(FailedJobs::class)->forget($uuid);
+
+        $result['ok']
+            ? ToastMagic::success(translate($action === 'retry' ? 'the_job_was_queued_again' : 'the_failed_job_was_discarded'))
+            : ToastMagic::error(translate($result['reason'] ?? 'that_job_is_no_longer_in_the_failed_list'));
+
+        return redirect()->route('admin.monitoring.section', ['section' => 'queues']);
+    }
+
+    /**
      * Ask for the search index to be rebuilt.
      *
-     * The one write on this page, and the reason it exists: a bulk import writes product rows
+     * The other write this page allows, and the reason it exists: a bulk import writes product rows
      * without going through the model save path the index observer listens on, so a large import
      * leaves search answering from a stale index and, until now, only shell access could fix it.
      *

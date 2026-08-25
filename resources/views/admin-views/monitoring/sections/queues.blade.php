@@ -71,6 +71,11 @@
     $queues = $panel['queues'];
     $workers = $panel['workers'];
     $failures = $panel['failures'];
+
+    /* Putting a job back on the queue is a write, and this area is otherwise read-only. An operator
+       who may read the page but not change it sees the failures and no buttons — the enforcement is
+       on the route, this only avoids offering what would be refused. */
+    $mayRetry = $permissions->can(\App\Services\Monitoring\MonitoringPermissionService::SETTINGS);
     $throughput = $panel['throughput'];
 
     // Column gaps that share a reason are stated once between them. Four columns blank because the
@@ -402,6 +407,7 @@
                     <th>{{ translate('queue') }}</th>
                     <th>{{ translate('failed_at') }}</th>
                     <th>{{ translate('exception') }}</th>
+                    @if ($mayRetry)<th></th>@endif
                 </tr>
                 </thead>
                 <tbody>
@@ -411,6 +417,28 @@
                         <td class="k-num">{{ $failure['queue'] }}</td>
                         <td class="k-num">{{ $failure['failed_at'] ?? '—' }}</td>
                         <td>{{ $failure['exception'] }}</td>
+                        @if ($mayRetry)
+                            <td class="k-num">
+                                {{-- Absent rather than disabled when the row carries no identifier:
+                                     some failed-job drivers only count failures, and a button that
+                                     cannot address anything is worse than no button. --}}
+                                @if (!empty($failure['uuid']))
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <form method="POST"
+                                              action="{{ route('admin.monitoring.failed-job', ['action' => 'retry', 'uuid' => $failure['uuid']]) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn--primary btn-sm">{{ translate('retry') }}</button>
+                                        </form>
+                                        <form method="POST"
+                                              action="{{ route('admin.monitoring.failed-job', ['action' => 'discard', 'uuid' => $failure['uuid']]) }}"
+                                              onsubmit="return confirm('{{ translate('discard_this_failed_job_without_running_it_again') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn--danger btn-sm">{{ translate('discard') }}</button>
+                                        </form>
+                                    </div>
+                                @endif
+                            </td>
+                        @endif
                     </tr>
                 @endforeach
                 </tbody>

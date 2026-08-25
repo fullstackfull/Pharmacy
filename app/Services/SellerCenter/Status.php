@@ -2,6 +2,8 @@
 
 namespace App\Services\SellerCenter;
 
+use App\Services\Marketplace\OperationsPolicy;
+
 /**
  * The canonical status and severity vocabulary (handoff 06).
  *
@@ -203,10 +205,15 @@ class Status
         if ($minutes < 0) {
             return ['tone' => self::CRITICAL, 'glyph' => 'warning-octagon', 'state' => 'breached', 'minutes' => abs($minutes)];
         }
-        if ($minutes <= 120) {
+        // The bands the marketplace set, not two numbers frozen here. The detector that decides an
+        // order is "at SLA risk" reads the same policy, so the colour on the row and the issue in
+        // the Control Tower cannot disagree about the same order.
+        $bands = app(OperationsPolicy::class)->slaBands();
+
+        if ($minutes <= $bands['closing']) {
             return ['tone' => self::HIGH, 'glyph' => 'clock-countdown', 'state' => 'closing', 'minutes' => $minutes];
         }
-        if ($minutes <= 480) {
+        if ($minutes <= $bands['soon']) {
             return ['tone' => self::HIGH, 'glyph' => 'clock', 'state' => 'soon', 'minutes' => $minutes];
         }
 

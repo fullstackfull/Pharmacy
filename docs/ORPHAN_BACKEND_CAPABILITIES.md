@@ -14,21 +14,25 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 300 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 304 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 77 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 52 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 104 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 100 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (300)
+## CONNECTED TO ADMIN (304)
 
 The marketplace operator manages or oversees it.
 
 | Capability | Area | Owner | Where it lives |
 |---|---|---|---|
+| How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders) | finance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_finance_grace_hours, default 6), read at app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:51; LOOKBACK_DAYS = 90 and LIMIT = 200 remain sweep bounds |
 | Low-stock threshold used by the seller API and the Flutter app | inventory | Admin | app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:42 (LOW_STOCK_THRESHOLD = 5) used at :69 and :73; mirrored in the Flutter app at /home/user/sillercenter-syria-cosmatics/lib/features/inventory/domain/models/inventory_models.dart:32 (lowStockThreshold ?? 5) |
+| Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon | compliance | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_batch_expiry_days, default 30), read at app/Services/Marketplace/BatchService.php:61 |
+| What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands) | orders | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_stuck_order_hours, ops_stuck_stop_after_days, ops_sla_urgent_fraction, ops_sla_closing_minutes, ops_sla_soon_minutes), read at app/Services/SellerCenter/Status.php:211, OrderStuckProducer.php:58,64 and OrderSlaProducer.php:72; deadline still from app/Services/Marketplace/SlaService.php:89 processingDeadline() |
+| The returns response promise — 48 hours to answer a return request, 72 hours to process it | returns | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_returns_response_hours, ops_returns_processing_hours), read at app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:53,111 |
 | Approve, reject or suspend a seller account (single and bulk) | platform | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:210 updateStatus + :167 bulkUpdateStatus; routes/admin/routes.php:498 admin.vendors.updateStatus, :501 admin.vendors.bulk-status; nav resources/views/layouts/admin/partials/v2/_side-bar.blade.php:493; routes routes/admin/routes.php:947 admin.vendors.update-vendor-status; the file contains zero AuditLogger references |
 | Commission rules — the rate the marketplace charges, by global, category, vendor or product scope | finance | Admin | app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php; app/Services/Marketplace/CommissionEngine.php; routes/admin/routes.php:768-776 admin.marketplace.commission-rules.*; nav _side-bar.blade.php:659; app/Services/Marketplace/CommissionEngine.php:46 (const DEFAULT_PRIORITY = [product 400, vendor 300, category 200, global 100]); legacy fallback at app/Utils/Helpers.php:633 seller_sales_commission() reading seller.sales_commission_percentage then setting 'sales_commission'; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php (routes/admin/routes.php:768-776), evaluated by app/Services/Marketplace/CommissionEngine.php; app/Http/Controllers/Admin/Marketplace/CommissionRuleController.php:60 store (audited 'commission.rule_created' at :63), :73 update, :81 toggle, :90 destroy (all three unaudited); routes under routes/admin/routes.php:549 marketplace group |
 | Per-seller commission override on the vendor record | finance | Admin | app/Http/Controllers/Admin/Vendor/VendorController.php:314 updateSalesCommission, :591 updateSetting; routes/admin/routes.php:505 admin.vendors.sales-commission-update, :508 admin.vendors.update-setting; no AuditLogger in the file |
@@ -915,7 +919,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (104)
+## ORPHAN (100)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -991,12 +995,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Analytics, Monitor
 - Ruled: belongs in Admin Settings. The 30-day default silently bounds how far back a seller can chase a missing payment, which is wrong for any marketplace settling monthly.
 
-**How late money may be before it is called a finance-integrity problem (6-hour grace on delivered orders)**  
-`finance` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/FinanceIntegrityProducer.php:32 (GRACE_HOURS = 6), :35 (LOOKBACK_DAYS = 90), :37 (LIMIT = 200), used at :53
-- No surface on — Admin, Analytics
-- Ruled: belongs in the Admin SLA/threshold settings. It is the platform's own definition of 'money is late', it is not shown to the admin at all, and it does not agree with the separately configurable stuck_order_hours in config/monitoring.php.
-
 **Diagnose a payment gateway that is switched on but cannot take a payment**  
 `finance` · owner: Admin  
 - Backend — app/Console/Commands/PaymentGatewayCheck.php:27 `payment:check`; reads addon_settings live_values/test_values against the row's mode column
@@ -1056,12 +1054,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Services/SellerIntelligence/Producers/StaleInventoryProducer.php:35 (STALE_DAYS = 90), :38 (MINIMUM_UNITS = 3), :40 (LIMIT = 200)
 - No surface on — Admin, Analytics, Monitor
 - Ruled: belongs in the Policy settings that already exist for automation. The seller-facing automation rule for the same idea lets the seller pick 7-365 days, so the platform's own judgement is stricter and unmovable while the seller's is configurable.
-
-**Batch expiry warning horizon — stock expiring within 30 days is shown as expiring soon**  
-`compliance` · owner: Admin  
-- Backend — app/Services/Marketplace/BatchService.php:52 (expiringSoon(int $days = 30)); admin list hardcodes it at app/Http/Controllers/Admin/Marketplace/BatchController.php:43 (now()->addDays(30)); API lets the caller pass ?days but defaults to 30 and caps at 365 at app/Http/Controllers/RestAPI/v3/seller/SellerInventoryController.php:238
-- No surface on — Seller Web, Analytics, Monitor
-- Ruled: belongs in Admin Settings; on a pharmacy and cosmetics catalogue the expiry warning window is a regulated operational decision. The admin screen hardcodes 30 days with no field while BatchService::expiringSoon takes a caller-supplied value the API can vary, so the two surfaces can disagree about what is expiring.
 
 **How much notice a seller gets before a verification document expires (45 days)**  
 `compliance` · owner: Admin  
@@ -1123,12 +1115,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Analytics, Monitor
 - Ruled: belongs in the Policy settings. One ratio is applied to the whole catalogue, and what is extreme for a pharmacy line is normal for clearance.
 
-**What counts as a late order — three definitions that disagree with the configurable SLA deadline (72-hour stuck, quarter-of-window urgent, fixed 120/480-minute colour bands)**  
-`orders` · owner: Admin  
-- Backend — app/Services/SellerCenter/Status.php:206 ($minutes <= 120 => closing) and :209 ($minutes <= 480 => soon); fed by app/Services/Marketplace/SlaService.php:89 processingDeadline(); app/Services/SellerIntelligence/Producers/OrderStuckProducer.php:34 (STALE_AFTER_HOURS = 72), :37 (STOP_AFTER_DAYS = 45), :40 (LIMIT = 100); run by app/Console/Commands/RefreshSellerInsights.php; app/Services/SellerIntelligence/Producers/OrderSlaProducer.php:30 (URGENT_FRACTION = 0.25) used at :71; insight self-expires at deadline+7 days (:95)
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in the Admin SLA settings that already own sla_processing_hours. The deadline is configurable and the three warning rules around it are not, so a marketplace running a two-hour SLA shows every order as closing from the moment it arrives and the daily briefing calls a different set of orders late than the order screen does.
-
 **Which order states remain editable, and which remain cancellable**  
 `orders` · owner: Admin  
 - Backend — app/Services/OrderEditService.php:388 (in_array($order->order_status, ['pending','confirmed']) gate, plus order_type != 'default_type'); repeated for stock checks at :247 and :484; app/Http/Controllers/Admin/Customer/CustomerController.php:228 (in_array($order->order_status, ['pending','confirmed','processing','out_for_delivery'])); terminal states listed at app/Utils/OrderManager.php:2751; stock restoration states at app/Utils/OrderManager.php:93 (['returned','failed','canceled'])
@@ -1152,12 +1138,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Http/Controllers/Admin/Order/RefundController.php:109 updateRefundStatus(); route routes/admin/routes.php:1704 admin.refund-section.refund.refund-status-update; wallet debit at :136-139, ledger reversal at :150; no AuditLogger in the file or in app/Services/RefundRequestService.php / RefundStatusService.php / RefundTransactionService.php; routes/vendor/routes.php:145-152 — vendor/refund/index/{status}, POST update-status; routes/rest_api/v3/seller.php:244-255 — api/v3/seller/refund/* (seller_can:orders.manage); app/Http/Controllers/Admin/Order/RefundController.php; routes/admin/routes.php:1698-1706 admin.refund-section.refund.*; nav _side-bar.blade.php:233
 - No surface on — Monitor
 - Ruled: belongs on the unified audit trail. Approval debits the seller's earnings, reverses the marketplace's commission and moves customer money, and writes only to its own refund_status history — so the audit centre cannot answer who approved any refund ever processed.
-
-**The returns response promise — 48 hours to answer a return request, 72 hours to process it**  
-`returns` · owner: Admin  
-- Backend — app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:31 (RESPONSE_HOURS = 48), :34 (PROCESSING_HOURS = 72), :36 (LIMIT = 100)
-- No surface on — Admin, Analytics, Monitor
-- Ruled: belongs in the Admin SLA settings. A returns-response SLA is a customer promise the marketplace makes, and it exists only as two private constants with no admin or seller field.
 
 **Registering a second courier — credentials, rates, labels and tracking per carrier**  
 `shipping` · owner: Admin  

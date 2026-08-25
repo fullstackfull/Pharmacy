@@ -32,7 +32,8 @@ class BatchController extends BaseController
         $expiredCount = 0;
 
         if (Schema::hasTable('product_batches')) {
-            $expiringCount = $this->batches->expiringSoon(30)->count();
+            // The marketplace's own horizon, rather than a second copy of the default.
+            $expiringCount = $this->batches->expiringSoon()->count();
             $expiredCount = $this->batches->expired()->count();
 
             $query = ProductBatch::query()->orderByRaw('expiry_date is null')->orderBy('expiry_date')->orderByDesc('id');
