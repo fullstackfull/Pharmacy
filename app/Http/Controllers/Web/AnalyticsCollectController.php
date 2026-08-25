@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Analytics\Analytics;
 use App\Services\Analytics\Support\ClientEventIngest;
 use App\Services\Analytics\Support\PathNormalizer;
@@ -38,7 +39,7 @@ class AnalyticsCollectController extends Controller
         // using sendBeacon, which cannot read a response anyway.
         $silence = response()->json(null, 204);
 
-        if (!config('analytics.enabled', true) || !config('analytics.beacon.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled() || !config('analytics.beacon.enabled', true)) {
             return $silence;
         }
 

@@ -170,6 +170,21 @@ final class AnalyticsEvent
         return self::CATEGORIES[$this->name] ?? 'other';
     }
 
+    /**
+     * Whether this event describes the shop's own business rather than a visitor's browsing.
+     *
+     * The distinction decides whether `is_internal` may exclude it. "Internal" means the merchant's
+     * own eleven visits a day should not be counted as customer traffic — a real filter, and the
+     * reason a small shop's conversion rate does not look like a rounding error. But a payout
+     * request and a KYC submission are only ever raised while a seller is signed in, so every one
+     * of them was written with is_internal = 1 and dropped by every rollup that reads the table:
+     * two events in the catalogue, emitted correctly, and permanently uncountable.
+     */
+    public function isSellerDomain(): bool
+    {
+        return (self::CATEGORIES[$this->name] ?? null) === 'seller';
+    }
+
     public static function isKnown(string $name): bool
     {
         return isset(self::CATEGORIES[$name]);

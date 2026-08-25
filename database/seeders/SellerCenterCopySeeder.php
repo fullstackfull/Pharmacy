@@ -1029,6 +1029,136 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── analytics · privacy settings, data quality and the fold ────────
+        'analytics_and_privacy' => [
+            'Analytics and privacy',
+            'التحليلات والخصوصية',
+        ],
+        'what_is_measured_about_live_customer_traffic_who_is_excluded_and_how_long_it_is_kept' => [
+            'What is measured about live customer traffic, who is excluded, and how long it is kept',
+            'ما يُقاس من حركة العملاء الفعلية، ومن يُستبعَد، ومدة الاحتفاظ',
+        ],
+        'measure_visits_at_all' => [
+            'Measure visits at all',
+            'قياس الزيارات أصلاً',
+        ],
+        'honour_the_do_not_track_header' => [
+            'Honour the Do Not Track header',
+            'احترام ترويسة عدم التتبّع',
+        ],
+        'refused_visits_are_counted_on_the_data_quality_screen_so_the_drop_has_an_explanation' => [
+            'Refused visits are counted on the Data quality screen, so the drop has an explanation',
+            'تُحصى الزيارات المرفوضة في شاشة جودة البيانات، فيكون للانخفاض تفسير',
+        ],
+        'measure_nothing_until_a_visitor_accepts_cookies' => [
+            'Measure nothing until a visitor accepts cookies',
+            'لا تقس شيئاً حتى يقبل الزائر ملفات تعريف الارتباط',
+        ],
+        'mask_the_ip_to_its_network_before_hashing_it' => [
+            'Mask the IP to its network before hashing it',
+            'إخفاء عنوان IP إلى شبكته قبل تجزئته',
+        ],
+        'store_the_visitors_country' => [
+            'Store the visitor’s country',
+            'تخزين بلد الزائر',
+        ],
+        'leave_bots_out_of_the_reports' => [
+            'Leave bots out of the reports',
+            'استبعاد الروبوتات من التقارير',
+        ],
+        'leave_your_own_staffs_browsing_out_of_the_reports' => [
+            'Leave your own staff’s browsing out of the reports',
+            'استبعاد تصفّح موظفيك من التقارير',
+        ],
+        'minutes_of_inactivity_that_end_a_visit' => [
+            'Minutes of inactivity that end a visit',
+            'دقائق الخمول التي تنهي الزيارة',
+        ],
+        'seconds_on_the_shop_before_a_visit_counts_as_engaged' => [
+            'Seconds on the shop before a visit counts as engaged',
+            'الثواني في المتجر قبل اعتبار الزيارة متفاعلة',
+        ],
+        'days_individual_events_are_kept' => [
+            'Days individual events are kept',
+            'عدد أيام الاحتفاظ بالأحداث الفردية',
+        ],
+        'days_sessions_are_kept' => [
+            'Days sessions are kept',
+            'عدد أيام الاحتفاظ بالجلسات',
+        ],
+        'days_the_daily_rollups_are_kept' => [
+            'Days the daily rollups are kept',
+            'عدد أيام الاحتفاظ بالتجميعات اليومية',
+        ],
+        'the_rollups_are_small_and_are_what_every_long_range_chart_reads' => [
+            'The rollups are small, and are what every long-range chart reads',
+            'التجميعات صغيرة الحجم، وهي ما تقرأه كل الرسوم البيانية الممتدة',
+        ],
+        'what_this_shop_measures' => [
+            'What this shop measures',
+            'ما يقيسه هذا المتجر',
+        ],
+        'the_pipeline_itself' => [
+            'The pipeline itself',
+            'خط المعالجة نفسه',
+        ],
+        'events_written' => [
+            'Events written',
+            'الأحداث المكتوبة',
+        ],
+        'dropped_buffer_full' => [
+            'Dropped — buffer full',
+            'مهملة — الذاكرة المؤقتة ممتلئة',
+        ],
+        'write_failures' => [
+            'Write failures',
+            'إخفاقات الكتابة',
+        ],
+        'events_reached_the_recorder_and_were_thrown_away_because_one_request_produced_more_than_the_buffer_holds' => [
+            'Events reached the recorder and were thrown away because one request produced more than the buffer holds',
+            'وصلت أحداث إلى المسجّل وأُهملت لأن طلباً واحداً أنتج أكثر مما تتسع له الذاكرة المؤقتة',
+        ],
+        'every_number_on_every_analytics_screen_is_short_by_that_much' => [
+            'Every number on every analytics screen is short by that much',
+            'كل رقم في كل شاشة تحليلات ناقص بهذا المقدار',
+        ],
+        'visits_we_chose_not_to_measure' => [
+            'Visits we chose not to measure',
+            'زيارات اخترنا ألا نقيسها',
+        ],
+        'neither_privacy_control_is_switched_on' => [
+            'Neither privacy control is switched on',
+            'لم يُفعَّل أي من ضابطي الخصوصية',
+        ],
+        'no_visit_is_being_refused_so_nothing_is_missing_from_the_figures_for_this_reason' => [
+            'No visit is being refused, so nothing is missing from the figures for this reason',
+            'لا تُرفض أي زيارة، فلا ينقص من الأرقام شيء لهذا السبب',
+        ],
+        'do_not_track' => [
+            'Do Not Track',
+            'عدم التتبّع',
+        ],
+        'consent_not_given' => [
+            'Consent not given',
+            'لم تُمنح الموافقة',
+        ],
+        'total_refused' => [
+            'Total refused',
+            'إجمالي المرفوض',
+        ],
+        'these_visits_were_deliberately_not_measured_they_are_the_reason_the_figures_are_lower_than_your_server_logs' => [
+            'These visits were deliberately not measured. They are the reason the figures are lower than your server logs',
+            'لم تُقَس هذه الزيارات عمداً. وهي سبب كون الأرقام أقل من سجلات خادمك',
+        ],
+        'what_each_link_did_in_this_window' => [
+            'What each link did in this window',
+            'ما فعله كل رابط في هذه النافذة',
+        ],
+        'short_link' => [
+            'Short link',
+            'الرابط المختصر',
+        ],
+
         // ── integrations · the portal's reference sections and webhooks ────
         'developer_portal' => [
             'Developer portal',

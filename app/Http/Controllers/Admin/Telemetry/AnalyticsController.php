@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Services\Marketplace\SellerOperationsOverview;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Http\Controllers\BaseController;
 use App\Models\Banner;
 use App\Services\Analytics\Reporting\AnalyticsNavigation;
@@ -233,6 +234,11 @@ class AnalyticsController extends BaseController
                 // Whether a short link opens the app on a phone that has it. Without this the
                 // section could not tell a merchant why their QR code opens a browser.
                 'app_links' => $this->appLinkState(),
+                // Per-day, per-link. The rollup has written a `campaign_link` dimension every day
+                // since it was built and no section asked for it, so the day-by-day series was
+                // reachable only by guessing the export URL — while this page read lifetime
+                // counters off analytics_campaigns and could not answer "which day did it work".
+                'per_day' => $this->reporting->breakdown($window, 'campaign_link', 50),
             ],
             'acquisition' => [
                 'sources' => $this->reporting->breakdown($window, 'source', 30),
@@ -292,6 +298,18 @@ class AnalyticsController extends BaseController
                 'health' => $this->reporting->collectionHealth(),
                 'excluded' => $this->reporting->excludedTraffic($window),
                 'events' => $this->reporting->breakdown($window, 'event', 40),
+                // What the pipeline wrote, what it threw away because a request overflowed the
+                // buffer, and who it refused to measure. All three were recorded and read by
+                // nothing, so a shortfall had no explanation anywhere on this screen.
+                'pipeline' => $this->reporting->pipelineHealth(),
+            ],
+            // The clearest case in the whole control-surface audit: this page opened with
+            // "Read-only for now, and honest about it" and printed config() values with no form, so
+            // every privacy decision about live customer traffic was an environment variable and a
+            // deploy.
+            'settings' => [
+                'values' => app(AnalyticsPolicy::class)->all(),
+                'fields' => \App\Services\Platform\PolicyRegistry::GROUPS['analytics']['policies'],
             ],
             default => [],
         };

@@ -3,6 +3,7 @@
 namespace App\Services\Analytics;
 
 use App\Services\Analytics\Support\AttributionEngine;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Analytics\Support\BotDetector;
 use App\Services\Analytics\Support\PathNormalizer;
 use App\Services\Telemetry\ClientIdentity;
@@ -88,7 +89,7 @@ class VisitorContext
                 request: $request,
                 userType: $this->userType,
                 userId: $this->userId,
-                maskAddress: (bool) config('analytics.privacy.mask_ip', true),
+                maskAddress: app(AnalyticsPolicy::class)->maskIp(),
             );
 
             if ($identity === null) {
@@ -145,7 +146,7 @@ class VisitorContext
 
         try {
             $now = Carbon::now();
-            $gap = (int) config('analytics.session_gap_minutes', 30);
+            $gap = app(AnalyticsPolicy::class)->sessionGapMinutes();
 
             $current = $this->connection()->table('analytics_sessions')
                 ->where('visitor_id', $visitorId)
@@ -174,8 +175,8 @@ class VisitorContext
     /** True when this visit belongs in the reports a merchant reads. */
     public function isCountable(): bool
     {
-        return !($this->isBot && config('analytics.exclude_bots', true))
-            && !($this->isInternal && config('analytics.exclude_internal', true));
+        return !($this->isBot && app(AnalyticsPolicy::class)->excludeBots())
+            && !($this->isInternal && app(AnalyticsPolicy::class)->excludeInternal());
     }
 
     public function device(): ?string
@@ -189,7 +190,7 @@ class VisitorContext
             return $this->country;
         }
 
-        if (!config('analytics.privacy.store_country', true)) {
+        if (!app(AnalyticsPolicy::class)->storeCountry()) {
             return null;
         }
 
@@ -274,7 +275,7 @@ class VisitorContext
     {
         $startedAt = Carbon::parse($session->started_at);
         $duration = max(0, (int) $startedAt->diffInSeconds($now, false));
-        $engagedAfter = (int) config('analytics.engaged_after_seconds', 10);
+        $engagedAfter = app(AnalyticsPolicy::class)->engagedAfterSeconds();
 
         $this->connection()->table('analytics_sessions')->where('id', $session->id)->update([
             'last_activity_at' => $now,
@@ -317,7 +318,7 @@ class VisitorContext
             'language' => Str::limit((string) $request->getPreferredLanguage(), 12, '') ?: null,
             'country' => $this->country($request),
             'app_version' => $this->appVersion($request),
-            'ip_hash' => $this->identity->networkHash($request, (bool) config('analytics.privacy.mask_ip', true)),
+            'ip_hash' => $this->identity->networkHash($request, app(AnalyticsPolicy::class)->maskIp()),
             'pageviews' => 0,
             'events' => 0,
             'duration_seconds' => 0,

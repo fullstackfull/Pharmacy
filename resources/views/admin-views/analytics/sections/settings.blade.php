@@ -1,5 +1,35 @@
-{{-- Read-only for now, and honest about it: these are the live values from config, so an operator
-     can see exactly what the pipeline is doing rather than guessing from documentation. --}}
+{{-- The decisions an administrator is allowed to make about live customer traffic.
+
+     This page used to open with "Read-only for now, and honest about it" and print config() values
+     with no form — so whether Do Not Track was honoured, whether consent was required before a
+     visitor was measured, whether an IP was masked and how long anything was kept were all an
+     environment variable and a deploy.
+
+     Precedence is stored, then environment, then the shipped default: an install that sets these in
+     .env keeps behaving exactly as it does. The read-only blocks below the form stay, because the
+     values they show (the country header, the cookie name, what is never stored) are facts about
+     the pipeline rather than choices. --}}
+
+<x-k.card :title="translate('what_this_shop_measures')">
+    <form action="{{ route('admin.settings.policies.update', ['group' => 'analytics']) }}" method="post" class="row g-3">
+        @csrf
+        @foreach ($data['fields'] ?? [] as $key => $field)
+            <div class="col-md-6 col-xl-4">
+                <label class="form-label fs-12 mb-1" for="{{ $key }}">{{ translate($field['label']) }}</label>
+                @include('admin-views.settings.partials._policy-field', ['key' => $key, 'field' => $field, 'value' => $data['values'][$key]])
+                @if (!empty($field['help']))
+                    <small class="text-muted d-block mt-1">{{ translate($field['help']) }}.</small>
+                @endif
+            </div>
+        @endforeach
+        <div class="col-12 d-flex justify-content-end">
+            <button class="btn btn-primary px-4">{{ translate('save') }}</button>
+        </div>
+    </form>
+</x-k.card>
+
+{{-- Below: facts about the pipeline rather than choices — they have no form because there is
+     nothing to decide. --}}
 <x-k.card :title="translate('what_is_collected')">
     <ul class="ana-list">
         <li><span>{{ translate('collection') }}</span><strong>{{ config('analytics.enabled') ? translate('on') : translate('off') }}</strong></li>

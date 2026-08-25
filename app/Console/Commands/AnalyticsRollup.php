@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Analytics\AnalyticsEvent;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,23 @@ use Illuminate\Support\Facades\DB;
  */
 class AnalyticsRollup extends Command
 {
+    /** The row every dimension's tail is folded into, as config/analytics.php promises. */
+    private const OTHER_KEY = '__other__';
+
+    /**
+     * Measures that may be summed across keys.
+     *
+     * Deliberately excludes `visitors` and `new_visitors`: those are COUNT(DISTINCT visitor_id) per
+     * key, and adding them across keys counts one person once per key they appear under.
+     */
+    /** Distinct counts, which cannot be added across keys — the folded row leaves them null. */
+    private const UNSUMMABLE_MEASURES = ['visitors', 'new_visitors'];
+
+    private const ADDITIVE_MEASURES = [
+        'sessions', 'pageviews', 'events', 'bounces', 'engaged_sessions',
+        'duration_seconds', 'cart_adds', 'checkouts', 'orders',
+    ];
+
     protected $signature = 'analytics:rollup
                             {--date= : YYYY-MM-DD, defaults to today}
                             {--days=1 : Roll up this many days back from --date}
@@ -47,7 +65,7 @@ class AnalyticsRollup extends Command
 
     public function handle(): int
     {
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             $this->warn('Analytics is disabled (ANALYTICS_ENABLED=false); nothing was rolled up.');
 
             return self::SUCCESS;
@@ -161,7 +179,7 @@ class AnalyticsRollup extends Command
             ->selectRaw('COALESCE(SUM(revenue), 0) revenue')
             ->groupBy('dimension_key')
             ->orderByDesc('sessions')
-            ->limit($this->cap())
+            ->limit($this->readCeiling())
             ->get();
 
         return $this->putMany($day, $dimension, $rows);
@@ -232,7 +250,7 @@ class AnalyticsRollup extends Command
             ->selectRaw('COUNT(*) pageviews, COUNT(DISTINCT visitor_id) visitors, COUNT(DISTINCT session_id) sessions')
             ->groupBy('dimension_key')
             ->orderByDesc('pageviews')
-            ->limit($this->cap())
+            ->limit($this->readCeiling())
             ->get();
 
         return $this->putMany($day, 'path', $rows);
@@ -294,7 +312,7 @@ class AnalyticsRollup extends Command
                 ->selectRaw('SUM(CASE WHEN name = ? THEN 1 ELSE 0 END) cart_adds', [AnalyticsEvent::CART_ADDED])
                 ->groupBy('dimension_key')
                 ->orderByDesc('events')
-                ->limit($this->cap())
+                ->limit($this->readCeiling())
                 ->get();
 
             $written += $this->putMany($day, $entity, $rows);
@@ -309,7 +327,7 @@ class AnalyticsRollup extends Command
             ->selectRaw('COUNT(*) orders, COUNT(DISTINCT visitor_id) visitors, COALESCE(SUM(value), 0) revenue')
             ->groupBy('dimension_key')
             ->orderByDesc('orders')
-            ->limit($this->cap())
+            ->limit($this->readCeiling())
             ->get();
 
         return $written + $this->putMany($day, 'vendor', $vendorRows);
@@ -335,7 +353,7 @@ class AnalyticsRollup extends Command
                 ->selectRaw('COUNT(*) events, COUNT(DISTINCT visitor_id) visitors, COUNT(DISTINCT session_id) sessions')
                 ->groupBy('dimension_key')
                 ->orderByDesc('events')
-                ->limit($this->cap())
+                ->limit($this->readCeiling())
                 ->get();
 
             $written += $this->putMany($day, $dimension, $rows);
@@ -408,11 +426,11 @@ class AnalyticsRollup extends Command
     {
         $query = $this->connection()->table('analytics_sessions')->whereBetween('started_at', [$from, $to]);
 
-        if (config('analytics.exclude_bots', true)) {
+        if (app(AnalyticsPolicy::class)->excludeBots()) {
             $query->where('is_bot', false);
         }
 
-        if (config('analytics.exclude_internal', true)) {
+        if (app(AnalyticsPolicy::class)->excludeInternal()) {
             $query->where('is_internal', false);
         }
 
@@ -423,11 +441,11 @@ class AnalyticsRollup extends Command
     {
         $query = $this->connection()->table('analytics_events')->whereBetween('occurred_at', [$from, $to]);
 
-        if (config('analytics.exclude_bots', true)) {
+        if (app(AnalyticsPolicy::class)->excludeBots()) {
             $query->where('is_bot', false);
         }
 
-        if (config('analytics.exclude_internal', true)) {
+        if (app(AnalyticsPolicy::class)->excludeInternal()) {
             $query->where('is_internal', false);
         }
 
@@ -437,12 +455,25 @@ class AnalyticsRollup extends Command
     /**
      * @param  \Illuminate\Support\Collection<int, object>  $rows
      */
+    /**
+     * Write the top keys, and fold everything below them into one `__other__` row.
+     *
+     * config/analytics.php has always promised this — "the rest are folded into __other__ and the
+     * fold is reported rather than hidden" — and the rollup applied a LIMIT and wrote no such row,
+     * so on any dimension with a long tail the day's total silently did not add up. A dimension
+     * table whose rows sum to less than the total, with nothing saying why, is worse than a
+     * truncated list: every percentage computed from it is wrong.
+     */
     private function putMany(Carbon $day, string $dimension, $rows): int
     {
+        $rows = collect($rows);
+        $kept = $rows->take($this->cap());
+        $folded = $rows->slice($this->cap());
+
         $written = 0;
         $keys = [];
 
-        foreach ($rows as $row) {
+        foreach ($kept as $row) {
             $values = (array) $row;
             $key = (string) ($values['dimension_key'] ?? '');
             unset($values['dimension_key']);
@@ -453,6 +484,11 @@ class AnalyticsRollup extends Command
 
             $keys[] = mb_substr($key, 0, 191);
             $written += $this->put($day, $dimension, $key, $values);
+        }
+
+        if ($folded->isNotEmpty()) {
+            $keys[] = self::OTHER_KEY;
+            $written += $this->put($day, $dimension, self::OTHER_KEY, $this->foldTail($folded));
         }
 
         // A rebuild has to remove as well as write. Each dimension is capped at a top-N, so a key
@@ -471,6 +507,38 @@ class AnalyticsRollup extends Command
     /**
      * @param  array<string, mixed>  $values
      */
+    /**
+     * The tail as one row.
+     *
+     * Only the additive measures are summed. `visitors` and `new_visitors` are COUNT(DISTINCT ...)
+     * per key, and adding those across keys counts the same person once per key they appear under —
+     * so they are left null, which renders as "—". An honest dash beats a confident overstatement
+     * on a page whose whole purpose is to be believed.
+     *
+     * @param  \Illuminate\Support\Collection  $folded
+     * @return array<string, mixed>
+     */
+    private function foldTail($folded): array
+    {
+        $summed = ['revenue' => 0.0];
+
+        foreach (self::ADDITIVE_MEASURES as $measure) {
+            $summed[$measure] = 0;
+        }
+
+        foreach ($folded as $row) {
+            $values = (array) $row;
+
+            foreach (self::ADDITIVE_MEASURES as $measure) {
+                $summed[$measure] += (int) ($values[$measure] ?? 0);
+            }
+
+            $summed['revenue'] += (float) ($values['revenue'] ?? 0);
+        }
+
+        return $summed + ['visitors' => null, 'new_visitors' => null];
+    }
+
     private function put(Carbon $day, string $dimension, string $key, array $values): int
     {
         $row = ['computed_at' => Carbon::now()];
@@ -479,7 +547,13 @@ class AnalyticsRollup extends Command
             'sessions', 'visitors', 'new_visitors', 'pageviews', 'events', 'bounces',
             'engaged_sessions', 'duration_seconds', 'cart_adds', 'checkouts', 'orders',
         ] as $column) {
-            $row[$column] = (int) ($values[$column] ?? 0);
+            // Null survives for the two distinct counts only, and only when the caller passed it
+            // deliberately. The folded __other__ row cannot sum COUNT(DISTINCT visitor_id) across
+            // keys, and casting that to 0 would print a confident zero where the truthful answer is
+            // "not countable from here". Every other measure is additive and a missing one is 0.
+            $row[$column] = in_array($column, self::UNSUMMABLE_MEASURES, true) && ($values[$column] ?? 0) === null
+                ? null
+                : (int) ($values[$column] ?? 0);
         }
 
         $row['revenue'] = round((float) ($values['revenue'] ?? 0), 2);
@@ -497,7 +571,14 @@ class AnalyticsRollup extends Command
 
     private function prune(): int
     {
-        $retention = (array) config('analytics.retention', []);
+        // Through the policy, so a retention window changed on the Analytics settings page is the
+        // window this prune actually applies — the page promised that and read config().
+        $policy = app(AnalyticsPolicy::class);
+        $retention = [
+            'event_days' => $policy->retentionDays('event_days'),
+            'session_days' => $policy->retentionDays('session_days'),
+            'daily_days' => $policy->retentionDays('daily_days'),
+        ] + (array) config('analytics.retention', []);
         $deleted = 0;
 
         $deleted += $this->deleteInChunks('analytics_events', 'occurred_at', (int) ($retention['event_days'] ?? 90));
@@ -552,6 +633,19 @@ class AnalyticsRollup extends Command
     private function cap(): int
     {
         return max(50, (int) config('analytics.max_keys_per_dimension', 500));
+    }
+
+    /**
+     * How many grouped rows a dimension may return before the fold stops being exact.
+     *
+     * The rollup reads past the cap so the tail can be summed rather than dropped. This is the
+     * safety ceiling on that read — a grouped aggregate, so it is distinct keys per day rather than
+     * raw rows, and a shop that exceeds it has a cardinality problem the normalisation is supposed
+     * to prevent.
+     */
+    private function readCeiling(): int
+    {
+        return max($this->cap() * 100, 50000);
     }
 
     private function connection(): \Illuminate\Database\Connection

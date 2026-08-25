@@ -69,3 +69,50 @@
 </x-k.card>
 
 @include('admin-views.analytics.sections._breakdown', ['breakdown' => $data['events'], 'title' => translate('what_is_being_recorded'), 'label' => translate('event'), 'dimension' => 'event', 'window' => $window, 'showEngagement' => false])
+
+{{-- What the pipeline itself did.
+
+     `events_written` and `events_dropped_buffer_full` are recorded explicitly by EventRecorder so
+     this screen can show them, and nothing read either — a request loop quietly shortening the
+     numbers was recorded and displayed nowhere. The privacy counters answer the question a shop
+     asks the day it turns consent on and watches its reported traffic fall. --}}
+@php($pipeline = $data['pipeline'] ?? ['state' => 'not_installed'])
+
+@if (($pipeline['state'] ?? '') === 'ok')
+    <x-k.card :title="translate('the_pipeline_itself')">
+        <div class="k-stats">
+            <x-k.stat :label="translate('events_written')" :value="number_format($pipeline['events_written'])" icon="check" />
+            <x-k.stat :label="translate('dropped_buffer_full')" :value="number_format($pipeline['events_dropped_buffer_full'])"
+                      icon="{{ $pipeline['events_dropped_buffer_full'] > 0 ? 'alert' : 'settings' }}"
+                      :caption="$pipeline['drop_share'] === null ? null : $pipeline['drop_share'] . '%'" />
+            <x-k.stat :label="translate('write_failures')" :value="number_format($pipeline['write_failed'])" icon="warning-octagon" />
+        </div>
+        @if ($pipeline['events_dropped_buffer_full'] > 0)
+            <p class="mon-note mon-note--critical">
+                {{ translate('events_reached_the_recorder_and_were_thrown_away_because_one_request_produced_more_than_the_buffer_holds') }}.
+                {{ translate('every_number_on_every_analytics_screen_is_short_by_that_much') }}.
+            </p>
+        @endif
+    </x-k.card>
+
+    <x-k.card :title="translate('visits_we_chose_not_to_measure')">
+        @php($privacy = $pipeline['privacy'])
+        @if (!$privacy['respect_do_not_track'] && !$privacy['require_consent'])
+            <x-k.empty icon="shield" :title="translate('neither_privacy_control_is_switched_on')"
+                       :text="translate('no_visit_is_being_refused_so_nothing_is_missing_from_the_figures_for_this_reason')" />
+        @else
+            <div class="k-stats">
+                @if ($privacy['respect_do_not_track'])
+                    <x-k.stat :label="translate('do_not_track')" :value="number_format($privacy['do_not_track'])" icon="shield" />
+                @endif
+                @if ($privacy['require_consent'])
+                    <x-k.stat :label="translate('consent_not_given')" :value="number_format($privacy['consent_not_given'])" icon="shield" />
+                @endif
+                <x-k.stat :label="translate('total_refused')" :value="number_format($privacy['total'])" icon="info" />
+            </div>
+            <p class="mon-note">
+                {{ translate('these_visits_were_deliberately_not_measured_they_are_the_reason_the_figures_are_lower_than_your_server_logs') }}.
+            </p>
+        @endif
+    </x-k.card>
+@endif

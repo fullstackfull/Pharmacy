@@ -317,17 +317,17 @@
  {
   "capability": "Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report",
   "area": "analytics",
-  "backend": "app/Services/Analytics/Analytics.php:363 payoutRequested, called from app/Services/Marketplace/PayoutService.php:128 (event payout_requested, dedupe payout:{reference}); app/Services/Analytics/Analytics.php:378 kycSubmitted, called from app/Services/Marketplace/SellerVerificationService.php:205 (event kyc_submitted)",
+  "backend": "app/Services/Analytics/AnalyticsEvent.php::isSellerDomain(), honoured by app/Services/Analytics/EventRecorder.php when it writes is_internal",
   "admin": "None",
   "seller_web": "Submit",
   "flutter": "None",
   "analytics": "Events",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "Yes",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable. RESOLVED. 'Internal' means the merchant browsing their own storefront — a real filter, and the reason a small shop's conversion rate does not look like a rounding error. A payout request is not that: both seller-domain events are only ever raised while a seller is signed in, so every row was written is_internal=1 and excluded by every rollup. Two events in the catalogue, emitted correctly, permanently uncountable."
  },
  {
   "capability": "Twelve inbound payment-gateway callbacks (bKash, Flutterwave, LiqPay, MercadoPago, Paymera, PayMob, Paystack, PayTabs, Razorpay, SenangPay and others)",
@@ -827,8 +827,8 @@
  {
   "capability": "Reporting how much traffic went unmeasured because of Do Not Track or missing consent",
   "area": "analytics",
-  "backend": "app/Services/Analytics/Support/PrivacyGate.php:32 reason() — documented as being 'for the data-quality screen'",
-  "admin": "None",
+  "backend": "app/Http/Middleware/RecordAnalytics.php calls PrivacyGate::reason() and EventRecorder::recordPrivacyRefusal(); shown on Analytics → Data quality",
+  "admin": "View",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "None",
@@ -836,8 +836,8 @@
   "dev_portal": "None",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the Analytics data-quality screen it was written for. PrivacyGate::reason() exists specifically to supply that number and has no caller anywhere, so a shop that turns consent on loses reported traffic with nothing explaining the drop."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the Analytics data-quality screen it was written for. PrivacyGate::reason() exists specifically to supply that number and has no caller anywhere, so a shop that turns consent on loses reported traffic with nothing explaining the drop. RESOLVED. reason() was written 'for the data-quality screen' and had no caller, so a shop that switched consent on watched its reported traffic fall with nothing explaining the drop — which is the one circumstance in which an operator concludes analytics is broken and switches the control back off. A zero is labelled with whether the control is even on."
  },
  {
   "capability": "Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone",
@@ -917,37 +917,22 @@
  {
   "capability": "Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it",
   "area": "analytics",
-  "backend": "app/Console/Commands/AnalyticsRollup.php:552 cap() = config('analytics.max_keys_per_dimension', 500), applied as ->limit() at :164, :235, :297, :337",
+  "backend": "app/Console/Commands/AnalyticsRollup.php reads past the cap and folds the tail into an __other__ row; database/migrations/2026_08_25_000002 widens the two distinct-count columns to accept null",
   "admin": "None",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Metrics",
   "monitor": "None",
-  "dev_portal": "None",
+  "dev_portal": "Full",
   "audit": "No",
   "owner": "Developer",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape."
+  "verdict": "FIXED",
+  "note": "Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape. RESOLVED. config/analytics.php promised this and the rollup applied a LIMIT and wrote no such row, so on any dimension with a long tail the day's rows summed to less than the day and every percentage computed from them was wrong. The additive measures are summed exactly; visitors and new_visitors are COUNT(DISTINCT ...) per key and are left NULL rather than added — an honest dash beats a confident overstatement on a page whose whole purpose is to be believed."
  },
  {
   "capability": "Pipeline health counters — events written, and events dropped because a request overflowed the buffer",
   "area": "analytics",
-  "backend": "app/Services/Analytics/EventRecorder.php:166 health('events_written') and :169 health('events_dropped_buffer_full') into analytics_health",
-  "admin": "None",
-  "seller_web": "None",
-  "flutter": "N/A",
-  "analytics": "Metrics",
-  "monitor": "None",
-  "dev_portal": "None",
-  "audit": "No",
-  "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the Analytics data-quality screen. EventRecorder records both counters explicitly so that screen can show them, and collectionHealth reads only rollup_ran and write_failed — so a request loop quietly shortening the numbers is recorded and shown to nobody."
- },
- {
-  "capability": "Per-day performance of each campaign short link",
-  "area": "analytics",
-  "backend": "app/Console/Commands/AnalyticsRollup.php:353 rollupCampaignPerformance writing the analytics_daily dimension 'campaign_link'",
+  "backend": "app/Services/Analytics/Reporting/AnalyticsReporting.php::pipelineHealth(), drawn on Analytics → Data quality",
   "admin": "View",
   "seller_web": "None",
   "flutter": "N/A",
@@ -956,8 +941,23 @@
   "dev_portal": "None",
   "audit": "No",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs on the Admin Campaigns screen, which instead reads lifetime counters off analytics_campaigns. The rollup writes a campaign_link dimension every day and no section asks for it, so the day-by-day series is reachable only by guessing the export URL."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the Analytics data-quality screen. EventRecorder records both counters explicitly so that screen can show them, and collectionHealth reads only rollup_ran and write_failed — so a request loop quietly shortening the numbers is recorded and shown to nobody. RESOLVED. EventRecorder records events_written and events_dropped_buffer_full explicitly so that screen can show them, and collectionHealth read only rollup_ran and write_failed — so a request loop quietly shortening every number on every analytics screen was recorded and displayed nowhere."
+ },
+ {
+  "capability": "Per-day performance of each campaign short link",
+  "area": "analytics",
+  "backend": "the campaign_link dimension is read on Analytics → Campaigns",
+  "admin": "View",
+  "seller_web": "None",
+  "flutter": "N/A",
+  "analytics": "Metrics",
+  "monitor": "None",
+  "dev_portal": "None",
+  "audit": "No",
+  "owner": "Admin",
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs on the Admin Campaigns screen, which instead reads lifetime counters off analytics_campaigns. The rollup writes a campaign_link dimension every day and no section asks for it, so the day-by-day series is reachable only by guessing the export URL. RESOLVED. The rollup has written it daily since it was built and no section asked for it, so the day-by-day series was reachable only by guessing the export URL while the page showed lifetime counters and could not answer 'which day did it work'."
  },
  {
   "capability": "The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason",
@@ -1007,17 +1007,17 @@
  {
   "capability": "Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept",
   "area": "analytics",
-  "backend": "config/analytics.php:11 (`ANALYTICS_ENABLED`), :56-61 retention, :83-88 exclusions, :105-114 privacy, :125-130 campaign links, :141-146 beacon; read throughout app/Services/Analytics/; config/analytics.php:57-60 (event_days 90, session_days 400, daily_days 1100, click_days 400, each env-overridable); pruned by bootstrap/app.php:229 (analytics:rollup --days=2 --prune dailyAt 02:15); config/analytics.php:32 (session_gap_minutes 30), :36 (engaged_after_seconds 10), :46 (dedupe_window_seconds 5), :29 (buffer_limit 40), :72 (max_keys_per_dimension 500); config/telemetry.php:9 `TELEMETRY_ENABLED`, :12 `TELEMETRY_RETENTION_DAYS`, :15 session gap, :18 ignore_prefixes; consumed by app/Services/Telemetry/ and app/Console/Commands/TelemetryRollup.php (scheduled bootstrap/app.php:242-247)",
-  "admin": "View",
+  "backend": "app/Services/Analytics/Support/AnalyticsPolicy.php over the analytics group in PolicyRegistry, read by the recorder, the visitor context, the privacy gate, the reporting layer and the rollup's pruner; edited on Analytics → Settings",
+  "admin": "Manage",
   "seller_web": "None",
   "flutter": "N/A",
   "analytics": "Metrics",
   "monitor": "Health",
   "dev_portal": "N/A",
-  "audit": "No",
+  "audit": "Yes",
   "owner": "Admin",
-  "verdict": "ORPHAN",
-  "note": "Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment."
+  "verdict": "CONNECTED TO ADMIN",
+  "note": "Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment. RESOLVED — the clearest case in the whole audit, and the page said so itself: it opened with 'Read-only for now, and honest about it'. Precedence is stored, then environment, then the shipped default, so an install that sets ANALYTICS_REQUIRE_CONSENT=true keeps requiring consent; the shipped posture is unchanged, and turning a privacy control ON is now a minute's work, which is the only reason those controls are worth having."
  },
  {
   "capability": "Request-shaping guards — ingest rate limits, list page sizes, per-screen bulk-action caps, the report date-range ceiling and the automation rule-scope limit",

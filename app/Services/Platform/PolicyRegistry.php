@@ -279,6 +279,64 @@ class PolicyRegistry
             ],
         ],
 
+        'analytics' => [
+            'title' => 'analytics_and_privacy',
+            'help' => 'what_is_measured_about_live_customer_traffic_who_is_excluded_and_how_long_it_is_kept',
+            'icon' => 'reports',
+            'policies' => [
+                'analytics_enabled' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'measure_visits_at_all',
+                ],
+                'analytics_respect_do_not_track' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'honour_the_do_not_track_header',
+                    'help' => 'refused_visits_are_counted_on_the_data_quality_screen_so_the_drop_has_an_explanation',
+                ],
+                'analytics_require_consent' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'measure_nothing_until_a_visitor_accepts_cookies',
+                ],
+                'analytics_mask_ip' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'mask_the_ip_to_its_network_before_hashing_it',
+                ],
+                'analytics_store_country' => [
+                    'type' => 'toggle', 'default' => false,
+                    'label' => 'store_the_visitors_country',
+                ],
+                'analytics_exclude_bots' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'leave_bots_out_of_the_reports',
+                ],
+                'analytics_exclude_internal' => [
+                    'type' => 'toggle', 'default' => true,
+                    'label' => 'leave_your_own_staffs_browsing_out_of_the_reports',
+                ],
+                'analytics_session_gap_minutes' => [
+                    'type' => 'int', 'default' => 30, 'min' => 1, 'max' => 1440,
+                    'label' => 'minutes_of_inactivity_that_end_a_visit',
+                ],
+                'analytics_engaged_after_seconds' => [
+                    'type' => 'int', 'default' => 10, 'min' => 1, 'max' => 3600,
+                    'label' => 'seconds_on_the_shop_before_a_visit_counts_as_engaged',
+                ],
+                'analytics_retention_event_days' => [
+                    'type' => 'int', 'default' => 90, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_individual_events_are_kept',
+                ],
+                'analytics_retention_session_days' => [
+                    'type' => 'int', 'default' => 400, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_sessions_are_kept',
+                ],
+                'analytics_retention_daily_days' => [
+                    'type' => 'int', 'default' => 1100, 'min' => 1, 'max' => 3650,
+                    'label' => 'days_the_daily_rollups_are_kept',
+                    'help' => 'the_rollups_are_small_and_are_what_every_long_range_chart_reads',
+                ],
+            ],
+        ],
+
         'developer' => [
             'title' => 'developer_portal',
             'help' => 'what_the_api_console_may_do_and_whether_response_shapes_are_learned_from_traffic',

@@ -9,10 +9,10 @@ A capability with no answer is not a design decision; it is a capability nobody 
 | | |
 |---|---|
 | Capabilities audited | 607 |
-| Fully connected to a surface | 487 |
+| Fully connected to a surface | 493 |
 | Internal by design | 53 |
 | Deprecated | 19 |
-| **Orphaned — no owner, no surface** | **48** |
+| **Orphaned — no owner, no surface** | **42** |
 
 Orphans are enumerated with their evidence in [ORPHAN_BACKEND_CAPABILITIES.md](ORPHAN_BACKEND_CAPABILITIES.md).
 The per-domain reading is in [FINAL_PLATFORM_COVERAGE_AUDIT.md](FINAL_PLATFORM_COVERAGE_AUDIT.md).
@@ -27,17 +27,17 @@ the whole point of the document, so it is never blurred.
 
 | Capability | Admin | Seller Web | Flutter App | Analytics | Monitor | Dev Portal | Audit | Owner | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | **None** | Yes | Developer | ORPHAN |
+| Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report | **None** | Submit | **None** | Events | **None** | Full | Yes | Developer | FIXED |
 | Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through | View | Manage | View | **None** | **None** | Documented | Yes | Admin | ORPHAN |
-| Reporting how much traffic went unmeasured because of Do Not Track or missing consent | **None** | **None** | N/A | **None** | **None** | **None** | No | Admin | ORPHAN |
+| Reporting how much traffic went unmeasured because of Do Not Track or missing consent | View | **None** | N/A | **None** | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | Seller report builder, saved report definitions and an exports centre | **None** | **None** | View | Metrics | **None** | Full | No | Seller | ORPHAN |
-| Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | **None** | No | Developer | ORPHAN |
-| Pipeline health counters — events written, and events dropped because a request overflowed the buffer | **None** | **None** | N/A | Metrics | **None** | **None** | No | Admin | ORPHAN |
-| Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | ORPHAN |
+| Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it | **None** | **None** | N/A | Metrics | **None** | Full | No | Developer | FIXED |
+| Pipeline health counters — events written, and events dropped because a request overflowed the buffer | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
+| Per-day performance of each campaign short link | View | **None** | N/A | Metrics | **None** | **None** | No | Admin | CONNECTED TO ADMIN |
 | The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason | View | **None** | **None** | Events | **None** | **None** | No | Admin | ORPHAN |
 | Saving an analytics report configuration to come back to | **None** | **None** | **None** | **None** | **None** | **None** | No | Admin | DEPRECATED |
 | Daily history of request volume, visitors, errors and API load (telemetry_daily) | **None** | **None** | N/A | Metrics | Failures | **None** | No | Developer | ORPHAN |
-| Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | View | **None** | N/A | Metrics | Health | N/A | No | Admin | ORPHAN |
+| Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | Manage | **None** | N/A | Metrics | Health | N/A | Yes | Admin | CONNECTED TO ADMIN |
 | Tracked marketing campaigns (UTM links, short links, QR codes) | Configure | **None** | **None** | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | In-house and vendor product sale reports | Oversight | View | View | Metrics | **None** | Partial | No | Admin | CONNECTED TO ADMIN |
 | Order, product and stock reports with Excel and PDF export | Oversight | Manage | Manage | Metrics | **None** | Documented | No | Seller | CONNECTED TO SELLER |

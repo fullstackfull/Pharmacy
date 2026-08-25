@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Services\Analytics\Analytics;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use App\Services\Analytics\Support\PathNormalizer;
+use App\Services\Analytics\EventRecorder;
 use App\Services\Analytics\Support\PrivacyGate;
 use App\Services\Analytics\VisitorContext;
 use Closure;
@@ -28,6 +30,7 @@ class RecordAnalytics
         private readonly VisitorContext $context,
         private readonly PathNormalizer $paths,
         private readonly PrivacyGate $privacy,
+        private readonly EventRecorder $recorder,
     ) {
     }
 
@@ -35,10 +38,19 @@ class RecordAnalytics
     {
         // Not measured means not identified either: minting a visitor cookie for somebody who
         // has asked not to be tracked is the tracking they asked not to have.
-        if (config('analytics.enabled', true) && $this->privacy->allows($request)) {
+        if (app(AnalyticsPolicy::class)->enabled() && $this->privacy->allows($request)) {
             // Resolving here, inside the request, is what allows the cookie to be queued onto the
             // outgoing response — by terminate() the response has already gone.
             $this->context->resolve($request);
+        } elseif (app(AnalyticsPolicy::class)->enabled()) {
+            // Counted, not silent. A shop that turns consent on and sees its traffic fall needs the
+            // number that explains the fall, or it concludes analytics is broken and turns the
+            // privacy control back off.
+            $reason = $this->privacy->reason($request);
+
+            if ($reason !== null) {
+                $this->recorder->recordPrivacyRefusal($reason);
+            }
         }
 
         return $next($request);
@@ -47,7 +59,7 @@ class RecordAnalytics
     public function terminate(Request $request, Response $response): void
     {
         try {
-            if (!config('analytics.enabled', true) || !$this->privacy->allows($request)) {
+            if (!app(AnalyticsPolicy::class)->enabled() || !$this->privacy->allows($request)) {
                 return;
             }
 

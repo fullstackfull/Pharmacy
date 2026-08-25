@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\Analytics\CommerceInstrumentation;
+use App\Services\Analytics\Support\AnalyticsPolicy;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -26,7 +27,7 @@ class AnalyticsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (!config('analytics.enabled', true)) {
+        if (!app(AnalyticsPolicy::class)->enabled()) {
             return;
         }
 

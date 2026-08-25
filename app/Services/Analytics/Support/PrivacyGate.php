@@ -46,13 +46,13 @@ class PrivacyGate
 
     private function decide(Request $request): bool
     {
-        $privacy = (array) config('analytics.privacy', []);
+        $policy = app(AnalyticsPolicy::class);
 
-        if (($privacy['respect_do_not_track'] ?? false) && $this->signalsDoNotTrack($request)) {
+        if ($policy->respectDoNotTrack() && $this->signalsDoNotTrack($request)) {
             return false;
         }
 
-        if ($privacy['require_consent'] ?? false) {
+        if ($policy->requireConsent()) {
             // Anything other than an explicit acceptance is a no. "Not asked yet" and "declined"
             // both mean consent has not been given, and only one of them is the visitor's fault.
             return $request->cookie(self::CONSENT_COOKIE) === 'accepted';

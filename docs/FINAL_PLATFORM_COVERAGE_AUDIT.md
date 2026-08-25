@@ -14,26 +14,20 @@ this document say that almost everything is broken.
 ## ANALYTICS
 
 Backend: 47 capabilities
-Admin: 34 of 47 covered
+Admin: 36 of 47 covered
 Seller Web: 10 of 47 covered
 Flutter App: 9 of 28 covered
 Analytics: 40 of 47 covered
 Monitor: 3 of 47 covered
-Dev Portal: 17 of 45 covered
+Dev Portal: 19 of 45 covered
 Audit: Complete
 
-Incomplete — the owner cannot reach it (10):
+Incomplete — the owner cannot reach it (4):
 
-- **Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report** — assigned to Developer, no surface yet. Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable.
 - **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through** — assigned to Admin, no surface yet. Ruled: belongs to Analytics. Stock can be listed, adjusted, transferred and written off on every surface, and nothing counts any of it — product_metrics carries views and cart adds and has no stock column, so the cost of a stock-out is unanswerable on a platform whose whole job is stock.
-- **Reporting how much traffic went unmeasured because of Do Not Track or missing consent** — assigned to Admin, no surface yet. Ruled: belongs on the Analytics data-quality screen it was written for. PrivacyGate::reason() exists specifically to supply that number and has no caller anywhere, so a shop that turns consent on loses reported traffic with nothing explaining the drop.
 - **Seller report builder, saved report definitions and an exports centre** — assigned to Seller, no surface yet. OVERRULED in part — the seller sweep recorded reports and exports as having no backend. Verified: GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and are used by the Flutter app. What is missing is the web surface and the saved-definition/queued-export half: seller.reports.index, seller.reports.builder and seller.exports.index have no route, so on a browser every export is a synchronous download off one specific list.
-- **Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it** — assigned to Developer, no surface yet. Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape.
-- **Pipeline health counters — events written, and events dropped because a request overflowed the buffer** — assigned to Admin, no surface yet. Ruled: belongs on the Analytics data-quality screen. EventRecorder records both counters explicitly so that screen can show them, and collectionHealth reads only rollup_ran and write_failed — so a request loop quietly shortening the numbers is recorded and shown to nobody.
-- **Per-day performance of each campaign short link** — assigned to Admin, no surface yet. Ruled: belongs on the Admin Campaigns screen, which instead reads lifetime counters off analytics_campaigns. The rollup writes a campaign_link dimension every day and no section asks for it, so the day-by-day series is reachable only by guessing the export URL.
 - **The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason** — assigned to Admin, no surface yet. Ruled: belongs to Analytics reporting. Every order writes them into analytics_events.properties and exactly one reader exists in the codebase (ExperimentReach pulling properties->experiment), so shipping cost, coupon and payment method per order are captured on every order and reportable on none.
 - **Daily history of request volume, visitors, errors and API load (telemetry_daily)** — assigned to Developer, no surface yet. Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at.
-- **Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept** — assigned to Admin, no surface yet. Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment.
 
 ## AUTOMATION
 

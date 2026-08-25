@@ -14,15 +14,15 @@ says so and why.
 
 | Verdict | Capabilities | Meaning |
 |---|---:|---|
-| CONNECTED TO ADMIN | 342 | The marketplace operator manages or oversees it. |
+| CONNECTED TO ADMIN | 346 | The marketplace operator manages or oversees it. |
 | CONNECTED TO SELLER | 79 | The seller manages it, in the panel or the app. |
 | CONNECTED TO DEVELOPER PORTAL | 28 | Documented as an API capability an integrator can use. |
 | CONNECTED TO MONITOR | 27 | Its health and its failures are visible to an operator. |
 | INTERNAL BY DESIGN | 53 | Infrastructure. No screen is appropriate, and the reason is stated. |
 | DEPRECATED | 19 | Present in code, no longer part of the product. |
-| ORPHAN | 48 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
+| ORPHAN | 42 | Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists. |
 
-## CONNECTED TO ADMIN (342)
+## CONNECTED TO ADMIN (346)
 
 The marketplace operator manages or oversees it.
 
@@ -50,6 +50,10 @@ The marketplace operator manages or oversees it.
 | The returns response promise — 48 hours to answer a return request, 72 hours to process it | returns | Admin | app/Services/Marketplace/OperationsPolicy.php (ops_returns_response_hours, ops_returns_processing_hours), read at app/Services/SellerIntelligence/Producers/ReturnsRiskProducer.php:53,111 |
 | How long a shipment may go without courier movement before it is raised as an exception (72 hours) | shipping | Admin | app/Services/Platform/PolicyRegistry.php (shipping_silent_hours, shipping_stop_after_days) read at app/Services/SellerIntelligence/Producers/ShippingExceptionProducer.php:46-48 |
 | Seller health tiers — the good / watch / at-risk bands on the admin scorecard | compliance | Admin | app/Services/Platform/PolicyRegistry.php compliance group (health_watch_* and health_at_risk_* for cancellation, return, refund, rating and strikes) read at app/Services/Marketplace/SellerScorecardService.php:104-137 |
+| Reporting how much traffic went unmeasured because of Do Not Track or missing consent | analytics | Admin | app/Http/Middleware/RecordAnalytics.php calls PrivacyGate::reason() and EventRecorder::recordPrivacyRefusal(); shown on Analytics → Data quality |
+| Pipeline health counters — events written, and events dropped because a request overflowed the buffer | analytics | Admin | app/Services/Analytics/Reporting/AnalyticsReporting.php::pipelineHealth(), drawn on Analytics → Data quality |
+| Per-day performance of each campaign short link | analytics | Admin | the campaign_link dimension is read on Analytics → Campaigns |
+| Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept | analytics | Admin | app/Services/Analytics/Support/AnalyticsPolicy.php over the analytics group in PolicyRegistry, read by the recorder, the visitor context, the privacy gate, the reporting layer and the rollup's pruner; edited on Analytics → Settings |
 | Silent truncation caps — 500 open issues, 500 SLA deadlines, 200 audit rows, 200 sellers in the admin rollup, 200 automation rules per sweep | platform | Admin | app/Services/Platform/PolicyRegistry.php platform group (limit_automation_sweep, limit_audit_rows, limit_control_tower_rows, limit_admin_seller_rollup) read at AutomationEngine.php, SellerAuditTrailService.php, ControlTowerService.php and SellerOperationsOverview.php |
 | Alert rules — seeding them, creating or editing one, setting a threshold, silencing one, and telling somebody when one fires | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringAlertRules.php (create, edit, silence, enable, delete, reinstall) behind routes/admin/routes.php admin.monitoring.actions.alert-rule; rules screen at resources/views/admin-views/monitoring/actions/_alert-rule.blade.php |
 | Defining the customer journeys the synthetic prober fetches | monitoring | Admin | app/Services/Monitoring/Operations/MonitoringConfiguration.php addJourney()/removeJourney(), on Monitoring → Synthetics; the console command still works and applies the same rules |
@@ -965,7 +969,7 @@ Present in code, no longer part of the product.
 - No surface on — Admin, Seller Web, Analytics, Monitor
 - Dead: an unedited stub ('Command description') with no scheduler entry and no caller; sessions are garbage-collected by Laravel's lottery and cache clearing is already reachable from Admin → Settings.
 
-## ORPHAN (48)
+## ORPHAN (42)
 
 Found with no surface. Each has been ruled to an owner; the ruling is not the surface, so the list reaches zero only when the screen exists.
 
@@ -1016,12 +1020,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — Detection exists as read-only findings in PaymentsPanel.php:1507 (duplicate settlements), :1565 (paid order with no settlement row), :1677 (commission mismatch); the settlement run itself is marketplace:settle at bootstrap/app.php:147
 - No surface on — Seller Web, Analytics, Monitor
 - Ruled: belongs to Monitoring. PaymentsPanel really does detect these money-losing conditions, but computes them live on page load and publishes no series, so MetricResolver cannot see them and no rule can be written — a seller who is silently never paid is found only if an admin happens to open the section.
-
-**Seller-domain analytics events (payout requested, KYC submitted) are recorded as internal traffic and can never reach a report**  
-`analytics` · owner: Developer  
-- Backend — app/Services/Analytics/Analytics.php:363 payoutRequested, called from app/Services/Marketplace/PayoutService.php:128 (event payout_requested, dedupe payout:{reference}); app/Services/Analytics/Analytics.php:378 kycSubmitted, called from app/Services/Marketplace/SellerVerificationService.php:205 (event kyc_submitted)
-- No surface on — Admin, Flutter App, Monitor, Dev Portal
-- Ruled: belongs to Developer as a defect in BotDetector. Both events are only ever raised while a seller is authenticated, and BotDetector.php:126 flags any logged-in seller as internal, so every row is written with is_internal=1 and excluded by every rollup and every report — the events exist and are structurally unreportable.
 
 **Inventory as a measured quantity — stock-out frequency, how long stock sat at zero, sell-through**  
 `analytics` · owner: Admin  
@@ -1113,12 +1111,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Seller Web, Flutter App, Analytics, Monitor, Dev Portal
 - Ruled: belongs on the Seller Center compliance page, which does not exist. Counts.php already computes a compliance_action badge for that missing page, so the platform renders a number on a menu pointing at nothing, and no breach, verification or brand-claim figure is trended anywhere.
 
-**Reporting how much traffic went unmeasured because of Do Not Track or missing consent**  
-`analytics` · owner: Admin  
-- Backend — app/Services/Analytics/Support/PrivacyGate.php:32 reason() — documented as being 'for the data-quality screen'
-- No surface on — Admin, Seller Web, Analytics, Monitor, Dev Portal
-- Ruled: belongs on the Analytics data-quality screen it was written for. PrivacyGate::reason() exists specifically to supply that number and has no caller anywhere, so a shop that turns consent on loses reported traffic with nothing explaining the drop.
-
 **Seller issue policy — the weighted severity model, the escalation ladder, and how often the platform may interrupt a seller's phone**  
 `automation` · owner: Admin  
 - Backend — app/Services/SellerIntelligence/Severity/SeverityEngine.php:65-69 (weights), :72-84 (saturations: revenue 0.25, volume 0.10, urgency 6h, duration 168h, recurrence 10), :86-88 (BAND_CRITICAL 75, BAND_HIGH 40, BAND_MEDIUM 20); baseline window app/Services/SellerIntelligence/Severity/SellerBaselineProvider.php:23 (LOOKBACK_DAYS = 30); app/Services/SellerIntelligence/IssueEscalationService.php:41-45 (PROMOTE_AFTER_HOURS low 336 / medium 168 / high 48), :48 (PROMOTE_ON_OVERDUE = true), :51 (MAX_ESCALATION_LEVEL = 3); swept by bootstrap/app.php:170 every four hours; app/Services/SellerIntelligence/SellerNotifier.php:46 (WINDOW_HOURS = 12), :49 (PUSH_FROM_SEVERITY = ['critical','high']); driven by app/Console/Commands/RefreshSellerInsights.php scheduled hourly at bootstrap/app.php:160; None — no notification-preference route, table, model or setting key exists; searched routes/vendor, routes/se
@@ -1149,24 +1141,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - No surface on — Admin, Seller Web, Monitor
 - OVERRULED in part — the seller sweep recorded reports and exports as having no backend. Verified: GET seller-center/reports/{orders,products,stock} and three export endpoints do exist on the v3 API and are used by the Flutter app. What is missing is the web surface and the saved-definition/queued-export half: seller.reports.index, seller.reports.builder and seller.exports.index have no route, so on a browser every export is a synchronous download off one specific list.
 
-**Folding the tail of a high-cardinality dimension into an __other__ row instead of dropping it**  
-`analytics` · owner: Developer  
-- Backend — app/Console/Commands/AnalyticsRollup.php:552 cap() = config('analytics.max_keys_per_dimension', 500), applied as ->limit() at :164, :235, :297, :337
-- No surface on — Admin, Seller Web, Monitor, Dev Portal
-- Ruled: belongs to Developer as a correctness gap. config/analytics.php:70 promises the tail beyond 500 keys is folded into __other__ 'and the fold is reported rather than hidden'; the analytics rollup applies a limit and writes no such row, so the tail is silently dropped and every breakdown's 'other' figure understates it. Monitoring's BucketWriter does implement the fold, which shows the intended shape.
-
-**Pipeline health counters — events written, and events dropped because a request overflowed the buffer**  
-`analytics` · owner: Admin  
-- Backend — app/Services/Analytics/EventRecorder.php:166 health('events_written') and :169 health('events_dropped_buffer_full') into analytics_health
-- No surface on — Admin, Seller Web, Monitor, Dev Portal
-- Ruled: belongs on the Analytics data-quality screen. EventRecorder records both counters explicitly so that screen can show them, and collectionHealth reads only rollup_ran and write_failed — so a request loop quietly shortening the numbers is recorded and shown to nobody.
-
-**Per-day performance of each campaign short link**  
-`analytics` · owner: Admin  
-- Backend — app/Console/Commands/AnalyticsRollup.php:353 rollupCampaignPerformance writing the analytics_daily dimension 'campaign_link'
-- No surface on — Seller Web, Monitor, Dev Portal
-- Ruled: belongs on the Admin Campaigns screen, which instead reads lifetime counters off analytics_campaigns. The rollup writes a campaign_link dimension every day and no section asks for it, so the day-by-day series is reachable only by guessing the export URL.
-
 **The extra facts attached to each event — payment method, coupon code, shipping cost, guest flag, failure reason**  
 `analytics` · owner: Admin  
 - Backend — written at app/Utils/OrderManager.php:1646-1653 and Analytics.php:177-181; stored as analytics_events.properties (EventRecorder.php:109)
@@ -1178,12 +1152,6 @@ Found with no surface. Each has been ruled to an owner; the ruling is not the su
 - Backend — app/Console/Commands/TelemetryRollup.php:31 (telemetry:rollup) writing telemetry_daily; scheduled bootstrap/app.php:243-249; app/Console/Commands/TelemetryRollup.php:31 `telemetry:rollup`; scheduled bootstrap/app.php:242 hourly at :07, bootstrap/app.php:246 `--date=yesterday` daily 00:20, bootstrap/app.php:247 `--prune` daily 01:30
 - No surface on — Admin, Seller Web, Dev Portal
 - Ruled: belongs to Developer to either surface or stop writing. Three scheduled runs a day maintain the table and the command's own header admits no screen reads it since Analytics moved to analytics_daily — it survives the raw-row prune as retention, so a quarter of the telemetry scheduler budget produces output nobody can look at.
-
-**Analytics and telemetry policy — consent, Do Not Track, IP masking, bot and staff exclusion, what a session and a bounce are, and how long customer data is kept**  
-`analytics` · owner: Admin  
-- Backend — config/analytics.php:11 (`ANALYTICS_ENABLED`), :56-61 retention, :83-88 exclusions, :105-114 privacy, :125-130 campaign links, :141-146 beacon; read throughout app/Services/Analytics/; config/analytics.php:57-60 (event_days 90, session_days 400, daily_days 1100, click_days 400, each env-overridable); pruned by bootstrap/app.php:229 (analytics:rollup --days=2 --prune dailyAt 02:15); config/analytics.php:32 (session_gap_minutes 30), :36 (engaged_after_seconds 10), :46 (dedupe_window_seconds 5), :29 (buffer_limit 40), :72 (max_keys_per_dimension 500); config/telemetry.php:9 `TELEMETRY_ENABLED`, :12 `TELEMETRY_RETENTION_DAYS`, :15 session gap, :18 ignore_prefixes; consumed by app/Services/Telemetry/ and app/Console/Commands/TelemetryRollup.php (scheduled bootstrap/app.php:242-247)
-- No surface on — Seller Web
-- Ruled: belongs in Admin Settings and is the clearest case in the whole audit: the Analytics settings page opens with 'Read-only for now, and honest about it' and prints config() values with no form. Every privacy decision about live customer traffic — and two independent retention policies, in config/analytics.php and config/telemetry.php — can only be changed by editing .env and redeploying, so honouring a consent or erasure request is a deployment.
 
 **Exception capture — grouped exceptions with stack traces, occurrence counts, affected users, and marking one resolved**  
 `monitoring` · owner: Developer  
