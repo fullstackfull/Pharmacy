@@ -107,11 +107,18 @@ class SellerController extends Controller
             // database for the two numbers. Loading every product and every
             // review of every seller to add them up in PHP — and then discarding
             // the rows — is the same answer at a fraction of the cost.
+            //
+            // These two reach reviews THROUGH products, and both tables carry a
+            // `status`. Review's global scope names that column unqualified,
+            // which is unambiguous in every other query in the app and ambiguous
+            // in exactly these — so the scope is set aside here and its filter
+            // restated against the right table, rather than rewriting a rule the
+            // whole codebase depends on to suit one join.
             ->withCount(['productReviews as rating_count' => function ($query) {
-                $query->where('reviews.status', 1);
+                $query->withoutGlobalScope('active')->where('reviews.status', 1);
             }])
             ->withSum(['productReviews as total_rating' => function ($query) {
-                $query->where('reviews.status', 1);
+                $query->withoutGlobalScope('active')->where('reviews.status', 1);
             }], 'rating')
             ->get()
             ->each(function ($seller) {
