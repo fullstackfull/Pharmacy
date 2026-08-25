@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Monitoring\Support\Clock;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\Histogram;
 use Illuminate\Console\Command;
 use Illuminate\Database\Connection;
@@ -275,7 +276,13 @@ class MonitoringRollup extends Command
      */
     private function prune(): int
     {
-        $retention = (array) config('monitoring.retention', []);
+        // Through the settings service, not config(): a window changed on the Settings page has to
+        // be the window this command prunes by, or the page is describing a system it cannot move.
+        $settings = app(MonitoringSettings::class);
+        $retention = [];
+        foreach (['minute_days' => 7, 'hour_days' => 90, 'day_days' => 400, 'trace_days' => 3, 'error_days' => 60, 'log_days' => 14, 'incident_days' => 400] as $kind => $default) {
+            $retention[$kind] = $settings->retentionDays($kind, $default);
+        }
         $deleted = 0;
 
         $plan = [

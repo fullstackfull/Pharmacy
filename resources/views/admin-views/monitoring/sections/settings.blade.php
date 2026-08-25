@@ -1,10 +1,14 @@
 {{--
     Settings: the rules every other section was measured under.
 
-    Read-only for now — saving arrives with the write action. Until then the value of this page is
-    provenance: a number here means one thing if an operator typed it and another if nobody has
-    ever touched it, so no value is shown without saying where it came from. Secrets state only
-    whether they exist, because a monitoring screen must never be the place a credential leaks.
+    Provenance first: a number here means one thing if an operator typed it and another if nobody
+    has ever touched it, so no value is shown without saying where it came from. Rows the running
+    code reads back are editable in place; the rest stay readings, because saving a key nothing
+    reads would be a control that silently does nothing. Secrets state only whether they exist and
+    are never editable here — a monitoring screen must not become the place a credential is typed.
+
+    Clearing a field means "go back to what shipped", which is a different instruction from setting
+    it to zero, so the placeholder on every input is the shipped default.
 --}}
 
 @php
@@ -170,6 +174,8 @@
 
 {{-- One table per group. Four columns and no more: what it is, what it is set to, who set it, and
      what it decides — which is the whole of what an operator needs before changing anything. --}}
+<form action="{{ route('admin.monitoring.actions.settings') }}" method="post">
+@csrf
 @foreach ($panel['groups'] ?? [] as $group)
     <x-k.card :title="translate($group['key'])">
         @if (empty($group['rows']))
@@ -204,6 +210,17 @@
                                     <span class="mon-pill mon-pill--{{ $row['configured'] ? 'ok' : 'info' }}">
                                         {{ $row['configured'] ? translate('configured') : translate('not_configured') }}
                                     </span>
+                                @elseif (!empty($row['editable']))
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="number" step="any" class="form-control form-control-sm" style="max-width:9rem"
+                                               name="settings[{{ $row['key'] }}]"
+                                               value="{{ $row['source'] === 'database' ? $row['value'] : '' }}"
+                                               placeholder="{{ is_scalar($row['shipped']) ? $row['shipped'] : '' }}">
+                                        @if ($row['unit'])<small class="text-muted">{{ $row['unit'] }}</small>@endif
+                                    </div>
+                                    <small class="mon-metric__note" style="display:block">
+                                        {{ translate('in_effect') }}: <span class="k-num">{{ $show($row) }}</span>
+                                    </small>
                                 @elseif ($row['state'] === 'ok')
                                     <span class="k-num">{{ $show($row) }}{{ $row['unit'] ? ' ' . $row['unit'] : '' }}</span>
                                 @else
@@ -239,6 +256,11 @@
         @endif
     </x-k.card>
 @endforeach
+
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-primary px-4">{{ translate('save_settings') }}</button>
+</div>
+</form>
 
 {{-- What is actually stored, including anything stored that this page does not present. A key in
      the table that no group renders is either housekeeping or a setting this panel has fallen

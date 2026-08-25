@@ -57,6 +57,21 @@ class MonitoringSettings
         return is_numeric($value) ? (float) $value : null;
     }
 
+    /**
+     * A retention window in days, from Settings, falling back to the shipped default.
+     *
+     * Retention used to be read straight from config() by the panels and the rollup, which meant a
+     * stored row was saved and then ignored — and the migration that created the settings table
+     * promised the opposite. Everything that prunes or explains a window asks here now, so changing
+     * one on the Settings page changes what is actually kept.
+     */
+    public function retentionDays(string $kind, int $default): int
+    {
+        $value = $this->get('retention.' . $kind, config('monitoring.retention.' . $kind, $default));
+
+        return max(1, (int) $value);
+    }
+
     public function put(string $key, mixed $value): void
     {
         [$type, $encoded] = $this->encode($value);
@@ -65,6 +80,19 @@ class MonitoringSettings
             ['key' => $key],
             ['value' => $encoded, 'type' => $type, 'updated_at' => Clock::stamp(), 'created_at' => Clock::stamp()],
         );
+
+        $this->cache = null;
+    }
+
+    /**
+     * Drop a stored override, so the shipped default takes over again.
+     *
+     * Deleted rather than stored as null: `get()` treats a present key as the answer, so a null row
+     * would read back as "the setting is null" instead of "nobody has overridden this".
+     */
+    public function clear(string $key): void
+    {
+        DB::connection(config('monitoring.connection'))->table('monitoring_settings')->where('key', $key)->delete();
 
         $this->cache = null;
     }

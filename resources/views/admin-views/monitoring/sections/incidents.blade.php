@@ -301,6 +301,8 @@
             @else
                 <p class="mon-note">{{ $incident['holding_open']['note'] ?? $stateTitle($incident['holding_open']['state']) }}</p>
             @endif
+
+            @include('admin-views.monitoring.actions._incident', ['incident' => $incident, 'permissions' => $permissions])
         @endforeach
 
         @if ($open['truncated'])

@@ -578,7 +578,8 @@ class IncidentsPanel implements Panel
     {
         return [
             'id', 'reference', 'title', 'severity', 'status', 'affected_services', 'signals',
-            'probable_cause', 'started_at', 'detected_at', 'acknowledged_at', 'resolved_at', 'updated_at',
+            'probable_cause', 'cause_evidence', 'notes', 'deployment_id',
+            'started_at', 'detected_at', 'acknowledged_at', 'resolved_at', 'updated_at',
         ];
     }
 
@@ -635,6 +636,9 @@ class IncidentsPanel implements Panel
             // is a statement about the code, and a value put there by hand or by a later writer
             // must appear on the incident rather than be hidden by a claim made about the code.
             'probable_cause' => $this->shortText($row->probable_cause, 191),
+            'cause_evidence' => $this->shortText($row->cause_evidence ?? null, 2000),
+            'deployment_id' => $row->deployment_id !== null ? (int) $row->deployment_id : null,
+            'notes' => $this->shortText($row->notes ?? null, 4000),
             'acknowledged_at' => $this->displayStamp($row->acknowledged_at),
             'affected_services' => $this->services($row->affected_services),
             'signals' => $this->signals($row->signals, $states, $id),
@@ -1033,55 +1037,57 @@ class IncidentsPanel implements Panel
     }
 
     // -------------------------------------------------------------------------------------------
-    // The columns nothing writes
+    // How much of an incident has been filled in
 
     /**
-     * Six schema columns with no writer anywhere in this build.
+     * Six columns that used to have no writer anywhere, and now have one.
      *
-     * Published as readings rather than left as empty table cells. A blank "probable cause" column
-     * reads as "we looked and found none", which is a finding; nothing here ever looked. Each one
-     * names the file that would have to write it, so the gap is a task rather than a mystery.
+     * They are still published as readings rather than left as empty cells, because the distinction
+     * that mattered before still matters: a blank "probable cause" reads as a cause that was looked
+     * for and not found. What changed is the reason a cell is empty — it is now that nobody has
+     * filled it in on THIS incident, not that the product cannot record it — so the remedy names the
+     * action rather than the missing feature.
      *
      * @return array<string, mixed>
      */
     private function unwritten(): array
     {
-        $writer = 'The only code that writes an incident is ' . self::WRITER . '; it sets none of these.';
+        $action = 'Recorded from the incident itself, in Monitoring → Incidents.';
 
         return [
             'state' => 'not_configured',
             'source' => self::SOURCE,
-            'note' => 'These columns exist in the schema and are written by nothing on this deployment. They are shown as unconfigured readings rather than as empty cells, because a blank cause column reads as a cause that was looked for and not found. The two that a row could carry readably — probable_cause and acknowledged_at — are still read from every incident this page lists, and are drawn on the incident if one ever holds a value.',
+            'note' => 'These columns are filled in by whoever handles the incident. They are shown as unconfigured readings rather than as empty cells, because a blank cause column reads as a cause that was looked for and not found. Every one of them is read back onto the incident above the moment it holds a value.',
             'fields' => [
                 'probable_cause' => Metric::notConfigured(
                     source: self::SOURCE . '.probable_cause',
-                    remedy: $writer . ' A cause-attribution step would set it there, from monitoring_deployments, monitoring_error_groups, monitoring_slow_queries and monitoring_scheduled_runs around started_at.',
-                    note: 'No cause attribution runs in this build. The signals on each incident are what fired; the cause is not inferred from them.',
+                    remedy: $action . ' The form offers the deploys that ran within two hours either side, so a release can be attached without guessing.',
+                    note: 'No cause has been recorded on the incidents in this window. The cause is stated by a person; it is never inferred from a timestamp.',
                 ),
                 'cause_evidence' => Metric::notConfigured(
                     source: self::SOURCE . '.cause_evidence',
-                    remedy: $writer . ' It is the long-form companion to probable_cause and would be written by the same step.',
-                    note: 'There is no evidence column content because there is no attribution to evidence.',
+                    remedy: $action . ' It is the long-form companion to probable_cause and is written with it.',
+                    note: 'No evidence has been written, because no cause has been recorded to evidence.',
                 ),
                 'deployment_id' => Metric::notConfigured(
                     source: self::SOURCE . '.deployment_id',
-                    remedy: $writer . ' Deploys themselves ARE recorded — `php artisan monitoring:deploy-recorded` writes monitoring_deployments — but nothing correlates an incident to one.',
-                    note: 'No incident is tied to a release. The deploys exist in the Deployments section; the link between the two is what is missing.',
+                    remedy: $action . ' Deploys are recorded in the Deployments section — from that page or from `php artisan monitoring:deploy-recorded` — and the incident form lists the ones near this incident.',
+                    note: 'No incident in this window is tied to a release.',
                 ),
                 'acknowledged_at' => Metric::notConfigured(
                     source: self::SOURCE . '.acknowledged_at',
-                    remedy: 'Monitoring ships read-only: routes/admin/routes.php registers GET routes only, so there is no action to acknowledge an incident with.',
-                    note: 'Nobody can acknowledge an incident in this build, so time-to-acknowledge is not measured. That is different from every incident being acknowledged instantly.',
+                    remedy: $action,
+                    note: 'No incident in this window has been acknowledged, so time-to-acknowledge is not measured for it. That is different from every incident being acknowledged instantly.',
                 ),
                 'resolved_by' => Metric::notConfigured(
                     source: self::SOURCE . '.resolved_by',
-                    remedy: 'Incidents close automatically when no attached rule is still firing, in ' . self::WRITER . '::releaseIfResolved(). A person closing one needs a write action, which this build has no route for.',
-                    note: 'Every closure here was automatic, so no incident has a human behind it to record.',
+                    remedy: $action . ' Incidents also close on their own, in ' . self::WRITER . '::releaseIfResolved(), and an automatic closure has no person to record.',
+                    note: 'Every closure in this window was automatic, so none has a person behind it.',
                 ),
                 'notes' => Metric::notConfigured(
                     source: self::SOURCE . '.notes',
-                    remedy: 'Needs the same write action as acknowledgement: routes/admin/routes.php has GET routes only.',
-                    note: 'There is nowhere in this build to write a note on an incident.',
+                    remedy: $action . ' Notes are appended and stamped, never replaced — the attempt that did not work is usually the one worth reading.',
+                    note: 'No notes have been written on the incidents in this window.',
                 ),
             ],
         ];

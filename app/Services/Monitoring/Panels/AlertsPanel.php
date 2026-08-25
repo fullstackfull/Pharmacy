@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Alerting\AlertEvaluator;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Alerting\MetricResolver;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
@@ -560,7 +561,7 @@ class AlertsPanel implements Panel
     {
         // Bounded by the window the rollup actually keeps: anything older has been pruned, so a
         // wider window would only promise rows that cannot exist.
-        $days = max(1, (int) config('monitoring.retention.incident_days', 400));
+        $days = max(1, app(MonitoringSettings::class)->retentionDays('incident_days', 400));
 
         $recorded = array_sum(array_map(
             static fn (array $rule) => $rule['fire_count'],

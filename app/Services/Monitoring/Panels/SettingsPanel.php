@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Ingest\MetricSink;
+use App\Services\Monitoring\Operations\MonitoringConfiguration;
 use App\Services\Monitoring\Metric;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\MonitoringSettings;
@@ -186,7 +187,7 @@ class SettingsPanel implements Panel
         $self = $this->selfHealth($failures);
 
         return [
-            'read_only' => true,
+            'read_only' => false,
             'groups' => $groups,
             'overrides' => $this->overrideSummary($stored, $groups),
             'environment' => $this->environmentVisibility(),
@@ -590,6 +591,11 @@ class SettingsPanel implements Panel
             'source_detail' => $source['detail'],
             'changed_at' => $source['changed_at'],
             'note' => $this->joinNotes($note, $source['note']),
+            // Whether the page may offer an input for this row. A secret is never editable here —
+            // a monitoring screen must not become the place a credential is typed — and neither is
+            // a key the running code does not read back, because saving it would do nothing.
+            'editable' => !$secret && MonitoringConfiguration::isWritable($path),
+            'shipped' => config('monitoring.' . $path),
         ];
 
         if ($secret) {

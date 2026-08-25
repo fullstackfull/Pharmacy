@@ -1,3 +1,5 @@
+@include('admin-views.monitoring.actions._backups', ['permissions' => $permissions])
+
 {{--
     Backups: how old the newest good one is, how big it was, and whether anyone has restored one.
 

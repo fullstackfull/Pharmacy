@@ -261,6 +261,30 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['admin', '
             // a panel class — nothing here changes, so the two can never drift apart.
             Route::get('{section}', 'index')->name('section')->where('section', '[a-z0-9\-]+');
         });
+
+        /*
+        | The writes. Declared in their own controller so the reader above stays a reader, and all
+        | of them POST — an action that changes what monitoring watches must not sit behind a URL a
+        | browser can prefetch. Registered BEFORE the {section} catch-all above would matter if they
+        | shared a prefix; they do not, because each lives under its own segment.
+        */
+        Route::controller(\App\Http\Controllers\Admin\Telemetry\MonitoringActionController::class)
+            ->prefix('actions')->name('actions.')
+            ->group(function () {
+                Route::post('settings', 'saveSettings')->name('settings');
+                Route::post('synthetics/add', 'addJourney')->name('synthetics.add');
+                Route::post('synthetics/remove', 'removeJourney')->name('synthetics.remove');
+                Route::post('annotate', 'annotate')->name('annotate');
+                Route::post('backups/recorded', 'recordBackup')->name('backups.recorded');
+                Route::post('backups/restore-tested', 'recordRestoreTest')->name('backups.restore-tested');
+                Route::post('deployments/recorded', 'recordDeployment')->name('deployments.recorded');
+                Route::post('incidents/{action}/{id}', 'incident')
+                    ->where('action', 'acknowledge|note|attribute|resolve')->whereNumber('id')
+                    ->name('incident');
+                Route::post('alerts/{action}', 'alertRule')
+                    ->where('action', 'save|enable|silence|delete|seed')
+                    ->name('alert-rule');
+            });
     });
 
     Route::get('logout', [LoginController::class, 'logout'])->name('logout');

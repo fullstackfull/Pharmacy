@@ -1029,6 +1029,580 @@ class SellerCenterCopySeeder extends Seeder
             'عدد الأيام التي يُظهر خلالها المخزون القارب على انتهاء الصلاحية',
         ],
 
+        // ── admin · the monitoring console's write actions ────────────────
+        'a_note_needs_something_to_say' => [
+            'A note needs something to say.',
+            'الملاحظة تحتاج نصاً.',
+        ],
+        'a_probe_needs_a_name_and_a_url' => [
+            'A probe needs a name and a URL.',
+            'الفحص يحتاج اسماً ورابطاً.',
+        ],
+        'a_request_id_is_hexadecimal_this_one_cannot_have_come_from_this_system' => [
+            'A request id is hexadecimal; this one cannot have come from this system',
+            'معرّف الطلب سداسي عشري؛ هذا المعرّف لا يمكن أن يكون من هذا النظام',
+        ],
+        'a_rule_key_is_letters_numbers_dots_and_dashes' => [
+            'A rule key is letters, numbers, dots and dashes.',
+            'مفتاح القاعدة يتكوّن من أحرف وأرقام ونقاط وشرطات.',
+        ],
+        'a_rule_needs_a_metric_to_watch' => [
+            'A rule needs a metric to watch.',
+            'القاعدة تحتاج مقياساً تراقبه.',
+        ],
+        'a_rule_needs_a_warning_or_a_critical_threshold' => [
+            'A rule needs a warning or a critical threshold, or it can never fire.',
+            'القاعدة تحتاج عتبة تحذير أو عتبة حرجة، وإلا لن تُطلق أبداً.',
+        ],
+        'acknowledge' => [
+            'Acknowledge',
+            'استلام',
+        ],
+        'acknowledged' => [
+            'Acknowledged',
+            'مُستلَم',
+        ],
+        'add' => [
+            'Add',
+            'إضافة',
+        ],
+        'add_a_note' => [
+            'Add a note',
+            'إضافة ملاحظة',
+        ],
+        'add_a_note_to_the_timeline' => [
+            'Add a note to the timeline',
+            'إضافة ملاحظة إلى الخط الزمني',
+        ],
+        'add_or_change_a_rule' => [
+            'Add or change a rule',
+            'إضافة قاعدة أو تعديلها',
+        ],
+        'an_existing_key_edits_that_rule' => [
+            'An existing key edits that rule',
+            'المفتاح الموجود يعدّل تلك القاعدة',
+        ],
+        'backup_id_optional' => [
+            'Backup id (optional)',
+            'معرّف النسخة الاحتياطية (اختياري)',
+        ],
+        'body_must_contain' => [
+            'Body must contain',
+            'يجب أن يحتوي المحتوى على',
+        ],
+        'branch' => [
+            'Branch',
+            'الفرع',
+        ],
+        'cannot_be_told_apart' => [
+            'Cannot be told apart',
+            'لا يمكن التمييز',
+        ],
+        'captured_because' => [
+            'Captured because',
+            'سبب الحفظ',
+        ],
+        'checkout_page' => [
+            'Checkout page',
+            'صفحة الدفع',
+        ],
+        'close_this_incident' => [
+            'Close this incident',
+            'إغلاق هذه الحادثة',
+        ],
+        'cooldown_seconds' => [
+            'Cooldown (seconds)',
+            'فترة التهدئة (ثوانٍ)',
+        ],
+        'database_override' => [
+            'Database override',
+            'تجاوز من قاعدة البيانات',
+        ],
+        'delete' => [
+            'Delete',
+            'حذف',
+        ],
+        'delete_this_rule_nothing_will_watch_that_metric_afterwards' => [
+            'Delete this rule? Nothing will watch that metric afterwards',
+            'هل تحذف هذه القاعدة؟ لن يراقب أحد ذلك المقياس بعدها',
+        ],
+        'description' => [
+            'Description',
+            'الوصف',
+        ],
+        'detail_optional' => [
+            'Detail (optional)',
+            'التفاصيل (اختياري)',
+        ],
+        'either_they_are_older_than_the_window_above_or_the_timeline_is_not_being_written' => [
+            'Either they are older than the window above, or the timeline is not being written',
+            'إمّا أنها أقدم من النافذة أعلاه، أو أن الخط الزمني لا يُكتب',
+        ],
+        'email' => [
+            'Email',
+            'البريد',
+        ],
+        'email_these_addresses' => [
+            'Email these addresses',
+            'أرسل إلى هذه العناوين',
+        ],
+        'enable' => [
+            'Enable',
+            'تفعيل',
+        ],
+        'enabled' => [
+            'Enabled',
+            'مُفعَّل',
+        ],
+        'environment_variable' => [
+            'Environment variable',
+            'متغيّر بيئة',
+        ],
+        'every_value_below_is_the_one_configuration_holds_but_whether_any_of_them_has_been_overridden_in_the_database_is_unknown' => [
+            'Every value below is the one configuration holds, but whether any of them has been overridden in the database is unknown',
+            'كل قيمة أدناه هي ما يحمله الضبط، لكن لا يُعرف إن كان أيّ منها متجاوزاً في قاعدة البيانات',
+        ],
+        'everything_here_is_redacted_before_it_is_drawn_a_stack_trace_is_a_reliable_place_to_find_a_token' => [
+            'Everything here is redacted before it is drawn — a stack trace is a reliable place to find a token',
+            'كل ما هنا مُنقّح قبل عرضه — أثر الاستدعاء مكان شائع لتسرّب المفاتيح',
+        ],
+        'evidence' => [
+            'Evidence',
+            'الدليل',
+        ],
+        'expect_status' => [
+            'Expected status',
+            'الحالة المتوقعة',
+        ],
+        'expects' => [
+            'Expects',
+            'يتوقع',
+        ],
+        'external' => [
+            'External',
+            'خارجي',
+        ],
+        'files' => [
+            'Files',
+            'الملفات',
+        ],
+        'firings_in_total_and_none_of_them_appear_on_this_timeline' => [
+            'firings in total, and none of them appear on this timeline',
+            'إطلاقاً في المجموع، ولا يظهر أيّ منها على هذا الخط الزمني',
+        ],
+        'firings_the_timeline_could_not_be_read_so_the_two_cannot_be_compared' => [
+            'firings; the timeline could not be read, so the two cannot be compared',
+            'إطلاقاً؛ تعذّرت قراءة الخط الزمني، فلا يمكن المقارنة',
+        ],
+        'fresh' => [
+            'Fresh',
+            'حديث',
+        ],
+        'in_effect' => [
+            'In effect',
+            'السارية',
+        ],
+        'in_its_own_database' => [
+            'In its own database',
+            'في قاعدة بياناتها الخاصة',
+        ],
+        'information_schema_is_readable_on_most_deployments_but_a_locked_down_grant_will_refuse_it' => [
+            'information_schema is readable on most deployments, but a locked-down grant will refuse it',
+            'جدول information_schema مقروء في معظم البيئات، لكن صلاحية مقيّدة سترفضه',
+        ],
+        'kept_because' => [
+            'Kept because',
+            'سبب الاحتفاظ',
+        ],
+        'key' => [
+            'Key',
+            'المفتاح',
+        ],
+        'kind' => [
+            'Kind',
+            'النوع',
+        ],
+        'look_up' => [
+            'Look up',
+            'بحث',
+        ],
+        'look_up_a_request' => [
+            'Look up a request',
+            'ابحث عن طلب',
+        ],
+        'mark_resolved' => [
+            'Mark resolved',
+            'وضع كمُعالَجة',
+        ],
+        'memory_peak_kb' => [
+            'Peak memory (KB)',
+            'ذروة الذاكرة (كيلوبايت)',
+        ],
+        'must_hold_for_seconds' => [
+            'Must hold for (seconds)',
+            'يجب أن تستمر (ثوانٍ)',
+        ],
+        'name' => [
+            'Name',
+            'الاسم',
+        ],
+        'newest_successful' => [
+            'Newest successful',
+            'أحدث ناجحة',
+        ],
+        'no_alert_rule_could_be_listed' => [
+            'No alert rule could be listed',
+            'تعذّر إدراج أي قاعدة تنبيه',
+        ],
+        'no_reading' => [
+            'No reading',
+            'لا قراءة',
+        ],
+        'no_release_was_recorded_near_this_incident' => [
+            'No release was recorded near this incident',
+            'لم تُسجَّل أي إصدارة قرب هذه الحادثة',
+        ],
+        'no_rule_was_past_its_threshold_at_the_last_evaluation' => [
+            'No rule was past its threshold at the last evaluation',
+            'لم تتجاوز أي قاعدة عتبتها في آخر تقييم',
+        ],
+        'no_trace_was_kept_for_this_request' => [
+            'No trace was kept for this request',
+            'لم يُحفَظ أثر لهذا الطلب',
+        ],
+        'none' => [
+            'None',
+            'لا شيء',
+        ],
+        'not_a_number' => [
+            'Not a number',
+            'ليس رقماً',
+        ],
+        'not_a_setting_the_running_code_reads_back' => [
+            'Not a setting the running code reads back',
+            'ليس إعداداً يقرأه الكود العامل',
+        ],
+        'noted_on_the_timeline' => [
+            'Noted on the timeline.',
+            'سُجّلت على الخط الزمني.',
+        ],
+        'nothing_is_configured_in_this_group' => [
+            'Nothing is configured in this group',
+            'لا شيء مضبوط في هذه المجموعة',
+        ],
+        'nothing_is_firing' => [
+            'Nothing is firing',
+            'لا شيء يُطلق تنبيهاً',
+        ],
+        'nothing_to_do_there_the_incident_may_already_be_in_that_state' => [
+            'Nothing to do there — the incident may already be in that state.',
+            'لا شيء لفعله — قد تكون الحادثة في تلك الحالة أصلاً.',
+        ],
+        'nothing_was_recorded_under_that_id_a_request_that_neither_failed_nor_was_sampled_leaves_no_row_and_rows_are_pruned_at_the_retention_window' => [
+            'Nothing was recorded under that id. A request that neither failed nor was sampled leaves no row, and rows are pruned at the retention window',
+            'لم يُسجَّل شيء تحت هذا المعرّف. الطلب الذي لم يفشل ولم يُؤخذ كعيّنة لا يترك سجلاً، والسجلات تُحذف عند نافذة الاحتفاظ',
+        ],
+        'notify_channels' => [
+            'Notify channels',
+            'قنوات الإشعار',
+        ],
+        'notify_email' => [
+            'Notify by email',
+            'الإشعار بالبريد',
+        ],
+        'off' => [
+            'Off',
+            'معطّل',
+        ],
+        'on' => [
+            'On',
+            'مفعّل',
+        ],
+        'only_http_urls_can_be_probed_and_never_a_cloud_metadata_address' => [
+            'Only http(s) URLs can be probed, and never a cloud metadata address.',
+            'لا يمكن فحص سوى روابط http(s)، وليس عناوين بيانات السحابة الوصفية أبداً.',
+        ],
+        'only_the_first_rules_are_listed_here' => [
+            'Only the first rules are listed here',
+            'القواعد الأولى فقط مدرجة هنا',
+        ],
+        'open_this_error_group' => [
+            'Open this error group',
+            'افتح مجموعة الأخطاء هذه',
+        ],
+        'operator' => [
+            'Operator',
+            'المعامل',
+        ],
+        'outcome' => [
+            'Outcome',
+            'النتيجة',
+        ],
+        'paste_a_request_id_from_a_response_header_or_a_log_line' => [
+            'Paste a request id from a response header or a log line',
+            'ألصق معرّف طلب من ترويسة استجابة أو سطر سجل',
+        ],
+        'probable_cause' => [
+            'Probable cause',
+            'السبب المرجّح',
+        ],
+        'probe_a_customer_journey' => [
+            'Probe a customer journey',
+            'فحص رحلة عميل',
+        ],
+        'queries' => [
+            'Queries',
+            'الاستعلامات',
+        ],
+        'read_from_the_build_if_left_empty' => [
+            'Read from the build if left empty',
+            'يُقرأ من البناء إن تُرك فارغاً',
+        ],
+        'record' => [
+            'Record',
+            'تسجيل',
+        ],
+        'record_a_backup_that_has_already_run' => [
+            'Record a backup that has already run',
+            'سجّل نسخة احتياطية تمّت بالفعل',
+        ],
+        'record_a_release' => [
+            'Record a release',
+            'سجّل إصدارة',
+        ],
+        'record_restore_test' => [
+            'Record restore test',
+            'سجّل اختبار الاستعادة',
+        ],
+        'reinstall_the_shipped_rules' => [
+            'Reinstall the shipped rules',
+            'أعد تثبيت القواعد المرفقة',
+        ],
+        'release_that_caused_it' => [
+            'Release that caused it',
+            'الإصدارة المسبّبة',
+        ],
+        'remove' => [
+            'Remove',
+            'إزالة',
+        ],
+        'request_context' => [
+            'Request context',
+            'سياق الطلب',
+        ],
+        'request_id' => [
+            'Request id',
+            'معرّف الطلب',
+        ],
+        'restored_to_staging_in_four_minutes' => [
+            'Restored to staging in four minutes',
+            'استُعيدت إلى بيئة الاختبار في أربع دقائق',
+        ],
+        'save_settings' => [
+            'Save settings',
+            'حفظ الإعدادات',
+        ],
+        'setting' => [
+            'Setting',
+            'الإعداد',
+        ],
+        'silence' => [
+            'Silence',
+            'إسكات',
+        ],
+        'size' => [
+            'Size',
+            'الحجم',
+        ],
+        'size_in_bytes' => [
+            'Size in bytes',
+            'الحجم بالبايت',
+        ],
+        'slow_above_ms' => [
+            'Slow above (ms)',
+            'بطيء فوق (مللي ثانية)',
+        ],
+        'some_settings_were_refused' => [
+            'Some settings were refused',
+            'رُفضت بعض الإعدادات',
+        ],
+        'span' => [
+            'Span',
+            'المقطع',
+        ],
+        'stack_trace' => [
+            'Stack trace',
+            'أثر الاستدعاء',
+        ],
+        'start_offset_ms' => [
+            'Offset (ms)',
+            'الإزاحة (مللي ثانية)',
+        ],
+        'started_at' => [
+            'Started at',
+            'بدأت في',
+        ],
+        'stop_probing_this_journey' => [
+            'Stop probing this journey',
+            'أوقف فحص هذه الرحلة',
+        ],
+        'stored_overrides_could_not_be_read' => [
+            'Stored overrides could not be read',
+            'تعذّرت قراءة التجاوزات المخزّنة',
+        ],
+        'supplier_import_started' => [
+            'Supplier import started',
+            'بدأ استيراد المورّد',
+        ],
+        'switched_off' => [
+            'Switched off',
+            'مُطفأ',
+        ],
+        'that_probe_is_no_longer_configured' => [
+            'That probe is no longer configured.',
+            'لم يعد هذا الفحص مضبوطاً.',
+        ],
+        'the_alert_engine_has_never_run_here' => [
+            'The alert engine has never run here',
+            'لم يعمل محرّك التنبيهات هنا قط',
+        ],
+        'the_alert_engine_is_not_evaluating_anything' => [
+            'The alert engine is not evaluating anything',
+            'محرّك التنبيهات لا يقيّم شيئاً',
+        ],
+        'the_alert_history_could_not_be_read' => [
+            'The alert history could not be read',
+            'تعذّرت قراءة سجل التنبيهات',
+        ],
+        'the_backup_could_not_be_recorded' => [
+            'The backup could not be recorded',
+            'تعذّر تسجيل النسخة الاحتياطية',
+        ],
+        'the_backup_was_recorded' => [
+            'The backup was recorded.',
+            'تم تسجيل النسخة الاحتياطية.',
+        ],
+        'the_deployment_could_not_be_recorded' => [
+            'The deployment could not be recorded',
+            'تعذّر تسجيل النشر',
+        ],
+        'the_deployment_was_recorded' => [
+            'The deployment was recorded.',
+            'تم تسجيل النشر.',
+        ],
+        'the_incident_was_updated' => [
+            'The incident was updated.',
+            'تم تحديث الحادثة.',
+        ],
+        'the_monitoring_settings_were_saved' => [
+            'The monitoring settings were saved.',
+            'تم حفظ إعدادات المراقبة.',
+        ],
+        'the_origin_of_some_values_cannot_be_told_apart_on_this_deployment' => [
+            'The origin of some values cannot be told apart on this deployment',
+            'لا يمكن تمييز مصدر بعض القيم في هذه البيئة',
+        ],
+        'the_probe_was_added' => [
+            'The probe was added.',
+            'تمت إضافة الفحص.',
+        ],
+        'the_probe_was_removed' => [
+            'The probe was removed.',
+            'تمت إزالة الفحص.',
+        ],
+        'the_request' => [
+            'The request',
+            'الطلب',
+        ],
+        'the_restore_did_not_work' => [
+            'The restore did not work',
+            'لم تنجح الاستعادة',
+        ],
+        'the_restore_test_was_recorded' => [
+            'The restore test was recorded.',
+            'تم تسجيل اختبار الاستعادة.',
+        ],
+        'the_self_health_block_could_not_be_read' => [
+            'The self-health block could not be read',
+            'تعذّرت قراءة كتلة صحة المراقبة نفسها',
+        ],
+        'the_settings_below_are_still_exact_only_monitoring_own_state_is_missing' => [
+            'The settings below are still exact; only monitoring’s own state is missing',
+            'الإعدادات أدناه دقيقة؛ الناقص فقط حالة المراقبة نفسها',
+        ],
+        'the_settings_table_holds_more_rows_than_this_page_reads_so_the_list_above_is_incomplete' => [
+            'The settings table holds more rows than this page reads, so the list above is incomplete',
+            'جدول الإعدادات يحوي صفوفاً أكثر مما تقرأه هذه الصفحة، فالقائمة أعلاه غير مكتملة',
+        ],
+        'the_shop_default_address_if_left_empty' => [
+            'The shop default address if left empty',
+            'عنوان المتجر الافتراضي إن تُرك فارغاً',
+        ],
+        'the_storage_footprint_could_not_be_read' => [
+            'The storage footprint could not be read',
+            'تعذّرت قراءة حجم التخزين',
+        ],
+        'there_are_already_as_many_probes_as_one_run_will_fetch_remove_one_first' => [
+            'There are already as many probes as one run will fetch. Remove one first.',
+            'عدد الفحوصات وصل إلى ما تجلبه الجولة الواحدة. أزل واحداً أولاً.',
+        ],
+        'these_enabled_rules_watch_a_metric_that_has_not_been_recorded_in_the_last_two_days_so_they_cannot_fire' => [
+            'These enabled rules watch a metric that has not been recorded in the last two days, so they cannot fire',
+            'هذه القواعد المفعّلة تراقب مقياساً لم يُسجَّل خلال آخر يومين، فلا يمكنها الإطلاق',
+        ],
+        'this_part_could_not_be_read' => [
+            'This part could not be read',
+            'تعذّرت قراءة هذا الجزء',
+        ],
+        'this_records_that_a_backup_happened_it_does_not_take_one' => [
+            'This records that a backup happened; it does not take one',
+            'هذا يسجّل أن نسخة احتياطية جرت؛ وهو لا ينشئ واحدة',
+        ],
+        'took' => [
+            'Took',
+            'استغرق',
+        ],
+        'traces_carry_a_correlation_id_rather_than_a_request_id_so_a_request_that_did_not_fail_has_no_join_to_its_trace' => [
+            'Traces carry a correlation id rather than a request id, so a request that did not fail has no join to its trace',
+            'تحمل الآثار معرّف ارتباط بدل معرّف الطلب، فالطلب الذي لم يفشل لا رابط له بأثره',
+        ],
+        'url' => [
+            'URL',
+            'الرابط',
+        ],
+        'value' => [
+            'Value',
+            'القيمة',
+        ],
+        'warning' => [
+            'Warning',
+            'تحذير',
+        ],
+        'what_the_test_found' => [
+            'What the test found',
+            'ما وجده الاختبار',
+        ],
+        'what_was_tried_and_what_it_did' => [
+            'What was tried, and what it did',
+            'ما جُرّب، وما أدّى إليه',
+        ],
+        'when_if_not_now' => [
+            'When, if not now',
+            'متى، إن لم يكن الآن',
+        ],
+        'where_it_was_written' => [
+            'Where it was written',
+            'أين كُتبت',
+        ],
+        'info' => [
+            'Info',
+            'معلومة',
+        ],
+        'success' => [
+            'Success',
+            'نجاح',
+        ],
+
         // ── admin · the platform policy registry ──────────────────────────
         'a_floor_on_top_of_the_category_return_window_zero_leaves_the_return_window_alone' => [
             'A floor on top of the category return window — zero leaves the return window alone',

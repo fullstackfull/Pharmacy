@@ -1,3 +1,5 @@
+@include('admin-views.monitoring.actions._annotate', ['permissions' => $permissions])
+
 {{--
     Timeline: everything that happened to this system, in the order it happened.
 

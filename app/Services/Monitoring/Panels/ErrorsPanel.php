@@ -3,6 +3,7 @@
 namespace App\Services\Monitoring\Panels;
 
 use App\Services\Monitoring\Metric;
+use App\Services\Monitoring\Support\MonitoringSettings;
 use App\Services\Monitoring\Support\Clock;
 use App\Services\Monitoring\Support\Redactor;
 use App\Services\Monitoring\Support\SeriesReader;
@@ -507,7 +508,7 @@ class ErrorsPanel implements Panel
                     'id' => $groupId,
                     // "No longer stored" would be a guess: a mistyped or stale link asks for an id
                     // this store never issued, and that is not the same fact as a pruned group.
-                    'remedy' => 'No group with id ' . $groupId . ' is in monitoring_error_groups. Either it was pruned — groups go after monitoring.retention.error_days, currently ' . (int) config('monitoring.retention.error_days', 60) . ' days — or the link carries an id this store never issued.',
+                    'remedy' => 'No group with id ' . $groupId . ' is in monitoring_error_groups. Either it was pruned — groups go after monitoring.retention.error_days, currently ' . app(MonitoringSettings::class)->retentionDays('error_days', 60) . ' days — or the link carries an id this store never issued.',
                 ];
             }
 
@@ -557,7 +558,7 @@ class ErrorsPanel implements Panel
                     // A group reached by a shared link is looked up by id, not through the window,
                     // so it can perfectly well have last been seen before this window opened. The
                     // remedy must not assert that it was seen inside it.
-                    'remedy' => 'No occurrence row for this group falls inside the selected window. The group may last have fired before the window opened — widen it — or its rows may have been pruned, which happens after monitoring.retention.error_days (currently ' . (int) config('monitoring.retention.error_days', 60) . ' days).',
+                    'remedy' => 'No occurrence row for this group falls inside the selected window. The group may last have fired before the window opened — widen it — or its rows may have been pruned, which happens after monitoring.retention.error_days (currently ' . app(MonitoringSettings::class)->retentionDays('error_days', 60) . ' days).',
                 ];
             }
 
@@ -630,7 +631,7 @@ class ErrorsPanel implements Panel
      */
     private function capture(): array
     {
-        $retentionDays = (int) config('monitoring.retention.error_days', 60);
+        $retentionDays = app(MonitoringSettings::class)->retentionDays('error_days', 60);
         $collecting = (bool) config('monitoring.enabled', true);
 
         try {

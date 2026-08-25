@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Telemetry;
 
 use App\Http\Controllers\BaseController;
+use App\Services\DeveloperPortal\RequestDebugger;
 use App\Services\DeveloperPortal\ApiConsole;
 use App\Services\DeveloperPortal\ApiManifest;
 use App\Services\DeveloperPortal\ApiSnapshotService;
@@ -293,6 +294,9 @@ class DeveloperPortalController extends BaseController
             'deprecations' => ['endpoints' => $this->portal->deprecations()],
             'quality' => $this->portal->quality(),
             'health' => ['api' => $this->portal->apiHealth($this->stringOr($request->query('range'), '24h'))],
+            // The section the navigation has always declared. It answers "what happened to THIS
+            // request", which is what the Errors advice tells developers to keep the id for.
+            'debugger' => ['lookup' => app(RequestDebugger::class)->lookup($this->stringOr($request->query('request_id')))],
             default => [],
         };
     }

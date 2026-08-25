@@ -237,6 +237,7 @@
                     <th>{{ translate('recovers_below') }}</th>
                     <th>{{ translate('must_hold_for') }}</th>
                     <th>{{ translate('cooldown') }}</th>
+                    @if ($permissions->canEditSettings())<th></th>@endif
                 </tr>
                 </thead>
                 <tbody>
@@ -280,6 +281,27 @@
                         <td class="k-num">{{ $rule['recovery_threshold'] ?? '—' }}</td>
                         <td class="k-num">{{ $seconds($rule['for_seconds']) }}</td>
                         <td class="k-num">{{ $seconds($rule['cooldown_seconds']) }}</td>
+                        @if ($permissions->canEditSettings())
+                            <td class="text-end">
+                                @if ($rule['exists'])
+                                    {{-- Silencing keeps the rule. Deleting is the destructive one and
+                                         says so, because a deleted rule is cover somebody thinks
+                                         they still have. --}}
+                                    <form action="{{ route('admin.monitoring.actions.alert-rule', ['action' => $rule['enabled'] ? 'silence' : 'enable']) }}"
+                                          method="post" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="key" value="{{ $rule['key'] }}">
+                                        <button class="btn btn-outline-secondary btn-sm">{{ translate($rule['enabled'] ? 'silence' : 'enable') }}</button>
+                                    </form>
+                                    <form action="{{ route('admin.monitoring.actions.alert-rule', ['action' => 'delete']) }}" method="post" class="d-inline"
+                                          onsubmit="return confirm('{{ translate('delete_this_rule_nothing_will_watch_that_metric_afterwards') }}?')">
+                                        @csrf
+                                        <input type="hidden" name="key" value="{{ $rule['key'] }}">
+                                        <button class="btn btn-outline-danger btn-sm">{{ translate('delete') }}</button>
+                                    </form>
+                                @endif
+                            </td>
+                        @endif
                     </tr>
                 @endforeach
                 </tbody>
@@ -294,7 +316,18 @@
     @elseif (($rules['state'] ?? '') !== 'failed')
         <x-k.empty icon="settings" :title="translate('no_alert_rule_could_be_listed')" :text="$rules['note'] ?? ''" />
     @endif
+
+    @if ($permissions->canEditSettings())
+        <div class="mt-3 d-flex justify-content-end">
+            <form action="{{ route('admin.monitoring.actions.alert-rule', ['action' => 'seed']) }}" method="post">
+                @csrf
+                <button class="btn btn-outline-primary btn-sm">{{ translate('reinstall_the_shipped_rules') }}</button>
+            </form>
+        </div>
+    @endif
 </x-k.card>
+
+@include('admin-views.monitoring.actions._alert-rule', ['permissions' => $permissions, 'rules' => $rules])
 
 {{-- Why this engine is quiet, in its own configured numbers rather than in general terms. --}}
 <x-k.card :title="translate('how_the_engine_avoids_becoming_noise')">
